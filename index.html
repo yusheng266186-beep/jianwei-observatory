@@ -3,13 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#f3f4fa">
+  <meta name="theme-color" content="#eef1f4">
   <meta name="description" content="衡迹教学证据台：班级画布、试卷地图与完整学生档案。">
   <title>衡迹 · 教学证据台</title>
   <link rel="icon" href="./favicon.svg">
-  <link rel="stylesheet" href="./styles.css?v=glass-20261011">
-  <link rel="stylesheet" href="./styles/glass.css?v=glass-20261011">
-  <script src="./app/launch.js?v=glass-20261011" defer></script>
+  <link rel="stylesheet" href="./styles.css?v=study-20261011b">
+  <script src="./app/launch.js?v=study-20261011b" defer></script>
 </head>
 <body>
   <header class="masthead">
@@ -22,7 +21,7 @@
   <input id="files" type="file" accept=".xlsx,.xls,.csv,.json" multiple hidden>
   <dialog id="inbox" class="sheet-dialog"><div id="inbox-content"></div></dialog>
   <dialog id="report-dialog" class="sheet-dialog report-dialog"><div id="report-content"></div></dialog>
-  <dialog id="research-drawer" class="research-drawer" aria-labelledby="drawer-title"><div class="drawer-top"><span>衡迹 / 学生研究</span><button class="button icon-only" data-cmd="drawer-close" aria-label="关闭观察窗">×</button></div><div id="drawer-content"></div></dialog>
+  <dialog id="research-drawer" class="research-drawer" aria-labelledby="drawer-title"><div class="drawer-top"><button class="button drawer-back" id="drawer-back" data-cmd="drawer-back" hidden>← 返回</button><span id="drawer-context">衡迹 / 研究观察窗</span><button class="button icon-only" data-cmd="drawer-close" aria-label="关闭观察窗">×</button></div><div id="drawer-content"></div></dialog>
   <div id="toast" role="status" aria-live="polite"></div>
   <div id="print-area"></div>
   <noscript><p class="noscript">请启用浏览器 JavaScript 后打开衡迹。</p></noscript>

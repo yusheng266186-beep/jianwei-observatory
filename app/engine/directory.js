@@ -1,6 +1,6 @@
-import {valid,difference} from './metrics.js?v=glass-20261011';
+import {valid,difference} from './metrics.js?v=study-20261011b';
 const cache=new WeakMap();
-export const directoryDefaults={search:'',page:1,directoryExam:'latest',track:'all',classes:[],language:'all',standing:'all',trend:'all',records:'all',savedOnly:false,minScore:'',maxScore:'',sort:'total',view:'cards',pageSize:24};
+export const directoryDefaults={search:'',page:1,directoryExam:'latest',track:'all',classes:[],language:'all',standing:'all',trend:'all',records:'all',savedOnly:false,minScore:'',maxScore:'',sort:'total',view:'cards',pageSize:24,lens:'all',focusSubject:'all',focusStatus:'below',maxExclusive:false,columns:'summary'};
 export function directoryEntries(atlas,exam='latest') {
   if(!cache.has(atlas))cache.set(atlas,new Map());
   const index=cache.get(atlas);if(index.has(exam))return index.get(exam);
@@ -26,9 +26,21 @@ export function queryDirectory(atlas,state,session) {
     if(state.trend==='unknown'&&e.change!==null)return false;
     if(state.records==='history'&&e.story.length<2)return false;
     if(state.records==='questions'&&!e.answers.length)return false;
+    if(state.focusSubject&&state.focusSubject!=='all') {
+      const score=atlas.subject(e.row,state.focusSubject)?.score,gap=atlas.gap(e.row,'under',state.focusSubject),total=e.under,status=state.focusStatus||'below';
+      if(status==='missing'&&valid(score))return false;
+      if(status==='unknown'&&(gap!==null||!valid(score)))return false;
+      if(status==='below'&&!(gap!==null&&gap<0))return false;
+      if(status==='near'&&!(gap!==null&&gap<0&&gap>=-10))return false;
+      if(status==='above'&&!(gap!==null&&gap>=0))return false;
+      if(status==='double'&&!(gap!==null&&gap>=0&&total!==null&&total>=0))return false;
+      if(status==='subjectOnly'&&!(gap!==null&&gap>=0&&total!==null&&total<0))return false;
+      if(status==='totalOnly'&&!(gap!==null&&gap<0&&total!==null&&total>=0))return false;
+      if(status==='bothBelow'&&!(gap!==null&&gap<0&&total!==null&&total<0))return false;
+    }
     if(state.savedOnly&&!saved.has(e.person.id))return false;
     if(String(state.minScore??'').trim()!==''&&(!valid(e.row.total)||e.row.total<Number(state.minScore)))return false;
-    if(String(state.maxScore??'').trim()!==''&&(!valid(e.row.total)||e.row.total>Number(state.maxScore)))return false;
+    if(String(state.maxScore??'').trim()!==''&&(!valid(e.row.total)||(state.maxExclusive?e.row.total>=Number(state.maxScore):e.row.total>Number(state.maxScore))))return false;
     return true;
   });
   const metric=state.sort==='growth'?e=>e.change:state.sort==='gap'?e=>e.under:state.sort==='records'?e=>e.story.length:state.sort==='percentile'?e=>e.percentile:e=>e.row.total;
@@ -37,3 +49,9 @@ export function queryDirectory(atlas,state,session) {
   return {all,matches,shown:matches.slice((page-1)*size,page*size),size,pages,page};
 }
 export const standingLabels={top:'特控达线',under:'本科达线',below:'本科线下',unknown:'有效线待补'};
+
+export const directoryLenses=[['all','全部学生','完整目录'],['nearUnder','本科临界','有效线两侧20分'],['nearTop','特控临界','有效线两侧20分'],['up','分位上升','相邻同科类记录提升≥3'],['down','分位下降','相邻同科类记录下降≥3'],['questions','有小题材料','本场至少一个学科'],['saved','我的收藏','保存在当前浏览器']];
+export function lensValues(lens) {
+  const base={standing:'all',trend:'all',records:'all',savedOnly:false,minScore:'',maxScore:'',maxExclusive:false,focusSubject:'all',focusStatus:'below',page:1,lens};
+  return {...base,...({nearUnder:{standing:'nearUnder'},nearTop:{standing:'nearTop'},up:{trend:'up'},down:{trend:'down'},questions:{records:'questions'},saved:{savedOnly:true}}[lens]||{})};
+}

@@ -1,5 +1,5 @@
-import {mergeDatasets,FLAT_FIELDS} from './parser.js?v=glass-20261011';
-import {esc,button,badge} from '../ui/html.js?v=glass-20261011';
+import {mergeDatasets,FLAT_FIELDS} from './parser.js?v=study-20261011b';
+import {esc,button,badge} from '../ui/html.js?v=study-20261011b';
 export class Inbox {
   constructor(commit,notify,current) {
     this.commit=commit;this.notify=notify;this.current=current;
@@ -46,7 +46,7 @@ export class Inbox {
   async file(file) {
     const buffer=await file.arrayBuffer();
     return new Promise((resolve,reject)=>{
-      const worker=new Worker(new URL('./worker.js?v=glass-20261011',import.meta.url)),timer=setTimeout(()=>finish(new Error('文件读取超时，请分开导入材料后重试。')),180000);
+      const worker=new Worker(new URL('./worker.js?v=study-20261011b',import.meta.url)),timer=setTimeout(()=>finish(new Error('文件读取超时，请分开导入材料后重试。')),180000);
       let finished=false;
       const finish=(error,result)=>{if(finished)return;finished=true;clearTimeout(timer);worker.terminate();this.pending=null;error?reject(error):resolve(result);};
       this.pending={file,buffer,worker,reject:error=>finish(error)};
