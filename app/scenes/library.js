@@ -11,10 +11,10 @@ export function render(atlas,state,session) {
     const exam=state.lineExam||atlas.latest;
     const grids=['physics','history'].map(track=>{
       const line=atlas.lines.get(exam+'|'+track)||{subjects:{}};
-      const rows=['总分',...SUBJECTS].map(subject=>[esc(subject),'<input type="number" step="any" name="'+track+'-'+subject+'-top" value="'+esc(subject==='总分'?line.top??'':line.subjects[subject]?.top??'')+'" aria-label="'+track+' '+subject+'特控线">','<input type="number" step="any" name="'+track+'-'+subject+'-under" value="'+esc(subject==='总分'?line.under??'':line.subjects[subject]?.under??'')+'" aria-label="'+track+' '+subject+'本科线">']);
+      const rows=['总分',...[...new Set(SUBJECTS.map(s=>['英语','日语'].includes(s)?'外语':s))]].map(subject=>[esc(subject),'<input type="number" step="any" name="'+track+'-'+subject+'-top" value="'+esc(subject==='总分'?line.top??'':(subject==='外语'?atlas.line({exam,track},'top','外语'):line.subjects[subject]?.top)??'')+'" aria-label="'+track+' '+subject+'特控线">','<input type="number" step="any" name="'+track+'-'+subject+'-under" value="'+esc(subject==='总分'?line.under??'':(subject==='外语'?atlas.line({exam,track},'under','外语'):line.subjects[subject]?.under)??'')+'" aria-label="'+track+' '+subject+'本科线">']);
       return '<section><h2>'+(track==='physics'?'物理类':'历史类')+'</h2>'+table(['项目','特控有效线','本科有效线'],rows)+'</section>';
     }).join('');
-    body=block('有效线编辑台',examRail(atlas,exam,'lineExam')+'<form data-form="lines" data-exam="'+esc(exam)+'"><div class="line-editor">'+grids+'</div><button class="button accent" type="submit">保存本考次两类有效线</button></form>','两类同时展示；空白表示没有该线，不参与达线统计。');
+    body=block('有效线编辑台',examRail(atlas,exam,'lineExam')+'<form data-form="lines" data-exam="'+esc(exam)+'"><div class="line-editor">'+grids+'</div><button class="button accent" type="submit">保存本考次两类有效线</button></form>','两类同时展示；外语使用统一折合成绩有效线。空白表示没有该线，不参与达线统计。');
   } else if(tab==='papers') {
     const papers=atlas.papers(),paper=papers.find(p=>p.key===state.bank)||papers[0];
     body='<div class="bank-index">'+papers.map(p=>button(esc(p.subject)+' · '+esc(p.exam),'set',{key:'bank',value:p.key},paper?.key===p.key?'chip selected':'chip')).join('')+'</div>';

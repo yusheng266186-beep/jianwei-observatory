@@ -19,21 +19,21 @@ export async function excel(sheets,name='衡迹分析材料') {
   XLSX.writeFile(book,name+'.xlsx');
 }
 export function scoreRows(atlas,rows) {
-  const subjects=atlas.subjects(rows);
-  return [['考试','姓名','班级','科类','语种','赋分总分','原分总分','市排名','校排名','特控分差','本科分差',...subjects.flatMap(s=>[s+'赋分',s+'原分',s+'原排名',s+'特控分差',s+'本科分差'])],...rows.map(r=>[atlas.exam(r.exam).label,atlas.name(r.sid),r.classNo,r.track==='physics'?'物理类':'历史类',r.language,r.total,r.rawTotal,r.cityRank,r.schoolRank,atlas.gap(r,'top'),atlas.gap(r,'under'),...subjects.flatMap(s=>[r.subjects[s]?.score??null,r.subjects[s]?.raw??null,atlas.subjectRank(r,s),atlas.gap(r,'top',s),atlas.gap(r,'under',s)])])];
+  const subjects=atlas.comparisonSubjects(rows);
+  return [['考试','姓名','班级','科类','语种','赋分总分','原分总分','市排名','校排名','特控分差','本科分差',...subjects.flatMap(s=>[s+'赋分',s+'原分',s+'原排名',s+'特控分差',s+'本科分差'])],...rows.map(r=>[atlas.exam(r.exam).label,atlas.name(r.sid),r.classNo,r.track==='physics'?'物理类':'历史类',r.language,r.total,r.rawTotal,r.cityRank,r.schoolRank,atlas.gap(r,'top'),atlas.gap(r,'under'),...subjects.flatMap(s=>[atlas.subject(r,s)?.score??null,atlas.subject(r,s)?.raw??null,atlas.subjectRank(r,s),atlas.gap(r,'top',s),atlas.gap(r,'under',s)])])];
 }
 export function effectiveRows(atlas,exam,comparison='') {
-  const rows=[['班级','类别','届别','班主任','参考人数','均分','均分增量','特控有效人','特控增量','特控任务','本科有效人','本科增量','本科任务','特控线下10','特控线下20','本科线下10','本科线下20','特控英语','特控日语','本科英语','本科日语']];
+  const rows=[['班级','类别','届别','班主任','参考人数','均分','均分增量','特控有效人','特控增量','特控任务','本科有效人','本科增量','本科任务','特控线下10','特控线下20','本科线下10','本科线下20','外语特控有效','外语特控双上线','外语本科有效','外语本科双上线']];
   for(const no of atlas.classes) {
     const p=atlas.profile(no),records=atlas.classAt(no,exam),s=atlas.summary(records),previous=atlas.summary(atlas.classAt(no,comparison));
-    const lang=(tier,language)=>atlas.summary(records.filter(r=>r.language===language))[tier];
-    rows.push([no,p.track,p.cohort,p.lead,s.count,s.mean,s.mean!==null&&previous.mean!==null?s.mean-previous.mean:null,s.top,s.top!==null&&previous.top!==null?s.top-previous.top:null,p.targets?.top,s.under,s.under!==null&&previous.under!==null?s.under-previous.under:null,p.targets?.under,s.topNear10,s.topNear20,s.underNear10,s.underNear20,lang('top','英语'),lang('top','日语'),lang('under','英语'),lang('under','日语')]);
+    const foreign=atlas.summary(records,'外语');
+    rows.push([no,p.track,p.cohort,p.lead,s.count,s.mean,s.mean!==null&&previous.mean!==null?s.mean-previous.mean:null,s.top,s.top!==null&&previous.top!==null?s.top-previous.top:null,p.targets?.top,s.under,s.under!==null&&previous.under!==null?s.under-previous.under:null,p.targets?.under,s.topNear10,s.topNear20,s.underNear10,s.underNear20,foreign.top,foreign.topDouble,foreign.under,foreign.underDouble]);
   }
   return rows;
 }
 export function subjectRows(atlas,exam) {
-  return [['班级','学科','教师','人数','均分','原分均分','特控有效','特控双上线','特控有效率','本科有效','本科双上线','本科有效率'],...atlas.classes.flatMap(no=>atlas.subjects(atlas.classAt(no,exam)).map(subject=>{
-    const s=atlas.summary(atlas.classAt(no,exam),subject);return [no,subject,atlas.profile(no).teachers?.[subject]||'',s.count,s.mean,s.raw,s.top,s.topDouble,s.topRate,s.under,s.underDouble,s.underRate];
+  return [['班级','学科','教师','人数','均分','原分均分','特控有效','特控双上线','特控有效率','本科有效','本科双上线','本科有效率'],...atlas.classes.flatMap(no=>atlas.comparisonSubjects(atlas.classAt(no,exam)).map(subject=>{
+    const s=atlas.summary(atlas.classAt(no,exam),subject);return [no,subject,atlas.teacher(no,subject),s.count,s.mean,s.raw,s.top,s.topDouble,s.topRate,s.under,s.underDouble,s.underRate];
   }))];
 }
 export function answerRows(atlas,answers) {

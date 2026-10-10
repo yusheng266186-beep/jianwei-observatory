@@ -4,7 +4,7 @@ const append=(map,key,value)=>{if(!map.has(key))map.set(key,[]);map.get(key).pus
 export class Atlas {
   constructor(dataset) {
     this.data=normalizeDataset(dataset);this.exams=this.data.exams;this.latest=this.exams.at(-1)?.id||'';
-    this.people=new Map(this.data.students.map(p=>[p.id,p]));this.examRows=new Map();this.classRows=new Map();this.stories=new Map();this.paperRows=new Map();this.personAnswers=new Map();
+    this.people=new Map(this.data.students.map(p=>[p.id,p]));this.examRows=new Map();this.classRows=new Map();this.stories=new Map();this.paperRows=new Map();this.personAnswers=new Map();this.percentiles=new Map();
     this.lines=new Map(this.data.lines.map(l=>[l.exam+'|'+l.track,l]));
     for(const row of this.data.scores){append(this.examRows,row.exam,row);append(this.classRows,row.classNo+'|'+row.exam,row);append(this.stories,row.sid,row);}
     for(const row of this.data.answers){append(this.paperRows,row.subject+'|'+row.exam,row);append(this.personAnswers,row.sid+'|'+row.exam,row);}
@@ -18,13 +18,17 @@ export class Atlas {
   rows(exam){return this.examRows.get(exam)||[];}
   classAt(no,exam){return this.classRows.get(Number(no)+'|'+exam)||[];}
   subjects(rows){return SUBJECTS.filter(s=>rows.some(r=>valid(r.subjects?.[s]?.score)));}
-  line(row,tier='under',subject=null){const line=this.lines.get(row.exam+'|'+row.track);return subject?line?.subjects?.[subject]?.[tier]??null:line?.[tier]??null;}
-  gap(row,tier='under',subject=null){const score=subject?row.subjects?.[subject]?.score:row.total,line=this.line(row,tier,subject);return valid(score)&&valid(line)?score-line:null;}
+  comparisonSubjects(rows){return [...new Set(this.subjects(rows).map(s=>['英语','日语'].includes(s)?'外语':s))];}
+  subjectName(row,subject){return subject==='外语'?(['英语','日语'].includes(row.language)?row.language:valid(row.subjects?.['英语']?.score)?'英语':'日语'):subject;}
+  subject(row,subject){return row?.subjects?.[this.subjectName(row,subject)];}
+  teacher(no,subject){const teachers=this.profile(no).teachers||{};return subject==='外语'?teachers['外语']||[...new Set([teachers['英语'],teachers['日语']].filter(Boolean))].join(' / '):teachers[subject]||'';}
+  line(row,tier='under',subject=null){const line=this.lines.get(row.exam+'|'+row.track);if(subject==='外语')return line?.subjects&&Object.hasOwn(line.subjects,'外语')?line.subjects['外语']?.[tier]??null:line?.subjects?.['英语']?.[tier]??line?.subjects?.['日语']?.[tier]??null;return subject?line?.subjects?.[subject]?.[tier]??null:line?.[tier]??null;}
+  gap(row,tier='under',subject=null){const score=subject?this.subject(row,subject)?.score:row.total,line=this.line(row,tier,subject);return valid(score)&&valid(line)?score-line:null;}
   summary(rows,subject=null) {
-    const value=r=>subject?r.subjects?.[subject]?.score:r.total;
+    const value=r=>subject?this.subject(r,subject)?.score:r.total;
     const measured=rows.filter(r=>valid(value(r))),result=distribution(measured.map(value));
     result.records=rows.length;result.missing=rows.length-measured.length;
-    result.raw=average(rows.map(r=>subject?r.subjects?.[subject]?.raw:r.rawTotal));
+    result.raw=subject==='外语'?null:average(rows.map(r=>subject?this.subject(r,subject)?.raw:r.rawTotal));
     for(const tier of ['top','under']) {
       const eligible=measured.filter(r=>valid(this.line(r,tier,subject))),passing=eligible.filter(r=>this.gap(r,tier,subject)>=0);
       result[tier]=eligible.length?passing.length:null;result[tier+'Base']=eligible.length;result[tier+'Rate']=eligible.length?passing.length/eligible.length:null;
@@ -43,7 +47,7 @@ export class Atlas {
   snapshot(no,exam) {
     const rows=this.classAt(no,exam),profile=this.profile(no);
     const peers=this.rows(exam).filter(r=>groupKey(this.profile(r.classNo))===groupKey(profile));
-    return {no:Number(no),exam,profile,rows,peers,summary:this.summary(rows),baseline:this.summary(peers),subjects:this.subjects(rows).map(subject=>({subject,own:this.summary(rows,subject),peers:this.summary(peers,subject)}))};
+    return {no:Number(no),exam,profile,rows,peers,summary:this.summary(rows),baseline:this.summary(peers),subjects:this.comparisonSubjects(rows).map(subject=>({subject,own:this.summary(rows,subject),peers:this.summary(peers,subject)}))};
   }
   classExams(no){return this.exams.filter(e=>this.classAt(no,e.id).length);}
   timeline(no,ids=[],matched=false) {
@@ -53,12 +57,16 @@ export class Atlas {
     return exams.map(exam=>{const rows=this.classAt(no,exam.id).filter(r=>!common||common.has(r.sid));return {exam,rows,summary:this.summary(rows)};});
   }
   story(sid){return this.stories.get(sid)||[];}
-  subjectRank(row,subject){const score=row.subjects?.[subject];return this.exam(row.exam).scope==='city'?score?.rank??null:score?.schoolRank??score?.rank??null;}
+  subjectRank(row,subject){const score=this.subject(row,subject);return this.exam(row.exam).scope==='city'?score?.rank??null:score?.schoolRank??score?.rank??null;}
   percentile(row) {
     if(!valid(row?.total))return null;
-    const peers=this.rows(row.exam).filter(r=>valid(r.total)&&groupKey(this.profile(r.classNo))===groupKey(this.profile(row.classNo)));
-    if(peers.length<2)return peers.length===1?100:null;
-    return (peers.length-1-peers.filter(r=>r.total>row.total).length)/(peers.length-1)*100;
+    const key=row.exam+'|'+groupKey(this.profile(row.classNo));
+    if(!this.percentiles.has(key)) {
+      const peers=this.rows(row.exam).filter(r=>valid(r.total)&&groupKey(this.profile(r.classNo))===groupKey(this.profile(row.classNo))).sort((a,b)=>b.total-a.total),positions=new Map();
+      peers.forEach((peer,index)=>{if(!positions.has(peer.total))positions.set(peer.total,peers.length<2?100:(peers.length-1-index)/(peers.length-1)*100);});
+      this.percentiles.set(key,positions);
+    }
+    return this.percentiles.get(key).get(row.total)??null;
   }
   value(row,metric) {
     if(!row)return null;
@@ -66,7 +74,7 @@ export class Atlas {
     if(metric==='percentile')return this.percentile(row);
     if(metric==='rank')return this.exam(row.exam).scope==='city'?row.cityRank:row.schoolRank;
     if(metric==='top'||metric==='under')return this.gap(row,metric);
-    return row.subjects?.[metric]?.score??null;
+    return this.subject(row,metric)?.score??null;
   }
   papers() {
     const order=new Map(this.exams.map((e,i)=>[e.id,i]));
@@ -103,7 +111,7 @@ export class Atlas {
       const gap=this.gap(row,tier);if(gap===null)return null;
       const within=side==='both'?Math.abs(gap)<=band:side==='above'?gap>=0&&gap<=band:gap<0&&gap>=-band;
       if(!within)return null;
-      const weaknesses=this.subjects([row]).map(subject=>({subject,gap:this.gap(row,tier,subject),score:row.subjects[subject].score})).filter(r=>r.gap!==null&&r.gap<0).sort((a,b)=>a.gap-b.gap);
+      const weaknesses=this.comparisonSubjects([row]).map(subject=>({subject,gap:this.gap(row,tier,subject),score:this.subject(row,subject)?.score})).filter(r=>r.gap!==null&&r.gap<0).sort((a,b)=>a.gap-b.gap);
       return {row,gap,weaknesses,nearest:[...weaknesses].sort((a,b)=>b.gap-a.gap)[0]};
     }).filter(Boolean).sort((a,b)=>Math.abs(a.gap)-Math.abs(b.gap));
   }

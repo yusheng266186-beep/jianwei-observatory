@@ -20,19 +20,19 @@ export function render(atlas,state) {
     const previous=state.comparison||atlas.exams.at(-2)?.id||'';
     const target=(actual,value)=>value>0?'<div class="target-track"><i style="width:'+Math.max(0,Math.min(100,(actual??0)/value*100))+'%"></i><span>'+integer(actual)+' / '+integer(value)+'</span></div>':'<span class="muted">未设任务</span>';
     body='<div class="comparison-bar"><span>增量对照</span>'+chips('comparison',atlas.exams.filter(e=>e.id!==exam).map(e=>[e.id,e.id]),previous)+'</div>';
-    body+=groups.map(group=>block(group.title,table(['班级','班主任','人数','均分 / 增量','特控 / 增量','英语 / 日语','特控任务','本科 / 增量','英语 / 日语','本科任务','线下10 / 20分'],group.classes.map(no=>{
+    body+=groups.map(group=>block(group.title,table(['班级','班主任','人数','均分 / 增量','特控 / 增量','外语有效','特控任务','本科 / 增量','外语有效','本科任务','线下10 / 20分'],group.classes.map(no=>{
       const snapshot=atlas.snapshot(no,exam),p=snapshot.profile,d=snapshot.summary,old=atlas.summary(atlas.classAt(no,previous));
-      const lang=tier=>integer(atlas.summary(snapshot.rows.filter(r=>r.language==='英语'))[tier])+' / '+integer(atlas.summary(snapshot.rows.filter(r=>r.language==='日语'))[tier]);
-      return [button(no+'班','class',{no},'person-link'),esc(p.lead||'—'),integer(d.count),number(d.mean)+'<small>'+delta(difference(d.mean,old.mean))+'</small>',integer(d.top)+'<small>'+delta(difference(d.top,old.top))+'</small>',lang('top'),target(d.top,p.targets?.top),integer(d.under)+'<small>'+delta(difference(d.under,old.under))+'</small>',lang('under'),target(d.under,p.targets?.under),'<small>特控 '+d.topNear10+' / '+d.topNear20+'</small><small>本科 '+d.underNear10+' / '+d.underNear20+'</small>'];
+      const foreignEffective=tier=>integer(atlas.summary(snapshot.rows,'外语')[tier]);
+      return [button(no+'班','class',{no},'person-link'),esc(p.lead||'—'),integer(d.count),number(d.mean)+'<small>'+delta(difference(d.mean,old.mean))+'</small>',integer(d.top)+'<small>'+delta(difference(d.top,old.top))+'</small>',foreignEffective('top'),target(d.top,p.targets?.top),integer(d.under)+'<small>'+delta(difference(d.under,old.under))+'</small>',foreignEffective('under'),target(d.under,p.targets?.under),'<small>特控 '+d.topNear10+' / '+d.topNear20+'</small><small>本科 '+d.underNear10+' / '+d.underNear20+'</small>'];
     })), '17班计入物理类，18班计入历史类。')).join('');
     sheets={'班级有效人':effectiveRows(atlas,exam,previous),'学科有效与双上线':subjectRows(atlas,exam)};
     sections=[{title:'班级有效人',headers:sheets['班级有效人'][0],rows:sheets['班级有效人'].slice(1)}];
   } else if(state.mode==='subjects') {
-    const subjects=atlas.subjects(rows),subject=subjects.includes(state.subject)?state.subject:subjects[0];
+    const subjects=atlas.comparisonSubjects(rows),subject=subjects.includes(state.subject)?state.subject:subjects[0];
     body=chips('subject',subjects,subject);
     body+=groups.map(group=>{
       const measured=group.classes.map(no=>({no,summary:atlas.summary(atlas.classAt(no,exam),subject)})).filter(c=>c.summary.count);
-      return block(group.title+' · '+(subject||''),bars('subject-'+group.key.replace('|','-'),measured.map(c=>({label:c.no+'班',value:c.summary.mean})))+table(['班级','任课教师','人数','均分 / 原分','特控有效 / 双上线','本科有效 / 双上线','本科有效率'],measured.map(c=>[button(c.no+'班','class',{no:c.no},'person-link'),esc(atlas.profile(c.no).teachers?.[subject]||'—'),integer(c.summary.count),number(c.summary.mean)+' / '+number(c.summary.raw),integer(c.summary.top)+' / '+integer(c.summary.topDouble),integer(c.summary.under)+' / '+integer(c.summary.underDouble),percent(c.summary.underRate)])),'英语和日语、地理和生物分别使用独立学科记录。');
+      return block(group.title+' · '+(subject||''),bars('subject-'+group.key.replace('|','-'),measured.map(c=>({label:c.no+'班',value:c.summary.mean})))+table(['班级','任课教师','人数','均分 / 原分','特控有效 / 双上线','本科有效 / 双上线','本科有效率'],measured.map(c=>[button(c.no+'班','class',{no:c.no},'person-link'),esc(atlas.profile(c.no).teachers?.[subject]||'—'),integer(c.summary.count),number(c.summary.mean)+' / '+number(c.summary.raw),integer(c.summary.top)+' / '+integer(c.summary.topDouble),integer(c.summary.under)+' / '+integer(c.summary.underDouble),percent(c.summary.underRate)])),'英语与日语按表内折合成绩统一比较为外语；地理与生物保留各自学科记录。');
     }).join('');
     sheets={'学科有效与双上线':subjectRows(atlas,exam)};sections=[{title:'各班学科有效',headers:sheets['学科有效与双上线'][0],rows:sheets['学科有效与双上线'].slice(1)}];
   } else if(state.mode==='history') {

@@ -10,7 +10,7 @@ export const badge=(label,style='')=>'<span class="badge '+style+'">'+esc(label)
 export const empty=(title,detail='')=>'<div class="empty"><span class="empty-symbol">＋</span><h3>'+esc(title)+'</h3><p>'+esc(detail)+'</p></div>';
 export function head(kicker,title,detail='',actions='') {return '<header class="scene-head"><div><div class="overline">'+esc(kicker)+'</div><h1>'+esc(title)+'</h1><p>'+esc(detail)+'</p></div><div class="head-actions">'+actions+'</div></header>';}
 export function table(headers,rows,{className='',label='分析明细'}={}) {
-  return '<div class="table-scroll '+className+'"><table aria-label="'+esc(label)+'"><thead><tr>'+headers.map(h=>'<th>'+esc(h)+'</th>').join('')+'</tr></thead><tbody>'+rows.map(row=>'<tr>'+row.map(cell=>'<td>'+String(cell??'—')+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>';
+  return '<div class="table-scroll '+className+'"><table aria-label="'+esc(label)+'"><thead><tr>'+headers.map(h=>'<th>'+esc(h)+'</th>').join('')+'</tr></thead><tbody>'+rows.map(row=>{const id=String(row[0]||'').match(/data-sid="([^"]+)"/);return '<tr'+(id?' data-motion-key="row-'+id[1]+'"':'')+'>'+row.map(cell=>'<td>'+String(cell??'—')+'</td>').join('')+'</tr>';}).join('')+'</tbody></table></div>';
 }
 export function block(title,body,caption='',action='') {return '<section class="block"><div class="block-head"><div><h2>'+esc(title)+'</h2>'+(caption?'<p>'+esc(caption)+'</p>':'')+'</div>'+action+'</div>'+body+'</section>';}
 export function ribbon(items) {return '<div class="number-ribbon">'+items.map(([label,value,detail])=>'<div><span>'+esc(label)+'</span><strong>'+value+'</strong><small>'+esc(detail||'')+'</small></div>').join('')+'</div>';}
@@ -20,7 +20,7 @@ export function examRail(atlas,selected,key='exam',exams=atlas.exams,multi=false
     return '<button class="exam-stop '+(on?'selected':'')+'" data-cmd="'+(multi?'toggle':'set')+'"'+attrs({key,value:exam.id})+' aria-pressed="'+on+'"><span class="stop-index">'+String(i+1).padStart(2,'0')+'</span><b>'+esc(exam.id)+'</b><small>'+esc(exam.label)+'</small></button>';
   }).join('')+'</div>';
 }
-export const personButton=(atlas,sid)=>button(esc(atlas.name(sid)),'person',{sid},'person-link');
+export const personButton=(atlas,sid,exam='')=>button(esc(atlas.name(sid)),'peek',{sid,exam},'person-link');
 export const delta=value=>'<span class="delta '+(value>0?'positive':value<0?'negative':'')+'">'+signed(value)+'</span>';
 export function classPicker(atlas,no,compact=false) {
   return '<div class="class-picker '+(compact?'compact':'')+'">'+['physics','history'].map((key,i)=>{
