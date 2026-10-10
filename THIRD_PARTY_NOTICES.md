@@ -5,4 +5,4 @@
 
 Original license notices are retained in the vendor files. The application uses these libraries only to read and export workbooks and to generate DOCX archives in the browser.
 
-The UI uses the optional Google Fonts families Noto Serif SC and DM Sans with system-font fallbacks. No scores or imported data are sent to the font service.
+The UI uses system fonts. No external font service or analytics service is requested.

@@ -1,0 +1,41 @@
+import {head,button,chips,badge,block,ribbon,table,number,integer,percent,esc,personButton,search,footnote,empty} from '../ui/html.js';
+import {bars,rateColor,chartButtons} from '../ui/plots.js';
+import {average,sum,valid} from '../engine/metrics.js';
+import {answerRows,evidence} from '../io/exports.js';
+export function render(atlas,state) {
+  const papers=atlas.papers(),paper=papers.find(p=>p.key===state.key);
+  if(!paper) {
+    const subjects=[...new Set(papers.map(p=>p.subject))];
+    const shelf=subjects.map(subject=>{
+      const all=papers.filter(p=>p.subject===subject),visible=state.archive?all:all.slice(0,3);
+      return '<section class="paper-shelf"><div class="shelf-caption"><h2>'+esc(subject)+'</h2><span>'+all.length+' 张卷</span></div><div class="paper-covers">'+visible.map(p=>'<button class="paper-cover" data-cmd="paper" data-key="'+esc(p.key)+'"><div class="paper-stamp">'+esc(p.exam)+'</div><h3>'+esc(atlas.exam(p.exam).label)+'</h3><p>'+p.questions.length+' 道小题 · '+p.answers.length+' 份作答</p><footer>'+p.classes.length+' 个班<span>打开试卷 ↗</span></footer></button>').join('')+'</div></section>';
+    }).join('');
+    return {html:head('03 / 试卷地图','先打开一张卷','每张卷保留自己的班级范围与题目位置。',button('导入小题','import',{},'accent'))+'<div class="shelf-tools">'+button(state.archive?'收起较早考次':'展开全部考次','set',{key:'archive',value:!state.archive},'outline')+'<span>'+papers.length+' 张卷已归档</span></div>'+(shelf||empty('卷架还是空的','导入含各学科小题的成绩工作簿，或单独上传小题表。')),report:null};
+  }
+  const scope=(state.classes||[]).filter(no=>paper.classes.includes(no)),lens=atlas.paper(paper.key,scope),selected=lens.questions.find(q=>q.index===Number(state.question))||lens.questions[0];
+  let body='';
+  if(state.tab==='students') {
+    const answers=lens.answers.filter(a=>atlas.name(a.sid).includes(state.search||'')),page=Math.min(state.page||1,Math.max(1,Math.ceil(answers.length/40))),shown=answers.slice((page-1)*40,page*40);
+    body=block('每一份作答','<div class="roster-bar">'+search('search',state.search)+'<span>'+answers.length+' 人 · 空白保留 —</span></div>'+table(['姓名','班级','小题合计',...lens.questions.map(q=>q.label)],shown.map(a=>[personButton(atlas,a.sid),esc(a.classNo+'班'),number(sum(a.values)),...lens.questions.map(q=>{
+      const value=a.values[q.index],rate=q.max&&valid(value)?value/q.max:null;
+      return '<span class="heat-cell" style="background:'+rateColor(rate)+'" title="'+esc(q.knowledge)+'">'+number(value)+'</span>';
+    })]),{className:'heatmap',label:'个人学科小题得分'})+'<div class="pagination">'+button('←','page',{step:-1},'outline',page<=1?'disabled':'')+'<span>'+page+' / '+Math.max(1,Math.ceil(answers.length/40))+'</span>'+button('→','page',{step:1},'outline',page*40>=answers.length?'disabled':'')+'</div>','点击姓名进入学生档案，继续看这个人的阶段变化。');
+  } else if(state.tab==='knowledge') {
+    body='<div class="knowledge-road">'+lens.skills.map((skill,i)=>'<article class="knowledge-card"><div class="knowledge-order">'+String(i+1).padStart(2,'0')+'</div><div><div class="overline">'+esc(skill.advice)+'</div><h2>'+esc(skill.name)+'</h2><p>得分率 '+percent(skill.rate)+' · 平均失分 '+number(skill.loss)+'</p><div class="question-links">'+skill.questions.map(q=>button(esc(q.label)+'题','question',{index:q.index},'outline')).join('')+'</div></div><strong>'+percent(skill.rate)+'</strong></article>').join('')+'</div>';
+  } else {
+    const questions=state.order==='loss'?[...lens.questions].sort((a,b)=>(b.loss??-1)-(a.loss??-1)):lens.questions;
+    const map='<div class="question-map">'+questions.map(q=>'<button class="question-tile '+(q.index===selected?.index?'selected':'')+'" data-cmd="question" data-index="'+q.index+'" style="--rate-color:'+rateColor(q.rate)+'" aria-pressed="'+(q.index===selected?.index)+'"><div><b>'+esc(q.label)+'</b><span>'+esc(q.maxNote||'')+'</span></div><strong>'+percent(q.rate)+'</strong><small>均分 '+number(q.mean)+' / '+number(q.max)+'</small><footer>'+esc(q.knowledge||'知识点未标注')+'</footer></button>').join('')+'</div>';
+    let inspector=empty('点击一道题','题目、班级与学生的证据会在这里展开。');
+    if(selected) {
+      const classes=paper.classes.filter(no=>!scope.length||scope.includes(no)).map(no=>({no,mean:average(lens.answers.filter(a=>a.classNo===no).map(a=>a.values[selected.index]))}));
+      const losses=lens.answers.filter(a=>valid(a.values[selected.index])).sort((a,b)=>a.values[selected.index]-b.values[selected.index]).slice(0,12);
+      inspector='<div class="inspector-label">题目观察窗</div><h2>'+esc(selected.label)+'<small> 题</small></h2>'+badge(selected.knowledge||'未标注知识点')+'<div class="inspector-stats">'+[['平均分',number(selected.mean)],['满分',number(selected.max)],['零分',integer(selected.zero)+'人'],['满分',integer(selected.full)+'人'],['平均失分',number(selected.loss)],['区分度',number(selected.discrimination,2)]].map(([label,value])=>'<div><span>'+label+'</span><strong>'+value+'</strong></div>').join('')+'</div>'+block('各班平均分',bars('question-classes',classes.map(c=>({label:c.no+'班',value:c.mean}))), '',chartButtons('question-classes'))+block('从具体作答继续研究',table(['姓名','班级','得分'],losses.map(a=>[personButton(atlas,a.sid),esc(a.classNo+'班'),number(a.values[selected.index])])));
+    }
+    body='<div class="paper-map-workspace"><div>'+chips('order',[['paper','按题目顺序'],['loss','按平均失分']],state.order||'paper')+map+'</div><aside class="question-inspector">'+inspector+'</aside></div>';
+  }
+  const max=sum(lens.questions.map(q=>q.max)),known=lens.questions.every(q=>q.max!==null);
+  const html=head('03 / '+paper.subject+'试卷',atlas.exam(paper.exam).label,'小题是入口：点一道题，看班级差异，再进入具体学生。',button('← 回到卷架','paper-back',{},'outline')+button('摘录','capture',{},'outline')+button('导出','export',{},'accent'))+'<div class="audience-strip"><span>观察范围</span>'+button('全部参考班','set',{key:'classes',value:'all'},!scope.length?'chip selected':'chip')+chips('classes',paper.classes.map(no=>[no,no+'班'+(atlas.profile(no).cohort==='repeat'?' · 补习':'')]),scope,true)+'</div>'+ribbon([['有效作答',integer(lens.answers.length),paper.subject],['小题均分',number(lens.mean),'基于原始小题得分'],['试卷满分',known?number(max):'待补全','只采用明确的题目满分'],['作答覆盖',percent(lens.coverage),'有该科记录的参考学生']])+'<div class="scene-tabs">'+chips('tab',[['map','逐题地图'],['knowledge','知识点路径'],['students','学生作答']],state.tab||'map')+'</div>'+body+footnote('区分度按小题合计的高低分组计算，默认各27%；样本少于6份时留空。没有明确满分的题保留得分，得分率留空。');
+  const questionRows=[['题号','知识点','样本','均分','满分','得分率','平均失分','区分度','零分人数','满分人数'],...lens.questions.map(q=>[q.label,q.knowledge,q.count,q.mean,q.max,q.rate,q.loss,q.discrimination,q.zero,q.full])];
+  const skills=[['知识点','得分率','平均失分','建议'],...lens.skills.map(k=>[k.name,k.rate,k.loss,k.advice])];
+  return {html,report:evidence(paper.subject+' · '+atlas.exam(paper.exam).label+'试卷研究',scope.length?scope.map(n=>n+'班').join('、'):'全部参考班',[{title:'逐题诊断',headers:questionRows[0],rows:questionRows.slice(1).map(row=>row.map((v,i)=>i===5?percent(v):v))},{title:'知识点路径',headers:skills[0],rows:skills.slice(1).map(row=>row.map((v,i)=>i===1?percent(v):v))}],{'个人学科小题得分':answerRows(atlas,lens.answers),'逐题诊断':questionRows,'知识点':skills})};
+}

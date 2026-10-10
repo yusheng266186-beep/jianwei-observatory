@@ -1,0 +1,32 @@
+import {head,button,chips,badge,block,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote,empty} from '../ui/html.js';
+import {trajectory,chartButtons,rateColor} from '../ui/plots.js';
+import {difference,valid} from '../engine/metrics.js';
+import {scoreRows,answerRows,evidence} from '../io/exports.js';
+export function render(atlas,state,session) {
+  const story=state.sid?atlas.story(state.sid):[];
+  if(!story.length) {
+    const query=(state.search||'').trim(),recent=(session.recent||[]).filter(id=>atlas.people.has(id));
+    const matches=atlas.data.students.filter(person=>{
+      const latest=atlas.story(person.id).at(-1);return latest&&(person.name.includes(query)||(query&&/^\d+班?$/.test(query)&&Number(query.replace('班',''))===latest.classNo));
+    });
+    const page=Math.min(state.page||1,Math.max(1,Math.ceil(matches.length/50)));
+    return {html:head('04 / 学生档案','找到一个人，再看完整的时间','姓名联结每一次考试，跨班级、跨阶段保留。')+'<div class="people-search">'+search('search',state.search,'输入姓名，或输入“4班”')+'<span>↵ 输入后直接点击姓名</span></div>'+(recent.length?block('最近研究过', '<div class="recent-people">'+recent.slice(0,8).map(id=>personButton(atlas,id)).join('')+'</div>'):'')+block(query?'查找结果':'学生目录',table(['姓名','最近所在班级','最新考试','总分','档案记录'],matches.slice((page-1)*50,page*50).map(person=>{const records=atlas.story(person.id),last=records.at(-1);return [personButton(atlas,person.id),esc(last.classNo+'班'),esc(atlas.exam(last.exam).label),number(last.total),records.length+' 次'];}))+'<div class="pagination">'+button('←','page',{step:-1},'outline',page<=1?'disabled':'')+'<span>'+page+' / '+Math.max(1,Math.ceil(matches.length/50))+'</span>'+button('→','page',{step:1},'outline',page*50>=matches.length?'disabled':'')+'</div>'),report:null};
+  }
+  const row=story.find(r=>r.exam===state.exam)||story.at(-1),person=atlas.people.get(state.sid),p=atlas.profile(row.classNo),subjects=atlas.subjects(story),currentSubjects=atlas.subjects([row]),metric=state.storyMetric||'total';
+  const names={total:'赋分总分',percentile:'同类分位',top:'特控分差',under:'本科分差'};
+  const timeline='<aside class="person-timeline"><div class="overline">'+story.length+' 次阶段记录</div>'+story.map((record,i)=>'<button class="story-stop '+(record.exam===row.exam?'selected':'')+'" data-cmd="person-exam" data-exam="'+esc(record.exam)+'"><span class="story-dot"></span><div><small>'+String(i+1).padStart(2,'0')+' / '+esc(record.exam)+'</small><b>'+esc(atlas.exam(record.exam).label)+'</b><span>'+record.classNo+'班 · '+number(record.total)+'分</span></div></button>').join('')+'</aside>';
+  const answerSubjects=[...new Set((atlas.personAnswers.get(row.sid+'|'+row.exam)||[]).filter(a=>a.classNo===row.classNo).map(a=>a.subject))];
+  const questionSubject=answerSubjects.includes(state.subject)?state.subject:answerSubjects[0],questions=questionSubject?atlas.questionsFor(row,questionSubject):[];
+  const gaps=currentSubjects.map(subject=>({subject,gap:atlas.gap(row,'under',subject)})).filter(item=>item.gap!==null).sort((a,b)=>a.gap-b.gap);
+  const values=story.map(record=>atlas.value(record,metric)).filter(valid),change=values.length>1?difference(values.at(-1),values[0]):null;
+  let canvas=ribbon([['本次赋分',number(row.total),atlas.exam(row.exam).label],['同类分位',number(atlas.percentile(row)),'同科类全体学生，含补习班'],['特控距离',delta(atlas.gap(row,'top')),'正数表示高于有效线'],['本科距离',delta(atlas.gap(row,'under')),'正数表示高于有效线']]);
+  canvas+=block('完整阶段变化',chips('storyMetric',[...Object.entries(names),...subjects.map(s=>[s,s+'成绩'])],metric)+trajectory('person-story',story.map(r=>r.exam),[{name:names[metric]||metric,values:story.map(record=>atlas.value(record,metric))}],{zero:metric==='top'||metric==='under'})+'<div class="story-caption">首末有效变化 '+delta(change)+'<span>当前记录：'+esc(atlas.exam(row.exam).label)+'</span></div>','每条记录使用当次班级与有效线。',chartButtons('person-story'));
+  const subjectRows=currentSubjects.map(subject=>[subject,row.subjects[subject]?.score,row.subjects[subject]?.raw,row.subjects[subject]?.rank,atlas.line(row,'top',subject),atlas.gap(row,'top',subject),atlas.line(row,'under',subject),atlas.gap(row,'under',subject)]);
+  canvas+=block('这一阶段的学科证据',table(['学科','赋分','原分','原排名','特控线','特控分差','本科线','本科分差'],subjectRows.map(record=>record.map((value,i)=>i===5||i===7?delta(value):i===0?esc(value):number(value,i===3?0:1))))+'<div class="teaching-hint"><span>教学关注</span><p>'+(gaps[0]?.gap<0?esc(gaps[0].subject)+'距离本科有效线 '+number(Math.abs(gaps[0].gap))+' 分，可继续打开该科小题观察失分位置。':'结合历次记录与具体小题，确定下一阶段的教学重点。')+'</p></div>');
+  canvas+=block('个人学科小题',chips('subject',answerSubjects,questionSubject)+(questions.length?'<div class="personal-questions">'+questions.map(q=>'<article style="--rate-color:'+rateColor(q.max&&valid(q.score)?q.score/q.max:null)+'"><div><b>'+esc(q.label)+'</b><span>'+esc(q.knowledge||'未标注')+'</span></div><strong>'+number(q.score)+'<small> / '+number(q.max)+'</small></strong><footer>失分 '+number(q.loss)+'</footer></article>').join('')+'</div>':empty('本次没有小题记录','可在资料仓追加该考次的小题工作簿。')),'题号、满分与得分来自原表，不按学科总分反推。');
+  canvas+=block('阶段记录原表',table(['考试','实际班级','赋分总分','原分总分','原排名','同类分位','特控分差','本科分差'],story.map(record=>[esc(atlas.exam(record.exam).label),esc(record.classNo+'班'),number(record.total),number(record.rawTotal),integer(atlas.value(record,'rank')),number(atlas.percentile(record)),delta(atlas.gap(record,'top')),delta(atlas.gap(record,'under'))])));
+  const html=head('04 / 学生档案',person?.name||atlas.name(row.sid),'当前观察 '+atlas.exam(row.exam).label+' · '+row.classNo+'班',button('← 查找其他学生','person-back',{},'outline')+button('摘录','capture',{},'outline')+button('导出','export',{},'accent'))+'<div class="person-passport">'+badge(p.cohort==='repeat'?'补习班':'应届班')+badge(p.track==='physics'?'物理类':'历史类')+badge(row.language||'外语未填写')+'<span>点击左侧阶段，展开当次学科与小题。</span></div><div class="person-workspace">'+timeline+'<div class="person-canvas">'+canvas+'</div></div>'+footnote('原排名统计范围可能随考次变化；跨考试比较可使用同类分位与距有效线分差。');
+  const allAnswers=atlas.data.answers.filter(a=>a.sid===state.sid);
+  const history=scoreRows(atlas,story),questionRows=[['题号','知识点','得分','满分','失分'],...questions.map(q=>[q.label,q.knowledge,q.score,q.max,q.loss])];
+  return {html,report:evidence(atlas.name(row.sid)+' · 学习档案',atlas.data.school+' · '+atlas.exam(row.exam).label,[{title:'全部阶段记录',headers:history[0],rows:history.slice(1)},{title:'本次学科表现',headers:['学科','赋分','原分','原排名','特控线','特控分差','本科线','本科分差'],rows:subjectRows},{title:(questionSubject||'')+'小题',headers:questionRows[0],rows:questionRows.slice(1)}],{'阶段成绩':history,'个人学科小题得分':answerRows(atlas,allAnswers),'当前学科小题':questionRows})};
+}

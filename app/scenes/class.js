@@ -1,0 +1,57 @@
+import {head,button,chips,badge,block,examRail,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote,classPicker} from '../ui/html.js';
+import {trajectory,bars,spread,chartButtons} from '../ui/plots.js';
+import {difference,average,valid,maxScore} from '../engine/metrics.js';
+import {scoreRows,evidence} from '../io/exports.js';
+const rowsSection=(title,headers,rows)=>({title,headers,rows});
+export function render(atlas,state) {
+  const no=state.no||atlas.classes[0],available=atlas.classExams(no),exam=available.some(e=>e.id===state.exam)?state.exam:available.at(-1)?.id||atlas.latest;
+  const snapshot=atlas.snapshot(no,exam,state.baseline),{profile,rows,summary,subjects}=snapshot;
+  const filtered=rows.filter(r=>atlas.name(r.sid).includes(state.search||'')).sort((a,b)=>state.sort==='name'?atlas.name(a.sid).localeCompare(atlas.name(b.sid),'zh'):state.sort==='gap'?(atlas.gap(b,'under')??-Infinity)-(atlas.gap(a,'under')??-Infinity):(b.total??-Infinity)-(a.total??-Infinity)),page=Math.min(state.page||1,Math.max(1,Math.ceil(filtered.length/40))),shown=filtered.slice((page-1)*40,page*40);
+  let content='',sections=[],sheets={};
+  if(state.tab==='history') {
+    const ids=state.exams?.length?state.exams:available.map(e=>e.id),timeline=atlas.timeline(no,ids,state.matched);
+    const subjectNames=atlas.subjects(timeline.flatMap(t=>t.rows)),metric=state.trendMetric||'mean';
+    const labels={mean:'总分均分',topRate:'特控率',underRate:'本科率',top:'特控人数',under:'本科人数',topGap:'特控分差',underGap:'本科分差'};
+    const value=t=>{const result=metric==='topGap'||metric==='underGap'?average(t.rows.map(r=>atlas.gap(r,metric==='topGap'?'top':'under'))):metric in labels?t.summary[metric]:atlas.summary(t.rows,metric).mean;return result===null?null:metric.includes('Rate')?result*100:result;};
+    content='<div class="history-tools"><span>点亮要对比的考次</span>'+button(state.matched?'共同参考 ✓':'全部参考','set',{key:'matched',value:!state.matched},state.matched?'accent':'outline')+'</div>'+examRail(atlas,ids,'exams',available,true)+chips('trendMetric',[...Object.entries(labels),...subjectNames.map(s=>[s,s+'均分'])],metric);
+    content+=block(labels[metric]||metric+'均分',trajectory('class-trajectory',timeline.map(t=>t.exam.id),[{name:no+'班',values:timeline.map(value)}],{zero:metric.includes('Gap'),suffix:metric.includes('Rate')?'%':''}),'共同参考使用选定考次的学生交集。缺考保留断点。',chartButtons('class-trajectory'));
+    const summaryRows=timeline.map(t=>[t.exam.label,t.summary.count,t.summary.mean,t.summary.median,t.summary.sd,t.summary.top,t.summary.topRate,t.summary.under,t.summary.underRate]);
+    content+=block('每个考次的参照面',table(['考试','人数','均分','中位数','标准差','特控人数','特控率','本科人数','本科率'],summaryRows.map(row=>row.map((v,i)=>i===6||i===8?percent(v):i>=2&&i<=4?number(v):esc(v)))));
+    const people=[...new Set(timeline.flatMap(t=>t.rows.map(r=>r.sid)))].filter(sid=>atlas.name(sid).includes(state.search||''));
+    const matrix=state.matrix||'total',matrixNames=[['total','赋分总分'],['percentile','同类分位'],['rank','原考试排名'],['top','特控分差'],['under','本科分差'],...subjectNames];
+    const matrixRows=people.map(sid=>{const records=timeline.map(t=>t.rows.find(r=>r.sid===sid)),values=records.map(r=>atlas.value(r,matrix)).filter(valid);return {sid,records,change:values.length>1?difference(values.at(-1),values[0]):null};});
+    if(state.growth)matrixRows.sort((a,b)=>(b.change??-Infinity)-(a.change??-Infinity));
+    const matrixPage=Math.min(state.page||1,Math.max(1,Math.ceil(matrixRows.length/40))),displayed=matrixRows.slice((matrixPage-1)*40,matrixPage*40);
+    content+=block('学生纵向矩阵', '<div class="roster-bar">'+search('search',state.search)+button(state.growth?'变化排序 ✓':'按变化排序','set',{key:'growth',value:!state.growth},'outline')+'</div>'+chips('matrix',matrixNames,matrix)+table(['姓名',...timeline.map(t=>t.exam.id),'首末变化'],displayed.map(p=>[personButton(atlas,p.sid),...p.records.map(r=>number(atlas.value(r,matrix))),delta(p.change)]))+pagination(matrixPage,matrixRows.length),'姓名联结所有阶段，转班记录保存在个人档案。');
+    sheets={'班级多次考试对比':[['姓名',...timeline.map(t=>t.exam.label),'首末变化'],...matrixRows.map(p=>[atlas.name(p.sid),...p.records.map(r=>atlas.value(r,matrix)),p.change])],'考次结构':[['考试','人数','均分','中位数','标准差','特控人数','特控率','本科人数','本科率'],...summaryRows]};
+    sections=[rowsSection('班级历次结构',sheets['考次结构'][0],summaryRows.map(row=>row.map((v,i)=>i===6||i===8?percent(v):v))),rowsSection('学生纵向矩阵',sheets['班级多次考试对比'][0],sheets['班级多次考试对比'].slice(1))];
+  } else if(state.tab==='targets') {
+    const tier=state.tier||'under',lineName=tier==='top'?'特控':'本科',near=atlas.critical(exam,{tier,band:20,classes:[Number(no)]});
+    const targetRows=['top','under'].map(t=>{const target=profile.targets?.[t];return [t==='top'?'特控':'本科',summary[t],summary[t+'Rate'],target,target>0&&summary[t]!==null?summary[t]/target:null,summary[t+'Near10'],summary[t+'Near20'],summary[t+'Safe10']];});
+    content=examRail(atlas,exam,'exam',available)+block('人数任务与临界带',table(['层次','有效人数','有效率','人数任务','完成率','线下10分','线下20分','线上10分'],targetRows.map(row=>row.map((v,i)=>i===2||i===4?percent(v):esc(v??'—')))));
+    const subjectRows=subjects.map(s=>[s.subject,profile.teachers?.[s.subject]||'',s.own.topLine,s.own.top,s.own.topDouble,s.own.topRate,s.own.underLine,s.own.under,s.own.underDouble,s.own.underRate]);
+    content+=block('有效、双上线，落到每个学科',table(['学科','教师','特控线','特控有效','双上线','有效率','本科线','本科有效','双上线','有效率'],subjectRows.map(row=>row.map((v,i)=>i===5||i===9?percent(v):i===2||i===6?number(v):esc(v??'—')))),'双上线要求同一个人的总分和学科同时达线。');
+    content+=block('外语学生的达线结构',table(['语种','参考人数','特控人数','本科人数'],['英语','日语'].map(language=>{const s=atlas.summary(rows.filter(r=>r.language===language));return [language,integer(s.count),integer(s.top),integer(s.under)];})));
+    content+=block(lineName+'线下20分',chips('tier',[['under','本科'],['top','特控']],tier)+table(['姓名','语种','总分','距线','最近可补学科','学科距线','跟进'],near.map(item=>[personButton(atlas,item.row.sid),esc(item.row.language),number(item.row.total),delta(item.gap),esc(item.nearest?.subject||'—'),delta(item.nearest?.gap),button('加入','follow-add',{sid:item.row.sid,exam,tier},'outline')])));
+    sheets={'班级有效人':[['层次','有效人数','有效率','人数任务','完成率','线下10分','线下20分','线上10分'],...targetRows],'学科有效与双上线':[['学科','教师','特控线','特控有效','双上线','有效率','本科线','本科有效','双上线','有效率'],...subjectRows],'临界学生':scoreRows(atlas,near.map(item=>item.row))};
+    sections=[rowsSection('班级任务与临界带',sheets['班级有效人'][0],targetRows),rowsSection('学科有效与双上线',sheets['学科有效与双上线'][0],subjectRows)];
+  } else {
+    const mode=state.value||'score';
+    const value=(row,subject=null)=>{
+      if(mode==='top'||mode==='under')return delta(atlas.gap(row,mode,subject));
+      if(mode==='rank')return integer(subject?row.subjects?.[subject]?.rank:atlas.value(row,'rank'));
+      return number(subject?row.subjects?.[subject]?.[mode==='raw'?'raw':'score']:row[mode==='raw'?'rawTotal':'total']);
+    };
+    content=examRail(atlas,exam,'exam',available)+ribbon([['参考人数',integer(summary.count),'缺总分 '+summary.missing+' 人'],['总分均分',number(summary.mean),'同类基准 '+number(snapshot.baseline.mean)],['特控达线',integer(summary.top),percent(summary.topRate)],['本科达线',integer(summary.under),percent(summary.underRate)]]);
+    content+='<div class="class-split">'+block('学科相对位置',bars('subject-distance',subjects.map(s=>({label:s.subject,value:difference(s.own.mean,s.peers.mean)})),{signed:true}),'班级均分减同科类基准，含17、18班。',chartButtons('subject-distance'))+block('总分分布',spread('class-distribution',rows.map(r=>r.total),rows[0]?[{label:'特控',value:atlas.line(rows[0],'top')},{label:'本科',value:atlas.line(rows[0],'under')}]:[]),'每个柱为25分区间。',chartButtons('class-distribution'))+'</div>';
+    const subRows=subjects.map(s=>[s.subject,profile.teachers?.[s.subject]||'',s.own.mean,s.own.raw,s.own.median,s.own.sd,difference(s.own.mean,s.peers.mean),s.own.top,s.own.topDouble,s.own.under,s.own.underDouble]);
+    content+=block('学科剖面',table(['学科','教师','赋分均分','原分均分','中位数','标准差','基准差','特控 / 双上线','本科 / 双上线'],subjects.map(s=>[esc(s.subject),esc(profile.teachers?.[s.subject]||'—'),number(s.own.mean),number(s.own.raw),number(s.own.median),number(s.own.sd),delta(difference(s.own.mean,s.peers.mean)),integer(s.own.top)+' / '+integer(s.own.topDouble),integer(s.own.under)+' / '+integer(s.own.underDouble)])));
+    content+=block('学生成绩切面','<div class="roster-bar">'+search('search',state.search)+chips('sort',[['total','总分排序'],['gap','本科分差'],['name','姓名']],state.sort||'total')+'</div>'+chips('value',[['score','赋分'],['raw','原分'],['rank','原排名'],['top','特控分差'],['under','本科分差']],mode)+table(['姓名','语种','总分',...subjects.map(s=>s.subject),'化+生本科分差'],shown.map(row=>{const a=atlas.gap(row,'under','化学'),b=atlas.gap(row,'under','生物');return [personButton(atlas,row.sid),esc(row.language),value(row),...subjects.map(s=>value(row,s.subject)),delta(valid(a)&&valid(b)?a+b:null)];}))+pagination(page,filtered.length),'点击姓名进入完整个人档案；该生跨班级的阶段记录仍然保留。');
+    sheets={'班级成绩分析单次':scoreRows(atlas,rows),'学科结构':[['学科','教师','赋分均分','原分均分','中位数','标准差','基准差','特控有效','特控双上线','本科有效','本科双上线'],...subRows]};
+    sections=[rowsSection('班级单次成绩',sheets['班级成绩分析单次'][0],sheets['班级成绩分析单次'].slice(1)),rowsSection('学科结构',sheets['学科结构'][0],subRows)];
+  }
+  const sidebar='<aside class="class-atlas"><div class="overline">选择研究对象</div>'+classPicker(atlas,no,true)+'<div class="class-passport"><h2>'+no+'<small> 班</small></h2>'+badge(profile.cohort==='repeat'?'补习班':'应届班')+badge(profile.track==='physics'?'物理类':'历史类')+'<dl><dt>班型</dt><dd>'+esc(profile.type)+'</dd><dt>班主任</dt><dd>'+esc(profile.lead||'未填写')+'</dd><dt>选科</dt><dd>'+esc(profile.combination)+'</dd></dl></div></aside>';
+  const html=head('02 / 班级画布',no+'班的教学证据','围绕这个班连续研究，切换视角时保留班级。',button('摘录这页','capture',{},'outline')+button('导出','export',{},'accent'))+'<div class="class-workspace">'+sidebar+'<div class="class-canvas"><div class="scene-tabs">'+chips('tab',[['snapshot','本场切面'],['history','纵向轨迹'],['targets','有效达成']],state.tab||'snapshot')+'</div>'+content+footnote('原排名保留原统计范围，市级与校级排名分别使用。补习班按每名学生的实际学科展开。')+'</div></div>';
+  return {html,report:evidence(no+'班 · '+({history:'历次对照',targets:'有效达成'}[state.tab]||atlas.exam(exam).label),atlas.data.school||'',sections,sheets)};
+}
+function pagination(page,count){return '<div class="pagination">'+button('←','page',{step:-1},'outline',page<=1?'disabled':'')+'<span>'+page+' / '+Math.max(1,Math.ceil(count/40))+'</span>'+button('→','page',{step:1},'outline',page*40>=count?'disabled':'')+'</div>';}
