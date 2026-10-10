@@ -1,4 +1,4 @@
-import {valid,difference} from './metrics.js';
+import {valid,difference} from './metrics.js?v=glass-20261011';
 const cache=new WeakMap();
 export const directoryDefaults={search:'',page:1,directoryExam:'latest',track:'all',classes:[],language:'all',standing:'all',trend:'all',records:'all',savedOnly:false,minScore:'',maxScore:'',sort:'total',view:'cards',pageSize:24};
 export function directoryEntries(atlas,exam='latest') {

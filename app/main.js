@@ -1,13 +1,13 @@
-import {Atlas} from './engine/atlas.js';
-import {normalizeDataset,SUBJECTS} from './data/compat.js';
-import {hydrate,save,sample,preference,remember,preserveUndo,previous,emptyDataset,loadNotebook,saveNotebook} from './data/workspace.js';
-import {mergeDatasets} from './data/parser.js';
-import {Inbox} from './data/inbox.js';
-import {esc,button,empty,table} from './ui/html.js';
-import {excel,word,print,download,chart,scoreRows,effectiveRows,subjectRows,answerRows,evidence} from './io/exports.js';
-import {directoryDefaults} from './engine/directory.js';
-import {peekView,compareView,drawerEvidence} from './ui/explorer.js';
-import {dockIcon} from './ui/icons.js';
+import {Atlas} from './engine/atlas.js?v=glass-20261011';
+import {normalizeDataset,SUBJECTS} from './data/compat.js?v=glass-20261011';
+import {hydrate,save,sample,preference,remember,preserveUndo,previous,emptyDataset,loadNotebook,saveNotebook} from './data/workspace.js?v=glass-20261011';
+import {mergeDatasets} from './data/parser.js?v=glass-20261011';
+import {Inbox} from './data/inbox.js?v=glass-20261011';
+import {esc,button,empty,table} from './ui/html.js?v=glass-20261011';
+import {excel,word,print,download,chart,scoreRows,effectiveRows,subjectRows,answerRows,evidence} from './io/exports.js?v=glass-20261011';
+import {directoryDefaults} from './engine/directory.js?v=glass-20261011';
+import {peekView,compareView,drawerEvidence} from './ui/explorer.js?v=glass-20261011';
+import {dockIcon} from './ui/icons.js?v=glass-20261011';
 
 const routes=[['board','年级棋盘','▦'],['class','班级画布','▥'],['papers','试卷地图','▧'],['people','学生档案','◎'],['follow','跟进清单','↗'],['library','资料仓','⊞']];
 const defaults={board:{mode:'map',metric:'underRate',historyMetric:'mean',search:'',page:1},class:{tab:'snapshot',value:'score',trendMetric:'mean',matrix:'total',search:'',page:1,matched:false},papers:{key:'',tab:'map',classes:[],question:0,order:'paper',search:'',page:1},people:{sid:'',storyMetric:'total',...directoryDefaults,filtersOpen:innerWidth>760},follow:{tier:'under',band:20,side:'below',classes:[],search:'',page:1},library:{tab:'materials'}};
@@ -65,7 +65,7 @@ function positionDock(){const dock=document.getElementById('navigation'),selecte
 async function paint(transition=false,focus=null) {
   const serial=++paintId,scene=current;nav();
   try {
-    if(!loaded.has(scene))loaded.set(scene,import('./scenes/'+scene+'.js'));
+    if(!loaded.has(scene))loaded.set(scene,import('./scenes/'+scene+'.js?v=glass-20261011'));
     const module=await loaded.get(scene);if(serial!==paintId)return;
     const view=scene==='class'&&!atlas.classes.length?{html:empty('先带入一个班的材料','从导入原表开始建立班级画布。')+button('导入材料','import',{},'accent'),report:null}:module.render(atlas,books[scene],session);
     const object=scene+'|'+(scene==='people'?books.people.sid:scene==='papers'?books.papers.key:scene==='class'?books.class.no:''),changed=object!==paintedObject,previousScroll=window.scrollY;

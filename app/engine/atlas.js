@@ -1,5 +1,5 @@
-import {classDefaults,SUBJECTS,normalizeDataset} from '../data/compat.js';
-import {valid,average,sum,distribution,groupKey,GROUPS} from './metrics.js';
+import {classDefaults,SUBJECTS,normalizeDataset} from '../data/compat.js?v=glass-20261011';
+import {valid,average,sum,distribution,groupKey,GROUPS} from './metrics.js?v=glass-20261011';
 const append=(map,key,value)=>{if(!map.has(key))map.set(key,[]);map.get(key).push(value);};
 export class Atlas {
   constructor(dataset) {

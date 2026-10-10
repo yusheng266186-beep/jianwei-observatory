@@ -1,7 +1,7 @@
-import {head,button,chips,badge,block,examRail,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote} from '../ui/html.js';
-import {mini,bars,trajectory,spread,chartButtons} from '../ui/plots.js';
-import {difference,average} from '../engine/metrics.js';
-import {scoreRows,effectiveRows,subjectRows,evidence} from '../io/exports.js';
+import {head,button,chips,badge,block,examRail,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote} from '../ui/html.js?v=glass-20261011';
+import {mini,bars,trajectory,spread,chartButtons} from '../ui/plots.js?v=glass-20261011';
+import {difference,average} from '../engine/metrics.js?v=glass-20261011';
+import {scoreRows,effectiveRows,subjectRows,evidence} from '../io/exports.js?v=glass-20261011';
 const tools=()=>button('摘录这页','capture',{},'outline')+button('导出','export',{},'accent');
 export function render(atlas,state) {
   const exam=state.exam||atlas.latest,groups=atlas.groups(exam),rows=atlas.rows(exam),s=atlas.summary(rows);

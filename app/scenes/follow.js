@@ -1,5 +1,5 @@
-import {head,button,chips,badge,block,examRail,table,number,integer,delta,esc,personButton,search,footnote,empty} from '../ui/html.js';
-import {evidence} from '../io/exports.js';
+import {head,button,chips,badge,block,examRail,table,number,integer,delta,esc,personButton,search,footnote,empty} from '../ui/html.js?v=glass-20261011';
+import {evidence} from '../io/exports.js?v=glass-20261011';
 export function render(atlas,state,session) {
   const exam=state.exam||atlas.latest,tier=state.tier||'under',items=atlas.critical(exam,{tier,band:Number(state.band)||20,side:state.side||'below',classes:state.classes||[]}).filter(item=>atlas.name(item.row.sid).includes(state.search||''));
   const plans=session.plans||[],planIds=new Set(plans.map(p=>p.sid+'|'+p.exam+'|'+p.tier));

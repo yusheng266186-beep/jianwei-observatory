@@ -1,8 +1,8 @@
-import {renderDirectory} from './directory.js';
-import {head,button,chips,badge,block,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote,empty} from '../ui/html.js';
-import {trajectory,chartButtons,rateColor} from '../ui/plots.js';
-import {difference,valid,sum} from '../engine/metrics.js';
-import {scoreRows,answerRows,evidence} from '../io/exports.js';
+import {renderDirectory} from './directory.js?v=glass-20261011';
+import {head,button,chips,badge,block,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote,empty} from '../ui/html.js?v=glass-20261011';
+import {trajectory,chartButtons,rateColor} from '../ui/plots.js?v=glass-20261011';
+import {difference,valid,sum} from '../engine/metrics.js?v=glass-20261011';
+import {scoreRows,answerRows,evidence} from '../io/exports.js?v=glass-20261011';
 export function render(atlas,state,session) {
   const story=state.sid?atlas.story(state.sid):[];
   if(!story.length)return renderDirectory(atlas,state,session);

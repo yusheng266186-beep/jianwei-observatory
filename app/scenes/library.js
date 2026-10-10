@@ -1,5 +1,5 @@
-import {SUBJECTS} from '../data/compat.js';
-import {head,button,chips,badge,block,examRail,ribbon,table,number,integer,esc,empty,field,radio,footnote} from '../ui/html.js';
+import {SUBJECTS} from '../data/compat.js?v=glass-20261011';
+import {head,button,chips,badge,block,examRail,ribbon,table,number,integer,esc,empty,field,radio,footnote} from '../ui/html.js?v=glass-20261011';
 export function render(atlas,state,session) {
   const tab=state.tab||'materials';let body='';
   if(tab==='classes') {

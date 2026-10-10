@@ -1,5 +1,5 @@
-import {esc,number,percent} from './html.js';
-import {valid} from '../engine/metrics.js';
+import {esc,number,percent} from './html.js?v=glass-20261011';
+import {valid} from '../engine/metrics.js?v=glass-20261011';
 const ink='#8171b6',copper='#b87995';
 export function trajectory(id,labels,series,{suffix='',zero=false}={}) {
   const values=series.flatMap(s=>s.values).filter(valid);

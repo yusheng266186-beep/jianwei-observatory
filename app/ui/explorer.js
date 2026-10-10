@@ -1,8 +1,8 @@
-import {button,badge,block,ribbon,table,number,integer,delta,esc,empty} from './html.js';
-import {trajectory,bars,chartButtons} from './plots.js';
-import {directoryEntries,standingLabels} from '../engine/directory.js';
-import {difference} from '../engine/metrics.js';
-import {evidence,scoreRows,answerRows} from '../io/exports.js';
+import {button,badge,block,ribbon,table,number,integer,delta,esc,empty} from './html.js?v=glass-20261011';
+import {trajectory,bars,chartButtons} from './plots.js?v=glass-20261011';
+import {directoryEntries,standingLabels} from '../engine/directory.js?v=glass-20261011';
+import {difference} from '../engine/metrics.js?v=glass-20261011';
+import {evidence,scoreRows,answerRows} from '../io/exports.js?v=glass-20261011';
 export function peekView(atlas,sid,exam,session) {
   const e=directoryEntries(atlas,exam||'latest').find(e=>e.person.id===sid)||directoryEntries(atlas).find(e=>e.person.id===sid);
   if(!e)return empty('暂时没有这个学生的成绩');

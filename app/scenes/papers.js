@@ -1,7 +1,7 @@
-import {head,button,chips,badge,block,ribbon,table,number,integer,percent,esc,personButton,search,footnote,empty} from '../ui/html.js';
-import {bars,rateColor,chartButtons} from '../ui/plots.js';
-import {average,sum,valid} from '../engine/metrics.js';
-import {answerRows,evidence} from '../io/exports.js';
+import {head,button,chips,badge,block,ribbon,table,number,integer,percent,esc,personButton,search,footnote,empty} from '../ui/html.js?v=glass-20261011';
+import {bars,rateColor,chartButtons} from '../ui/plots.js?v=glass-20261011';
+import {average,sum,valid} from '../engine/metrics.js?v=glass-20261011';
+import {answerRows,evidence} from '../io/exports.js?v=glass-20261011';
 export function render(atlas,state) {
   const papers=atlas.papers(),paper=papers.find(p=>p.key===state.key);
   if(!paper) {

@@ -1,8 +1,8 @@
-import {head,button,chips,badge,block,ribbon,table,number,integer,delta,esc,search,empty,footnote} from '../ui/html.js';
-import {mini,spread,chartButtons} from '../ui/plots.js';
-import {valid} from '../engine/metrics.js';
-import {queryDirectory,standingLabels} from '../engine/directory.js';
-import {scoreRows,evidence} from '../io/exports.js';
+import {head,button,chips,badge,block,ribbon,table,number,integer,delta,esc,search,empty,footnote} from '../ui/html.js?v=glass-20261011';
+import {mini,spread,chartButtons} from '../ui/plots.js?v=glass-20261011';
+import {valid} from '../engine/metrics.js?v=glass-20261011';
+import {queryDirectory,standingLabels} from '../engine/directory.js?v=glass-20261011';
+import {scoreRows,evidence} from '../io/exports.js?v=glass-20261011';
 const filter=(label,body)=>'<section class="filter-section"><h3>'+label+'</h3>'+body+'</section>';
 const peek=(e)=>button(esc(e.person.name),'peek',{sid:e.person.id,exam:e.row.exam},'person-link');
 export function renderDirectory(atlas,state,session) {
