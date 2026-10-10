@@ -39,7 +39,7 @@ export function render(atlas,state) {
     const mode=state.value||'score';
     const value=(row,subject=null)=>{
       if(mode==='top'||mode==='under')return delta(atlas.gap(row,mode,subject));
-      if(mode==='rank')return integer(subject?row.subjects?.[subject]?.rank:atlas.value(row,'rank'));
+      if(mode==='rank')return integer(subject?atlas.subjectRank(row,subject):atlas.value(row,'rank'));
       return number(subject?row.subjects?.[subject]?.[mode==='raw'?'raw':'score']:row[mode==='raw'?'rawTotal':'total']);
     };
     content=examRail(atlas,exam,'exam',available)+ribbon([['参考人数',integer(summary.count),'缺总分 '+summary.missing+' 人'],['总分均分',number(summary.mean),'同类基准 '+number(snapshot.baseline.mean)],['特控达线',integer(summary.top),percent(summary.topRate)],['本科达线',integer(summary.under),percent(summary.underRate)]]);

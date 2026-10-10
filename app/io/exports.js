@@ -20,7 +20,7 @@ export async function excel(sheets,name='衡迹分析材料') {
 }
 export function scoreRows(atlas,rows) {
   const subjects=atlas.subjects(rows);
-  return [['考试','姓名','班级','科类','语种','赋分总分','原分总分','市排名','校排名','特控分差','本科分差',...subjects.flatMap(s=>[s+'赋分',s+'原分',s+'原排名',s+'特控分差',s+'本科分差'])],...rows.map(r=>[atlas.exam(r.exam).label,atlas.name(r.sid),r.classNo,r.track==='physics'?'物理类':'历史类',r.language,r.total,r.rawTotal,r.cityRank,r.schoolRank,atlas.gap(r,'top'),atlas.gap(r,'under'),...subjects.flatMap(s=>[r.subjects[s]?.score??null,r.subjects[s]?.raw??null,r.subjects[s]?.rank??null,atlas.gap(r,'top',s),atlas.gap(r,'under',s)])])];
+  return [['考试','姓名','班级','科类','语种','赋分总分','原分总分','市排名','校排名','特控分差','本科分差',...subjects.flatMap(s=>[s+'赋分',s+'原分',s+'原排名',s+'特控分差',s+'本科分差'])],...rows.map(r=>[atlas.exam(r.exam).label,atlas.name(r.sid),r.classNo,r.track==='physics'?'物理类':'历史类',r.language,r.total,r.rawTotal,r.cityRank,r.schoolRank,atlas.gap(r,'top'),atlas.gap(r,'under'),...subjects.flatMap(s=>[r.subjects[s]?.score??null,r.subjects[s]?.raw??null,atlas.subjectRank(r,s),atlas.gap(r,'top',s),atlas.gap(r,'under',s)])])];
 }
 export function effectiveRows(atlas,exam,comparison='') {
   const rows=[['班级','类别','届别','班主任','参考人数','均分','均分增量','特控有效人','特控增量','特控任务','本科有效人','本科增量','本科任务','特控线下10','特控线下20','本科线下10','本科线下20','特控英语','特控日语','本科英语','本科日语']];

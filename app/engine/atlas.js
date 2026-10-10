@@ -53,6 +53,7 @@ export class Atlas {
     return exams.map(exam=>{const rows=this.classAt(no,exam.id).filter(r=>!common||common.has(r.sid));return {exam,rows,summary:this.summary(rows)};});
   }
   story(sid){return this.stories.get(sid)||[];}
+  subjectRank(row,subject){const score=row.subjects?.[subject];return this.exam(row.exam).scope==='city'?score?.rank??null:score?.schoolRank??score?.rank??null;}
   percentile(row) {
     if(!valid(row?.total))return null;
     const peers=this.rows(row.exam).filter(r=>valid(r.total)&&groupKey(this.profile(r.classNo))===groupKey(this.profile(row.classNo)));
