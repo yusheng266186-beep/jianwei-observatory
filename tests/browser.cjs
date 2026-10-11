@@ -12,7 +12,7 @@ async function run(){
  const page=await context.newPage(),errors=[],failed=[],checks=[];page.setDefaultTimeout(6000);
  page.on('pageerror',e=>errors.push(e.message));page.on('response',r=>{if(r.status()>=400)failed.push(r.status()+' '+r.url());});
  const wait=()=>page.waitForTimeout(300);
- const click=async(s)=>{await page.locator(s).first().click();await wait();};
+ const click=async(s)=>{const target=page.locator(s).first(),scene=await target.evaluate(el=>el.dataset.cmd==='nav'?el.dataset.scene:null);await target.click();if(scene)await page.waitForFunction(scene=>{const stage=document.getElementById('stage');return stage.dataset.scene===scene&&stage.getAttribute('aria-busy')==='false';},scene);else await wait();};
  const check=async(name,fn)=>{try{await fn();checks.push({name,ok:true});console.log('PASS '+name);}catch(e){checks.push({name,ok:false,error:e.message});console.log('FAIL '+name+' '+e.message.slice(0,500));await page.screenshot({path:output+'/hengji-failure-'+checks.length+'.png'});}};
  await page.goto(process.env.AUDIT_URL||'http://127.0.0.1:4173');await page.waitForSelector('#navigation button');await wait();
  await check('首次打开为空白且所有入口可用',async()=>{assert.equal(await page.locator('body').getAttribute('data-workspace'),'empty');assert.equal(await page.locator('.research-button').isVisible(),false);for(const scene of ['board','class','papers','people','follow','library']){await click(`[data-cmd="nav"][data-scene="${scene}"]`);assert.equal(await page.locator('#welcome-title').count(),1);}await page.screenshot({path:output+'/hengji-empty-desktop.png'});});
