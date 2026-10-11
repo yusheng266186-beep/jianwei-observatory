@@ -1,24 +1,24 @@
-import {questionView,questionEvidence} from './ui/question.js?v=audit-20261011h';
-import {subjectView,knowledgeView,lensEvidence} from './ui/lenses.js?v=audit-20261011h';
-import {subjectLens,skillLens,questionLens} from './engine/lenses.js?v=audit-20261011h';
-import {directoryFilterView} from './scenes/directory.js?v=audit-20261011h';
-import {renderInto} from './ui/render.js?v=audit-20261011h';
-import {installInteractions,enhance,prepareUpdate,shiftTable} from './ui/interactions.js?v=audit-20261011h';
-import {readingDefaults,readingView,applyReading} from './ui/reading.js?v=audit-20261011h';
-import {reportView} from './ui/report.js?v=audit-20261011h';
-import {welcomeView} from './ui/welcome.js?v=audit-20261011h';
-import {composeScene} from './ui/composition.js?v=audit-20261011h';
-import {researchView,studyDescription,studyAvailable,studyKey} from './ui/research.js?v=audit-20261011h';
-import {Atlas} from './engine/atlas.js?v=audit-20261011h';
-import {normalizeDataset,SUBJECTS} from './data/compat.js?v=audit-20261011h';
-import {hydrate,save,restoreDataset,hasMaterials,preference,remember,preserveUndo,previous,emptyDataset,loadNotebook,saveNotebook} from './data/workspace.js?v=audit-20261011h';
-import {mergeDatasets} from './data/parser.js?v=audit-20261011h';
-import {Inbox} from './data/inbox.js?v=audit-20261011h';
-import {esc,button,empty,table} from './ui/html.js?v=audit-20261011h';
-import {excel,word,print,download,chart,scoreRows,effectiveRows,subjectRows,answerRows,evidence} from './io/exports.js?v=audit-20261011h';
-import {directoryDefaults,lensValues,queryDirectory,directoryViewValues,directoryViewName} from './engine/directory.js?v=audit-20261011h';
-import {peekView,compareView,drawerEvidence} from './ui/explorer.js?v=audit-20261011h';
-import {dockIcon} from './ui/icons.js?v=audit-20261011h';
+import {questionView,questionEvidence} from './ui/question.js?v=journey-20261011i';
+import {subjectView,knowledgeView,lensEvidence} from './ui/lenses.js?v=journey-20261011i';
+import {subjectLens,skillLens,questionLens} from './engine/lenses.js?v=journey-20261011i';
+import {directoryFilterView} from './scenes/directory.js?v=journey-20261011i';
+import {renderInto} from './ui/render.js?v=journey-20261011i';
+import {installInteractions,enhance,prepareUpdate,shiftTable} from './ui/interactions.js?v=journey-20261011i';
+import {readingDefaults,readingView,applyReading} from './ui/reading.js?v=journey-20261011i';
+import {reportView} from './ui/report.js?v=journey-20261011i';
+import {welcomeView} from './ui/welcome.js?v=journey-20261011i';
+import {composeScene} from './ui/composition.js?v=journey-20261011i';
+import {researchView,studyDescription,studyAvailable,studyKey} from './ui/research.js?v=journey-20261011i';
+import {Atlas} from './engine/atlas.js?v=journey-20261011i';
+import {normalizeDataset,SUBJECTS} from './data/compat.js?v=journey-20261011i';
+import {hydrate,save,restoreDataset,hasMaterials,preference,remember,preserveUndo,previous,emptyDataset,loadNotebook,saveNotebook} from './data/workspace.js?v=journey-20261011i';
+import {mergeDatasets} from './data/parser.js?v=journey-20261011i';
+import {Inbox} from './data/inbox.js?v=journey-20261011i';
+import {esc,button,empty,table} from './ui/html.js?v=journey-20261011i';
+import {excel,word,print,download,chart,scoreRows,effectiveRows,subjectRows,answerRows,evidence} from './io/exports.js?v=journey-20261011i';
+import {directoryDefaults,lensValues,queryDirectory,directoryViewValues,directoryViewName} from './engine/directory.js?v=journey-20261011i';
+import {peekView,compareView,drawerEvidence} from './ui/explorer.js?v=journey-20261011i';
+import {dockIcon} from './ui/icons.js?v=journey-20261011i';
 
 const routes=[['board','年级总览','▦'],['class','班级研究','▥'],['papers','试卷研究','▧'],['people','学生研究','◎'],['follow','教学跟进','↗'],['library','资料与报告','⊞']];
 const defaults={board:{mode:'overview',metric:'underRate',historyMetric:'mean',search:'',page:1},class:{tab:'snapshot',value:'score',trendMetric:'mean',matrix:'total',search:'',page:1,matched:false},papers:{key:'',tab:'map',classes:[],question:0,order:'paper',search:'',page:1},people:{sid:'',storyMetric:'total',...directoryDefaults,filtersOpen:innerWidth>760},follow:{tier:'under',band:20,side:'below',classes:[],search:'',page:1},library:{tab:'materials'}};
@@ -37,7 +37,7 @@ const converted=value=>value==='true'?true:value==='false'?false:value;
 const stage=()=>document.getElementById('stage');
 function notify(message,action={}) {
   const toast=document.getElementById('toast');pendingUndo=action.undo||null;
-  toast.innerHTML='<span>'+esc(message)+'</span>'+((action.undo||action.cmd)?button(esc(action.label||'撤销'),action.undo?'undo-action':action.cmd,{},'toast-action'):'');
+  toast.innerHTML='<span>'+esc(message)+'</span>'+((action.undo||action.cmd)?button(esc(action.label||'撤销'),action.undo?'undo-action':action.cmd,{},'toast-action'):'')+button('×','toast-close',{},'toast-dismiss','aria-label="关闭提示"');
   if(toast.showPopover){if(toast.matches(':popover-open'))toast.hidePopover();toast.showPopover();}
   toast.classList.add('visible');clearTimeout(notify.timer);notify.timer=setTimeout(()=>{toast.classList.remove('visible');if(toast.hidePopover&&toast.matches(':popover-open'))toast.hidePopover();pendingUndo=null;},action.undo||action.cmd?9000:4500);
 }
@@ -45,6 +45,23 @@ const tablePositionKey=el=>paintedObject+'|'+(el.closest('.block')?.querySelecto
 function closeReader(){const dialog=document.getElementById('table-reader');if(dialog.open)dialog.close();}
 async function dismissDialog(id){const dialog=document.getElementById(id);if(!dialog.open)return;if(!reducedMotion())try{await dialog.animate([{opacity:1,transform:'translateY(0) scale(1)'},{opacity:0,transform:'translateY(7px) scale(.985)'}],{duration:180,easing:'cubic-bezier(.4,0,1,1)'}).finished;}catch{}dialog.close();}
 function persistBooks(){remember('books',books);}
+function revealResults(root) {
+  const target=root.querySelector('.directory-controls,.lens-roster-tools,.roster-bar,.report-query,.table-frame');if(!target)return;
+  target.tabIndex=-1;target.focus({preventScroll:true});
+  const dialog=root.closest('dialog');
+  if(dialog){const offset=(dialog.querySelector('.drawer-top')?.clientHeight||0)+(dialog.querySelector('.drawer-tabs')?.clientHeight||0)+24;dialog.scrollTo({top:Math.max(0,dialog.scrollTop+target.getBoundingClientRect().top-dialog.getBoundingClientRect().top-offset),behavior:'instant'});}
+  else {const head=document.querySelector('.masthead').getBoundingClientRect(),outline=stage().querySelector('.study-outline'),offset=Math.max(head.bottom,outline?.getBoundingClientRect().bottom||0)+18;window.scrollTo({top:Math.max(0,scrollY+target.getBoundingClientRect().top-offset),behavior:'instant'});}
+}
+function drawerTablePositions(){return [...document.querySelectorAll('#drawer-content .table-frame')].map(el=>({key:el.dataset.tableKey,left:el.querySelector('.table-scroll')?.scrollLeft||0}));}
+function restoreDrawerPosition(state){document.getElementById('research-drawer').scrollTop=state.scrollTop||0;for(const item of state.tablePositions||[]){const frame=[...document.querySelectorAll('#drawer-content .table-frame')].find(el=>el.dataset.tableKey===item.key);if(frame)frame.querySelector('.table-scroll').scrollLeft=item.left;}enhance(document.getElementById('drawer-content'));}
+function comparisonContext() {
+  if(drawerState?.type==='person'||drawerState?.type==='subject')return drawerState.exam||'latest';
+  if(['question','knowledge'].includes(drawerState?.type))return drawerState.key.split('|')[1]||'latest';
+  if(drawerState?.type==='compare')return drawerState.context||'latest';
+  if(current==='people')return books.people.sid?(atlas.materialAt(books.people.sid,books.people.exam)?.exam||'latest'):books.people.directoryExam||'latest';
+  if(current==='papers')return books.papers.key.split('|')[1]||'latest';
+  return books[current].exam||'latest';
+}
 function persistResearch(){remember('research',research);}
 function compactDrawer(state){if(!state||!['person','question','compare','subject','knowledge'].includes(state.type))return null;const {queue,cursor,queueLabel,...rest}=state;return structuredClone(rest);}
 function studyNow() {
@@ -143,7 +160,7 @@ async function paint(transition=false,focus=null) {
     const available=hasMaterials(atlas.data);let view;
     if(!available)view=welcomeView();
     else {
-      if(!loaded.has(scene))loaded.set(scene,import('./scenes/'+scene+'.js?v=audit-20261011h'));
+      if(!loaded.has(scene))loaded.set(scene,import('./scenes/'+scene+'.js?v=journey-20261011i'));
       const module=await loaded.get(scene);if(serial!==paintId)return;
       view=scene==='class'&&!atlas.classes.length?{html:empty('先带入一个班的材料','从导入原表开始建立班级画布。')+button('导入材料','import',{},'accent'),report:null}:module.render(atlas,books[scene],session);
     }
@@ -219,8 +236,10 @@ async function commitMaterial(incoming,mode) {
   await restoreContext(dataset);
   await installDataset(dataset,{fresh:true});await store();notify('材料已加入工作区',{label:'撤回材料更新',cmd:'undo'});
 }
-function openReport(report) {
+function sameReport(a,b){return a.title===b.title&&a.subtitle===b.subtitle&&JSON.stringify(a.sections)===JSON.stringify(b.sections)&&JSON.stringify(a.sheets)===JSON.stringify(b.sheets);}
+function openReport(report,{fresh=false}={}) {
   if(!report){notify('先打开一个班级、学生或试卷，再摘录研究结果。');return;}
+  if(!report.id&&!fresh)report=session.notebook.find(note=>note.autoSaved&&sameReport(note,report))||report;
   if(exportReport?.id)saveNotebook(session.notebook).catch(()=>{});reportNoteRevision++;
   clearTimeout(noteTimer);exportReport=structuredClone(report);reportOrigin=report.id?(report.study||null):studyNow();
   if(reportOrigin&&!exportReport.study){exportReport.study=structuredClone(reportOrigin);exportReport.studyTitle=studyDescription(atlas,reportOrigin).title;}
@@ -228,7 +247,7 @@ function openReport(report) {
   const dialog=document.getElementById('report-dialog');if(!dialog.open)dialog.showModal();dialog.scrollTop=0;enhance(dialog);
 }
 function drawReport(){prepareUpdate();const content=document.getElementById('report-content');renderInto(content,reportView(exportReport,reportScope,{noteState:reportNoteState,canReturn:Boolean(reportOrigin&&studyAvailable(atlas,reportOrigin))}));enhance(content);}
-function showNoteState(state){reportNoteState=state;const el=document.getElementById('report-note-state');if(el){el.dataset.state=state;el.textContent={preview:'尚未留存 · 可保存为摘录',saving:'正在保存判断…',saved:'已保存到本机摘录',error:'本机保存未完成 · 请下载材料保留判断'}[state];}}
+function showNoteState(state){reportNoteState=state;const el=document.getElementById('report-note-state');if(el){el.dataset.state=state;el.textContent={preview:'写下判断后自动留存，空白预览不新增摘录',saving:'正在保存判断…',saved:'已保存到本机摘录',error:'本机保存未完成 · 请下载材料保留判断'}[state];}if(exportReport?.id){const label=document.querySelector('#report-content .inbox-top .overline');if(label)label.textContent=state==='saved'?'教学证据 / 已摘录':'教学证据 / 正在留存';const keep=document.querySelector('#report-content [data-cmd="report-keep"]');if(keep)keep.textContent='保存判断';}}
 async function persistReportNote() {
   if(!exportReport?.id){showNoteState('preview');return;}
   const note=session.notebook.find(n=>n.id===exportReport.id);if(!note)return;
@@ -242,9 +261,18 @@ async function keepReport() {
   await persistReportNote();drawReport();
   if(reportNoteState==='saved')notify('证据与判断已留在资料与报告');
 }
+async function finishReport() {
+  clearTimeout(noteTimer);if(exportReport?.id)await persistReportNote();else if(exportReport?.note?.trim())await keepReport();
+  if(reportNoteState==='error'){notify('判断尚未成功保存，请先下载这份材料保留记录。');return false;}return true;
+}
+async function closeReport() {
+  if(!await finishReport())return;
+  await dismissDialog('report-dialog');
+  if(current==='library'&&books.library.tab==='notebook')await paint();
+}
 async function capture(source=activeReport) {
   if(!source){openReport(null);return;}
-  openReport(source);await keepReport();document.getElementById('report-note')?.focus({preventScroll:true});
+  openReport(source,{fresh:true});await keepReport();document.getElementById('report-note')?.focus({preventScroll:true});
 }
 function drawDrawer() {
   const dialog=document.getElementById('research-drawer'),content=document.getElementById('drawer-content'),focus=document.activeElement?.dataset;
@@ -267,7 +295,7 @@ function drawDrawer() {
 }
 function openDrawer(state) {
   const dialog=document.getElementById('research-drawer');if(drawerClosing)return;
-  if(dialog.open&&drawerState)drawerTrail.push({...structuredClone(drawerState),scrollTop:dialog.scrollTop});else drawerTrail=[];
+  if(dialog.open&&drawerState)drawerTrail.push({...structuredClone(drawerState),scrollTop:dialog.scrollTop,tablePositions:drawerTablePositions()});else drawerTrail=[];
   drawerState=state;drawDrawer();dialog.scrollTop=0;
   if(dialog.open&&!reducedMotion())document.getElementById('drawer-content').animate([{opacity:.45,transform:'translateX(12px)'},{opacity:1,transform:'translateX(0)'}],{duration:260,easing:'cubic-bezier(.22,.8,.22,1)'});
   if(!dialog.open){drawerOpener=document.activeElement;dialog.showModal();document.body.classList.add('drawer-open');dialog.scrollTop=0;if(!reducedMotion())dialog.animate([{opacity:0,transform:'translateX(64px)'},{opacity:1,transform:'translateX(0)'}],{duration:420,easing:'cubic-bezier(.16,1,.3,1)'});}
@@ -357,7 +385,8 @@ async function commands(event) {
     if(d.cmd==='reading-set'||d.cmd==='reading-reset'){if(d.cmd==='reading-reset')Object.assign(reading,readingDefaults);else if(Object.hasOwn(readingDefaults,d.key))reading[d.key]=d.value;remember('reading',reading);applyReading(reading);if(reducedMotion())for(const animation of document.getAnimations())animation.cancel();renderInto(document.getElementById('reading-content'),readingView(reading));enhance();positionDock();return;}
     if(d.cmd==='undo-action'){const undo=pendingUndo;pendingUndo=null;if(undo){await undo();notify('已撤销刚才的操作');}return;}
     if(b.closest('#research-drawer')&&['nav','class','paper','lens-paper','subject-open','people-lens','inspect-bin','workbook-open','library-open'].includes(d.cmd))await closeDrawer();
-    if(d.cmd==='nav')go(d.scene);
+    if(d.cmd==='toast-close'){const toast=document.getElementById('toast');clearTimeout(notify.timer);toast.classList.remove('visible');if(toast.hidePopover&&toast.matches(':popover-open'))toast.hidePopover();pendingUndo=null;}
+    else if(d.cmd==='nav')go(d.scene);
     else if(d.cmd==='set'||d.cmd==='toggle')update(d.key,d.value,d.cmd==='toggle');
     else if(d.cmd==='import')inbox.choose();
     else if(d.cmd==='find'){if(!hasMaterials(atlas.data)){notify('导入成绩材料后即可查找学生');return;}go('people',{sid:'',...directoryDefaults},true);setTimeout(()=>stage().querySelector('[data-field="search"]')?.focus(),100);}
@@ -376,9 +405,10 @@ async function commands(event) {
     else if(d.cmd==='class-subject')openDrawer({type:'subject',no:Number(d.no||books.class.no),subject:['英语','日语'].includes(d.subject)?'外语':d.subject,exam:d.exam||books.class.exam,tab:'students',tier:'under',filter:'all',sort:'low',search:'',page:1});
     else if(d.cmd==='knowledge-open'){const classes=d.no?[Number(d.no)]:d.classes!==undefined?d.classes.split(',').filter(Boolean).map(Number):[...(books.papers.classes||[])],key=d.key||books.papers.key;if(!atlas.paper(key,classes).skills.some(s=>s.name===d.knowledge)){notify('这个知识点还没有题目材料');return;}openDrawer({type:'knowledge',key,knowledge:d.knowledge,classes,tab:'questions',filter:'all',sort:'low',search:'',page:1});}
     else if(d.cmd==='lens-filter'||d.cmd==='lens-sort'||d.cmd==='lens-tier'){drawerState[d.cmd==='lens-filter'?'filter':d.cmd==='lens-sort'?'sort':'tier']=d.value;drawerState.page=1;drawDrawer();}
-    else if(d.cmd==='lens-page'){drawerState.page=Math.max(1,(drawerState.page||1)+Number(d.step));drawDrawer();}
+    else if(d.cmd==='lens-page'){drawerState.page=Math.max(1,(drawerState.page||1)+Number(d.step));drawDrawer();revealResults(document.getElementById('drawer-content'));}
     else if(d.cmd==='lens-exam'){drawerState.exam=d.exam;drawerState.page=1;drawerState.search='';drawDrawer();animateDrawer();}
     else if(d.cmd==='knowledge-class')openDrawer({...structuredClone(drawerState),classes:[Number(d.no)],tab:'students',filter:'all',search:'',page:1});
+    else if(d.cmd==='question-all')openDrawer({...structuredClone(drawerState),classes:[],filter:'all',search:'',page:1});
     else if(d.cmd==='question-class')openDrawer({...structuredClone(drawerState),classes:[Number(d.no)],filter:'all',search:'',page:1});
     else if(d.cmd==='question-unfocus'){delete drawerState.focusSid;drawDrawer();}
     else if(d.cmd==='answer-question'){if(current==='papers'&&books.papers.key===d.key){books.papers.question=Number(d.index);persistBooks();await paint();}openDrawer({type:'question',key:d.key,question:Number(d.index),classes:d.classes?.split(',').filter(Boolean).map(Number)||[],focusSid:d.sid,filter:'all',page:1,search:''});}
@@ -387,10 +417,10 @@ async function commands(event) {
     else if(d.cmd==='drawer-question-subject'||d.cmd==='drawer-question-filter'){drawerState[d.cmd==='drawer-question-subject'?'subject':'questionFilter']=d.value;drawDrawer();}
     else if(d.cmd==='drawer-person-step'){const cursor=(drawerState.cursor||0)+Number(d.step),next=drawerState.queue?.[cursor];if(next){Object.assign(drawerState,next,{cursor});session.recent=[next.sid,...session.recent.filter(id=>id!==next.sid)].slice(0,12);remember('recent',session.recent);drawDrawer();document.getElementById('research-drawer').scrollTop=0;animateDrawer(Number(d.step));}}
     else if(d.cmd==='drawer-question-step'){const qs=atlas.paper(drawerState.key,drawerState.classes).questions,index=qs.findIndex(q=>q.index===drawerState.question)+Number(d.step);if(qs[index]){drawerState.question=qs[index].index;drawerState.page=1;drawerState.search='';if(current==='papers'&&books.papers.key===drawerState.key){books.papers.question=drawerState.question;persistBooks();paint();}drawDrawer();}}
-    else if(d.cmd==='drawer-question-page'){drawerState.page=Math.max(1,(drawerState.page||1)+Number(d.step));drawDrawer();}
+    else if(d.cmd==='drawer-question-page'){drawerState.page=Math.max(1,(drawerState.page||1)+Number(d.step));drawDrawer();revealResults(document.getElementById('drawer-content'));}
     else if(d.cmd==='person-section'){const section=document.getElementById(d.id);section?.scrollIntoView({behavior:reducedMotion()?'instant':'smooth',block:'start'});}
-    else if(d.cmd==='drawer-back'){if(drawerTrail.length){drawerState=drawerTrail.pop();drawDrawer();document.getElementById('research-drawer').scrollTop=drawerState.scrollTop||0;if(!reducedMotion())document.getElementById('drawer-content').animate([{opacity:.45,transform:'translateX(-12px)'},{opacity:1,transform:'translateX(0)'}],{duration:260,easing:'cubic-bezier(.22,.8,.22,1)'});}}
-    else if(d.cmd==='drawer-ancestor'){const index=Number(d.index),ancestor=drawerTrail[index];if(ancestor){drawerState=ancestor;drawerTrail=drawerTrail.slice(0,index);drawDrawer();document.getElementById('research-drawer').scrollTop=ancestor.scrollTop||0;animateDrawer(-1);}}
+    else if(d.cmd==='drawer-back'){if(drawerTrail.length){drawerState=drawerTrail.pop();drawDrawer();restoreDrawerPosition(drawerState);if(!reducedMotion())document.getElementById('drawer-content').animate([{opacity:.45,transform:'translateX(-12px)'},{opacity:1,transform:'translateX(0)'}],{duration:260,easing:'cubic-bezier(.22,.8,.22,1)'});}}
+    else if(d.cmd==='drawer-ancestor'){const index=Number(d.index),ancestor=drawerTrail[index];if(ancestor){drawerState=ancestor;drawerTrail=drawerTrail.slice(0,index);drawDrawer();restoreDrawerPosition(ancestor);animateDrawer(-1);}}
     else if(d.cmd==='drawer-close')await closeDrawer();
     else if(d.cmd==='drawer-capture')await capture(drawerReport());
     else if(d.cmd==='drawer-export')openReport(drawerReport());
@@ -398,7 +428,9 @@ async function commands(event) {
     else if(d.cmd==='directory-reset'){const context={directoryExam:state.directoryExam,view:state.view,pageSize:state.pageSize};Object.assign(state,directoryDefaults,context);persistBooks();await paint();drawDrawer();}
     else if(d.cmd==='directory-clear'){if(d.key==='range')Object.assign(state,{minScore:'',maxScore:'',maxExclusive:false});else state[d.key]=directoryDefaults[d.key];state.page=1;state.lens='custom';persistBooks();await paint();drawDrawer();}
     else if(d.cmd==='directory-lens'){Object.assign(state,lensValues(d.lens));persistBooks();paint(true);}
-    else if(d.cmd==='directory-filters')openDrawer({type:'filters'});
+    else if(d.cmd==='directory-apply'){await closeDrawer();revealResults(stage());}
+    else if(d.cmd==='directory-scope'){state.scopeExpanded=!state.scopeExpanded;persistBooks();await paint();}
+    else if(d.cmd==='directory-filters'){openDrawer({type:'filters'});if(d.focus)document.querySelector('#drawer-content [data-field="'+d.focus+'"]')?.focus();}
     else if(d.cmd==='directory-save'){openDrawer({type:'filters'});const input=document.querySelector('#drawer-content [name="view-name"]');input?.focus({preventScroll:true});input?.scrollIntoView({behavior:reducedMotion()?'instant':'smooth',block:'center'});}
     else if(d.cmd==='directory-restore'){const view=session.directoryViews.find(v=>v.id===d.id);if(view){if(view.values.directoryExam!=='latest'&&!atlas.exams.some(e=>e.id===view.values.directoryExam)){notify('这组筛选对应的考试尚未导入');return;}Object.assign(books.people,directoryDefaults,structuredClone(view.values),{sid:'',page:1,lens:'custom'});persistBooks();await closeDrawer();pagePositions.delete('people|');window.scrollTo({top:0,behavior:'instant'});await paint(true);notify('已打开“'+view.name+'”');}}
     else if(d.cmd==='directory-view-remove'){const index=session.directoryViews.findIndex(v=>v.id===d.id),view=session.directoryViews[index];if(view){session.directoryViews.splice(index,1);remember('directoryViews',session.directoryViews);await paint();notify('已移除常用筛选',{undo:async()=>{session.directoryViews.splice(Math.min(index,session.directoryViews.length),0,view);remember('directoryViews',session.directoryViews);await paint();}});}}
@@ -417,7 +449,7 @@ async function commands(event) {
       remember('comparePeople',session.comparePeople);await paint();drawDrawer();
     }
     else if(d.cmd==='compare-clear'){session.comparePeople=[];remember('comparePeople',[]);paint();}
-    else if(d.cmd==='compare-open') {if(session.comparePeople.length>=2)openDrawer({type:'compare',metric:'percentile',common:false,context:current==='people'&&!state.sid?state.directoryExam||'latest':'latest'});}
+    else if(d.cmd==='compare-open') {if(session.comparePeople.length>=2)openDrawer({type:'compare',metric:'percentile',common:false,context:comparisonContext()});}
     else if(d.cmd==='compare-metric'){drawerState.metric=d.value;drawDrawer();}
     else if(d.cmd==='compare-common'){drawerState.common=!drawerState.common;drawDrawer();}
     else if(d.cmd==='paper')go('papers',{key:d.key,classes:[],question:0,tab:'map',page:1});
@@ -425,14 +457,14 @@ async function commands(event) {
     else if(d.cmd==='paper-back')go('papers',{key:''});
     else if(d.cmd==='subject-open')go('board',{mode:'subjects',subject:d.subject,exam:d.exam});
     else if(d.cmd==='question'){const key=d.key||books.papers.key,classes=d.no?[Number(d.no)]:d.classes!==undefined?d.classes.split(',').filter(Boolean).map(Number):[...(books.papers.classes||[])];if(current==='papers'&&books.papers.key===key){books.papers.question=Number(d.index);persistBooks();await paint();}openDrawer({type:'question',key,classes,question:Number(d.index),page:1,search:''});}
-    else if(d.cmd==='page'){state.page=Math.max(1,(state.page||1)+Number(d.step));persistBooks();paint();}
+    else if(d.cmd==='page'){state.page=Math.max(1,(state.page||1)+Number(d.step));persistBooks();await paint();revealResults(stage());}
     else if(d.cmd==='capture')await capture();
     else if(d.cmd==='export')openReport(activeReport);
-    else if(d.cmd==='close-report'){clearTimeout(noteTimer);if(exportReport?.id)await persistReportNote();await dismissDialog('report-dialog');}
+    else if(d.cmd==='close-report')await closeReport();
     else if(d.cmd==='report-keep')await keepReport();
-    else if(d.cmd==='report-return'){clearTimeout(noteTimer);if(exportReport?.id)await persistReportNote();else if(exportReport?.note?.trim())await keepReport();if(reportNoteState==='error'){notify('判断尚未成功保存，请先下载这份材料保留记录。');return;}if(reportOrigin)await restoreStudy(reportOrigin);}
+    else if(d.cmd==='report-return'){if(await finishReport())if(reportOrigin)await restoreStudy(reportOrigin);}
     else if(d.cmd==='report-section'){Object.assign(reportScope,{section:Number(d.index),page:1,search:''});drawReport();}
-    else if(d.cmd==='report-page'){reportScope.page=Math.max(1,reportScope.page+Number(d.step));drawReport();}
+    else if(d.cmd==='report-page'){reportScope.page=Math.max(1,reportScope.page+Number(d.step));drawReport();revealResults(document.getElementById('report-content'));}
     else if(d.cmd==='report-excel'){const noteSheet=Object.hasOwn(exportReport.sheets,'教师判断')?'本份报告说明':'教师判断';await excel({...exportReport.sheets,[noteSheet]:[['摘录时间','研究来源','教师判断'],[exportReport.created||'',exportReport.studyTitle||exportReport.subtitle||'',exportReport.note||'']]},exportReport.title);}
     else if(d.cmd==='report-word')await word(exportReport);
     else if(d.cmd==='report-print')print(exportReport);
@@ -501,7 +533,7 @@ export async function mount() {
   window.addEventListener('resize',positionDock);
   document.addEventListener('scroll',()=>{if(hasMaterials(atlas.data))scheduleResearch();},{passive:true,capture:true});
   window.addEventListener('pagehide',()=>{archiveStudy();if(exportReport?.id)saveNotebook(session.notebook).catch(()=>{});});
-  document.getElementById('report-dialog').addEventListener('cancel',()=>{clearTimeout(noteTimer);if(exportReport?.id)persistReportNote();});
+  document.getElementById('report-dialog').addEventListener('cancel',async event=>{event.preventDefault();await closeReport();});
   document.addEventListener('keydown',event=>{if(event.target.matches('.student-dot,[data-plot-action]')&&['Enter',' '].includes(event.key)){event.preventDefault();event.target.dispatchEvent(new MouseEvent('click',{bubbles:true}));}});
   document.addEventListener('keydown',event=>{if(!drawer.open||event.altKey||event.ctrlKey||event.metaKey||!['ArrowLeft','ArrowRight'].includes(event.key)||event.target.closest('input,textarea,select,.table-scroll,.drawer-stages,.drawer-tabs'))return;const cmd=drawerState?.type==='person'?'drawer-person-step':drawerState?.type==='question'?'drawer-question-step':null,button=cmd&&drawer.querySelector('[data-cmd="'+cmd+'"][data-step="'+(event.key==='ArrowLeft'?-1:1)+'"]');if(button&&!button.disabled){event.preventDefault();button.click();}});
   document.addEventListener('compositionend',event=>{if(event.target.matches('[data-field],[data-drawer-field],[data-report-search],[data-research-search]'))event.target.dispatchEvent(new Event('input',{bubbles:true}));});
@@ -517,9 +549,9 @@ export async function mount() {
     if(target.dataset.researchSearch){researchScope.search=target.value;clearTimeout(researchSearchTimer);researchSearchTimer=setTimeout(drawResearch,130);}
     if(target.dataset.planNote){const plan=session.plans.find(p=>p.id===target.dataset.planNote);if(plan){plan.note=target.value;remember('plans',session.plans);}}
     if(target.dataset.evidenceNote){const note=session.notebook.find(n=>n.id===target.dataset.evidenceNote);if(note){note.note=target.value;clearTimeout(noteTimer);noteTimer=setTimeout(()=>saveNotebook(session.notebook).catch(()=>notify('请下载备份以保留摘录')),400);}}
-    if(target.id==='report-note'&&exportReport){exportReport.note=target.value;if(exportReport.id){const note=session.notebook.find(n=>n.id===exportReport.id);if(note){note.note=target.value;showNoteState('saving');clearTimeout(noteTimer);noteTimer=setTimeout(persistReportNote,400);}}else showNoteState('preview');}
+    if(target.id==='report-note'&&exportReport){exportReport.note=target.value;if(!exportReport.id&&target.value.trim()){exportReport.id='e'+crypto.randomUUID();exportReport.autoSaved=true;session.notebook.unshift(structuredClone(exportReport));}if(exportReport.id){const note=session.notebook.find(n=>n.id===exportReport.id);if(note){note.note=target.value;showNoteState('saving');clearTimeout(noteTimer);noteTimer=setTimeout(persistReportNote,400);}}else showNoteState('preview');}
   });
-  document.addEventListener('keydown',async event=>{if((event.metaKey||event.ctrlKey)&&event.key.toLowerCase()==='k'){event.preventDefault();if(document.getElementById('inbox').open)return;if(!hasMaterials(atlas.data)){notify('导入成绩材料后即可查找学生');return;}await closeDrawer();for(const dialog of document.querySelectorAll('dialog[open]'))if(dialog.id!=='inbox')dialog.close();go('people',{sid:'',...directoryDefaults},true);setTimeout(()=>stage().querySelector('[data-field="search"]')?.focus(),100);}});
+  document.addEventListener('keydown',async event=>{if((event.metaKey||event.ctrlKey)&&event.key.toLowerCase()==='k'){event.preventDefault();if(document.getElementById('inbox').open)return;if(!hasMaterials(atlas.data)){notify('导入成绩材料后即可查找学生');return;}if(document.getElementById('report-dialog').open&&!await finishReport())return;await closeDrawer();for(const dialog of document.querySelectorAll('dialog[open]'))if(dialog.id!=='inbox')dialog.close();go('people',{sid:'',...directoryDefaults},true);setTimeout(()=>stage().querySelector('[data-field="search"]')?.focus(),100);}});
   document.addEventListener('dragstart',event=>{const card=event.target.closest('[data-plan]');if(card)event.dataTransfer.setData('text/plain',card.dataset.plan);});
   document.addEventListener('dragover',event=>{if(event.target.closest('.follow-lane'))event.preventDefault();});
   document.addEventListener('dragenter',event=>event.target.closest('.follow-lane')?.classList.add('dragover'));

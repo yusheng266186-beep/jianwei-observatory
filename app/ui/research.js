@@ -1,6 +1,6 @@
-import {button,esc,empty} from './html.js?v=audit-20261011h';
-import {directoryViewName} from '../engine/directory.js?v=audit-20261011h';
-import {dockIcon} from './icons.js?v=audit-20261011h';
+import {button,esc,empty} from './html.js?v=journey-20261011i';
+import {directoryViewName} from '../engine/directory.js?v=journey-20261011i';
+import {dockIcon} from './icons.js?v=journey-20261011i';
 
 const scenes={board:'年级总览',class:'班级研究',papers:'试卷研究',people:'学生研究',follow:'教学跟进',library:'资料与报告'};
 const labels={overview:'本场概况',map:'逐题地图',targets:'有效与任务',subjects:'学科研究',history:'阶段对比',roster:'完整名单',snapshot:'本场剖面',knowledge:'知识点路径',classes:'班级热力',details:'逐题明细',students:'学生作答',responses:'单题作答',materials:'材料与备份',lines:'有效线',papers:'题目资料',exams:'考次与口径',notebook:'证据报告'};
@@ -45,8 +45,8 @@ function ordered(value) {
   return value&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(key=>[key,ordered(value[key])])):value;
 }
 export function studyKey(study) {
-  const drawer=study.drawer?{...study.drawer}:null;if(drawer)delete drawer.scrollTop;
-  const trail=(study.trail||[]).map(({scrollTop,...context})=>context),comparing=drawer?.type==='compare'||trail.some(d=>d.type==='compare');
+  const drawer=study.drawer?{...study.drawer}:null;if(drawer){delete drawer.scrollTop;delete drawer.tablePositions;}
+  const trail=(study.trail||[]).map(({scrollTop,tablePositions,...context})=>context),comparing=drawer?.type==='compare'||trail.some(d=>d.type==='compare');
   return JSON.stringify(ordered({scene:study.scene,values:study.values,drawer,trail,comparePeople:comparing?study.comparePeople:undefined}));
 }
 const date=value=>{try{return new Intl.DateTimeFormat('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(value));}catch{return '';}};

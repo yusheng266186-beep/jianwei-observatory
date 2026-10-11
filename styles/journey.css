@@ -1,0 +1,74 @@
+/* Controls follow the task: find a person, follow evidence, return to the list. */
+.scope-summary-mobile{display:none}
+.directory-query{margin-bottom:18px}
+.directory-secondary-actions{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:9px;margin:20px 0}
+.empty-result-actions{display:flex;justify-content:center;flex-wrap:wrap;gap:8px;margin:-10px 0 28px}
+.filter-range-error{margin:10px 0 0;color:var(--copper);font-size:12px}
+.score-range input[aria-invalid=true]{border-color:#cf8695;background:#fff8fa}
+.lens-scope .scope-expand{font-size:11px;color:var(--blue);min-height:30px;padding:5px 8px;white-space:normal}
+.personal-question-card.button{display:flex;flex-direction:column;align-items:stretch;justify-content:space-between;gap:0;min-width:0;min-height:176px;padding:20px;border:1px solid #ffffffee;border-radius:16px;background:linear-gradient(145deg,#ffffffba,#ffffff50),var(--rate-color);box-shadow:inset 0 1px 0 #fff,0 10px 26px -22px #18273e40;white-space:normal;text-align:left;color:var(--ink);position:relative;overflow:hidden;transition:transform .28s var(--ease),border-color .2s,box-shadow .28s}
+.personal-question-card.button:hover{transform:translateY(-3px);border-color:#b6c7ff;box-shadow:inset 0 1px 0 #fff,0 12px 30px -18px #365dff35}
+.personal-question-card.button:active{transform:translateY(0) scale(.985)}
+.personal-question-card header{display:flex;flex-direction:column;gap:5px}
+.personal-question-card header b{font-size:14px;font-weight:600}
+.personal-question-card header span{font-size:11px;line-height:1.6;min-height:32px;color:var(--muted);overflow-wrap:anywhere}
+.personal-question-card strong{display:block;font-size:27px;font-weight:580;letter-spacing:-.8px;margin:18px 0 14px}
+.personal-question-card strong small{font-size:11px;font-weight:400;letter-spacing:0;color:var(--muted)}
+.personal-question-card footer{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:11px;color:var(--muted);border-top:1px solid #dde3f180;padding-top:10px}
+.personal-question-card footer i{font-style:normal;color:var(--blue);font-size:16px;transition:transform .28s var(--ease)}
+.personal-question-card:hover footer i{transform:translate(2px,-2px)}
+.skill-question-link.button{font-size:11px;padding:5px 8px;min-height:30px;white-space:normal;color:var(--blue);border-color:#dde4f7;background:#ffffff9e;margin:3px 3px 0 0}
+.directory-controls:focus,.roster-bar:focus,.lens-roster-tools:focus,.report-query:focus{outline:none}
+#toast{inset:94px 24px auto auto;transform:translateY(-8px);gap:10px;max-width:min(420px,calc(100vw - 32px));padding:10px 12px 10px 16px}
+#toast.visible{transform:translateY(0);pointer-events:none}
+#toast>span{min-width:0;overflow-wrap:anywhere}
+#toast .toast-action,#toast .toast-dismiss{pointer-events:auto;flex-shrink:0}
+#toast .toast-dismiss{min-height:28px;min-width:28px;padding:3px;font-size:19px;font-weight:400;color:#ffffffb8;background:transparent;border:0}
+@media(max-width:760px){
+ #stage[data-scene=people]:has(.directory-head)>.study-return{min-height:34px;margin-bottom:12px}
+ .directory-head{position:relative;padding-right:36px;margin-bottom:12px;gap:10px}
+ .directory-head h1{font-size:28px;letter-spacing:-1px}
+ .directory-head .head-actions{position:absolute;right:0;top:5px}
+ .directory-head .study-save{padding:4px 7px;min-height:32px}
+ .directory-head p{font-size:11px;margin-bottom:0}
+ .directory-head .overline{margin-bottom:8px}
+ .directory-exams{display:flex;align-items:center;gap:9px;margin:10px 0 12px}
+ .directory-exams>span{white-space:nowrap;margin:0;font-size:10px}
+ .directory-exams>.chips{min-width:0;flex:1;padding-bottom:0}
+ .directory-results .directory-query>.button:last-child{display:inline-flex}
+ .scope-summary-mobile{display:flex;align-items:center;justify-content:space-between;gap:12px}
+ .scope-summary-mobile>div{display:flex;flex-direction:column;gap:3px;min-width:0}
+ .scope-summary-mobile span{font-size:10px;color:var(--muted)}
+ .scope-summary-mobile b{font-size:12px;font-weight:560;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ .scope-adjust.button{color:var(--blue);font-size:11px;min-height:35px;padding:6px 8px;flex-shrink:0}
+ .scope-adjust>span{transition:transform .25s var(--ease);font-size:14px;color:var(--blue)}
+ .scope-adjust[aria-expanded=true]>span{transform:rotate(180deg)}
+ .student-scope{padding:11px 15px;margin-bottom:10px}
+ .student-scope[data-expanded=false] .scope-controls{display:none}
+ .student-scope[data-expanded=true] .scope-controls{margin-top:16px;padding-top:14px;border-top:1px solid var(--line);animation:scope-arrive .25s var(--ease)}
+ .directory-results>.subject-focus{display:none}
+ .directory-query{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;padding:0}
+ .directory-query>.search-input{grid-column:1 / -1;width:100%;min-height:42px;font-size:13px}
+ .directory-query>.button{min-height:36px}
+ .directory-workspace{gap:15px}
+ .directory-controls{margin:10px 0}
+ .directory-controls>div{min-width:0;flex:1}
+ .directory-controls h2{font-size:18px}
+ .directory-controls p{white-space:nowrap;text-overflow:ellipsis;overflow:hidden;max-width:170px}
+ .result-tools{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding:3px 0 6px;gap:6px;margin-bottom:10px}
+ .result-tools>.chips{flex-wrap:nowrap}
+ .result-tools .button,.result-tools>span{flex-shrink:0;white-space:nowrap}
+ .result-tools .chip{min-height:30px;padding:5px 8px;font-size:10px}
+ .directory-lenses .lens-button{flex:0 0 124px;min-height:44px;height:44px;padding:8px 10px}
+ .directory-lenses .lens-button small{display:none}
+ .directory-lenses .lens-button strong{font-size:16px}
+ .personal-question-card.button{padding:16px;min-height:164px;border-radius:14px}
+ .personal-question-card strong{font-size:25px;margin:15px 0 10px}
+ .personal-question-card header span{font-size:11px}
+ .personal-questions{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .empty-result-actions .button{font-size:11px}
+ #toast{inset:82px 16px auto auto;font-size:11px;max-width:calc(100vw - 32px)}
+}
+@keyframes scope-arrive{from{opacity:.2;transform:translateY(-5px)}to{opacity:1;transform:translateY(0)}}
+body[data-motion=calm] .scope-controls{animation:none!important}
+@media(prefers-reduced-motion:reduce){.scope-controls{animation:none!important}}
