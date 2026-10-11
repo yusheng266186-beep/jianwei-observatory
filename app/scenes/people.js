@@ -1,8 +1,8 @@
-import {renderDirectory} from './directory.js?v=empty-20261011d';
-import {head,button,chips,badge,block,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote,empty} from '../ui/html.js?v=empty-20261011d';
-import {trajectory,chartButtons,rateColor} from '../ui/plots.js?v=empty-20261011d';
-import {difference,valid,sum} from '../engine/metrics.js?v=empty-20261011d';
-import {scoreRows,answerRows,evidence} from '../io/exports.js?v=empty-20261011d';
+import {renderDirectory} from './directory.js?v=clarity-20261011e';
+import {head,button,chips,badge,block,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote,empty} from '../ui/html.js?v=clarity-20261011e';
+import {trajectory,chartButtons,rateColor,rateLegend} from '../ui/plots.js?v=clarity-20261011e';
+import {difference,valid,sum} from '../engine/metrics.js?v=clarity-20261011e';
+import {scoreRows,answerRows,evidence} from '../io/exports.js?v=clarity-20261011e';
 export function render(atlas,state,session) {
   const story=state.sid?atlas.story(state.sid):[];
   if(!story.length)return renderDirectory(atlas,state,session);
@@ -25,7 +25,7 @@ export function render(atlas,state,session) {
     const groups=new Map();for(const q of visibleQuestions)for(const name of (q.knowledge||'未标注').split(/[,，;；]/).map(s=>s.trim()).filter(Boolean)){if(!groups.has(name))groups.set(name,[]);groups.get(name).push(q);}
     questionBody='<div class="personal-skills">'+[...groups].map(([name,qs])=>{const known=qs.filter(q=>q.max>0&&valid(q.score)),max=sum(known.map(q=>q.max)),earned=sum(known.map(q=>q.score)),rate=max?earned/max:null;return '<article><header><b>'+esc(name)+'</b><strong>'+percent(rate)+'</strong></header><div class="skill-track"><i style="width:'+Math.max(0,Math.min(100,(rate||0)*100))+'%"></i></div><p>'+qs.length+' 道关联题 · 可计算 '+known.length+' 道 · 失分 '+number(known.length?sum(known.map(q=>q.loss)):null)+'</p><div>'+qs.map(q=>badge(q.label+'题 · '+number(q.score)+' / '+number(q.max))).join('')+'</div></article>';}).join('')+'</div>';
   }
-  canvas+='<div id="person-questions" class="section-anchor">'+block('个人学科小题',questionControls+(questions.length?(visibleQuestions.length?questionBody:empty('当前小题条件没有记录','切换为全部小题继续查看。')):empty('本次没有小题记录','可在资料仓追加该考次的小题工作簿。')),'题号、满分与得分来自原表。知识点结构只使用明确满分且有作答的题目。')+'</div>';
+  canvas+='<div id="person-questions" class="section-anchor">'+block('个人学科小题',questionControls+(questions.length&&state.questionView!=='table'?rateLegend():'')+(questions.length?(visibleQuestions.length?questionBody:empty('当前小题条件没有记录','切换为全部小题继续查看。')):empty('本次没有小题记录','可在资料仓追加该考次的小题工作簿。')),'题号、满分与得分来自原表。知识点结构只使用明确满分且有作答的题目。')+'</div>';
   canvas+='<details class="record-accordion"><summary><span>完整阶段原表</span><small>'+story.length+' 次考试 · 原分、折合分、原排名与距线</small></summary>'+block('阶段记录原表',table(['考试','实际班级','赋分总分','原分总分','原排名','同类分位','特控分差','本科分差'],story.map(record=>[esc(atlas.exam(record.exam).label),esc(record.classNo+'班'),number(record.total),number(record.rawTotal),integer(atlas.value(record,'rank')),number(atlas.percentile(record)),delta(atlas.gap(record,'top')),delta(atlas.gap(record,'under'))])))+'</details>';
   const html=head('04 / 学生档案',person?.name||atlas.name(row.sid),'当前观察 '+atlas.exam(row.exam).label+' · '+row.classNo+'班',button('← 查找其他学生','person-back',{},'outline')+button('摘录','capture',{},'outline')+button('导出','export',{},'accent'))+'<div class="person-passport">'+badge(p.cohort==='repeat'?'补习班':'应届班')+badge(p.track==='physics'?'物理类':'历史类')+badge(row.language||'外语未填写')+'<span>点选考次，展开当次学科与小题。</span></div><div class="person-section-nav">'+button('阶段变化','person-section',{id:'person-history'},'outline')+button('学科表现','person-section',{id:'person-subjects'},'outline')+button('个人小题','person-section',{id:'person-questions'},'outline')+'</div><div class="person-workspace">'+timeline+'<div class="person-canvas">'+canvas+'</div></div>'+footnote('原排名统计范围可能随考次变化；跨考试比较可使用同类分位与距有效线分差。');
   const allAnswers=atlas.data.answers.filter(a=>a.sid===state.sid);

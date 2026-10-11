@@ -1,6 +1,7 @@
-import {esc,number,percent,attrs} from './html.js?v=empty-20261011d';
-import {valid} from '../engine/metrics.js?v=empty-20261011d';
-const colors=['#376a9f','#333e4c','#8d9eaf','#6c879b'];
+import {esc,number,percent,attrs} from './html.js?v=clarity-20261011e';
+import {valid} from '../engine/metrics.js?v=clarity-20261011e';
+export const seriesColors=['#365dff','#202735','#7996e4','#9689b7'];
+const colors=seriesColors;
 const action=item=>item?.cmd?' data-plot-action="true" data-cmd="'+esc(item.cmd)+'"'+attrs(item.data||{})+' role="button" tabindex="0"':'';
 export function trajectory(id,labels,series,{suffix='',zero=false}={}) {
   const values=series.flatMap(s=>s.values).filter(valid);if(!values.length)return '<div class="plot-empty">暂无可绘制的成绩</div>';
@@ -18,18 +19,18 @@ export function trajectory(id,labels,series,{suffix='',zero=false}={}) {
   return '<div class="plot-legend">'+series.map((s,i)=>'<span><i style="background:'+(s.color||colors[i%colors.length])+'"></i>'+esc(s.name)+'</span>').join('')+'</div><svg id="'+id+'" class="trajectory" viewBox="0 0 '+w+' '+h+'" role="'+(series.some(s=>s.points?.some(p=>p?.cmd))?'group':'img')+'" aria-label="成绩趋势">'+content+'</svg>';
 }
 export function bars(id,items,{percentages=false,signed=false}={}) {
-  const measured=items.map(r=>r.value).filter(valid),max=Math.max(1,...measured.map(Math.abs)),w=860,h=Math.max(70,items.length*37+20),base=signed?490:190;
+  const measured=items.map(r=>r.value).filter(valid),max=Math.max(1,...measured.map(Math.abs)),w=1060,h=Math.max(70,items.length*37+20),base=signed?490:190;
   return '<svg id="'+id+'" class="bars" viewBox="0 0 '+w+' '+h+'" role="group" aria-label="横向比较">'+items.map((item,i)=>{
     const y=15+i*37,value=item.value,width=valid(value)?Math.abs(value)/max*(signed?260:540):0,start=signed&&value<0?base-width:base,label=String(item.label),display=label.length>14?label.slice(0,13)+'…':label;
-    return '<g class="plot-item"'+action(item)+'><title>'+esc(label)+'：'+(percentages?percent(value):number(value))+'</title><rect x="0" y="'+(y-4)+'" width="'+w+'" height="33" fill="transparent"/><text x="174" y="'+(y+15)+'" text-anchor="end">'+esc(display)+'</text><line x1="'+base+'" x2="'+base+'" y1="'+y+'" y2="'+(y+22)+'" stroke="#d9dfe6"/><rect class="plot-bar" x="'+start+'" y="'+y+'" width="'+width+'" height="22" rx="5" fill="'+(value<0?'#8b6262':'#376a9f')+'"/><text x="790" y="'+(y+15)+'">'+(percentages?percent(value):number(value))+'</text></g>';
+    return '<g class="plot-item"'+action(item)+'><title>'+esc(label)+'：'+(percentages?percent(value):number(value))+'</title><rect x="0" y="'+(y-4)+'" width="'+w+'" height="33" fill="transparent"/><text x="174" y="'+(y+15)+'" text-anchor="end">'+esc(display)+'</text><line x1="'+base+'" x2="'+base+'" y1="'+y+'" y2="'+(y+22)+'" stroke="#d9dfe6"/><rect class="plot-bar" x="'+start+'" y="'+y+'" width="'+width+'" height="22" rx="5" fill="'+(value<0?'#ba5364':'#365dff')+'"/><text x="790" y="'+(y+15)+'">'+(percentages?percent(value):number(value))+'</text></g>';
   }).join('')+'</svg>';
 }
 export function spread(id,values,lines=[],scope=null) {
   const list=values.filter(valid);if(!list.length)return '<div class="plot-empty">暂无总分</div>';
   const step=25,lo=Math.floor(Math.min(...list)/step)*step,hi=Math.ceil((Math.max(...list)+1)/step)*step,bins=[];for(let v=lo;v<hi;v+=step)bins.push({start:v,count:list.filter(s=>s>=v&&s<v+step).length});
   const w=780,h=225,l=40,r=20,t=30,b=35,bw=(w-l-r)/bins.length,max=Math.max(1,...bins.map(s=>s.count)),xy=value=>l+(value-lo)/(hi-lo)*(w-l-r);
-  const columns=bins.map((bin,i)=>{const height=bin.count/max*(h-t-b),x=l+i*bw+2;return '<g class="plot-item"'+action(scope?{cmd:'inspect-bin',data:{...scope,min:bin.start,max:bin.start+step}}:null)+'><title>'+bin.start+'–'+(bin.start+step)+'分（不含上界）：'+bin.count+'人</title><rect x="'+x+'" y="'+t+'" width="'+Math.max(1,bw-4)+'" height="'+(h-b-t)+'" fill="transparent"/><rect class="plot-column" x="'+x+'" y="'+(h-b-height)+'" width="'+Math.max(1,bw-4)+'" height="'+height+'" rx="3" fill="#8da5bd"/>'+(bins.length<=18?'<text x="'+(x+(bw-4)/2)+'" y="'+(h-b-height-7)+'" text-anchor="middle">'+bin.count+'</text>':'')+'</g>';}).join('');
-  const markers=lines.filter(line=>valid(line.value)&&line.value>=lo&&line.value<=hi).map((line,i)=>'<line x1="'+xy(line.value)+'" x2="'+xy(line.value)+'" y1="8" y2="'+(h-b)+'" stroke="#384a5d" stroke-width="1.5" stroke-dasharray="4 4"/><text x="'+(xy(line.value)+4)+'" y="'+(12+i*13)+'" fill="#384a5d">'+esc(line.label)+' '+number(line.value,0)+'</text>').join('');
+  const columns=bins.map((bin,i)=>{const height=bin.count/max*(h-t-b),x=l+i*bw+2;return '<g class="plot-item"'+action(scope?{cmd:'inspect-bin',data:{...scope,min:bin.start,max:bin.start+step}}:null)+'><title>'+bin.start+'–'+(bin.start+step)+'分（不含上界）：'+bin.count+'人</title><rect x="'+x+'" y="'+t+'" width="'+Math.max(1,bw-4)+'" height="'+(h-b-t)+'" fill="transparent"/><rect class="plot-column" x="'+x+'" y="'+(h-b-height)+'" width="'+Math.max(1,bw-4)+'" height="'+height+'" rx="3" fill="#7899ed"/>'+(bins.length<=18?'<text x="'+(x+(bw-4)/2)+'" y="'+(h-b-height-7)+'" text-anchor="middle">'+bin.count+'</text>':'')+'</g>';}).join('');
+  const markers=lines.filter(line=>valid(line.value)&&line.value>=lo&&line.value<=hi).map((line,i)=>'<line x1="'+xy(line.value)+'" x2="'+xy(line.value)+'" y1="8" y2="'+(h-b)+'" stroke="#333d55" stroke-width="1.5" stroke-dasharray="4 4"/><text x="'+(xy(line.value)+4)+'" y="'+(12+i*13)+'" fill="#333d55">'+esc(line.label)+' '+number(line.value,0)+'</text>').join('');
   return '<svg id="'+id+'" viewBox="0 0 '+w+' '+h+'" class="spread" role="group" aria-label="总分分布">'+columns+markers+bins.filter((_,i)=>i%Math.max(1,Math.ceil(bins.length/10))===0).map(bin=>'<text x="'+xy(bin.start)+'" y="'+(h-8)+'">'+bin.start+'</text>').join('')+'</svg>';
 }
 export function mini(values) {
@@ -38,5 +39,8 @@ export function mini(values) {
   values.forEach((v,i)=>{if(!valid(v)){previous=false;return;}path+=(previous?'L':'M')+i*105/Math.max(1,values.length-1)+','+(25-(v-low)/(high-low||1)*22)+' ';previous=true;});
   return '<svg viewBox="0 0 110 28" class="mini" aria-hidden="true"><path d="'+path+'" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>';
 }
-export const rateColor=rate=>rate===null?'#f1f3f5':rate<.5?'#e6e9ed':rate<.75?'#d9e3ed':'#bfd1e3';
+export const rateColor=rate=>!valid(rate)?'#f0f1f5':rate<.5?'#fdeaea':rate<.75?'#f1f4fa':'#e1e9ff';
+export function rateLegend() {
+  return '<div class="rate-legend" aria-label="得分率颜色说明"><span>得分率</span>'+[[.25,'低于50%'],[.6,'50%至75%以下'],[.9,'75%及以上'],[null,'无法计算']].map(([rate,label])=>'<span><i style="background:'+rateColor(rate)+'"></i>'+label+'</span>').join('')+'</div>';
+}
 export function chartButtons(id){return '<div class="chart-buttons"><button data-cmd="svg" data-id="'+id+'">SVG ↗</button><button data-cmd="png" data-id="'+id+'">PNG ↗</button></div>';}

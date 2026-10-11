@@ -1,7 +1,7 @@
-import {head,button,chips,badge,block,examRail,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote,classPicker} from '../ui/html.js?v=empty-20261011d';
-import {trajectory,bars,spread,chartButtons} from '../ui/plots.js?v=empty-20261011d';
-import {difference,average,valid,maxScore} from '../engine/metrics.js?v=empty-20261011d';
-import {scoreRows,evidence} from '../io/exports.js?v=empty-20261011d';
+import {head,button,chips,badge,block,examRail,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote,classPicker} from '../ui/html.js?v=clarity-20261011e';
+import {trajectory,bars,spread,chartButtons} from '../ui/plots.js?v=clarity-20261011e';
+import {difference,average,valid,maxScore} from '../engine/metrics.js?v=clarity-20261011e';
+import {scoreRows,evidence} from '../io/exports.js?v=clarity-20261011e';
 const rowsSection=(title,headers,rows)=>({title,headers,rows});
 export function render(atlas,state) {
   const no=state.no||atlas.classes[0],available=atlas.classExams(no),exam=available.some(e=>e.id===state.exam)?state.exam:available.at(-1)?.id||atlas.latest;
@@ -46,7 +46,10 @@ export function render(atlas,state) {
       if(mode==='rank')return integer(subject?atlas.subjectRank(row,subject):atlas.value(row,'rank'));
       return number(subject?atlas.subject(row,subject)?.[mode==='raw'?'raw':'score']:row[mode==='raw'?'rawTotal':'total']);
     };
+    const relative=subjects.map(s=>({...s,distance:difference(s.own.mean,s.peers.mean)})).filter(s=>valid(s.distance)).sort((a,b)=>a.distance-b.distance),focus=relative[0],near=atlas.critical(exam,{tier:'under',band:20,side:'both',classes:[Number(no)]});
+    const clue=focus?.distance<0?focus.subject+'较同科类均分低 '+number(Math.abs(focus.distance))+' 分':focus?'从学科相对位置继续研究':'先从本场成绩建立观察';
     content=examRail(atlas,exam,'exam',available)+ribbon([['参考人数',integer(summary.count),'缺总分 '+summary.missing+' 人'],['总分均分',number(summary.mean),'同类基准 '+number(snapshot.baseline.mean)],['特控达线',integer(summary.top),percent(summary.topRate)],['本科达线',integer(summary.under),percent(summary.underRate)]]);
+    content+='<aside class="research-brief" data-study-title="教学线索"><div><span class="overline">可继续展开的证据</span><h2>'+esc(clue)+'</h2><p>'+(summary.underBase?'本科有效线两侧20分内有 '+near.length+' 位学生。进入名单后，再结合历次与逐题得分观察。':'本场还没有可计算本科距线的记录，请补齐有效线与总分材料。')+'</p></div><div class="brief-actions">'+(focus?button('研究'+esc(focus.subject)+' ↗','subject-open',{subject:focus.subject,exam},'outline'):'')+(summary.underBase?button('打开临界名单 ↗','people-lens',{lens:'nearUnder',no,exam},'accent'):summary.count?button('补充本场有效线','library-open',{tab:'lines',exam},'accent'):button('补充成绩材料','import',{},'accent'))+'</div></aside>';
     content+='<div class="class-split">'+block('学科相对位置',bars('subject-distance',subjects.map(s=>({label:s.subject,value:difference(s.own.mean,s.peers.mean),cmd:'subject-open',data:{subject:s.subject,exam}})),{signed:true}),'班级均分减同科类基准，含17、18班。',chartButtons('subject-distance'))+block('总分分布',spread('class-distribution',rows.map(r=>r.total),rows[0]?[{label:'特控',value:atlas.line(rows[0],'top')},{label:'本科',value:atlas.line(rows[0],'under')}]:[],{exam,classes:String(no)}),'每个柱为25分区间；点击柱子打开对应学生。',chartButtons('class-distribution'))+'</div>';
     const subRows=subjects.map(s=>[s.subject,atlas.teacher(no,s.subject)||'',s.own.mean,s.own.raw,s.own.median,s.own.sd,difference(s.own.mean,s.peers.mean),s.own.top,s.own.topDouble,s.own.under,s.own.underDouble]);
     const subjectTable=table(['学科','教师','赋分均分','原分均分','中位数','标准差','基准差','特控 / 双上线','本科 / 双上线'],subjects.map(s=>[button(esc(s.subject),'subject-open',{subject:s.subject,exam},'person-link'),esc(atlas.teacher(no,s.subject)||'—'),number(s.own.mean),number(s.own.raw),number(s.own.median),number(s.own.sd),delta(difference(s.own.mean,s.peers.mean)),integer(s.own.top)+' / '+integer(s.own.topDouble),integer(s.own.under)+' / '+integer(s.own.underDouble)]));

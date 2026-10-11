@@ -34,4 +34,4 @@ export function field(label,name,value,type='text',extra='') {return '<label cla
 export function radio(name,options,value) {return '<div class="radio-line">'+options.map(([id,label])=>'<label><input type="radio" name="'+esc(name)+'" value="'+esc(id)+'" '+(String(id)===String(value)?'checked':'')+'><span>'+esc(label)+'</span></label>').join('')+'</div>';}
 export function toolbar(key,options,value,label='') {return '<div class="toolbar">'+(label?'<span class="toolbar-label">'+esc(label)+'</span>':'')+chips(key,options,value)+'</div>';}
 export const search=(key,value,placeholder='查找姓名')=>'<input class="search-input" type="search" data-field="'+esc(key)+'" value="'+esc(value||'')+'" placeholder="'+esc(placeholder)+'" aria-label="'+esc(placeholder)+'">';
-export const footnote=text=>'<p class="footnote">'+esc(text)+'</p>';
+export const footnote=text=>'<details class="method-note"><summary>阅读口径与数据说明<span aria-hidden="true">⌄</span></summary><p class="footnote">'+esc(text)+'</p></details>';

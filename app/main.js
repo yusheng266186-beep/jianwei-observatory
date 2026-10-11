@@ -1,20 +1,21 @@
-import {questionView,questionEvidence} from './ui/question.js?v=empty-20261011d';
-import {directoryFilterView} from './scenes/directory.js?v=empty-20261011d';
-import {renderInto} from './ui/render.js?v=empty-20261011d';
-import {installInteractions,enhance,prepareUpdate,shiftTable} from './ui/interactions.js?v=empty-20261011d';
-import {readingDefaults,readingView,applyReading} from './ui/reading.js?v=empty-20261011d';
-import {reportView} from './ui/report.js?v=empty-20261011d';
-import {welcomeView} from './ui/welcome.js?v=empty-20261011d';
-import {Atlas} from './engine/atlas.js?v=empty-20261011d';
-import {normalizeDataset,SUBJECTS} from './data/compat.js?v=empty-20261011d';
-import {hydrate,save,restoreDataset,hasMaterials,preference,remember,preserveUndo,previous,emptyDataset,loadNotebook,saveNotebook} from './data/workspace.js?v=empty-20261011d';
-import {mergeDatasets} from './data/parser.js?v=empty-20261011d';
-import {Inbox} from './data/inbox.js?v=empty-20261011d';
-import {esc,button,empty,table} from './ui/html.js?v=empty-20261011d';
-import {excel,word,print,download,chart,scoreRows,effectiveRows,subjectRows,answerRows,evidence} from './io/exports.js?v=empty-20261011d';
-import {directoryDefaults,lensValues,queryDirectory,directoryViewValues,directoryViewName} from './engine/directory.js?v=empty-20261011d';
-import {peekView,compareView,drawerEvidence} from './ui/explorer.js?v=empty-20261011d';
-import {dockIcon} from './ui/icons.js?v=empty-20261011d';
+import {questionView,questionEvidence} from './ui/question.js?v=clarity-20261011e';
+import {directoryFilterView} from './scenes/directory.js?v=clarity-20261011e';
+import {renderInto} from './ui/render.js?v=clarity-20261011e';
+import {installInteractions,enhance,prepareUpdate,shiftTable} from './ui/interactions.js?v=clarity-20261011e';
+import {readingDefaults,readingView,applyReading} from './ui/reading.js?v=clarity-20261011e';
+import {reportView} from './ui/report.js?v=clarity-20261011e';
+import {welcomeView} from './ui/welcome.js?v=clarity-20261011e';
+import {composeScene} from './ui/composition.js?v=clarity-20261011e';
+import {Atlas} from './engine/atlas.js?v=clarity-20261011e';
+import {normalizeDataset,SUBJECTS} from './data/compat.js?v=clarity-20261011e';
+import {hydrate,save,restoreDataset,hasMaterials,preference,remember,preserveUndo,previous,emptyDataset,loadNotebook,saveNotebook} from './data/workspace.js?v=clarity-20261011e';
+import {mergeDatasets} from './data/parser.js?v=clarity-20261011e';
+import {Inbox} from './data/inbox.js?v=clarity-20261011e';
+import {esc,button,empty,table} from './ui/html.js?v=clarity-20261011e';
+import {excel,word,print,download,chart,scoreRows,effectiveRows,subjectRows,answerRows,evidence} from './io/exports.js?v=clarity-20261011e';
+import {directoryDefaults,lensValues,queryDirectory,directoryViewValues,directoryViewName} from './engine/directory.js?v=clarity-20261011e';
+import {peekView,compareView,drawerEvidence} from './ui/explorer.js?v=clarity-20261011e';
+import {dockIcon} from './ui/icons.js?v=clarity-20261011e';
 
 const routes=[['board','年级总览','▦'],['class','班级研究','▥'],['papers','试卷研究','▧'],['people','学生研究','◎'],['follow','教学跟进','↗'],['library','资料与报告','⊞']];
 const defaults={board:{mode:'overview',metric:'underRate',historyMetric:'mean',search:'',page:1},class:{tab:'snapshot',value:'score',trendMetric:'mean',matrix:'total',search:'',page:1,matched:false},papers:{key:'',tab:'map',classes:[],question:0,order:'paper',search:'',page:1},people:{sid:'',storyMetric:'total',...directoryDefaults,filtersOpen:innerWidth>760},follow:{tier:'under',band:20,side:'below',classes:[],search:'',page:1},library:{tab:'materials'}};
@@ -91,11 +92,14 @@ async function paint(transition=false,focus=null) {
     const available=hasMaterials(atlas.data);let view;
     if(!available)view=welcomeView();
     else {
-      if(!loaded.has(scene))loaded.set(scene,import('./scenes/'+scene+'.js?v=empty-20261011d'));
+      if(!loaded.has(scene))loaded.set(scene,import('./scenes/'+scene+'.js?v=clarity-20261011e'));
       const module=await loaded.get(scene);if(serial!==paintId)return;
       view=scene==='class'&&!atlas.classes.length?{html:empty('先带入一个班的材料','从导入原表开始建立班级画布。')+button('导入材料','import',{},'accent'),report:null}:module.render(atlas,books[scene],session);
     }
+    if(available)view.html=composeScene(view.html);
     const object=available?scene+'|'+(scene==='people'?books.people.sid:scene==='papers'?books.papers.key:scene==='class'?books.class.no:''):'empty',changed=object!==paintedObject,previousScroll=window.scrollY;
+    const oldScene=stage().dataset.scene,direction=oldScene===scene?'focus':routes.findIndex(r=>r[0]===scene)>routes.findIndex(r=>r[0]===oldScene)?'forward':'backward';
+    document.documentElement.dataset.transitionDirection=direction;
     const positions=new Map([...stage().querySelectorAll('[data-motion-key]')].map(el=>[el.dataset.motionKey,el.getBoundingClientRect()]));
     const focused=document.activeElement?.closest('[data-cmd]'),focusedData=focused&&stage().contains(focused)?{...focused.dataset}:null;
     for(const el of stage().querySelectorAll('.table-scroll'))paintedScrolls.set(tablePositionKey(el),el.scrollLeft);
@@ -231,6 +235,13 @@ async function commands(event) {
   const b=event.target.closest('[data-cmd]');if(!b||b.disabled)return;
   const d=b.dataset,state=books[current];
   try {
+    if(d.cmd==='section-top'){window.scrollTo({top:0,behavior:reducedMotion()?'instant':'smooth'});return;}
+    if(d.cmd==='section-jump') {
+      const target=document.getElementById(d.target);if(!target)return;
+      if(target.matches('details'))target.open=true;
+      for(let parent=target.parentElement;parent;parent=parent.parentElement)if(parent.matches('details'))parent.open=true;
+      target.scrollIntoView({behavior:reducedMotion()?'instant':'smooth',block:'start'});return;
+    }
     if(b.closest('#table-reader')&&!['table-close','table-shift'].includes(d.cmd))closeReader();
     if(d.cmd==='table-open') {
       const frame=b.closest('.table-frame'),copy=frame.cloneNode(true);copy.querySelector('.table-expand')?.remove();
@@ -286,7 +297,7 @@ async function commands(event) {
       else if(d.target==='history')go('class',{tab:'history',exams:atlas.classExams(books.class.no).map(e=>e.id)});
       else go('board',{mode:d.target,exam:d.exam||books.board.exam});
     }
-    else if(d.cmd==='library-open')go('library',{tab:d.tab||'materials'});
+    else if(d.cmd==='library-open')go('library',{tab:d.tab||'materials',...(d.exam?{lineExam:d.exam}:{})});
     else if(d.cmd==='save-person'){session.savedPeople=session.savedPeople.includes(d.sid)?session.savedPeople.filter(id=>id!==d.sid):[...session.savedPeople,d.sid];remember('savedPeople',session.savedPeople);await paint();drawDrawer();}
     else if(d.cmd==='compare-toggle') {
       if(session.comparePeople.includes(d.sid))session.comparePeople=session.comparePeople.filter(id=>id!==d.sid);
@@ -360,6 +371,7 @@ async function forms(event) {
   }catch(error){notify(error.message);}
 }
 export async function mount() {
+  const shortcut=document.getElementById('find-shortcut');if(shortcut)shortcut.textContent=/Mac|iPhone|iPad/.test(navigator.platform)?'⌘ K':'Ctrl K';
   inbox=new Inbox(commitMaterial,notify,()=>atlas.data);
   installInteractions({reducedMotion});
   document.addEventListener('click',commands);document.addEventListener('submit',forms);

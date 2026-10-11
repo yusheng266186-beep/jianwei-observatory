@@ -3,21 +3,28 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#eef1f4">
+  <meta name="theme-color" content="#f5f6f8">
   <meta name="description" content="衡迹教学证据台：班级画布、试卷地图与完整学生档案。">
   <title>衡迹 · 教学证据台</title>
-  <link rel="icon" href="./favicon.svg">
-  <link rel="stylesheet" href="./styles.css?v=empty-20261011d">
-  <script src="./app/launch.js?v=empty-20261011d" defer></script>
+  <link rel="icon" href="./favicon.svg?v=clarity-20261011e">
+  <link rel="stylesheet" href="./styles.css?v=clarity-20261011e">
+  <script src="./app/launch.js?v=clarity-20261011e" defer></script>
 </head>
 <body data-workspace="empty">
   <header class="masthead">
     <a class="brand" href="#board" aria-label="衡迹首页"><span class="brand-mark"><i></i><i></i><i></i></span><strong>衡迹</strong><span class="brand-description">教学证据台</span></a>
     <div class="workspace-location" id="workspace-location"></div>
     <div class="workspace-status"><i></i><span id="work-status">等待导入材料</span></div>
-    <div class="masthead-tools"><button class="button header-button" data-cmd="find" hidden>找学生 <kbd>⌘ K</kbd></button><button class="button header-button reading-button" data-cmd="reading"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 7h16M4 17h16"/><rect x="8" y="4" width="4" height="6" rx="1" fill="var(--canvas)"/><rect x="14" y="14" width="4" height="6" rx="1" fill="var(--canvas)"/></svg><span class="reading-title">阅读设置</span><span class="reading-title-mobile">阅读</span></button><button class="button header-import" data-cmd="import">＋ 导入材料</button></div>
+    <div class="masthead-tools"><button class="button header-button" data-cmd="find" hidden>找学生 <kbd id="find-shortcut">Ctrl K</kbd></button><button class="button header-button reading-button" data-cmd="reading"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 7h16M4 17h16"/><rect x="8" y="4" width="4" height="6" rx="1" fill="var(--canvas)"/><rect x="14" y="14" width="4" height="6" rx="1" fill="var(--canvas)"/></svg><span class="reading-title">阅读设置</span><span class="reading-title-mobile">阅读</span></button><button class="button header-import" data-cmd="import">＋ 导入材料</button></div>
   </header>
-  <main id="stage" tabindex="-1"><section class="welcome-workspace" id="drop-zone" aria-labelledby="welcome-title"><div class="welcome-card"><span class="welcome-emblem" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none"><path d="M15 8h13l8 8v22a3 3 0 0 1-3 3H15a3 3 0 0 1-3-3V11a3 3 0 0 1 3-3Z"/><path d="M28 8v8h8M18 26h12M24 20v12"/></svg></span><span class="overline">空白工作区</span><h1 id="welcome-title">导入材料，开启研究。</h1><p>导入后，再呈现班级、学生、成绩与试题分析。</p><div class="welcome-actions"><button class="button accent" data-cmd="import">选择成绩工作簿</button><button class="button outline" data-cmd="template">下载录入模板</button></div><span class="welcome-formats">支持 Excel、CSV 和 JSON 备份，也可以把文件拖到这里。</span><footer>材料在当前浏览器处理与保存。</footer></div></section></main>
+  <main id="stage" tabindex="-1"><div class="startup"><h1>导入材料，开启研究。</h1><p>导入后，再呈现班级、学生、成绩与试题分析。</p><button class="button accent" data-cmd="import">选择成绩工作簿</button></div></main>
+  <template id="empty-workspace-template">
+    <section class="welcome-workspace" id="drop-zone" aria-labelledby="welcome-title">
+      <div class="welcome-copy"><span class="welcome-eyebrow"><i></i>衡迹 · 空白工作区</span><h1 id="welcome-title">导入材料。<br><span>看见更多。</span></h1><p>班级、学生、阶段变化与每一道小题，<br>将在你的材料中展开。</p><div class="welcome-actions"><button class="button accent" data-cmd="import">选择成绩工作簿 <span aria-hidden="true">↗</span></button><button class="button quiet" data-cmd="template">下载录入模板</button></div><span class="welcome-formats">Excel / CSV / JSON 备份<br>支持多份文件，也可以直接拖入。</span></div>
+      <div class="welcome-art" aria-hidden="true"><div class="glass-orbit orbit-one"></div><div class="glass-orbit orbit-two"></div><div class="glass-sheet sheet-back"></div><div class="glass-sheet sheet-middle"></div><div class="glass-sheet sheet-front"><span class="sheet-fold"></span><i class="sheet-plus"></i><span class="sheet-corner corner-a"></span><span class="sheet-corner corner-b"></span></div><span class="art-spark spark-one"></span><span class="art-spark spark-two"></span><div class="art-floor"></div></div>
+      <footer class="welcome-footer"><span><i aria-hidden="true"></i>材料在当前浏览器处理与保存</span><span>导入前不呈现具体成绩或样本</span></footer>
+    </section>
+  </template>
   <nav class="navigation-dock" id="navigation" aria-label="研究入口"></nav>
   <input id="files" type="file" accept=".xlsx,.xls,.csv,.json" multiple hidden>
   <dialog id="inbox" class="sheet-dialog"><div id="inbox-content"></div></dialog>
