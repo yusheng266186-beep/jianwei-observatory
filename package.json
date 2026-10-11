@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test tests/engine.test.js",
+    "test": "node --test tests/*.test.js",
+    "test:code": "node tests/code-audit.cjs",
     "test:browser": "node tests/browser.cjs && node tests/edges.cjs && node tests/journey.cjs",
     "test:journey": "node tests/journey.cjs",
     "test:surface": "node tests/full-surface.cjs",

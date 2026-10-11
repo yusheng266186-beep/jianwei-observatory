@@ -1,5 +1,5 @@
-import { SUBJECTS, EXAM_ORDER, EXAM_NAMES, classDefaults, finite, normalizeDataset } from './compat.js?v=motion-20261011m';
-import {mergeContext} from './context.js?v=motion-20261011m';
+import { SUBJECTS, EXAM_ORDER, EXAM_NAMES, classDefaults, finite, normalizeDataset } from './compat.js?v=audit-20261011n';
+import {mergeContext} from './context.js?v=audit-20261011n';
 const txt=v=>String(v??'').trim();
 const num=v=>v==null||txt(v)===''?null:Number.isFinite(Number(v))?Number(v):null;
 const code=v=>txt(v).replace(/[物历]$/,'');
@@ -61,7 +61,7 @@ export function parseWorkbook(XLSX,buffer,source,progress=()=>{},mapping=null){
    subjects[subject]={score:num(r[assigned]),raw:num(r[raw]),rank:num(r[ranking]),schoolRank:school==null?null:num(r[school])};
   }
   data.scores.push({exam:e,rawExam:txt(r[0]),sid:idFor(name),classNo:n,track:t,total:num(r[5]),rawTotal:num(r[4]),cityRank:cityExam(e)?num(r[7]):null,schoolRank:cityExam(e)?null:num(r[9])??num(r[7]),subjects,language,sourceRow:i+1});
-  data.profiles[n]||=classDefaults(n);
+  data.profiles[n]||={...classDefaults(n),track:t};
  }
  progress('提取班级目标与任课信息',35);
  for(const name of chosen.filter(n=>/^班级有效人/.test(n))){
@@ -135,10 +135,10 @@ export function parseFlat(rows,source,mapping=null){
  for(const row of rows.slice(auto.headerRow+1)){
   const val=k=>mapping[k]==null||mapping[k]===''?null:row[Number(mapping[k])];
   const name=txt(val('name')),n=num(txt(val('classNo')).replace(/[^\d]/g,''));if(!name||!n)continue;
-  const e=code(val('exam'))||'本次',t=txt(val('track')).includes('历')?'history':txt(val('track')).includes('物')?'physics':classDefaults(n).track,subjects={};
+  const e=code(val('exam'))||'本次',category=txt(val('track')).toLowerCase(),t=category==='history'||category.includes('历')?'history':category==='physics'||category.includes('物')?'physics':track(val('exam'),n),subjects={};
   for(const s of SUBJECTS){const v=num(val(s));if(v!=null)subjects[s]={score:v,raw:v,rank:null,schoolRank:null};}
-  data.scores.push({exam:e,rawExam:txt(val('exam')),sid:idFor(name),classNo:n,track:t,total:num(val('total')),rawTotal:num(val('rawTotal')),cityRank:num(val('cityRank')),schoolRank:num(val('schoolRank')),subjects,language:txt(val('language'))|| (subjects['日语']?'日语':'英语')});
-  data.profiles[n]||=classDefaults(n);
+  data.scores.push({exam:e,rawExam:txt(val('exam')),sid:idFor(name),classNo:n,track:t,total:num(val('total')),rawTotal:num(val('rawTotal')),cityRank:num(val('cityRank')),schoolRank:num(val('schoolRank')),subjects,language:txt(val('language'))|| (subjects['日语']?'日语':subjects['英语']?'英语':'')});
+  data.profiles[n]||={...classDefaults(n),track:t};
  }
  return examsFrom(data);
 }
@@ -154,13 +154,53 @@ export function adaptJSON(json,source){
  for(const a of json.itemResponses||[])data.answers.push({exam:code(a.exam),sid:idFor(a.name),classNo:Number(a.classNo),track:classDefaults(Number(a.classNo)).track,subject:a.subject,values:(a.scores||[]).map(num)});
  return examsFrom(data);
 }
+// Merge means supplement: blank input does not erase existing measurements.
+function supplement(previous={},incoming={}) {
+ const result={...previous};
+ for(const [key,value] of Object.entries(incoming)) {
+  if(value==null||value===''||typeof value==='number'&&!finite(value))continue;
+  result[key]=typeof value==='object'&&!Array.isArray(value)?supplement(previous[key],value):value;
+ }
+ return result;
+}
+function mergeScore(previous,incoming) {
+ const result=supplement(previous,incoming);if(!previous)return result;
+ // A changed score invalidates its old rank unless the new material provides one.
+ const changed=(a,b)=>finite(a)&&finite(b)&&a!==b;
+ if(changed(previous.total,incoming.total))for(const key of ['cityRank','schoolRank'])if(!finite(incoming[key]))result[key]=null;
+ for(const [subject,record] of Object.entries(incoming.subjects||{}))if(changed(previous.subjects?.[subject]?.score,record.score))for(const key of ['rank','schoolRank'])if(!finite(record[key]))result.subjects[subject][key]=null;
+ return result;
+}
+function mergePapers(data,incoming,usable) {
+ const alignments=new Map();
+ for(const [key,newBank] of Object.entries(incoming.banks)) {
+  const oldBank=data.banks[key];if(!oldBank?.length){data.banks[key]=structuredClone(newBank);continue;}if(!newBank.length)continue;
+  const oldLabels=oldBank.map(q=>txt(q.label)),newLabels=newBank.map(q=>txt(q.label));
+  if(JSON.stringify(oldLabels)===JSON.stringify(newLabels)){data.banks[key]=oldBank.map((q,i)=>supplement(q,newBank[i]));continue;}
+  if([...oldLabels,...newLabels].some(label=>!label)||new Set(oldLabels).size!==oldLabels.length||new Set(newLabels).size!==newLabels.length)throw new Error(key.replace('|',' · ')+' 存在空题号或重复题号，无法唯一对应。请先补齐唯一题号，再合并；原工作区未改动。');
+  const oldIndex=new Map(oldLabels.map((label,i)=>[label,i])),newIndex=new Map(newLabels.map((label,i)=>[label,i])),labels=[...newLabels,...oldLabels.filter(label=>!newIndex.has(label))];
+  data.banks[key]=labels.map(label=>supplement(oldBank[oldIndex.get(label)],newBank[newIndex.get(label)]));
+  alignments.set(key,{old:labels.map(label=>oldIndex.get(label)),incoming:labels.map(label=>newIndex.get(label))});
+ }
+ const aligned=(answer,side)=>{const indices=alignments.get(answer.subject+'|'+answer.exam)?.[side];return indices?{...answer,values:indices.map(index=>index===undefined?null:answer.values[index]??null)}:answer;};
+ const identity=a=>a.exam+'|'+a.classNo+'|'+a.sid+'|'+a.subject;
+ const answers=new Map(data.answers.map(a=>{const row=aligned(a,'old');return [identity(row),row];}));
+ for(const answer of incoming.answers) {
+  const row=aligned(usable(answer),'incoming'),old=answers.get(identity(row));
+  if(old)row.values=Array.from({length:Math.max(old.values.length,row.values.length)},(_,i)=>finite(row.values[i])?row.values[i]:old.values[i]??null);
+  answers.set(identity(row),row);
+ }
+ data.answers=[...answers.values()];
+}
 export function mergeDatasets(current,incoming){
  if(current.anonymous&&!incoming.anonymous&&incoming.scores.length)return normalizeDataset(incoming);
- const data=structuredClone(current),names=new Map(data.students.map(s=>[s.name,s.id])),remap=new Map();
- for(const p of incoming.students){const sid=names.get(p.name)||p.id;remap.set(p.id,sid);if(!names.has(p.name)){data.students.push({...p,id:sid});names.set(p.name,sid);}}
+ const data=structuredClone(current),names=new Map(data.students.map(s=>[s.name,s.id])),occupied=new Set(data.students.map(s=>s.id)),remap=new Map();
+ for(const p of incoming.students){const sid=names.get(p.name)||(occupied.has(p.id)?'s-'+crypto.randomUUID():p.id);remap.set(p.id,sid);if(!names.has(p.name)){data.students.push({...p,id:sid});names.set(p.name,sid);occupied.add(sid);}}
  const usable=p=>({...p,sid:remap.get(p.sid)||p.sid});
- data.scores.push(...incoming.scores.map(usable));data.answers.push(...incoming.answers.map(usable));
- data.banks={...data.banks,...incoming.banks};data.profiles={...data.profiles,...Object.fromEntries(Object.entries(incoming.profiles).map(([n,p])=>{const old=data.profiles[n];if(old?.manuallyConfigured||old&&!incoming.scores.length)return [n,old];return [n,{...old,...p,lead:p.lead||old?.lead||'',teachers:{...old?.teachers,...Object.fromEntries(Object.entries(p.teachers||{}).filter(([,v])=>v))},targets:p.targets?.top==null&&p.targets?.under==null?old?.targets:p.targets}];}))};
+ const identity=r=>r.exam+'|'+r.classNo+'|'+r.sid,scores=new Map(data.scores.map(r=>[identity(r),r]));
+ for(const score of incoming.scores){const row=usable(score);scores.set(identity(row),mergeScore(scores.get(identity(row)),row));}data.scores=[...scores.values()];
+ mergePapers(data,incoming,usable);
+ data.profiles={...data.profiles,...Object.fromEntries(Object.entries(incoming.profiles).map(([n,p])=>{const old=data.profiles[n];if(old?.manuallyConfigured||old&&!incoming.scores.length)return [n,old];return [n,{...old,...p,lead:p.lead||old?.lead||'',teachers:{...old?.teachers,...Object.fromEntries(Object.entries(p.teachers||{}).filter(([,v])=>v))},targets:p.targets?.top==null&&p.targets?.under==null?old?.targets:p.targets}];}))};
  data.lines=[...new Map([...data.lines,...incoming.lines].map(l=>[l.exam+'|'+l.track,l])).values()];
  data.exams=[...new Map([...data.exams,...incoming.exams].map(e=>[e.id,e])).values()];
  data.sheets=[...new Set([...data.sheets,...incoming.sheets])];data.sourceName=incoming.sourceName;data.importedAt=incoming.importedAt;data.anonymous=current.anonymous&&incoming.anonymous;

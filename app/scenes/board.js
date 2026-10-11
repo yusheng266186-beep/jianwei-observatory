@@ -1,8 +1,8 @@
-import {overview} from './overview.js?v=motion-20261011m';
-import {head,button,chips,badge,block,examRail,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote} from '../ui/html.js?v=motion-20261011m';
-import {mini,bars,trajectory,spread,chartButtons} from '../ui/plots.js?v=motion-20261011m';
-import {difference,average} from '../engine/metrics.js?v=motion-20261011m';
-import {scoreRows,effectiveRows,subjectRows,evidence} from '../io/exports.js?v=motion-20261011m';
+import {overview} from './overview.js?v=audit-20261011n';
+import {head,button,chips,badge,block,examRail,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote} from '../ui/html.js?v=audit-20261011n';
+import {mini,bars,trajectory,spread,chartButtons} from '../ui/plots.js?v=audit-20261011n';
+import {difference,average} from '../engine/metrics.js?v=audit-20261011n';
+import {scoreRows,effectiveRows,subjectRows,evidence} from '../io/exports.js?v=audit-20261011n';
 const tools=()=>button('摘录这页','capture',{},'outline')+button('导出','export',{},'accent');
 export function render(atlas,state) {
   const exam=state.exam||atlas.latest,groups=atlas.groups(exam),rows=atlas.rows(exam),s=atlas.summary(rows);
@@ -22,7 +22,7 @@ export function render(atlas,state) {
     sections=[{title:labels[metric]+' · 班级位置',headers:['班级','类别','届别','均分','特控人数','本科人数','本科率'],rows:atlas.classes.map(no=>{const c=atlas.snapshot(no,exam);return [no+'班',c.profile.track==='physics'?'物理':'历史',c.profile.cohort==='repeat'?'补习':'应届',number(c.summary.mean),integer(c.summary.top),integer(c.summary.under),percent(c.summary.underRate)];})}];
     sheets={'班级位置':sections[0].rows.length?[sections[0].headers,...sections[0].rows]:[]};
   } else if(state.mode==='targets') {
-    const previous=state.comparison||atlas.exams.at(-2)?.id||'';
+    const previous=atlas.exams.some(e=>e.id===state.comparison)&&state.comparison!==exam?state.comparison:atlas.exams[atlas.exams.findIndex(e=>e.id===exam)-1]?.id||'';
     const target=(actual,value)=>value>0?'<div class="target-track"><i style="width:'+Math.max(0,Math.min(100,(actual??0)/value*100))+'%"></i><span>'+integer(actual)+' / '+integer(value)+'</span></div>':'<span class="muted">未设任务</span>';
     body='<div class="comparison-bar"><span>增量对照</span>'+chips('comparison',atlas.exams.filter(e=>e.id!==exam).map(e=>[e.id,e.id]),previous)+'</div>';
     body+=groups.map(group=>block(group.title,table(['班级','班主任','人数','均分 / 增量','特控 / 增量','外语有效','特控任务','本科 / 增量','外语有效','本科任务','线下10 / 20分'],group.classes.map(no=>{

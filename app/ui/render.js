@@ -23,9 +23,10 @@ function synchronize(current,next) {
   reconcile(current,next);
 }
 function reconcile(parent,next) {
-  const previous=[...parent.childNodes],keyed=new Map(previous.map(n=>[identity(n),n]).filter(([k])=>k)),used=new Set();let cursor=parent.firstChild;
+  const previous=[...parent.childNodes],keyed=new Map(),used=new Set();let cursor=parent.firstChild;
+  for(const node of previous){const key=identity(node);if(key){if(!keyed.has(key))keyed.set(key,[]);keyed.get(key).push(node);}}
   for(const desired of [...next.childNodes]) {
-    const key=identity(desired);let node=key?keyed.get(key):previous.find(n=>!used.has(n)&&!identity(n)&&compatible(n,desired));
+    const key=identity(desired);let node=key?keyed.get(key)?.find(n=>!used.has(n)&&compatible(n,desired)):previous.find(n=>!used.has(n)&&!identity(n)&&compatible(n,desired));
     if(node&&!compatible(node,desired))node=null;
     if(!node)node=desired.cloneNode(true);else synchronize(node,desired);
     used.add(node);if(node!==cursor)parent.insertBefore(node,cursor);cursor=node.nextSibling;

@@ -1,6 +1,6 @@
-import {button,esc,number} from './html.js?v=motion-20261011m';
-import {rateColor} from './plots.js?v=motion-20261011m';
-import {valid} from '../engine/metrics.js?v=motion-20261011m';
+import {button,esc,number} from './html.js?v=audit-20261011n';
+import {rateColor} from './plots.js?v=audit-20261011n';
+import {valid} from '../engine/metrics.js?v=audit-20261011n';
 
 export function personalQuestionLink(q,context,label,style='person-link',extra='') {
   return button(label,'answer-question',{key:context.subject+'|'+context.exam,index:q.index,sid:context.sid,classes:context.classNo},style,

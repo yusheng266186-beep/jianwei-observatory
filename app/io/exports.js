@@ -1,13 +1,19 @@
-import {esc,number,percent,signed} from '../ui/html.js?v=motion-20261011m';
+import {esc,number,percent,signed} from '../ui/html.js?v=audit-20261011n';
 export function download(content,name,type='application/octet-stream') {
   const blob=content instanceof Blob?content:new Blob([content],{type}),url=URL.createObjectURL(blob),anchor=document.createElement('a');
   anchor.href=url;anchor.download=name;anchor.click();setTimeout(()=>URL.revokeObjectURL(url),5000);
 }
 let loaded;
 export async function vendors() {
-  loaded ||= Promise.all(['xlsx.full.min.js','jszip.min.js'].map(file=>new Promise((resolve,reject)=>{
-    const script=document.createElement('script');script.src=new URL('../../vendor/'+file,import.meta.url);script.onload=resolve;script.onerror=()=>reject(new Error('导出组件暂时无法载入'));document.head.append(script);
-  })));
+  if(!loaded){
+    const attempt=Promise.all([['xlsx.full.min.js','XLSX'],['jszip.min.js','JSZip']].map(([file,global])=>window[global]?Promise.resolve():new Promise((resolve,reject)=>{
+      const script=document.createElement('script'),timer=setTimeout(()=>finish(new Error('导出组件载入超时，请重试')),15000);
+      let done=false;
+      const finish=error=>{if(done)return;done=true;clearTimeout(timer);script.onload=null;script.onerror=null;if(error){script.remove();reject(error);}else resolve();};
+      script.src=new URL('../../vendor/'+file,import.meta.url);script.onload=()=>finish(window[global]?null:new Error('导出组件未能初始化，请重试'));script.onerror=()=>finish(new Error('导出组件暂时无法载入，请重试'));document.head.append(script);
+    })));
+    loaded=attempt;attempt.catch(()=>{if(loaded===attempt)loaded=null;});
+  }
   await loaded;return {XLSX:window.XLSX,JSZip:window.JSZip};
 }
 export async function excel(sheets,name='衡迹分析材料') {
