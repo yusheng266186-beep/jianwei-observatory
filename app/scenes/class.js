@@ -1,7 +1,7 @@
-import {head,button,chips,badge,block,examRail,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote,classPicker} from '../ui/html.js?v=study-20261011b';
-import {trajectory,bars,spread,chartButtons} from '../ui/plots.js?v=study-20261011b';
-import {difference,average,valid,maxScore} from '../engine/metrics.js?v=study-20261011b';
-import {scoreRows,evidence} from '../io/exports.js?v=study-20261011b';
+import {head,button,chips,badge,block,examRail,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote,classPicker} from '../ui/html.js?v=polish-20261011c';
+import {trajectory,bars,spread,chartButtons} from '../ui/plots.js?v=polish-20261011c';
+import {difference,average,valid,maxScore} from '../engine/metrics.js?v=polish-20261011c';
+import {scoreRows,evidence} from '../io/exports.js?v=polish-20261011c';
 const rowsSection=(title,headers,rows)=>({title,headers,rows});
 export function render(atlas,state) {
   const no=state.no||atlas.classes[0],available=atlas.classExams(no),exam=available.some(e=>e.id===state.exam)?state.exam:available.at(-1)?.id||atlas.latest;

@@ -1,0 +1,7 @@
+import {button,esc} from './html.js?v=polish-20261011c';
+export const readingDefaults={density:'comfortable',surface:'glass',motion:'system'};
+export function applyReading(reading) {for(const key of Object.keys(readingDefaults))document.body.dataset[key]=reading[key]||readingDefaults[key];}
+export function readingView(reading) {
+  const choices=(key,options)=>'<div class="reading-choices">'+options.map(([value,title,detail])=>'<button class="reading-choice '+(reading[key]===value?'selected':'')+'" data-cmd="reading-set" data-key="'+key+'" data-value="'+value+'" aria-pressed="'+(reading[key]===value)+'"><b>'+esc(title)+'</b><span>'+esc(detail)+'</span><i aria-hidden="true"></i></button>').join('')+'</div>';
+  return '<div class="inbox-top"><span class="overline">你的阅读习惯</span>'+button('×','reading-close',{},'icon-only','aria-label="关闭阅读偏好"')+'</div><h2>把研究台调到舒服的状态</h2><p>这些设置会保存在当前浏览器。</p><section class="reading-section"><h3>信息间距</h3>'+choices('density',[['comfortable','舒展','卡片与表格留出更多阅读空间'],['compact','紧凑','同屏查看更多记录']])+'</section><section class="reading-section"><h3>页面材质</h3>'+choices('surface',[['glass','通透','保留玻璃层次与透明感'],['paper','纸面','面板更实、更便于长时间阅读']])+'</section><section class="reading-section"><h3>动态效果</h3>'+choices('motion',[['system','自然过渡','跟随系统动态效果偏好'],['calm','静读','减少动画与移动效果']])+'</section><div class="reading-footer">'+button('恢复默认','reading-reset',{},'outline')+button('开始研究','reading-close',{},'accent')+'</div>';
+}

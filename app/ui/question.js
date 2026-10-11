@@ -1,7 +1,7 @@
-import {button,badge,block,ribbon,table,number,integer,percent,esc,empty} from './html.js?v=study-20261011b';
-import {bars,chartButtons} from './plots.js?v=study-20261011b';
-import {average,valid} from '../engine/metrics.js?v=study-20261011b';
-import {evidence} from '../io/exports.js?v=study-20261011b';
+import {button,badge,block,ribbon,table,number,integer,percent,esc,empty} from './html.js?v=polish-20261011c';
+import {bars,chartButtons} from './plots.js?v=polish-20261011c';
+import {average,valid} from '../engine/metrics.js?v=polish-20261011c';
+import {evidence} from '../io/exports.js?v=polish-20261011c';
 export function questionView(atlas,state) {
   const lens=atlas.paper(state.key,state.classes||[]),q=lens.questions.find(q=>q.index===Number(state.question))||lens.questions[0];if(!q)return empty('这张卷尚无题目资料');
   const classes=[...new Set(lens.answers.map(a=>a.classNo))].sort((a,b)=>a-b),answers=lens.answers.filter(a=>atlas.name(a.sid).includes(state.search||'')).sort((a,b)=>(a.values[q.index]??Infinity)-(b.values[q.index]??Infinity)),pages=Math.max(1,Math.ceil(answers.length/30)),page=Math.min(state.page||1,pages),shown=answers.slice((page-1)*30,page*30),at=lens.questions.indexOf(q);

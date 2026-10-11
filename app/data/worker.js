@@ -1,7 +1,7 @@
-importScripts('../../vendor/xlsx.full.min.js?v=study-20261011b');
+importScripts('../../vendor/xlsx.full.min.js?v=polish-20261011c');
 self.onmessage=async ({data:input})=>{
   try {
-    const parser=await import('./parser.js?v=study-20261011b');
+    const parser=await import('./parser.js?v=polish-20261011c');
     const progress=(message,percent)=>self.postMessage({type:'progress',message,percent});
     let dataset;
     if(/\.json$/i.test(input.name)) dataset=parser.adaptJSON(JSON.parse(new TextDecoder().decode(input.buffer)),input.name);

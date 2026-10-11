@@ -1,5 +1,5 @@
-import {esc,number,percent,attrs} from './html.js?v=study-20261011b';
-import {valid} from '../engine/metrics.js?v=study-20261011b';
+import {esc,number,percent,attrs} from './html.js?v=polish-20261011c';
+import {valid} from '../engine/metrics.js?v=polish-20261011c';
 const colors=['#376a9f','#333e4c','#8d9eaf','#6c879b'];
 const action=item=>item?.cmd?' data-plot-action="true" data-cmd="'+esc(item.cmd)+'"'+attrs(item.data||{})+' role="button" tabindex="0"':'';
 export function trajectory(id,labels,series,{suffix='',zero=false}={}) {
@@ -15,7 +15,7 @@ export function trajectory(id,labels,series,{suffix='',zero=false}={}) {
     content+='<path class="plot-line" pathLength="1000" d="'+path+'" fill="none" stroke="'+color+'" stroke-width="2.6" stroke-linejoin="round"/>';
     content+=item.values.map((value,i)=>valid(value)?'<circle class="plot-point" cx="'+x(i)+'" cy="'+y(value)+'" r="4" fill="white" stroke="'+color+'" stroke-width="2"'+action(item.points?.[i])+'><title>'+esc(item.name)+' · '+esc(labels[i])+'：'+number(value)+esc(suffix)+'</title></circle>':'').join('');
   }
-  return '<div class="plot-legend">'+series.map((s,i)=>'<span><i style="background:'+(s.color||colors[i%colors.length])+'"></i>'+esc(s.name)+'</span>').join('')+'</div><svg id="'+id+'" class="trajectory" viewBox="0 0 '+w+' '+h+'" role="img" aria-label="成绩趋势">'+content+'</svg>';
+  return '<div class="plot-legend">'+series.map((s,i)=>'<span><i style="background:'+(s.color||colors[i%colors.length])+'"></i>'+esc(s.name)+'</span>').join('')+'</div><svg id="'+id+'" class="trajectory" viewBox="0 0 '+w+' '+h+'" role="'+(series.some(s=>s.points?.some(p=>p?.cmd))?'group':'img')+'" aria-label="成绩趋势">'+content+'</svg>';
 }
 export function bars(id,items,{percentages=false,signed=false}={}) {
   const measured=items.map(r=>r.value).filter(valid),max=Math.max(1,...measured.map(Math.abs)),w=860,h=Math.max(70,items.length*37+20),base=signed?490:190;

@@ -1,4 +1,4 @@
-import {valid,difference} from './metrics.js?v=study-20261011b';
+import {valid,difference} from './metrics.js?v=polish-20261011c';
 const cache=new WeakMap();
 export const directoryDefaults={search:'',page:1,directoryExam:'latest',track:'all',classes:[],language:'all',standing:'all',trend:'all',records:'all',savedOnly:false,minScore:'',maxScore:'',sort:'total',view:'cards',pageSize:24,lens:'all',focusSubject:'all',focusStatus:'below',maxExclusive:false,columns:'summary'};
 export function directoryEntries(atlas,exam='latest') {
@@ -12,9 +12,9 @@ export function directoryEntries(atlas,exam='latest') {
   });index.set(exam,entries);return entries;
 }
 export function queryDirectory(atlas,state,session) {
-  const all=directoryEntries(atlas,state.directoryExam||'latest'),q=(state.search||'').trim(),classes=state.classes||[],saved=new Set(session.savedPeople||[]);
+  const all=directoryEntries(atlas,state.directoryExam||'latest'),queries=(state.search||'').split(/[,，;；\n]+/).map(q=>q.trim()).filter(Boolean),classes=state.classes||[],saved=new Set(session.savedPeople||[]);
   const matches=all.filter(e=>{
-    if(q&&!e.person.name.includes(q)&&!(/^\d+班?$/.test(q)&&Number(q.replace('班',''))===e.row.classNo))return false;
+    if(queries.length&&!queries.some(q=>e.person.name.includes(q)||(/^\d+班?$/.test(q)&&Number(q.replace('班',''))===e.row.classNo)))return false;
     if(state.track!=='all'&&state.track&&e.track!==state.track)return false;
     if(classes.length&&!classes.includes(Number(e.row.classNo)))return false;
     if(state.standing==='nearUnder'&&!(e.under!==null&&Math.abs(e.under)<=20))return false;
@@ -54,4 +54,13 @@ export const directoryLenses=[['all','全部学生','完整目录'],['nearUnder'
 export function lensValues(lens) {
   const base={standing:'all',trend:'all',records:'all',savedOnly:false,minScore:'',maxScore:'',maxExclusive:false,focusSubject:'all',focusStatus:'below',page:1,lens};
   return {...base,...({nearUnder:{standing:'nearUnder'},nearTop:{standing:'nearTop'},up:{trend:'up'},down:{trend:'down'},questions:{records:'questions'},saved:{savedOnly:true}}[lens]||{})};
+}
+
+const viewFields=['directoryExam','track','classes','standing','trend','records','savedOnly','minScore','maxScore','maxExclusive','focusSubject','focusStatus','search','sort','view','columns'];
+export function directoryViewValues(state) {return Object.fromEntries(viewFields.map(key=>[key,structuredClone(state[key]??directoryDefaults[key])]));}
+export function directoryViewName(state) {
+  const scope=state.classes?.length?state.classes.map(no=>no+'班').join('、'):state.track==='physics'?'物理类':state.track==='history'?'历史类':'全体学生';
+  const subject=state.focusSubject&&state.focusSubject!=='all'?state.focusSubject+' · '+({below:'学科线下',near:'线下10分',above:'学科达线',double:'双上线',totalOnly:'总分达线学科偏弱',subjectOnly:'学科达线总分偏弱',bothBelow:'双未上线',missing:'缺学科成绩',unknown:'缺有效线'}[state.focusStatus]||'学科观察'):'';
+  const clue=subject||directoryLenses.find(([id])=>id===state.lens&&id!=='all')?.[1]||({nearUnder:'本科临界',nearTop:'特控临界',top:'特控达线',under:'本科达线',below:'本科线下'}[state.standing])||({up:'分位上升',down:'分位下降'}[state.trend])||(state.search?'姓名检索':'学生目录');
+  return [scope,clue,state.directoryExam==='latest'||!state.directoryExam?'每人最新':state.directoryExam].join(' · ').slice(0,80);
 }

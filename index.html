@@ -2,27 +2,31 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#eef1f4">
   <meta name="description" content="衡迹教学证据台：班级画布、试卷地图与完整学生档案。">
   <title>衡迹 · 教学证据台</title>
   <link rel="icon" href="./favicon.svg">
-  <link rel="stylesheet" href="./styles.css?v=study-20261011b">
-  <script src="./app/launch.js?v=study-20261011b" defer></script>
+  <link rel="stylesheet" href="./styles.css?v=polish-20261011c">
+  <script src="./app/launch.js?v=polish-20261011c" defer></script>
 </head>
 <body>
   <header class="masthead">
     <a class="brand" href="#board" aria-label="衡迹首页"><span class="brand-mark"><i></i><i></i><i></i></span><strong>衡迹</strong><span class="brand-description">教学证据台</span></a>
+    <div class="workspace-location" id="workspace-location"></div>
     <div class="workspace-status"><i></i><span id="work-status">准备教学材料</span></div>
-    <div class="masthead-tools"><button class="button header-button" data-cmd="find">找学生 <kbd>⌘ K</kbd></button><button class="button header-import" data-cmd="import">＋ 导入材料</button></div>
+    <div class="masthead-tools"><button class="button header-button" data-cmd="find">找学生 <kbd>⌘ K</kbd></button><button class="button header-button reading-button" data-cmd="reading"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 7h16M4 17h16"/><rect x="8" y="4" width="4" height="6" rx="1" fill="var(--canvas)"/><rect x="14" y="14" width="4" height="6" rx="1" fill="var(--canvas)"/></svg><span class="reading-title">阅读设置</span><span class="reading-title-mobile">阅读</span></button><button class="button header-import" data-cmd="import">＋ 导入材料</button></div>
   </header>
   <main id="stage" tabindex="-1"><div class="startup"><span class="startup-bars"><i></i><i></i><i></i></span><h1>正在打开研究台</h1><p>材料尚未载入时，也可以直接导入原表。</p><button class="button accent" data-cmd="import">选择成绩工作簿</button></div></main>
   <nav class="navigation-dock" id="navigation" aria-label="研究入口"></nav>
   <input id="files" type="file" accept=".xlsx,.xls,.csv,.json" multiple hidden>
   <dialog id="inbox" class="sheet-dialog"><div id="inbox-content"></div></dialog>
   <dialog id="report-dialog" class="sheet-dialog report-dialog"><div id="report-content"></div></dialog>
+  <dialog id="reading-dialog" class="sheet-dialog reading-dialog" aria-label="阅读偏好"><div id="reading-content"></div></dialog>
+  <dialog id="table-reader" class="table-reader" aria-labelledby="table-reader-title"><div id="table-reader-content"></div></dialog>
   <dialog id="research-drawer" class="research-drawer" aria-labelledby="drawer-title"><div class="drawer-top"><button class="button drawer-back" id="drawer-back" data-cmd="drawer-back" hidden>← 返回</button><span id="drawer-context">衡迹 / 研究观察窗</span><button class="button icon-only" data-cmd="drawer-close" aria-label="关闭观察窗">×</button></div><div id="drawer-content"></div></dialog>
-  <div id="toast" role="status" aria-live="polite"></div>
+  <div id="toast" popover="manual" role="status" aria-live="polite"></div>
+  <div id="chart-tooltip" class="chart-tooltip" popover="manual" role="tooltip" hidden></div>
   <div id="print-area"></div>
   <noscript><p class="noscript">请启用浏览器 JavaScript 后打开衡迹。</p></noscript>
 </body>
