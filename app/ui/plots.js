@@ -1,5 +1,5 @@
-import {esc,number,percent,attrs} from './html.js?v=surface-20261011j';
-import {valid} from '../engine/metrics.js?v=surface-20261011j';
+import {esc,number,percent,attrs} from './html.js?v=motion-20261011m';
+import {valid} from '../engine/metrics.js?v=motion-20261011m';
 export const seriesColors=['#365dff','#202735','#7996e4','#9689b7'];
 const colors=seriesColors;
 const action=item=>item?.cmd?' data-plot-action="true" data-cmd="'+esc(item.cmd)+'"'+attrs(item.data||{})+' role="button" tabindex="0"':'';

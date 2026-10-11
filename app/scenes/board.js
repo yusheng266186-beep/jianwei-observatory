@@ -1,8 +1,8 @@
-import {overview} from './overview.js?v=surface-20261011j';
-import {head,button,chips,badge,block,examRail,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote} from '../ui/html.js?v=surface-20261011j';
-import {mini,bars,trajectory,spread,chartButtons} from '../ui/plots.js?v=surface-20261011j';
-import {difference,average} from '../engine/metrics.js?v=surface-20261011j';
-import {scoreRows,effectiveRows,subjectRows,evidence} from '../io/exports.js?v=surface-20261011j';
+import {overview} from './overview.js?v=motion-20261011m';
+import {head,button,chips,badge,block,examRail,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote} from '../ui/html.js?v=motion-20261011m';
+import {mini,bars,trajectory,spread,chartButtons} from '../ui/plots.js?v=motion-20261011m';
+import {difference,average} from '../engine/metrics.js?v=motion-20261011m';
+import {scoreRows,effectiveRows,subjectRows,evidence} from '../io/exports.js?v=motion-20261011m';
 const tools=()=>button('摘录这页','capture',{},'outline')+button('导出','export',{},'accent');
 export function render(atlas,state) {
   const exam=state.exam||atlas.latest,groups=atlas.groups(exam),rows=atlas.rows(exam),s=atlas.summary(rows);

@@ -1,4 +1,4 @@
-import {normalizeDataset} from './compat.js?v=surface-20261011j';
+import {normalizeDataset} from './compat.js?v=motion-20261011m';
 const DB='hengji-evidence-workspace',TABLE='materials';
 const localPrefix='hengji:';
 export function preference(key,fallback) { try {return JSON.parse(localStorage.getItem(localPrefix+key))??fallback;}catch{return fallback;} }

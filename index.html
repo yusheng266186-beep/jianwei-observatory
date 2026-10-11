@@ -6,10 +6,10 @@
   <meta name="theme-color" content="#f5f6f8">
   <meta name="description" content="衡迹教学证据台：班级画布、试卷地图与完整学生档案。">
   <title>衡迹 · 教学证据台</title>
-  <link rel="icon" href="./favicon.svg?v=surface-20261011j">
-  <link rel="stylesheet" href="./styles.css?v=surface-20261011j">
-  <link rel="stylesheet" href="./styles/journey.css?v=surface-20261011j">
-  <script src="./app/launch.js?v=surface-20261011l" defer></script>
+  <link rel="icon" href="./favicon.svg?v=motion-20261011m">
+  <link rel="stylesheet" href="./styles.css?v=motion-20261011m">
+  <link rel="stylesheet" href="./styles/journey.css?v=motion-20261011m">
+  <script src="./app/launch.js?v=motion-20261011m" defer></script>
 </head>
 <body data-workspace="empty">
   <header class="masthead">
@@ -18,6 +18,7 @@
     <div class="workspace-status"><i></i><span id="work-status">等待导入材料</span></div>
     <div class="masthead-tools"><button class="button header-button research-button" data-cmd="research" aria-haspopup="dialog" aria-label="打开研究夹" title="研究夹" hidden><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M7 3.5h10a1 1 0 0 1 1 1v16l-6-4-6 4v-16a1 1 0 0 1 1-1Z"/></svg><span>研究夹</span></button><button class="button header-button find-button" data-cmd="find" aria-label="找学生" title="找学生" hidden><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg><span>找学生</span><kbd id="find-shortcut">Ctrl K</kbd></button><button class="button header-button reading-button" data-cmd="reading"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 7h16M4 17h16"/><rect x="8" y="4" width="4" height="6" rx="1" fill="var(--canvas)"/><rect x="14" y="14" width="4" height="6" rx="1" fill="var(--canvas)"/></svg><span class="reading-title">阅读设置</span><span class="reading-title-mobile">阅读</span></button><button class="button header-import" data-cmd="import">＋ 导入材料</button></div>
   </header>
+  <div id="scene-status" class="scene-status" role="status" aria-live="polite" hidden></div>
   <main id="stage" tabindex="-1"><div class="startup"><h1>导入材料，开启研究。</h1><p>导入后，再呈现班级、学生、成绩与试题分析。</p><button class="button accent" data-cmd="import">选择成绩工作簿</button></div></main>
   <template id="empty-workspace-template">
     <section class="welcome-workspace" id="drop-zone" aria-labelledby="welcome-title">

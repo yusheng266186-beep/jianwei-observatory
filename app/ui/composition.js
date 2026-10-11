@@ -1,4 +1,4 @@
-import {button,esc} from './html.js?v=surface-20261011j';
+import {button,esc} from './html.js?v=motion-20261011m';
 
 export function composeScene(html,{back=''}={}) {
   const template=document.createElement('template');template.innerHTML=html;

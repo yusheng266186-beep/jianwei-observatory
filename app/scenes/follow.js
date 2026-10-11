@@ -1,5 +1,5 @@
-import {head,button,chips,badge,block,examRail,table,number,integer,delta,esc,personButton,search,footnote,empty} from '../ui/html.js?v=surface-20261011j';
-import {evidence} from '../io/exports.js?v=surface-20261011j';
+import {head,button,chips,badge,block,examRail,table,number,integer,delta,esc,personButton,search,footnote,empty} from '../ui/html.js?v=motion-20261011m';
+import {evidence} from '../io/exports.js?v=motion-20261011m';
 const statuses=[['new','待开始'],['active','跟进中'],['done','已完成']];
 const noteField=(atlas,plan)=>'<textarea data-plan-note="'+esc(plan.id)+'" aria-label="'+esc(atlas.name(plan.sid))+'的教学记录" placeholder="记录做法、日期和下一步">'+esc(plan.note||'')+'</textarea>';
 const statusButtons=plan=>'<div class="follow-status">'+statuses.map(([target,label])=>button(label,'follow-status',{id:plan.id,status:target},target===plan.status?'chip selected':'chip')).join('')+'</div>';

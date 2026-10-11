@@ -6,7 +6,9 @@
     "test": "node --test tests/engine.test.js",
     "test:browser": "node tests/browser.cjs && node tests/edges.cjs && node tests/journey.cjs",
     "test:journey": "node tests/journey.cjs",
-    "test:surface": "node tests/full-surface.cjs"
+    "test:surface": "node tests/full-surface.cjs",
+    "test:motion": "node tests/motion.cjs",
+    "profile:motion": "node tests/motion-profile.cjs"
   },
   "devDependencies": {
     "playwright": "1.62.1"

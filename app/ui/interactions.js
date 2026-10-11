@@ -1,5 +1,5 @@
 let motionPreference=()=>false,resizeObserver,plotObserver,revealObserver,tooltipTarget=null,tooltipOriginal=null,tooltipFrame=0,outlineFrame=0,pointerFrame=0,outline=null,outlineEntries=[],shineTarget=null;
-const observedTables=new Set(),observedPlots=new Set(),revealed=new WeakSet(),disclosures=new WeakMap();
+const observedTables=new Set(),observedPlots=new Set(),observedReveals=new Set(),revealed=new WeakSet(),disclosures=new WeakMap();
 function refreshPlot(svg) {
   const width=svg.getBoundingClientRect().width,viewWidth=svg.viewBox?.baseVal.width;if(!width||!viewWidth)return;
   const scale=viewWidth/width,size=Math.max(12,svg.classList.contains('bars')?11.5*scale:Math.min(34,11.5*scale));svg.style.setProperty('--plot-label-size',size+'px');
@@ -31,7 +31,7 @@ function refreshTable(frame) {
   const track=frame.querySelector('.table-overflow-note i');if(track){track.style.setProperty('--scroll-progress',overflow?Math.max(0,Math.min(100,scroll.scrollLeft/extent*100))+'%':'0%');track.style.setProperty('--scroll-thumb',Math.max(12,Math.min(100,scroll.clientWidth/Math.max(1,scroll.scrollWidth)*100))+'%');}
 }
 export function prepareUpdate(){hideTooltip();}
-export function enhance(root=document) {
+export function enhance(root=document,{reveal=true}={}) {
   hideTooltip();
   for(const button of root.querySelectorAll('[data-cmd="svg"],[data-cmd="png"]')) {
     const available=Boolean(document.getElementById(button.dataset.id));button.disabled=!available;
@@ -42,7 +42,8 @@ export function enhance(root=document) {
   for(const frame of root.querySelectorAll('.table-frame')){refreshTable(frame);if(!observedTables.has(frame)){observedTables.add(frame);resizeObserver?.observe(frame);}}
   for(const svg of observedPlots)if(!svg.isConnected){plotObserver?.unobserve(svg);observedPlots.delete(svg);}
   for(const svg of root.querySelectorAll('.bars,.trajectory,.spread,.landscape')){refreshPlot(svg);if(!observedPlots.has(svg)){observedPlots.add(svg);plotObserver?.observe(svg);}}
-  if(revealObserver&&!motionPreference())for(const node of root.querySelectorAll('.block,.student-scope,.follow-workbench,.knowledge-card,.personal-skills article,.source-launchpad>button,.student-card,.paper-cover,.question-tile'))if(!revealed.has(node)){revealed.add(node);if(node.getBoundingClientRect().top>innerHeight-25)revealObserver.observe(node);}
+  for(const node of observedReveals)if(!node.isConnected){revealObserver?.unobserve(node);observedReveals.delete(node);}
+  if(reveal&&revealObserver&&!motionPreference())for(const node of root.querySelectorAll('.block,.student-scope,.follow-workbench,.knowledge-card,.personal-skills article,.source-launchpad>button,.student-card,.paper-cover,.question-tile'))if(!revealed.has(node)){revealed.add(node);if(node.getBoundingClientRect().top>innerHeight-25){observedReveals.add(node);revealObserver.observe(node);}}
   outline=document.querySelector('#stage .study-outline');
   outlineEntries=outline?[...outline.querySelectorAll('[data-target]')].map(button=>({button,section:document.getElementById(button.dataset.target)})).filter(entry=>entry.section):[];
   refreshOutline();
@@ -90,7 +91,7 @@ export function installInteractions({reducedMotion}) {
   motionPreference=reducedMotion;
   if('ResizeObserver' in window)resizeObserver=new ResizeObserver(entries=>{for(const entry of entries)refreshTable(entry.target);});
   if('ResizeObserver' in window)plotObserver=new ResizeObserver(entries=>{for(const entry of entries)refreshPlot(entry.target);});
-  if('IntersectionObserver' in window)revealObserver=new IntersectionObserver(entries=>{let order=0;for(const entry of entries)if(entry.isIntersecting){revealObserver.unobserve(entry.target);if(!motionPreference())entry.target.animate([{opacity:0,transform:'translateY(18px)'},{opacity:1,transform:'translateY(0)'}],{duration:560,delay:Math.min(order++,5)*28,easing:'cubic-bezier(.16,1,.3,1)',fill:'backwards'});}},{rootMargin:'0px 0px -25px 0px',threshold:.06});
+  if('IntersectionObserver' in window)revealObserver=new IntersectionObserver(entries=>{let order=0;for(const entry of entries)if(entry.isIntersecting){revealObserver.unobserve(entry.target);observedReveals.delete(entry.target);if(!motionPreference())entry.target.animate([{opacity:0,transform:'translateY(10px)'},{opacity:1,transform:'translateY(0)'}],{duration:320,delay:Math.min(order++,3)*20,easing:'cubic-bezier(.16,1,.3,1)',fill:'backwards'});}},{rootMargin:'0px 0px -25px 0px',threshold:.06});
   document.addEventListener('scroll',event=>{if(event.target?.matches?.('.table-scroll'))refreshTable(event.target.closest('.table-frame'));else {hideTooltip();if(event.target===document||event.target===document.documentElement){document.body.dataset.scrolled=String(window.scrollY>18);cancelAnimationFrame(outlineFrame);outlineFrame=requestAnimationFrame(refreshOutline);}}},true);
   document.addEventListener('click',event=>{const summary=event.target.closest('summary');if(!summary||event.target.closest('button,a,input'))return;const details=summary.parentElement;if(details.matches('.card-scores,.card-meta,.record-accordion,.method-note')){event.preventDefault();toggleDetails(details);}});
   document.addEventListener('pointerover',event=>{if(event.pointerType==='touch')return;const target=event.target.closest('[data-plot-action],.plot-item,.plot-point,.student-dot,.heat-cell[title],[data-tip]');if(target)showTooltip(target,event.clientX,event.clientY);});
