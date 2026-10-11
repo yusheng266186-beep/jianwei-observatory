@@ -1,9 +1,9 @@
-import {personalQuestionCard,personalQuestionLink} from '../ui/personal-questions.js?v=glass-20261012a';
-import {renderDirectory} from './directory.js?v=glass-20261012a';
-import {head,button,chips,badge,block,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote,empty} from '../ui/html.js?v=glass-20261012a';
-import {trajectory,chartButtons,rateColor,rateLegend} from '../ui/plots.js?v=glass-20261012a';
-import {difference,valid,sum} from '../engine/metrics.js?v=glass-20261012a';
-import {scoreRows,answerRows,evidence} from '../io/exports.js?v=glass-20261012a';
+import {personalQuestionCard,personalQuestionLink} from '../ui/personal-questions.js?v=atelier-20261012c';
+import {renderDirectory} from './directory.js?v=atelier-20261012c';
+import {head,button,chips,badge,block,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote,empty} from '../ui/html.js?v=atelier-20261012c';
+import {trajectory,chartButtons,rateColor,rateLegend} from '../ui/plots.js?v=atelier-20261012c';
+import {difference,valid,sum} from '../engine/metrics.js?v=atelier-20261012c';
+import {scoreRows,answerRows,evidence} from '../io/exports.js?v=atelier-20261012c';
 export function render(atlas,state,session) {
   const story=state.sid?atlas.story(state.sid):[];
   const materials=state.sid?atlas.materialStory(state.sid):[],row=atlas.materialAt(state.sid,state.exam)||materials.at(-1);

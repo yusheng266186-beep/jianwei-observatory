@@ -1,26 +1,26 @@
-import {questionView,questionEvidence} from './ui/question.js?v=glass-20261012a';
-import {subjectView,knowledgeView,lensEvidence} from './ui/lenses.js?v=glass-20261012a';
-import {subjectLens,skillLens,questionLens} from './engine/lenses.js?v=glass-20261012a';
-import {directoryFilterView} from './scenes/directory.js?v=glass-20261012a';
-import {renderInto} from './ui/render.js?v=glass-20261012a';
-import {installInteractions,enhance,prepareUpdate,shiftTable} from './ui/interactions.js?v=glass-20261012a';
-import {readingDefaults,readingView,applyReading} from './ui/reading.js?v=glass-20261012a';
-import {reportView} from './ui/report.js?v=glass-20261012a';
-import {welcomeView} from './ui/welcome.js?v=glass-20261012a';
-import {composeScene} from './ui/composition.js?v=glass-20261012a';
-import {researchView,studyDescription,studyAvailable,studyKey} from './ui/research.js?v=glass-20261012a';
-import {Atlas} from './engine/atlas.js?v=glass-20261012a';
-import {normalizeDataset,SUBJECTS} from './data/compat.js?v=glass-20261012a';
-import {hydrate,save,saveWorkspace,restoreDataset,hasMaterials,preference,remember,previous,emptyDataset,loadNotebook,saveNotebook} from './data/workspace.js?v=glass-20261012a';
-import {mergeDatasets} from './data/parser.js?v=glass-20261012a';
-import {Inbox} from './data/inbox.js?v=glass-20261012a';
-import {NoteJournal} from './data/notes.js?v=glass-20261012a';
-import {motion,settle,visualFrame,cancelOwnMotion,enterCanvas,arrangeRows} from './ui/motion.js?v=glass-20261012a';
-import {esc,button,empty,table} from './ui/html.js?v=glass-20261012a';
-import {excel,word,print,download,chart,scoreRows,effectiveRows,subjectRows,answerRows,evidence} from './io/exports.js?v=glass-20261012a';
-import {directoryDefaults,lensValues,queryDirectory,directoryViewValues,directoryViewName} from './engine/directory.js?v=glass-20261012a';
-import {peekView,compareView,drawerEvidence} from './ui/explorer.js?v=glass-20261012a';
-import {dockIcon} from './ui/icons.js?v=glass-20261012a';
+import {questionView,questionEvidence} from './ui/question.js?v=atelier-20261012c';
+import {subjectView,knowledgeView,lensEvidence} from './ui/lenses.js?v=atelier-20261012c';
+import {subjectLens,skillLens,questionLens} from './engine/lenses.js?v=atelier-20261012c';
+import {directoryFilterView} from './scenes/directory.js?v=atelier-20261012c';
+import {renderInto} from './ui/render.js?v=atelier-20261012c';
+import {installInteractions,enhance,prepareUpdate,shiftTable} from './ui/interactions.js?v=atelier-20261012c';
+import {readingDefaults,readingView,applyReading} from './ui/reading.js?v=atelier-20261012c';
+import {reportView} from './ui/report.js?v=atelier-20261012c';
+import {welcomeView} from './ui/welcome.js?v=atelier-20261012c';
+import {composeScene} from './ui/composition.js?v=atelier-20261012c';
+import {researchView,studyDescription,studyAvailable,studyKey} from './ui/research.js?v=atelier-20261012c';
+import {Atlas} from './engine/atlas.js?v=atelier-20261012c';
+import {normalizeDataset,SUBJECTS} from './data/compat.js?v=atelier-20261012c';
+import {hydrate,save,saveWorkspace,restoreDataset,hasMaterials,preference,remember,previous,emptyDataset,loadNotebook,saveNotebook} from './data/workspace.js?v=atelier-20261012c';
+import {mergeDatasets} from './data/parser.js?v=atelier-20261012c';
+import {Inbox} from './data/inbox.js?v=atelier-20261012c';
+import {NoteJournal} from './data/notes.js?v=atelier-20261012c';
+import {motion,settle,visualFrame,cancelOwnMotion,enterCanvas,arrangeRows} from './ui/motion.js?v=atelier-20261012c';
+import {esc,button,empty,table} from './ui/html.js?v=atelier-20261012c';
+import {excel,word,print,download,chart,scoreRows,effectiveRows,subjectRows,answerRows,evidence} from './io/exports.js?v=atelier-20261012c';
+import {directoryDefaults,lensValues,queryDirectory,directoryViewValues,directoryViewName} from './engine/directory.js?v=atelier-20261012c';
+import {peekView,compareView,drawerEvidence} from './ui/explorer.js?v=atelier-20261012c';
+import {dockIcon} from './ui/icons.js?v=atelier-20261012c';
 
 const routes=[['board','年级总览','▦'],['class','班级研究','▥'],['papers','试卷研究','▧'],['people','学生研究','◎'],['follow','教学跟进','↗'],['library','资料与报告','⊞']];
 const defaults={board:{mode:'overview',metric:'underRate',historyMetric:'mean',search:'',page:1},class:{tab:'snapshot',value:'score',trendMetric:'mean',matrix:'total',search:'',page:1,matched:false},papers:{key:'',tab:'map',classes:[],question:0,order:'paper',search:'',page:1},people:{sid:'',storyMetric:'total',...directoryDefaults,filtersOpen:innerWidth>760},follow:{tier:'under',band:20,side:'below',classes:[],search:'',page:1},library:{tab:'materials'}};
@@ -190,7 +190,7 @@ async function paint(transition=false,focus=null) {
     const available=hasMaterials(atlas.data);let view;
     if(!available)view=welcomeView();
     else {
-      if(!loaded.has(scene))loaded.set(scene,import('./scenes/'+scene+'.js?v=glass-20261012a'));
+      if(!loaded.has(scene))loaded.set(scene,import('./scenes/'+scene+'.js?v=atelier-20261012c'));
       const module=await loaded.get(scene);if(serial!==paintId)return;
       view=scene==='class'&&!atlas.classes.length?{html:empty('先带入一个班的材料','从导入原表开始建立班级画布。')+button('导入材料','import',{},'accent'),report:null}:module.render(atlas,books[scene],session);
     }
@@ -210,8 +210,8 @@ async function paint(transition=false,focus=null) {
       else if(focusedData&&!changed){const next=[...stage().querySelectorAll('[data-cmd]')].find(el=>Object.entries(focusedData).every(([k,v])=>el.dataset[k]===v));next?.focus({preventScroll:true});}
       for(const el of stage().querySelectorAll('.table-scroll'))el.scrollLeft=paintedScrolls.get(tablePositionKey(el))||0;
       for(const rail of stage().querySelectorAll('.exam-rail')){const selected=rail.querySelector('.selected');if(selected)rail.scrollLeft=selected.offsetLeft-rail.offsetLeft-rail.clientWidth/2+selected.clientWidth/2;}
-      if(changed||scrollResets.has(object))window.scrollTo({top:scrollResets.has(object)?0:pagePositions.get(object)||0,behavior:'instant'});else window.scrollTo({top:previousScroll,behavior:'instant'});scrollResets.delete(object);
       enhance(stage());
+      if(changed||scrollResets.has(object))window.scrollTo({top:scrollResets.has(object)?0:pagePositions.get(object)||0,behavior:'instant'});else window.scrollTo({top:previousScroll,behavior:'instant'});scrollResets.delete(object);
       paintedStudy=available?{scene,values:structuredClone(books[scene])}:null;scheduleResearch();
       if(!reducedMotion()) {
         if(changed)enterCanvas(stage(),direction);

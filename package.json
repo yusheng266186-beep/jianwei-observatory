@@ -9,6 +9,7 @@
     "test:journey": "node tests/journey.cjs",
     "test:surface": "node tests/full-surface.cjs",
     "test:motion": "node tests/motion.cjs",
+    "test:polish": "node tests/polish.cjs",
     "profile:motion": "node tests/motion-profile.cjs"
   },
   "devDependencies": {

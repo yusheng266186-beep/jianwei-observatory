@@ -1,6 +1,6 @@
-import {SUBJECTS} from '../data/compat.js?v=glass-20261012a';
-import {studyAvailable} from '../ui/research.js?v=glass-20261012a';
-import {head,button,chips,badge,block,examRail,ribbon,table,number,integer,esc,empty,field,radio,footnote} from '../ui/html.js?v=glass-20261012a';
+import {SUBJECTS} from '../data/compat.js?v=atelier-20261012c';
+import {studyAvailable} from '../ui/research.js?v=atelier-20261012c';
+import {head,button,chips,badge,block,examRail,ribbon,table,number,integer,esc,empty,field,radio,footnote} from '../ui/html.js?v=atelier-20261012c';
 export function render(atlas,state,session) {
   const tab=state.tab||'materials';let body='';
   const routes=[['materials','材料与备份',atlas.data.scores.length+' 条成绩','导入、合并、撤回与完整备份'],['classes','班级与任务',atlas.classes.length+' 个班级','人数任务、任课信息与班级档案'],['lines','有效线',atlas.data.lines.length+' 条口径','本场两科类总分与学科线'],['papers','题目资料',atlas.papers().length+' 张试卷','题号、满分与知识点维护'],['exams','考次与口径',atlas.exams.length+' 次考试','考试顺序、排名范围与分析参数'],['notebook','证据报告',(session.notebook||[]).length+' 份摘录','结果快照、教师判断与完整导出']];
@@ -39,5 +39,5 @@ export function render(atlas,state,session) {
     })),'有成绩的考次可以研究分布；补齐对应有效线后可计算达线。题目满分与知识点在题目资料中维护。');
     body+='<div class="source-routes">'+[['01','班级有效人','年级总览 · 有效账 / 班级研究 · 有效与任务','任务、增量、外语有效、双上线与10/20分带。'],['02','个人学科小题得分','试卷研究 / 学生研究','从一道题到一个人，保留每一道小题。'],['03','班级多次考试对比','班级研究 · 历次对照','点选考次、共同参考与学生纵向矩阵。'],['04','班级成绩分析单次','班级研究 · 本场成绩','原分、折合分、排名与总分、学科分差。']].map(([n,title,path,text])=>'<article><span>'+n+'</span><h3>'+title+'</h3><b>'+path+'</b><p>'+text+'</p></article>').join('')+'</div>';
   }
-  return {html:head('06 / 资料与报告','材料、口径与判断，各有自己的位置','导入、整理、留存与导出，各有明确位置。',button('导入材料','import',{},'accent'))+navigation+body+footnote('标准版复盘表由基础记录和学科小题重新展开四类分析，不使用展示表中当前筛选留下的单人缓存。'),report:null};
+  return {html:head('06 / 资料与报告','资料与报告','导入、整理、留存与导出，各有明确位置。',button('导入材料','import',{},'accent'))+navigation+body+footnote('标准版复盘表由基础记录和学科小题重新展开四类分析，不使用展示表中当前筛选留下的单人缓存。'),report:null};
 }

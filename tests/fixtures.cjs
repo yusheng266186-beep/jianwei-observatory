@@ -17,4 +17,16 @@ fixture.banks['英语|52']=[{label:'1',max:5,knowledge:'阅读'},{label:'2',max:
 fixture.banks['日语|52']=[{label:'1',max:5,knowledge:'阅读'},{label:'2',max:10,knowledge:'阅读'}];
 return fixture;
 }
-module.exports={makeFixture};
+function makeWideFixture(){
+ const data=makeFixture();
+ for(let no=1;no<=18;no++){
+  const track=no<10||no===17?'physics':'history';
+  if(!data.scores.some(r=>r.classNo===no)){
+   const source=track==='physics'?4:10,people=data.students.filter(p=>data.scores.some(r=>r.classNo===source&&r.sid===p.id)).slice(0,4);
+   for(const person of people){const sid=person.id+'-class'+no;data.students.push({id:sid,name:'观察'+no+'班'+person.name.slice(-2)});for(const list of [data.scores,data.answers])list.push(...list.filter(r=>r.sid===person.id).map(r=>({...structuredClone(r),sid,classNo:no,track})));}
+  }
+  data.profiles[no]={classNo:no,track,cohort:no>=17?'repeat':'regular',lead:'匿名教师'+no,type:'平行班',combination:track==='physics'?'物化生':'史政地',teachers:{数学:'匿名数学教师',英语:'匿名外语教师'}};
+ }
+ return data;
+}
+module.exports={makeFixture,makeWideFixture};

@@ -14,12 +14,12 @@ export function table(headers,rows,{className='',label='分析明细'}={}) {
   return '<div class="table-frame" data-table-key="'+key+'" data-render-key="table-'+key+'">'+tools+'<div class="table-scroll '+className+'" tabindex="0" role="region" aria-label="'+esc(label)+'"><table aria-label="'+esc(label)+'"><thead><tr>'+headers.map(h=>'<th scope="col">'+esc(h)+'</th>').join('')+'</tr></thead><tbody>'+rows.map(row=>{const id=String(row[0]||'').match(/data-sid="([^"]+)"/);return '<tr'+(id?' data-motion-key="row-'+id[1]+'"':'')+'>'+row.map(cell=>'<td>'+String(cell??'—')+'</td>').join('')+'</tr>';}).join('')+'</tbody></table></div><div class="table-overflow-note" aria-hidden="true"><span>左右滚动，查看其余列</span><i></i></div></div>';
 }
 
-export function block(title,body,caption='',action='') {return '<section class="block"><div class="block-head"><div><h2>'+esc(title)+'</h2>'+(caption?'<p>'+esc(caption)+'</p>':'')+'</div>'+action+'</div>'+body+'</section>';}
-export function ribbon(items) {return '<div class="number-ribbon">'+items.map(([label,value,detail])=>'<div><span>'+esc(label)+'</span><strong>'+value+'</strong><small>'+esc(detail||'')+'</small></div>').join('')+'</div>';}
+export function block(title,body,caption='',action='',{id=''}={}) {return '<section class="block"'+(id?' id="'+esc(id)+'"':'')+'><div class="block-head"><div><h2>'+esc(title)+'</h2>'+(caption?'<p>'+esc(caption)+'</p>':'')+'</div>'+action+'</div>'+body+'</section>';}
+export function ribbon(items) {return '<div class="number-ribbon">'+items.map(([label,value,detail,action])=>{const tag=action?'button':'div';return '<'+tag+(action?' type="button" class="metric-card" data-cmd="'+esc(action.cmd)+'"'+attrs(action.values||{}):'')+'><span>'+esc(label)+(action?'<i aria-hidden="true">↗</i>':'')+'</span><strong>'+value+'</strong><small>'+esc(detail||'')+'</small></'+tag+'>';}).join('')+'</div>';}
 export function examRail(atlas,selected,key='exam',exams=atlas.exams,multi=false) {
   return '<div class="exam-rail" aria-label="考试时间轴">'+exams.map((exam,i)=>{
     const on=multi?selected.includes(exam.id):String(selected)===String(exam.id);
-    return '<button class="exam-stop '+(on?'selected':'')+'" data-cmd="'+(multi?'toggle':'set')+'"'+attrs({key,value:exam.id})+' aria-pressed="'+on+'"><span class="stop-index">'+String(i+1).padStart(2,'0')+'</span><b>'+esc(exam.id)+'</b><small>'+esc(exam.label)+'</small></button>';
+    return '<button class="exam-stop '+(on?'selected':'')+'" data-cmd="'+(multi?'toggle':'set')+'"'+attrs({key,value:exam.id,tip:exam.label})+' aria-pressed="'+on+'"><span class="stop-index">'+String(i+1).padStart(2,'0')+'</span><b>'+esc(exam.id)+'</b><small>'+esc(exam.label)+'</small></button>';
   }).join('')+'</div>';
 }
 export const personButton=(atlas,sid,exam='')=>button(esc(atlas.name(sid)),'peek',{sid,exam},'person-link');

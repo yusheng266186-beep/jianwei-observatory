@@ -2,11 +2,30 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {Atlas} from '../app/engine/atlas.js';
 import {mergeDatasets} from '../app/data/parser.js';
-import {directoryEntries} from '../app/engine/directory.js';
+import {directoryEntries,queryDirectory,directoryDefaults,lensValues} from '../app/engine/directory.js';
 import {questionLens,skillLens} from '../app/engine/lenses.js';
 import {studyAvailable} from '../app/ui/research.js';
 import fixtures from './fixtures.cjs';
 const {makeFixture}=fixtures;
+
+test('本科达线下钻包含特控学生，与同班同考次概况人数一致',()=>{
+  const atlas=new Atlas(makeFixture()),rows=atlas.classAt(4,'52');
+  const state={...directoryDefaults,...lensValues('passUnder'),classes:[4],directoryExam:'52'};
+  const {matches}=queryDirectory(atlas,state,{}),expected=rows.filter(row=>atlas.gap(row,'under')!==null&&atlas.gap(row,'under')>=0);
+  assert.deepEqual(new Set(matches.map(e=>e.row.sid)),new Set(expected.map(row=>row.sid)));
+  assert.equal(matches.length,atlas.summary(rows).under);
+  assert.ok(matches.some(e=>e.top!==null&&e.top>=0));
+  assert.ok(matches.every(e=>e.row.classNo===4&&e.row.exam==='52'));
+});
+test('达线名单区分真实0人与缺有效线，不借用特控来推断本科',()=>{
+  const f=makeFixture();for(const line of f.lines)if(line.exam==='52')line.under=null;
+  const atlas=new Atlas(f),under=queryDirectory(atlas,{...directoryDefaults,...lensValues('passUnder'),directoryExam:'52'},{});
+  assert.equal(under.matches.length,0);assert.equal(atlas.summary(atlas.rows('52')).under,null);
+  assert.ok(queryDirectory(atlas,{...directoryDefaults,...lensValues('passTop'),directoryExam:'52'},{}).matches.length>0);
+  const zero=makeFixture();for(const row of zero.scores)row.total=0;const zeroAtlas=new Atlas(zero);
+  assert.equal(zeroAtlas.summary(zeroAtlas.rows('52')).under,0);
+  assert.equal(queryDirectory(zeroAtlas,{...directoryDefaults,...lensValues('passUnder'),directoryExam:'52'},{}).matches.length,0);
+});
 
 test('英语、日语沿用表内折合成绩，17/18班归入各自科类',()=>{
   const atlas=new Atlas(makeFixture()),rows=atlas.rows('52');

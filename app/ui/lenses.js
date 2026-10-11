@@ -1,8 +1,8 @@
-import {button,block,table,ribbon,number,integer,percent,delta,esc,empty} from './html.js?v=glass-20261012a';
-import {trajectory,bars,rateColor,chartButtons} from './plots.js?v=glass-20261012a';
-import {subjectLens,skillLens} from '../engine/lenses.js?v=glass-20261012a';
-import {valid} from '../engine/metrics.js?v=glass-20261012a';
-import {evidence,scoreRows} from '../io/exports.js?v=glass-20261012a';
+import {button,block,table,ribbon,number,integer,percent,delta,esc,empty} from './html.js?v=atelier-20261012c';
+import {trajectory,bars,rateColor,chartButtons} from './plots.js?v=atelier-20261012c';
+import {subjectLens,skillLens} from '../engine/lenses.js?v=atelier-20261012c';
+import {valid} from '../engine/metrics.js?v=atelier-20261012c';
+import {evidence,scoreRows} from '../io/exports.js?v=atelier-20261012c';
 
 const tabs=(options,value)=>'<nav class="drawer-tabs lens-tabs" aria-label="观察视角">'+options.map(([id,label])=>button(label,'drawer-tab',{value:id},id===value?'chip selected':'chip','aria-pressed="'+(id===value)+'"')).join('')+'</nav>';
 const filters=(items,value)=>'<div class="lens-filters" role="group" aria-label="当前观察窗的名单条件">'+items.map(item=>button('<span>'+esc(item.label)+'</span><b>'+integer(item.count)+'</b>','lens-filter',{value:item.id},item.id===value?'lens-filter selected':'lens-filter','aria-pressed="'+(item.id===value)+'"')).join('')+'</div>';
@@ -22,7 +22,7 @@ export function subjectView(atlas,state) {
   const head='<header class="drawer-title"><div class="overline">班级学科 / 证据观察</div><h2 id="drawer-title">'+no+'班的'+esc(subject)+'</h2><p>'+esc(atlas.teacher(no,subject)||'任课教师未填写')+' · '+esc(atlas.exam(state.exam).label)+'</p>'+actions()+'</header>'+scope([no+'班',snapshot.profile.track==='physics'?'物理类':'历史类',atlas.exam(state.exam).label,subject==='外语'?'统一折合外语':'表内折合成绩'],'上方概况使用本班本场全部记录，名单条件只作用于下方名单。同科类参照包含17、18班。')+ribbon([['学科均分',number(own.mean),own.count+' 份成绩 · 缺 '+own.missing+' 份'],['同类基准差',delta(model.distance),'同科类均分 '+number(peers.mean)],['学科'+tierLabel+'达线',integer(own[tier]),own[tier+'Base']+' 人可判定'],['总分与学科双上线',integer(model.dualPass),model.dualBase+' 人可判定 · 口径不全 '+model.filters.find(f=>f.id==='unknown').count+' 人']])+tabs([['students','具体学生'],['history','历次参照'],['papers','相关小题']],tab);
   let body='';
   if(tab==='history') {
-    body=block('这个学科，历次的位置',trajectory('lens-subject-story',timeline.map(t=>t.exam.id),[{name:no+'班',values:timeline.map(t=>t.own.mean),points:timeline.map(t=>({cmd:'lens-exam',data:{exam:t.exam.id}}))},{name:'同科类基准',values:timeline.map(t=>t.peers.mean),color:'#9daaca'}]),'点击节点观察对应考次；各场原始均分保留，考试难度与参考学生可能不同。',chartButtons('lens-subject-story'))+block('逐场参照',table(['考次','有效成绩','缺学科成绩','班级均分','同类均分','基准差'],timeline.map(t=>[button(esc(t.exam.label),'lens-exam',{exam:t.exam.id},'person-link'),integer(t.own.count),integer(t.own.missing),number(t.own.mean),number(t.peers.mean),delta(valid(t.own.mean)&&valid(t.peers.mean)?t.own.mean-t.peers.mean:null)]),{label:'班级学科历次参照'}));
+    body=block('这个学科，历次的位置',trajectory('lens-subject-story',timeline.map(t=>t.exam.id),[{name:no+'班',values:timeline.map(t=>t.own.mean),points:timeline.map(t=>({cmd:'lens-exam',data:{exam:t.exam.id}}))},{name:'同科类基准',values:timeline.map(t=>t.peers.mean),color:'#a9ab8e'}]),'点击节点观察对应考次；各场原始均分保留，考试难度与参考学生可能不同。',chartButtons('lens-subject-story'))+block('逐场参照',table(['考次','有效成绩','缺学科成绩','班级均分','同类均分','基准差'],timeline.map(t=>[button(esc(t.exam.label),'lens-exam',{exam:t.exam.id},'person-link'),integer(t.own.count),integer(t.own.missing),number(t.own.mean),number(t.peers.mean),delta(valid(t.own.mean)&&valid(t.peers.mean)?t.own.mean-t.peers.mean:null)]),{label:'班级学科历次参照'}));
   } else if(tab==='papers') {
     body=block('把学科差异，追到题目里',papers.length?'<div class="lens-paper-grid">'+papers.map(p=>{
       const part=atlas.paper(p.key,[no]);return '<article><header><span>'+esc(p.subject)+'</span><small>'+part.answers.length+' 份作答</small></header><h3>'+esc(atlas.exam(p.exam).label)+'</h3><p>'+p.questions.length+' 道小题 · 本班材料</p><div>'+button('研究这张卷 ↗','lens-paper',{key:p.key,no},'outline')+'</div><div class="lens-skill-links">'+part.skills.map(s=>button(esc(s.name)+' <small>'+percent(s.rate)+'</small>','knowledge-open',{key:p.key,knowledge:s.name,no},'lens-skill-link')).join('')+'</div></article>';

@@ -1,0 +1,35 @@
+const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const {makeFixture,makeWideFixture}=require('./fixtures.cjs');
+const output=path.join(__dirname,'../.audit-output/polish');fs.mkdirSync(output,{recursive:true});
+const url=process.env.AUDIT_URL||'http://127.0.0.1:4173';
+(async()=>{
+ const browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',args:['--no-sandbox']}),results=[];
+ async function test(name,fn,{fixture=makeWideFixture(),mobile=false}={}){
+  const context=await browser.newContext({viewport:mobile?{width:390,height:844}:{width:1440,height:1000},reducedMotion:'reduce'}),page=await context.newPage(),errors=[];page.setDefaultTimeout(7000);page.on('pageerror',e=>errors.push(e.message));
+  const nav=async scene=>{await page.locator(`[data-cmd="nav"][data-scene="${scene}"]`).click();await page.waitForFunction(s=>document.getElementById('stage').dataset.scene===s&&document.getElementById('stage').getAttribute('aria-busy')==='false',scene);};
+  try{await page.goto(url);await page.waitForSelector('#navigation button');await page.locator('#files').setInputFiles({name:'anonymous.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(fixture))});await page.locator('[data-inbox="commit"]').click();await page.waitForSelector('body[data-workspace="ready"]');await page.waitForSelector('#inbox:not([open])',{state:'attached'});await page.locator('#toast [data-cmd="toast-close"]').click();await fn({page,nav});assert.deepEqual(errors,[]);results.push({name,ok:true});console.log('PASS '+name);}catch(error){results.push({name,ok:false,error:error.message,errors});console.log('FAIL '+name+' '+error.message.slice(0,550));await page.screenshot({path:path.join(output,'failure-'+results.length+'.png')});}await context.close();
+ }
+ await test('班级概况数字进入相同考次、相同班级的本科和特控名单',async({page,nav})=>{
+  await nav('class');assert.equal((await page.locator('.metric-card').first().locator('strong').textContent()).trim(),'35');assert.match(await page.locator('.metric-card').first().textContent(),/有总分 34 人.*缺 1 人/);
+  for(const [lens,count] of [['passUnder',31],['passTop',7]]){const control=page.locator(`.metric-card[data-lens="${lens}"]`);assert.equal(Number(await control.locator('strong').textContent()),count);await control.click();await page.waitForFunction(()=>document.getElementById('stage').dataset.scene==='people');assert.match(await page.locator('.directory-controls h2').textContent(),new RegExp('找到 '+count+' 位'));const state=await page.evaluate(()=>JSON.parse(localStorage.getItem('hengji:books')).people);assert.deepEqual(state.classes,[4]);assert.equal(state.directoryExam,'52');await page.locator('[data-cmd="research-back"]').click();await page.waitForSelector('.metric-card');}
+  await page.locator('.metric-card[data-target="class-distribution-section"]').click();assert.ok(await page.locator('#class-distribution-section').evaluate(el=>el.getBoundingClientRect().top<innerHeight));
+  await page.locator('.metric-card[data-target="class-snapshot-roster"]').click();assert.ok(await page.locator('#class-snapshot-roster').evaluate(el=>el.getBoundingClientRect().top<innerHeight));
+ });
+ await test('手机18班：选中17班保持可见，资料与全部概况数字可以阅读',async({page,nav})=>{
+  await nav('class');await page.evaluate(()=>document.querySelector('.class-key[data-no="17"]').click());await page.waitForFunction(()=>document.querySelector('.class-key.selected')?.dataset.no==='17');
+  for(const width of [320,390,820,1440]){await page.setViewportSize({width,height:900});await page.waitForTimeout(100);assert.ok(await page.evaluate(()=>{const selected=document.querySelector('.class-key.selected'),rail=selected.parentElement,a=selected.getBoundingClientRect(),b=rail.getBoundingClientRect();return a.left>=b.left-1&&a.right<=b.right+1;}));assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));}
+  await page.setViewportSize({width:390,height:844});await page.evaluate(()=>scrollTo({top:0,behavior:'instant'}));const data=await page.locator('.metric-card strong').evaluateAll(es=>es.map(e=>({text:e.textContent,top:e.getBoundingClientRect().top,bottom:e.getBoundingClientRect().bottom})));const dock=await page.locator('#navigation').boundingBox();assert.equal(data.length,4);assert.ok(data.every(e=>e.bottom<dock.y),'primary figures covered by Dock');
+  await page.locator('.class-profile summary').click();assert.match(await page.locator('.class-profile .class-passport').innerText(),/匿名教师17/);assert.match(await page.locator('.class-profile .class-passport').innerText(),/物化生/);
+  await page.locator('.class-profile summary').click();assert.equal(await page.locator('.class-profile').evaluate(e=>e.open),false);
+ },{mobile:true});
+ const unknown=makeFixture();unknown.lines=[];
+ await test('没有有效线时达线卡片明确引导补充，真实0人可打开空名单',async({page,nav})=>{await nav('board');for(const control of await page.locator('.overview-pass').all()){assert.equal(await control.locator('strong').textContent(),'— 人');assert.equal(await control.getAttribute('data-cmd'),'library-open');}await page.locator('.overview-pass').first().click();await page.waitForFunction(()=>document.getElementById('stage').dataset.scene==='library');assert.equal(await page.locator('[data-form="lines"]').count(),1);},{fixture:unknown});
+ const zero=makeFixture();for(const row of zero.scores)row.total=0;
+ await test('真实零人仍显示0并保留本科名单入口',async({page})=>{const control=page.locator('.overview-pass[data-lens="passUnder"]');assert.match(await control.locator('strong').textContent(),/^0/);await control.click();await page.waitForSelector('.directory-controls h2');assert.match(await page.locator('.directory-controls h2').textContent(),/找到 0 位/);assert.match(await page.locator('.active-conditions').textContent(),/本科达线 · 含特控/);},{fixture:zero});
+ await test('各场景在四种宽度下的图标、纸面模式与空跟进引导可用',async({page,nav})=>{
+  for(const scene of ['board','class','papers','people','follow','library'])for(const width of [1440,820,390,320]){await page.setViewportSize({width,height:900});await nav(scene);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));for(const action of await page.locator('.head-actions button').all())assert.ok(await action.getAttribute('aria-label'));}
+  await nav('follow');assert.equal(await page.locator('.follow-placeholder').count(),3);await page.locator('.follow-placeholder [data-cmd="section-jump"]').click();assert.ok(await page.locator('#follow-discovery').evaluate(el=>el.getBoundingClientRect().top<innerHeight));
+  await page.locator('.reading-button').click();await page.locator('#reading-content [data-key="surface"][data-value="paper"]').click();await page.locator('[data-cmd="reading-close"]').first().click();await nav('class');assert.equal(await page.locator('.number-ribbon').evaluate(el=>getComputedStyle(el).backgroundImage),'none');
+ });
+ fs.writeFileSync(path.join(output,'results.json'),JSON.stringify({results},null,2));await browser.close();if(results.some(r=>!r.ok))process.exitCode=1;
+})().catch(e=>{console.error(e);process.exitCode=1;});
