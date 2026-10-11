@@ -1,4 +1,4 @@
-import {esc,number,percent,signed} from '../ui/html.js?v=audit-20261011n';
+import {esc,number,percent,signed} from '../ui/html.js?v=glass-20261012a';
 export function download(content,name,type='application/octet-stream') {
   const blob=content instanceof Blob?content:new Blob([content],{type}),url=URL.createObjectURL(blob),anchor=document.createElement('a');
   anchor.href=url;anchor.download=name;anchor.click();setTimeout(()=>URL.revokeObjectURL(url),5000);

@@ -1,8 +1,8 @@
-import {head,button,chips,badge,block,table,number,integer,delta,esc,search,empty,footnote} from '../ui/html.js?v=audit-20261011n';
-import {mini,spread,chartButtons} from '../ui/plots.js?v=audit-20261011n';
-import {valid} from '../engine/metrics.js?v=audit-20261011n';
-import {queryDirectory,directoryLenses,standingLabels,directoryViewName} from '../engine/directory.js?v=audit-20261011n';
-import {scoreRows,evidence} from '../io/exports.js?v=audit-20261011n';
+import {head,button,chips,badge,block,table,number,integer,delta,esc,search,empty,footnote} from '../ui/html.js?v=glass-20261012a';
+import {mini,spread,chartButtons,seriesColors} from '../ui/plots.js?v=glass-20261012a';
+import {valid} from '../engine/metrics.js?v=glass-20261012a';
+import {queryDirectory,directoryLenses,standingLabels,directoryViewName} from '../engine/directory.js?v=glass-20261012a';
+import {scoreRows,evidence} from '../io/exports.js?v=glass-20261012a';
 const filter=(label,body)=>'<section class="filter-section"><h3>'+label+'</h3>'+body+'</section>';
 const peek=e=>button(esc(e.person.name),'peek',{sid:e.person.id,exam:e.row.exam},'person-link');
 const subjectOptions=atlas=>[['all','全部学科'],...atlas.comparisonSubjects(atlas.data.scores).map(s=>[s,s])];
@@ -54,7 +54,7 @@ function landscape(entries) {
   const points=entries.filter(e=>valid(e.percentile)&&valid(e.change)),w=940,h=340,left=64,right=24,top=25,bottom=45,bound=Math.max(10,...points.map(e=>Math.abs(e.change))),x=v=>left+v/100*(w-left-right),y=v=>top+(bound-v)/(2*bound)*(h-top-bottom);
   if(!points.length)return empty('暂无可比较的相邻阶段','至少需要同一学生的两次同科类有效总分。');
   const grid=[0,25,50,75,100].map(v=>'<line x1="'+x(v)+'" x2="'+x(v)+'" y1="'+top+'" y2="'+(h-bottom)+'"/><text x="'+x(v)+'" y="'+(h-18)+'" text-anchor="middle">'+v+'</text>').join('')+[-bound,-bound/2,0,bound/2,bound].map(v=>'<line x1="'+left+'" x2="'+(w-right)+'" y1="'+y(v)+'" y2="'+y(v)+'" class="'+(v===0?'zero-line':'')+'"/><text x="'+(left-10)+'" y="'+(y(v)+4)+'" text-anchor="end">'+number(v,0)+'</text>').join('');
-  return '<div class="plot-legend"><span><i style="background:#365dff"></i>物理类</span><span><i style="background:#202735"></i>历史类</span><span>'+points.length+' 人可绘制 · '+(entries.length-points.length)+' 人暂缺可比阶段</span></div><svg class="landscape" viewBox="0 0 '+w+' '+h+'" role="group" aria-label="学生分位与变化分布">'+grid+points.map(e=>'<circle class="student-dot" cx="'+x(e.percentile)+'" cy="'+y(e.change)+'" r="5" fill="'+(e.track==='physics'?'#365dff':'#202735')+'" data-cmd="peek" data-sid="'+esc(e.person.id)+'" data-exam="'+esc(e.row.exam)+'" tabindex="0" role="button" aria-label="'+esc(e.person.name)+'，'+e.row.classNo+'班，分位'+number(e.percentile)+'，变化'+number(e.change)+'"><title>'+esc(e.person.name)+' · '+e.row.classNo+'班 · 分位 '+number(e.percentile)+' · 变化 '+number(e.change)+'</title></circle>').join('')+'<text x="'+(w-right)+'" y="'+(h-3)+'" text-anchor="end">同类分位 →</text></svg>';
+  return '<div class="plot-legend"><span><i style="background:'+seriesColors[0]+'"></i>物理类</span><span><i style="background:'+seriesColors[1]+'"></i>历史类</span><span>'+points.length+' 人可绘制 · '+(entries.length-points.length)+' 人暂缺可比阶段</span></div><svg class="landscape" viewBox="0 0 '+w+' '+h+'" role="group" aria-label="学生分位与变化分布">'+grid+points.map(e=>'<circle class="student-dot" cx="'+x(e.percentile)+'" cy="'+y(e.change)+'" r="5" fill="'+(e.track==='physics'?seriesColors[0]:seriesColors[1])+'" data-cmd="peek" data-sid="'+esc(e.person.id)+'" data-exam="'+esc(e.row.exam)+'" tabindex="0" role="button" aria-label="'+esc(e.person.name)+'，'+e.row.classNo+'班，分位'+number(e.percentile)+'，变化'+number(e.change)+'"><title>'+esc(e.person.name)+' · '+e.row.classNo+'班 · 分位 '+number(e.percentile)+' · 变化 '+number(e.change)+'</title></circle>').join('')+'<text x="'+(w-right)+'" y="'+(h-3)+'" text-anchor="end">同类分位 →</text></svg>';
 }
 
 function activeConditions(state) {

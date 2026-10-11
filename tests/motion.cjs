@@ -86,6 +86,35 @@ const scenes=['board','class','papers','people','follow','library'];
    await page.keyboard.press('Escape');await page.waitForSelector('#research-drawer:not([open])',{state:'attached'});
   },{mobile});
  }
+ for(const mobile of [false,true])await test((mobile?'手机':'桌面')+' 选中底板：首次打开、快速切换与尺寸变化均对齐',async({page,nav,click,settled})=>{
+  const aligned=selector=>page.waitForFunction(selector=>{
+   const rail=document.querySelector(selector),selected=rail?.querySelector('.chip.selected'),indicator=rail?.querySelector('.selection-indicator');if(!selected||!indicator)return false;
+   const a=selected.getBoundingClientRect(),b=indicator.getBoundingClientRect();return a.width>15&&Math.abs(a.left-b.left)<1.5&&Math.abs(a.width-b.width)<1.5;
+  },selector);
+  await nav('class');await aligned('#stage .scene-tabs>.chips');
+  await click('button[data-cmd="class-subject"][data-subject="数学"]');await aligned('#drawer-content .drawer-tabs');
+  for(const value of ['history','papers','students']){await page.locator(`#drawer-content .drawer-tabs [data-value="${value}"]`).press('Enter');await page.waitForTimeout(30);}await settled();await aligned('#drawer-content .drawer-tabs');
+  await page.locator('#drawer-content .drawer-tabs [data-value="history"]').press('Enter');await page.waitForTimeout(40);await page.setViewportSize({width:mobile?820:390,height:900});await aligned('#drawer-content .drawer-tabs');
+  assert.ok(await page.locator('#drawer-content .selection-indicator').evaluate(el=>el.getAnimations().length<=1));
+  for(const width of [320,820,1440]){await page.setViewportSize({width,height:900});await aligned('#drawer-content .drawer-tabs');assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));}
+  await page.keyboard.press('Escape');await page.waitForSelector('#research-drawer:not([open])',{state:'attached'});await settled();await aligned('#stage .scene-tabs>.chips');
+  await click('button[data-cmd="class-subject"][data-subject="数学"]');await aligned('#drawer-content .drawer-tabs');
+ },{mobile});
+ await test('图表导出：缺失断开、实际零分保留，渐变随SVG和PNG完整导出',async({page})=>{
+  const result=await page.evaluate(async()=>{
+   const {trajectory,bars}=await import('./app/ui/plots.js?v=glass-20261012a');
+   const host=document.createElement('section');host.className='block';host.id='visual-fixture';host.innerHTML=trajectory('匿名趋势',['一','二','缺失阶段','四','五'],[{name:'匿名阶段',values:[10,30,null,0,20]}])+bars('匿名条形',[{label:'实际零分',value:0},{label:'未填成绩',value:null},{label:'已有成绩',value:40}]);document.getElementById('stage').replaceChildren(host);
+   const svg=host.querySelector('.trajectory'),line=svg.querySelector('.plot-line'),bar=host.querySelector('.bars');
+   const references=[...host.querySelectorAll('[fill^="url("]')].map(el=>el.getAttribute('fill').slice(5,-1));
+   return {points:svg.querySelectorAll('.plot-point').length,segments:(line.getAttribute('d').match(/M/g)||[]).length,areas:svg.querySelectorAll('.plot-area').length,zero:Number(bar.querySelectorAll('.plot-value')[0].textContent),missing:bar.querySelectorAll('.plot-value')[1].textContent,allFillsResolve:references.every(id=>!!document.getElementById(id))};
+  });
+  assert.deepEqual(result,{points:4,segments:2,areas:2,zero:0,missing:'—',allFillsResolve:true});
+  for(const id of ['匿名趋势','匿名条形'])for(const png of [false,true]){
+   const pending=page.waitForEvent('download');await page.evaluate(async({id,png})=>{const {chart}=await import('./app/io/exports.js?v=glass-20261012a');chart(id,png);},{id,png});
+   const file=await pending;assert.equal(await file.failure(),null);const target=path.join(output,id+(png?'.png':'.svg'));await file.saveAs(target);const bytes=fs.readFileSync(target);assert.ok(bytes.length>100);
+   if(!png){const decoded=await page.evaluate(async text=>{const svg=new DOMParser().parseFromString(text,'image/svg+xml');if(svg.querySelector('parsererror'))return false;return new Promise(resolve=>{const image=new Image(),url=URL.createObjectURL(new Blob([text],{type:'image/svg+xml'}));image.onload=()=>{URL.revokeObjectURL(url);resolve(image.naturalWidth>0)};image.onerror=()=>{URL.revokeObjectURL(url);resolve(false)};image.src=url;});},bytes.toString());assert.equal(decoded,true);}
+  }
+ });
  await test('慢加载：旧页点击和输入不能污染新页，可继续换页',async({page,nav,settled})=>{
   await nav('class');await page.route('**/app/scenes/papers.js*',async route=>{await new Promise(r=>setTimeout(r,1100));await route.continue();});
   await page.locator('[data-cmd="nav"][data-scene="papers"]').click();await page.waitForSelector('#stage[aria-busy=true]');

@@ -1,52 +1,64 @@
-import {esc,number,percent,attrs} from './html.js?v=audit-20261011n';
-import {valid} from '../engine/metrics.js?v=audit-20261011n';
-export const seriesColors=['#365dff','#202735','#7996e4','#9689b7'];
+import {esc,number,percent,attrs} from './html.js?v=glass-20261012a';
+import {valid} from '../engine/metrics.js?v=glass-20261012a';
+export const seriesColors=['#6586ae','#798b9d','#849f98','#a28c97'];
 const colors=seriesColors;
 const action=item=>item?.cmd?' data-plot-action="true" data-cmd="'+esc(item.cmd)+'"'+attrs(item.data||{})+' role="button" tabindex="0"':'';
+const key=id=>'glass-'+[...String(id)].map(char=>char.codePointAt(0).toString(16)).join('-');
+const gradient=(id,from,to,vertical=false)=>'<linearGradient id="'+id+'" x1="0" y1="0" x2="'+(vertical?'0':'1')+'" y2="'+(vertical?'1':'0')+'"><stop stop-color="'+from+'"/><stop offset="1" stop-color="'+to+'"/></linearGradient>';
+// Each segment stays within its two values; missing records break the curve and area.
+function curve(points){return points.map((p,i)=>i?'C'+(points[i-1].x+p.x)/2+','+points[i-1].y+' '+(points[i-1].x+p.x)/2+','+p.y+' '+p.x+','+p.y:'M'+p.x+','+p.y).join(' ');}
 export function trajectory(id,labels,series,{suffix='',zero=false}={}) {
   const values=series.flatMap(s=>s.values).filter(valid);if(!values.length)return '<div class="plot-empty">暂无可绘制的成绩</div>';
   let low=Math.min(...values),high=Math.max(...values);if(zero){low=Math.min(0,low);high=Math.max(0,high);}if(high===low){low-=1;high+=1;}
   const padding=(high-low)*.15;low-=padding;high+=padding;
-  const w=940,h=275,left=60,right=30,top=25,bottom=55,x=i=>left+i*(w-left-right)/Math.max(1,labels.length-1),y=v=>top+(high-v)/(high-low)*(h-top-bottom);
-  let content=Array.from({length:5},(_,i)=>{const value=low+(high-low)*i/4;return '<line x1="'+left+'" x2="'+(w-right)+'" y1="'+y(value)+'" y2="'+y(value)+'" stroke="#e8ebef"/><text x="'+(left-10)+'" y="'+(y(value)+4)+'" text-anchor="end">'+number(value,0)+esc(suffix)+'</text>';}).join('');
+  const w=940,h=275,left=60,right=30,top=25,bottom=55,x=i=>left+i*(w-left-right)/Math.max(1,labels.length-1),y=v=>top+(high-v)/(high-low)*(h-top-bottom),prefix=key(id);
+  let defs='',areas='',curves='',passivePoints='',activePoints='';
+  let content=Array.from({length:5},(_,i)=>{const value=low+(high-low)*i/4;return '<line class="plot-grid" x1="'+left+'" x2="'+(w-right)+'" y1="'+y(value)+'" y2="'+y(value)+'" stroke="#dbe0ec" stroke-dasharray="2 6"/><text x="'+(left-10)+'" y="'+(y(value)+4)+'" text-anchor="end">'+number(value,0)+esc(suffix)+'</text>';}).join('');
   content+=labels.map((label,i)=>'<text x="'+x(i)+'" y="'+(h-19)+'" text-anchor="middle">'+esc(label)+'</text>').join('');
-  let curves='',passivePoints='',activePoints='';
   for(const [index,item] of series.entries()) {
-    const color=item.color||colors[index%colors.length];let path='',previous=false;
-    item.values.forEach((value,i)=>{if(!valid(value)){previous=false;return;}path+=(previous?'L':'M')+x(i)+','+y(value)+' ';previous=true;});
-    curves+='<path class="plot-line" pathLength="1000" d="'+path+'" fill="none" stroke="'+color+'" stroke-width="2.6" stroke-linejoin="round"/>';
+    const color=item.color||colors[index%colors.length],segments=[];let points=[];
+    const finish=()=>{if(points.length){segments.push(points);points=[];}};
+    item.values.forEach((value,i)=>{if(!valid(value)){finish();return;}points.push({x:x(i),y:y(value)});});finish();
+    if(index===0){
+      const fill=prefix+'-area';defs+='<linearGradient id="'+fill+'" x1="0" y1="0" x2="0" y2="1"><stop stop-color="'+color+'" stop-opacity=".18"/><stop offset="1" stop-color="'+color+'" stop-opacity="0"/></linearGradient>';
+      areas+=segments.filter(s=>s.length>1).map(s=>'<path class="plot-area" d="'+curve(s)+' L'+s.at(-1).x+','+(h-bottom)+' L'+s[0].x+','+(h-bottom)+' Z" fill="url(#'+fill+')"/>').join('');
+    }
+    curves+='<path class="plot-line" pathLength="1000" d="'+segments.map(curve).join(' ')+'" fill="none" stroke="'+color+'" stroke-width="'+(index===0?'3':'2.4')+'" stroke-linejoin="round" stroke-linecap="round"/>';
     item.values.forEach((value,i)=>{
       if(!valid(value))return;
       const title=series.filter(s=>s.values[i]===value).map(s=>s.name+' · '+labels[i]+'：'+number(value)+suffix).join('\n');
-      const point='<circle class="plot-point" cx="'+x(i)+'" cy="'+y(value)+'" r="4" fill="white" stroke="'+color+'" stroke-width="2"'+action(item.points?.[i])+'><title>'+esc(title)+'</title></circle>';
+      const point='<circle class="plot-point" cx="'+x(i)+'" cy="'+y(value)+'" r="4" fill="#fafbff" stroke="'+color+'" stroke-width="2"'+action(item.points?.[i])+'><title>'+esc(title)+'</title></circle>';
       if(item.points?.[i]?.cmd)activePoints+=point;else passivePoints+=point;
     });
   }
-  content+=curves+passivePoints+activePoints;
-  return '<div class="plot-legend">'+series.map((s,i)=>'<span><i style="background:'+(s.color||colors[i%colors.length])+'"></i>'+esc(s.name)+'</span>').join('')+'</div><svg id="'+id+'" class="trajectory" viewBox="0 0 '+w+' '+h+'" role="'+(series.some(s=>s.points?.some(p=>p?.cmd))?'group':'img')+'" aria-label="成绩趋势">'+content+'</svg>';
+  content+=areas+curves+passivePoints+activePoints;
+  return '<div class="plot-legend">'+series.map((s,i)=>'<span><i style="background:'+(s.color||colors[i%colors.length])+'"></i>'+esc(s.name)+'</span>').join('')+'</div><svg id="'+esc(id)+'" class="trajectory" viewBox="0 0 '+w+' '+h+'" role="'+(series.some(s=>s.points?.some(p=>p?.cmd))?'group':'img')+'" aria-label="成绩趋势"><defs>'+defs+'</defs>'+content+'</svg>';
 }
 export function bars(id,items,{percentages=false,signed=false}={}) {
-  const measured=items.map(r=>r.value).filter(valid),max=Math.max(1,...measured.map(Math.abs)),w=1060,h=Math.max(70,items.length*37+20),base=signed?490:190;
-  return '<svg id="'+id+'" class="bars" viewBox="0 0 '+w+' '+h+'" role="group" aria-label="横向比较">'+items.map((item,i)=>{
+  const measured=items.map(r=>r.value).filter(valid),max=Math.max(1,...measured.map(Math.abs)),w=1060,h=Math.max(70,items.length*37+20),base=signed?490:190,prefix=key(id);
+  const defs=gradient(prefix+'-positive','#9eb6ce','#6e8eae')+gradient(prefix+'-negative','#d1aab6','#b77d91');
+  return '<svg id="'+esc(id)+'" class="bars" viewBox="0 0 '+w+' '+h+'" role="group" aria-label="横向比较"><defs>'+defs+'</defs>'+items.map((item,i)=>{
     const y=15+i*37,value=item.value,width=valid(value)?Math.abs(value)/max*(signed?260:540):0,start=signed&&value<0?base-width:base,label=String(item.label),display=label.length>14?label.slice(0,13)+'…':label;
-    return '<g class="plot-item"'+action(item)+'><title>'+esc(label)+'：'+(percentages?percent(value):number(value))+'</title><rect x="0" y="'+(y-4)+'" width="'+w+'" height="33" fill="transparent"/><text x="174" y="'+(y+15)+'" text-anchor="end">'+esc(display)+'</text><line x1="'+base+'" x2="'+base+'" y1="'+y+'" y2="'+(y+22)+'" stroke="#d9dfe6"/><rect class="plot-bar" x="'+start+'" y="'+y+'" width="'+width+'" height="22" rx="5" fill="'+(value<0?'#ba5364':'#365dff')+'"/><text x="790" y="'+(y+15)+'">'+(percentages?percent(value):number(value))+'</text></g>';
+    const track=!signed&&valid(value)?'<rect class="plot-track" x="'+base+'" y="'+y+'" width="540" height="22" rx="6" fill="#939fbe12"/>':'';
+    return '<g class="plot-item"'+action(item)+'><title>'+esc(label)+'：'+(percentages?percent(value):number(value))+'</title><rect x="0" y="'+(y-4)+'" width="'+w+'" height="33" fill="transparent"/><text x="174" y="'+(y+15)+'" text-anchor="end">'+esc(display)+'</text>'+track+'<line class="plot-axis" x1="'+base+'" x2="'+base+'" y1="'+y+'" y2="'+(y+22)+'" stroke="#a2aecb44"/><rect class="plot-bar" x="'+start+'" y="'+y+'" width="'+width+'" height="22" rx="6" fill="url(#'+prefix+(value<0?'-negative':'-positive')+')"/><text class="plot-value" x="790" y="'+(y+15)+'">'+(percentages?percent(value):number(value))+'</text></g>';
   }).join('')+'</svg>';
 }
 export function spread(id,values,lines=[],scope=null) {
   const list=values.filter(valid);if(!list.length)return '<div class="plot-empty">暂无总分</div>';
   const step=25,lo=Math.floor(Math.min(...list)/step)*step,hi=Math.ceil((Math.max(...list)+1)/step)*step,bins=[];for(let v=lo;v<hi;v+=step)bins.push({start:v,count:list.filter(s=>s>=v&&s<v+step).length});
-  const w=780,h=225,l=40,r=20,t=30,b=35,bw=(w-l-r)/bins.length,max=Math.max(1,...bins.map(s=>s.count)),xy=value=>l+(value-lo)/(hi-lo)*(w-l-r);
-  const columns=bins.map((bin,i)=>{const height=bin.count/max*(h-t-b),x=l+i*bw+2;return '<g class="plot-item"'+action(scope?{cmd:'inspect-bin',data:{...scope,min:bin.start,max:bin.start+step}}:null)+'><title>'+bin.start+'–'+(bin.start+step)+'分（不含上界）：'+bin.count+'人</title><rect x="'+x+'" y="'+t+'" width="'+Math.max(1,bw-4)+'" height="'+(h-b-t)+'" fill="transparent"/><rect class="plot-column" x="'+x+'" y="'+(h-b-height)+'" width="'+Math.max(1,bw-4)+'" height="'+height+'" rx="3" fill="#7899ed"/>'+(bins.length<=18?'<text x="'+(x+(bw-4)/2)+'" y="'+(h-b-height-7)+'" text-anchor="middle">'+bin.count+'</text>':'')+'</g>';}).join('');
-  const markers=lines.filter(line=>valid(line.value)&&line.value>=lo&&line.value<=hi).map((line,i)=>'<line x1="'+xy(line.value)+'" x2="'+xy(line.value)+'" y1="8" y2="'+(h-b)+'" stroke="#333d55" stroke-width="1.5" stroke-dasharray="4 4"/><text x="'+(xy(line.value)+4)+'" y="'+(12+i*13)+'" fill="#333d55">'+esc(line.label)+' '+number(line.value,0)+'</text>').join('');
-  return '<svg id="'+id+'" viewBox="0 0 '+w+' '+h+'" class="spread" role="group" aria-label="总分分布">'+columns+markers+bins.filter((_,i)=>i%Math.max(1,Math.ceil(bins.length/10))===0).map(bin=>'<text x="'+xy(bin.start)+'" y="'+(h-8)+'">'+bin.start+'</text>').join('')+'</svg>';
+  const w=780,h=225,l=40,r=20,t=30,b=35,bw=(w-l-r)/bins.length,max=Math.max(1,...bins.map(s=>s.count)),xy=value=>l+(value-lo)/(hi-lo)*(w-l-r),prefix=key(id);
+  const grid=Array.from({length:3},(_,i)=>'<line class="plot-grid" x1="'+l+'" x2="'+(w-r)+'" y1="'+(t+i*(h-b-t)/2)+'" y2="'+(t+i*(h-b-t)/2)+'" stroke="#dbe0ec" stroke-dasharray="2 6"/>').join('');
+  const columns=bins.map((bin,i)=>{const height=bin.count/max*(h-t-b),x=l+i*bw+2;return '<g class="plot-item"'+action(scope?{cmd:'inspect-bin',data:{...scope,min:bin.start,max:bin.start+step}}:null)+'><title>'+bin.start+'–'+(bin.start+step)+'分（不含上界）：'+bin.count+'人</title><rect x="'+x+'" y="'+t+'" width="'+Math.max(1,bw-4)+'" height="'+(h-b-t)+'" fill="transparent"/><rect class="plot-column" x="'+x+'" y="'+(h-b-height)+'" width="'+Math.max(1,bw-4)+'" height="'+height+'" rx="4" fill="url(#'+prefix+'-column)"/>'+(bins.length<=18?'<text class="plot-value" x="'+(x+(bw-4)/2)+'" y="'+(h-b-height-7)+'" text-anchor="middle">'+bin.count+'</text>':'')+'</g>';}).join('');
+  const markers=lines.filter(line=>valid(line.value)&&line.value>=lo&&line.value<=hi).map((line,i)=>'<line x1="'+xy(line.value)+'" x2="'+xy(line.value)+'" y1="8" y2="'+(h-b)+'" stroke="#596884" stroke-width="1.5" stroke-dasharray="4 4"/><text x="'+(xy(line.value)+4)+'" y="'+(12+i*13)+'" fill="#596884">'+esc(line.label)+' '+number(line.value,0)+'</text>').join('');
+  return '<svg id="'+esc(id)+'" viewBox="0 0 '+w+' '+h+'" class="spread" role="group" aria-label="总分分布"><defs>'+gradient(prefix+'-column','#a3bdd3','#7796b2',true)+'</defs>'+grid+columns+markers+bins.filter((_,i)=>i%Math.max(1,Math.ceil(bins.length/10))===0).map(bin=>'<text x="'+xy(bin.start)+'" y="'+(h-8)+'">'+bin.start+'</text>').join('')+'</svg>';
 }
 export function mini(values) {
   const list=values.filter(valid);if(list.length<2)return '<svg viewBox="0 0 110 28" class="mini"></svg>';
   const low=Math.min(...list),high=Math.max(...list);let path='',previous=false;
   values.forEach((v,i)=>{if(!valid(v)){previous=false;return;}path+=(previous?'L':'M')+i*105/Math.max(1,values.length-1)+','+(25-(v-low)/(high-low||1)*22)+' ';previous=true;});
-  return '<svg viewBox="0 0 110 28" class="mini" aria-hidden="true"><path d="'+path+'" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>';
+  return '<svg viewBox="0 0 110 28" class="mini" aria-hidden="true"><path d="'+path+'" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
 }
-export const rateColor=rate=>!valid(rate)?'#f0f1f5':rate<.5?'#fdeaea':rate<.75?'#f1f4fa':'#e1e9ff';
+export const rateColor=rate=>!valid(rate)?'#e7eaf2':rate<.5?'#efdee3':rate<.75?'#e7edf3':'#d6e3ef';
 export function rateLegend() {
   return '<div class="rate-legend" aria-label="得分率颜色说明"><span>得分率</span>'+[[.25,'低于50%'],[.6,'50%至75%以下'],[.9,'75%及以上'],[null,'无法计算']].map(([rate,label])=>'<span><i style="background:'+rateColor(rate)+'"></i>'+label+'</span>').join('')+'</div>';
 }

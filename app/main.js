@@ -1,25 +1,26 @@
-import {questionView,questionEvidence} from './ui/question.js?v=audit-20261011n';
-import {subjectView,knowledgeView,lensEvidence} from './ui/lenses.js?v=audit-20261011n';
-import {subjectLens,skillLens,questionLens} from './engine/lenses.js?v=audit-20261011n';
-import {directoryFilterView} from './scenes/directory.js?v=audit-20261011n';
-import {renderInto} from './ui/render.js?v=audit-20261011n';
-import {installInteractions,enhance,prepareUpdate,shiftTable} from './ui/interactions.js?v=audit-20261011n';
-import {readingDefaults,readingView,applyReading} from './ui/reading.js?v=audit-20261011n';
-import {reportView} from './ui/report.js?v=audit-20261011n';
-import {welcomeView} from './ui/welcome.js?v=audit-20261011n';
-import {composeScene} from './ui/composition.js?v=audit-20261011n';
-import {researchView,studyDescription,studyAvailable,studyKey} from './ui/research.js?v=audit-20261011n';
-import {Atlas} from './engine/atlas.js?v=audit-20261011n';
-import {normalizeDataset,SUBJECTS} from './data/compat.js?v=audit-20261011n';
-import {hydrate,save,saveWorkspace,restoreDataset,hasMaterials,preference,remember,previous,emptyDataset,loadNotebook,saveNotebook} from './data/workspace.js?v=audit-20261011n';
-import {mergeDatasets} from './data/parser.js?v=audit-20261011n';
-import {Inbox} from './data/inbox.js?v=audit-20261011n';
-import {NoteJournal} from './data/notes.js?v=audit-20261011n';
-import {esc,button,empty,table} from './ui/html.js?v=audit-20261011n';
-import {excel,word,print,download,chart,scoreRows,effectiveRows,subjectRows,answerRows,evidence} from './io/exports.js?v=audit-20261011n';
-import {directoryDefaults,lensValues,queryDirectory,directoryViewValues,directoryViewName} from './engine/directory.js?v=audit-20261011n';
-import {peekView,compareView,drawerEvidence} from './ui/explorer.js?v=audit-20261011n';
-import {dockIcon} from './ui/icons.js?v=audit-20261011n';
+import {questionView,questionEvidence} from './ui/question.js?v=glass-20261012a';
+import {subjectView,knowledgeView,lensEvidence} from './ui/lenses.js?v=glass-20261012a';
+import {subjectLens,skillLens,questionLens} from './engine/lenses.js?v=glass-20261012a';
+import {directoryFilterView} from './scenes/directory.js?v=glass-20261012a';
+import {renderInto} from './ui/render.js?v=glass-20261012a';
+import {installInteractions,enhance,prepareUpdate,shiftTable} from './ui/interactions.js?v=glass-20261012a';
+import {readingDefaults,readingView,applyReading} from './ui/reading.js?v=glass-20261012a';
+import {reportView} from './ui/report.js?v=glass-20261012a';
+import {welcomeView} from './ui/welcome.js?v=glass-20261012a';
+import {composeScene} from './ui/composition.js?v=glass-20261012a';
+import {researchView,studyDescription,studyAvailable,studyKey} from './ui/research.js?v=glass-20261012a';
+import {Atlas} from './engine/atlas.js?v=glass-20261012a';
+import {normalizeDataset,SUBJECTS} from './data/compat.js?v=glass-20261012a';
+import {hydrate,save,saveWorkspace,restoreDataset,hasMaterials,preference,remember,previous,emptyDataset,loadNotebook,saveNotebook} from './data/workspace.js?v=glass-20261012a';
+import {mergeDatasets} from './data/parser.js?v=glass-20261012a';
+import {Inbox} from './data/inbox.js?v=glass-20261012a';
+import {NoteJournal} from './data/notes.js?v=glass-20261012a';
+import {motion,settle,visualFrame,cancelOwnMotion,enterCanvas,arrangeRows} from './ui/motion.js?v=glass-20261012a';
+import {esc,button,empty,table} from './ui/html.js?v=glass-20261012a';
+import {excel,word,print,download,chart,scoreRows,effectiveRows,subjectRows,answerRows,evidence} from './io/exports.js?v=glass-20261012a';
+import {directoryDefaults,lensValues,queryDirectory,directoryViewValues,directoryViewName} from './engine/directory.js?v=glass-20261012a';
+import {peekView,compareView,drawerEvidence} from './ui/explorer.js?v=glass-20261012a';
+import {dockIcon} from './ui/icons.js?v=glass-20261012a';
 
 const routes=[['board','年级总览','▦'],['class','班级研究','▥'],['papers','试卷研究','▧'],['people','学生研究','◎'],['follow','教学跟进','↗'],['library','资料与报告','⊞']];
 const defaults={board:{mode:'overview',metric:'underRate',historyMetric:'mean',search:'',page:1},class:{tab:'snapshot',value:'score',trendMetric:'mean',matrix:'total',search:'',page:1,matched:false},papers:{key:'',tab:'map',classes:[],question:0,order:'paper',search:'',page:1},people:{sid:'',storyMetric:'total',...directoryDefaults,filtersOpen:innerWidth>760},follow:{tier:'under',band:20,side:'below',classes:[],search:'',page:1},library:{tab:'materials'}};
@@ -55,8 +56,6 @@ function notify(message,action={}) {
 }
 const tablePositionKey=el=>paintedObject+'|'+(el.closest('.block')?.querySelector('h2')?.textContent||'')+'|'+(el.closest('.table-frame')?.dataset.tableKey||el.querySelector('table')?.getAttribute('aria-label'));
 function closeReader(){const dialog=document.getElementById('table-reader');if(dialog.open)dialog.close();}
-function visualFrame(element){const style=getComputedStyle(element);return {opacity:style.opacity,transform:style.transform};}
-function cancelOwnMotion(element){for(const animation of element.getAnimations())animation.cancel();}
 function dismissDialog(id){
   const dialog=document.getElementById(id);if(dialogClosings.has(dialog))return dialogClosings.get(dialog);if(!dialog.open)return Promise.resolve();
   const from=visualFrame(dialog);cancelOwnMotion(dialog);
@@ -191,7 +190,7 @@ async function paint(transition=false,focus=null) {
     const available=hasMaterials(atlas.data);let view;
     if(!available)view=welcomeView();
     else {
-      if(!loaded.has(scene))loaded.set(scene,import('./scenes/'+scene+'.js?v=audit-20261011n'));
+      if(!loaded.has(scene))loaded.set(scene,import('./scenes/'+scene+'.js?v=glass-20261012a'));
       const module=await loaded.get(scene);if(serial!==paintId)return;
       view=scene==='class'&&!atlas.classes.length?{html:empty('先带入一个班的材料','从导入原表开始建立班级画布。')+button('导入材料','import',{},'accent'),report:null}:module.render(atlas,books[scene],session);
     }
@@ -199,7 +198,7 @@ async function paint(transition=false,focus=null) {
     const object=sceneObject(scene),changed=object!==paintedObject,previousScroll=window.scrollY;
     const oldScene=stage().dataset.scene,direction=oldScene===scene?'focus':routes.findIndex(r=>r[0]===scene)>routes.findIndex(r=>r[0]===oldScene)?'forward':'backward';
     document.documentElement.dataset.transitionDirection=direction;
-    const positions=new Map([...stage().querySelectorAll('[data-motion-key]')].map(el=>[el.dataset.motionKey,el.getBoundingClientRect()]));
+    const positions=new Map([...stage().querySelectorAll('[data-motion-key]')].map(el=>[el,el.getBoundingClientRect()]));
     const focused=document.activeElement?.closest('[data-cmd]'),focusedData=focused&&stage().contains(focused)?{...focused.dataset}:null;
     for(const el of stage().querySelectorAll('.table-scroll'))paintedScrolls.set(tablePositionKey(el),el.scrollLeft);
     if(changed&&paintedObject)pagePositions.set(paintedObject,previousScroll);
@@ -215,12 +214,8 @@ async function paint(transition=false,focus=null) {
       enhance(stage());
       paintedStudy=available?{scene,values:structuredClone(books[scene])}:null;scheduleResearch();
       if(!reducedMotion()) {
-        if(changed){
-          const from=Number(getComputedStyle(stage()).opacity);cancelOwnMotion(stage());
-          stage().animate([{opacity:from<1?from:.65},{opacity:1}],{duration:220,easing:'cubic-bezier(.2,.8,.2,1)'});
-          const head=stage().querySelector('.scene-head');if(head&&direction!=='focus')head.animate([{transform:'translateX('+(direction==='backward'?-8:direction==='forward'?8:0)+'px)'},{transform:'translateX(0)'}],{duration:260,easing:'cubic-bezier(.22,.8,.22,1)'});
-        }
-        if(!changed)for(const el of stage().querySelectorAll('[data-motion-key]')){const before=positions.get(el.dataset.motionKey),after=el.getBoundingClientRect();if(after.bottom<72||after.top>innerHeight)continue;if(before&&!changed&&(before.x!==after.x||before.y!==after.y))el.animate([{transform:'translate('+(before.x-after.x)+'px,'+(before.y-after.y)+'px)'},{transform:'translate(0,0)'}],{duration:240,easing:'cubic-bezier(.22,.8,.22,1)'});else if(!before)el.animate([{opacity:0,transform:'translateY(12px)'},{opacity:1,transform:'translateY(0)'}],{duration:240,delay:Math.min([...el.parentElement.children].indexOf(el),4)*18,fill:'backwards',easing:'cubic-bezier(.22,.8,.22,1)'});}
+        if(changed)enterCanvas(stage(),direction);
+        else arrangeRows(stage(),positions);
       }
     };
     apply();
@@ -328,7 +323,7 @@ function drawDrawer() {
   const dialog=document.getElementById('research-drawer'),content=document.getElementById('drawer-content'),focus=document.activeElement?.dataset;
   if(!drawerState)return;
   drawerContentMotion?.cancel();drawerContentMotion=null;
-  const object=[drawerState.type,drawerState.sid||drawerState.no||drawerState.key||'',drawerState.subject||drawerState.knowledge||drawerState.question||'',drawerState.tab||''].join('|'),same=dialog.dataset.object===object,positions=new Map([...content.querySelectorAll('tr[data-motion-key]')].map(el=>[el.dataset.motionKey,el.getBoundingClientRect()]));dialog.dataset.object=object;
+  const object=[drawerState.type,drawerState.sid||drawerState.no||drawerState.key||'',drawerState.subject||drawerState.knowledge||drawerState.question||'',drawerState.tab||''].join('|'),same=dialog.dataset.object===object,positions=new Map([...content.querySelectorAll('tr[data-motion-key]')].map(el=>[el,el.getBoundingClientRect()]));dialog.dataset.object=object;
   if(drawerState.type==='person'&&!drawerState.queue){const active=drawerState;drawerState=drawerTrail.at(-1)||null;const queue=personQueue(active.sid,active.exam);drawerState=active;Object.assign(active,queue);}
   document.getElementById('drawer-back').hidden=!drawerTrail.length;
   dialog.classList.toggle('comparison-drawer',drawerState.type==='compare');dialog.dataset.kind=drawerState.type;document.getElementById('drawer-context').textContent='衡迹 / '+({person:'学生观察',question:'单题研究',filters:'名单筛选',compare:'并排比较',subject:'班级学科',knowledge:'知识点研究'}[drawerState.type]||'研究观察窗');
@@ -341,7 +336,7 @@ function drawDrawer() {
     requestAnimationFrame(()=>{if(crumb.isConnected)crumb.scrollLeft=crumb.scrollWidth;});
   }
   enhance(content);
-  if(same&&!reducedMotion()){let order=0;for(const row of content.querySelectorAll('tr[data-motion-key]')){const after=row.getBoundingClientRect(),before=positions.get(row.dataset.motionKey);if(after.bottom<dialog.getBoundingClientRect().top+65||after.top>innerHeight)continue;if(before&&Math.abs(before.y-after.y)>1)row.animate([{transform:'translateY('+(before.y-after.y)+'px)'},{transform:'translateY(0)'}],{duration:340,easing:'cubic-bezier(.16,1,.3,1)'});else if(!before)row.animate([{opacity:0,transform:'translateY(5px)'},{opacity:1,transform:'translateY(0)'}],{duration:260,delay:Math.min(order++,4)*18,fill:'backwards',easing:'cubic-bezier(.16,1,.3,1)'});}}
+  if(same&&!reducedMotion())arrangeRows(content,positions,{edge:dialog.getBoundingClientRect().top+65});
   if(focus?.cmd){const target=[...content.querySelectorAll('[data-cmd]')].find(el=>Object.entries(focus).every(([k,v])=>el.dataset[k]===v));target?.focus({preventScroll:true});}
 }
 function openDrawer(state) {
@@ -351,7 +346,7 @@ function openDrawer(state) {
   drawerState=state;drawDrawer();dialog.scrollTop=0;
   if(!wasOpen){drawerOpener=document.activeElement;dialog.showModal();document.body.classList.add('drawer-open');}
   if(!reducedMotion()){
-    if(!wasOpen||reopening)drawerMotion=dialog.animate([from,{opacity:1,transform:'translateX(0)'}],{duration:300,easing:'cubic-bezier(.16,1,.3,1)'});
+    if(!wasOpen||reopening)drawerMotion=dialog.animate([from,{opacity:1,transform:'translateX(0)'}],{duration:420,easing:settle});
     else animateDrawer();
   }
   const title=document.getElementById('drawer-title');if(title){title.tabIndex=-1;title.focus({preventScroll:true});}
@@ -362,7 +357,7 @@ function closeDrawer() {
   const study=studyNow();if(study){archiveStudy(study);closedStudy={study,closedAt:Date.now()};}
   const epoch=++drawerEpoch,from=visualFrame(dialog);drawerMotion?.cancel();drawerContentMotion?.cancel();
   const closing=(async()=>{
-    if(!reducedMotion())try{drawerMotion=dialog.animate([from,{opacity:0,transform:'translateX(40px)'}],{duration:180,easing:'cubic-bezier(.4,0,1,1)'});await drawerMotion.finished;}catch{}
+    if(!reducedMotion())try{drawerMotion=dialog.animate([from,{opacity:0,transform:'translateX(40px)'}],motion.leave);await drawerMotion.finished;}catch{}
     if(epoch!==drawerEpoch)return false;
     dialog.close();document.body.classList.remove('drawer-open');drawerState=null;drawerTrail=[];drawerOpener?.isConnected&&drawerOpener.focus({preventScroll:true});return true;
   })();
