@@ -19,6 +19,10 @@
 .personal-question-card:hover footer i{transform:translate(2px,-2px)}
 .skill-question-link.button{font-size:11px;padding:5px 8px;min-height:30px;white-space:normal;color:var(--blue);border-color:#dde4f7;background:#ffffff9e;margin:3px 3px 0 0}
 .directory-controls:focus,.roster-bar:focus,.lens-roster-tools:focus,.report-query:focus{outline:none}
+.chart-buttons[data-empty=true]::before{content:'暂无图表可导出';font-size:10px;color:var(--muted);align-self:center;margin-right:6px}
+.chart-buttons button:disabled{opacity:.4;cursor:default}
+/* Blur the backdrop once so scrolling dialog content stays on an unfiltered layer. */
+.sheet-dialog,.research-drawer,.table-reader{backdrop-filter:none;-webkit-backdrop-filter:none}
 #toast{inset:94px 24px auto auto;transform:translateY(-8px);gap:10px;max-width:min(420px,calc(100vw - 32px));padding:10px 12px 10px 16px}
 #toast.visible{transform:translateY(0);pointer-events:none}
 #toast>span{min-width:0;overflow-wrap:anywhere}
@@ -72,3 +76,12 @@
 @keyframes scope-arrive{from{opacity:.2;transform:translateY(-5px)}to{opacity:1;transform:translateY(0)}}
 body[data-motion=calm] .scope-controls{animation:none!important}
 @media(prefers-reduced-motion:reduce){.scope-controls{animation:none!important}}
+@media print{
+ html{scrollbar-gutter:auto}
+ .print-paper{color:#202735}
+ .print-paper table{table-layout:fixed;font-size:10px}
+ .print-paper th,.print-paper td{overflow-wrap:anywhere}
+ .print-paper h2{break-after:avoid}
+ .print-paper thead{display:table-header-group}
+ .print-paper tr{break-inside:avoid}
+}

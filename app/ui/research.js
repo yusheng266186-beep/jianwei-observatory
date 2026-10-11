@@ -1,6 +1,6 @@
-import {button,esc,empty} from './html.js?v=journey-20261011i';
-import {directoryViewName} from '../engine/directory.js?v=journey-20261011i';
-import {dockIcon} from './icons.js?v=journey-20261011i';
+import {button,esc,empty} from './html.js?v=surface-20261011j';
+import {directoryViewName} from '../engine/directory.js?v=surface-20261011j';
+import {dockIcon} from './icons.js?v=surface-20261011j';
 
 const scenes={board:'年级总览',class:'班级研究',papers:'试卷研究',people:'学生研究',follow:'教学跟进',library:'资料与报告'};
 const labels={overview:'本场概况',map:'逐题地图',targets:'有效与任务',subjects:'学科研究',history:'阶段对比',roster:'完整名单',snapshot:'本场剖面',knowledge:'知识点路径',classes:'班级热力',details:'逐题明细',students:'学生作答',responses:'单题作答',materials:'材料与备份',lines:'有效线',papers:'题目资料',exams:'考次与口径',notebook:'证据报告'};

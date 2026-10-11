@@ -1,5 +1,5 @@
-import {esc,number,percent,attrs} from './html.js?v=journey-20261011i';
-import {valid} from '../engine/metrics.js?v=journey-20261011i';
+import {esc,number,percent,attrs} from './html.js?v=surface-20261011j';
+import {valid} from '../engine/metrics.js?v=surface-20261011j';
 export const seriesColors=['#365dff','#202735','#7996e4','#9689b7'];
 const colors=seriesColors;
 const action=item=>item?.cmd?' data-plot-action="true" data-cmd="'+esc(item.cmd)+'"'+attrs(item.data||{})+' role="button" tabindex="0"':'';
@@ -10,12 +10,19 @@ export function trajectory(id,labels,series,{suffix='',zero=false}={}) {
   const w=940,h=275,left=60,right=30,top=25,bottom=55,x=i=>left+i*(w-left-right)/Math.max(1,labels.length-1),y=v=>top+(high-v)/(high-low)*(h-top-bottom);
   let content=Array.from({length:5},(_,i)=>{const value=low+(high-low)*i/4;return '<line x1="'+left+'" x2="'+(w-right)+'" y1="'+y(value)+'" y2="'+y(value)+'" stroke="#e8ebef"/><text x="'+(left-10)+'" y="'+(y(value)+4)+'" text-anchor="end">'+number(value,0)+esc(suffix)+'</text>';}).join('');
   content+=labels.map((label,i)=>'<text x="'+x(i)+'" y="'+(h-19)+'" text-anchor="middle">'+esc(label)+'</text>').join('');
+  let curves='',passivePoints='',activePoints='';
   for(const [index,item] of series.entries()) {
     const color=item.color||colors[index%colors.length];let path='',previous=false;
     item.values.forEach((value,i)=>{if(!valid(value)){previous=false;return;}path+=(previous?'L':'M')+x(i)+','+y(value)+' ';previous=true;});
-    content+='<path class="plot-line" pathLength="1000" d="'+path+'" fill="none" stroke="'+color+'" stroke-width="2.6" stroke-linejoin="round"/>';
-    content+=item.values.map((value,i)=>valid(value)?'<circle class="plot-point" cx="'+x(i)+'" cy="'+y(value)+'" r="4" fill="white" stroke="'+color+'" stroke-width="2"'+action(item.points?.[i])+'><title>'+esc(item.name)+' · '+esc(labels[i])+'：'+number(value)+esc(suffix)+'</title></circle>':'').join('');
+    curves+='<path class="plot-line" pathLength="1000" d="'+path+'" fill="none" stroke="'+color+'" stroke-width="2.6" stroke-linejoin="round"/>';
+    item.values.forEach((value,i)=>{
+      if(!valid(value))return;
+      const title=series.filter(s=>s.values[i]===value).map(s=>s.name+' · '+labels[i]+'：'+number(value)+suffix).join('\n');
+      const point='<circle class="plot-point" cx="'+x(i)+'" cy="'+y(value)+'" r="4" fill="white" stroke="'+color+'" stroke-width="2"'+action(item.points?.[i])+'><title>'+esc(title)+'</title></circle>';
+      if(item.points?.[i]?.cmd)activePoints+=point;else passivePoints+=point;
+    });
   }
+  content+=curves+passivePoints+activePoints;
   return '<div class="plot-legend">'+series.map((s,i)=>'<span><i style="background:'+(s.color||colors[i%colors.length])+'"></i>'+esc(s.name)+'</span>').join('')+'</div><svg id="'+id+'" class="trajectory" viewBox="0 0 '+w+' '+h+'" role="'+(series.some(s=>s.points?.some(p=>p?.cmd))?'group':'img')+'" aria-label="成绩趋势">'+content+'</svg>';
 }
 export function bars(id,items,{percentages=false,signed=false}={}) {

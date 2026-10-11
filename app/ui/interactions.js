@@ -2,10 +2,20 @@ let motionPreference=()=>false,resizeObserver,plotObserver,revealObserver,toolti
 const observedTables=new Set(),observedPlots=new Set(),revealed=new WeakSet(),disclosures=new WeakMap();
 function refreshPlot(svg) {
   const width=svg.getBoundingClientRect().width,viewWidth=svg.viewBox?.baseVal.width;if(!width||!viewWidth)return;
-  const size=Math.max(12,Math.min(34,11.5*viewWidth/width));svg.style.setProperty('--plot-label-size',size+'px');
+  const scale=viewWidth/width,size=Math.max(12,svg.classList.contains('bars')?11.5*scale:Math.min(34,11.5*scale));svg.style.setProperty('--plot-label-size',size+'px');
+  const row=Math.max(37,32*scale),barHeight=Math.max(22,18*scale);
+  if(svg.classList.contains('bars')) {
+    const items=[...svg.querySelectorAll(':scope > .plot-item')];svg.viewBox.baseVal.height=Math.max(70,items.length*row+20);
+    items.forEach((item,index)=>{
+      item.setAttribute('transform','translate(0,'+index*(row-37)+')');
+      item.querySelector('rect:not(.plot-bar)')?.setAttribute('height',row-4);
+      item.querySelector('.plot-bar')?.setAttribute('height',barHeight);
+      const line=item.querySelector('line');if(line)line.setAttribute('y2',Number(line.getAttribute('y1'))+barHeight);
+    });
+  }
   for(const text of svg.querySelectorAll('text')) {
     if(svg.classList.contains('bars')) {
-      text.setAttribute('dy',Math.max(0,(size-11)*.3));
+      text.setAttribute('dy',Math.max(0,barHeight/2+size*.35-15));
       if(text.getAttribute('text-anchor')==='end') {
         const full=text.dataset.fullLabel||text.textContent; text.dataset.fullLabel=full;
         const limit=Math.max(3,Math.floor(160/size));text.textContent=full.length>limit?full.slice(0,limit-1)+'…':full;
@@ -23,6 +33,11 @@ function refreshTable(frame) {
 export function prepareUpdate(){hideTooltip();}
 export function enhance(root=document) {
   hideTooltip();
+  for(const button of root.querySelectorAll('[data-cmd="svg"],[data-cmd="png"]')) {
+    const available=Boolean(document.getElementById(button.dataset.id));button.disabled=!available;
+    button.setAttribute('aria-label',(button.dataset.cmd==='svg'?'SVG':'PNG')+'图表导出'+(available?'':'，当前没有可绘制的数据'));
+    button.closest('.chart-buttons')?.setAttribute('data-empty',String(!available));
+  }
   for(const frame of observedTables)if(!frame.isConnected){resizeObserver?.unobserve(frame);observedTables.delete(frame);}
   for(const frame of root.querySelectorAll('.table-frame')){refreshTable(frame);if(!observedTables.has(frame)){observedTables.add(frame);resizeObserver?.observe(frame);}}
   for(const svg of observedPlots)if(!svg.isConnected){plotObserver?.unobserve(svg);observedPlots.delete(svg);}
@@ -78,7 +93,7 @@ export function installInteractions({reducedMotion}) {
   if('IntersectionObserver' in window)revealObserver=new IntersectionObserver(entries=>{let order=0;for(const entry of entries)if(entry.isIntersecting){revealObserver.unobserve(entry.target);if(!motionPreference())entry.target.animate([{opacity:0,transform:'translateY(18px)'},{opacity:1,transform:'translateY(0)'}],{duration:560,delay:Math.min(order++,5)*28,easing:'cubic-bezier(.16,1,.3,1)',fill:'backwards'});}},{rootMargin:'0px 0px -25px 0px',threshold:.06});
   document.addEventListener('scroll',event=>{if(event.target?.matches?.('.table-scroll'))refreshTable(event.target.closest('.table-frame'));else {hideTooltip();if(event.target===document||event.target===document.documentElement){document.body.dataset.scrolled=String(window.scrollY>18);cancelAnimationFrame(outlineFrame);outlineFrame=requestAnimationFrame(refreshOutline);}}},true);
   document.addEventListener('click',event=>{const summary=event.target.closest('summary');if(!summary||event.target.closest('button,a,input'))return;const details=summary.parentElement;if(details.matches('.card-scores,.card-meta,.record-accordion,.method-note')){event.preventDefault();toggleDetails(details);}});
-  document.addEventListener('pointerover',event=>{if(event.pointerType==='touch')return;const target=event.target.closest('[data-plot-action],.student-dot,.heat-cell[title],[data-tip]');if(target)showTooltip(target,event.clientX,event.clientY);});
+  document.addEventListener('pointerover',event=>{if(event.pointerType==='touch')return;const target=event.target.closest('[data-plot-action],.plot-item,.plot-point,.student-dot,.heat-cell[title],[data-tip]');if(target)showTooltip(target,event.clientX,event.clientY);});
   document.addEventListener('pointermove',event=>{if(!tooltipTarget)return;cancelAnimationFrame(tooltipFrame);tooltipFrame=requestAnimationFrame(()=>placeTooltip(event.clientX,event.clientY));});
   document.addEventListener('pointermove',event=>{
     if(event.pointerType==='touch'||motionPreference())return;

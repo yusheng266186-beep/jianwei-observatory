@@ -1,8 +1,8 @@
-import {button,block,ribbon,table,number,integer,percent,delta,esc,chips,empty} from '../ui/html.js?v=journey-20261011i';
-import {bars,trajectory,chartButtons} from '../ui/plots.js?v=journey-20261011i';
-import {directoryEntries} from '../engine/directory.js?v=journey-20261011i';
-import {difference} from '../engine/metrics.js?v=journey-20261011i';
-import {dockIcon} from '../ui/icons.js?v=journey-20261011i';
+import {button,block,ribbon,table,number,integer,percent,delta,esc,chips,empty} from '../ui/html.js?v=surface-20261011j';
+import {bars,trajectory,chartButtons} from '../ui/plots.js?v=surface-20261011j';
+import {directoryEntries} from '../engine/directory.js?v=surface-20261011j';
+import {difference} from '../engine/metrics.js?v=surface-20261011j';
+import {dockIcon} from '../ui/icons.js?v=surface-20261011j';
 export function overview(atlas,state) {
   const exam=state.exam||atlas.latest,rows=atlas.rows(exam),groups=atlas.groups(exam),entries=directoryEntries(atlas,exam),papers=atlas.papers().filter(p=>p.exam===exam),index=atlas.exams.findIndex(e=>e.id===exam),previous=atlas.exams.some(e=>e.id===state.comparison)&&state.comparison!==exam?state.comparison:atlas.exams[index-1]?.id;
   const sources=[['01','班级有效人','达线、任务、增量、临界带','targets',atlas.classes.length+' 个班'],['02','个人学科小题得分','从知识点到一道题，再到一个人','papers',papers.length+' 张试卷'],['03','班级多次考试对比','同班阶段轨迹与逐人变化','history',atlas.exams.length+' 次考试'],['04','班级成绩分析单次','原分、折合分、排名与学科结构','roster',rows.length+' 条成绩']];

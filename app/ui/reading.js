@@ -1,4 +1,4 @@
-import {button,esc} from './html.js?v=journey-20261011i';
+import {button,esc} from './html.js?v=surface-20261011j';
 export const readingDefaults={density:'comfortable',surface:'glass',motion:'system'};
 export function applyReading(reading) {for(const key of Object.keys(readingDefaults))document.body.dataset[key]=reading[key]||readingDefaults[key];}
 export function readingView(reading) {

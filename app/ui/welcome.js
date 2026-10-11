@@ -1,4 +1,4 @@
-import {button} from './html.js?v=journey-20261011i';
+import {button} from './html.js?v=surface-20261011j';
 
 export function welcomeView() {
   const template=document.getElementById('empty-workspace-template');

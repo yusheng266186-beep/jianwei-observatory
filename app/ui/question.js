@@ -1,8 +1,8 @@
-import {button,badge,block,ribbon,table,number,integer,percent,esc,empty} from './html.js?v=journey-20261011i';
-import {bars,chartButtons} from './plots.js?v=journey-20261011i';
-import {average,valid} from '../engine/metrics.js?v=journey-20261011i';
-import {evidence} from '../io/exports.js?v=journey-20261011i';
-import {questionLens} from '../engine/lenses.js?v=journey-20261011i';
+import {button,badge,block,ribbon,table,number,integer,percent,esc,empty} from './html.js?v=surface-20261011j';
+import {bars,chartButtons} from './plots.js?v=surface-20261011j';
+import {average,valid} from '../engine/metrics.js?v=surface-20261011j';
+import {evidence} from '../io/exports.js?v=surface-20261011j';
+import {questionLens} from '../engine/lenses.js?v=surface-20261011j';
 export function questionView(atlas,state) {
   const model=questionLens(atlas,state),{lens,question:q,matches:answers}=model;if(!q)return empty('这张卷尚无题目资料');
   const classes=[...new Set(lens.answers.map(a=>a.classNo))].sort((a,b)=>a-b),pages=Math.max(1,Math.ceil(answers.length/30)),page=Math.min(state.page||1,pages),shown=answers.slice((page-1)*30,page*30),at=lens.questions.indexOf(q),focus=lens.answers.find(a=>a.sid===state.focusSid);

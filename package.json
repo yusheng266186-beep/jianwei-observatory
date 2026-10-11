@@ -5,7 +5,8 @@
   "scripts": {
     "test": "node --test tests/engine.test.js",
     "test:browser": "node tests/browser.cjs && node tests/edges.cjs && node tests/journey.cjs",
-    "test:journey": "node tests/journey.cjs"
+    "test:journey": "node tests/journey.cjs",
+    "test:surface": "node tests/full-surface.cjs"
   },
   "devDependencies": {
     "playwright": "1.62.1"
