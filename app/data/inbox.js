@@ -1,5 +1,5 @@
-import {mergeDatasets,FLAT_FIELDS} from './parser.js?v=polish-20261011c';
-import {esc,button,badge} from '../ui/html.js?v=polish-20261011c';
+import {mergeDatasets,FLAT_FIELDS} from './parser.js?v=empty-20261011d';
+import {esc,button,badge} from '../ui/html.js?v=empty-20261011d';
 export class Inbox {
   constructor(commit,notify,current) {
     this.commit=commit;this.notify=notify;this.current=current;
@@ -46,7 +46,7 @@ export class Inbox {
   async file(file) {
     const buffer=await file.arrayBuffer();
     return new Promise((resolve,reject)=>{
-      const worker=new Worker(new URL('./worker.js?v=polish-20261011c',import.meta.url)),timer=setTimeout(()=>finish(new Error('文件读取超时，请分开导入材料后重试。')),180000);
+      const worker=new Worker(new URL('./worker.js?v=empty-20261011d',import.meta.url)),timer=setTimeout(()=>finish(new Error('文件读取超时，请分开导入材料后重试。')),180000);
       let finished=false;
       const finish=(error,result)=>{if(finished)return;finished=true;clearTimeout(timer);worker.terminate();this.pending=null;error?reject(error):resolve(result);};
       this.pending={file,buffer,worker,reject:error=>finish(error)};
@@ -70,8 +70,10 @@ export class Inbox {
         this.incoming=this.incoming?mergeDatasets(this.incoming,incoming):incoming;
       }
       if(this.cancelled)return;
-      const d=this.incoming,replace=this.current().anonymous&&!d.anonymous;
-      this.shell('<h2>材料已经展开</h2><p>'+files.map(f=>esc(f.name)).join('<br>')+'</p><div class="import-summary"><div><strong>'+d.students.length+'</strong><span>学生档案</span></div><div><strong>'+d.exams.length+'</strong><span>考试</span></div><div><strong>'+d.scores.length+'</strong><span>成绩记录</span></div><div><strong>'+d.answers.length+'</strong><span>小题学科记录</span></div></div><p>'+ (replace?'当前是匿名样本，导入真实成绩将建立真实工作区。':'合并会按姓名、考次、班级与学科补充记录；替换会建立新工作区，可在资料仓撤回。')+'</p><div class="import-decisions"><button class="button '+(replace?'outline':'accent')+'" data-inbox="commit" data-mode="merge">合并材料 / 补充考次</button><button class="button '+(replace?'accent':'outline')+'" data-inbox="commit" data-mode="replace">替换为这份材料</button></div>');
+      const d=this.incoming,current=this.current(),first=!current.scores.length&&!current.answers.length&&!current.lines.length&&!Object.keys(current.banks).length,replace=current.anonymous&&!d.anonymous;
+      const detail=first?'加入工作区后，开始查看这份材料的成绩与分析。':replace?'当前材料使用匿名姓名，导入真实成绩将建立真实工作区。':'合并会按姓名、考次、班级与学科补充记录；替换会建立新工作区，可在资料仓撤回。';
+      const actions=first?'<button class="button accent" data-inbox="commit" data-mode="replace">加入工作区</button>':'<button class="button '+(replace?'outline':'accent')+'" data-inbox="commit" data-mode="merge">合并材料 / 补充考次</button><button class="button '+(replace?'accent':'outline')+'" data-inbox="commit" data-mode="replace">替换为这份材料</button>';
+      this.shell('<h2>材料已经展开</h2><p>'+files.map(f=>esc(f.name)).join('<br>')+'</p><div class="import-summary"><div><strong>'+d.students.length+'</strong><span>学生档案</span></div><div><strong>'+d.exams.length+'</strong><span>考试</span></div><div><strong>'+d.scores.length+'</strong><span>成绩记录</span></div><div><strong>'+d.answers.length+'</strong><span>小题学科记录</span></div></div><p>'+detail+'</p><div class="import-decisions">'+actions+'</div>');
     } catch(error) {if(!this.cancelled)this.error(error.message);}
     finally {this.busy=false;this.input.value='';}
   }

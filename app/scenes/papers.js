@@ -1,7 +1,7 @@
-import {head,button,chips,badge,block,ribbon,table,number,integer,percent,esc,personButton,search,footnote,empty} from '../ui/html.js?v=polish-20261011c';
-import {bars,rateColor,chartButtons} from '../ui/plots.js?v=polish-20261011c';
-import {average,sum,valid} from '../engine/metrics.js?v=polish-20261011c';
-import {answerRows,evidence} from '../io/exports.js?v=polish-20261011c';
+import {head,button,chips,badge,block,ribbon,table,number,integer,percent,esc,personButton,search,footnote,empty} from '../ui/html.js?v=empty-20261011d';
+import {bars,rateColor,chartButtons} from '../ui/plots.js?v=empty-20261011d';
+import {average,sum,valid} from '../engine/metrics.js?v=empty-20261011d';
+import {answerRows,evidence} from '../io/exports.js?v=empty-20261011d';
 export function render(atlas,state) {
   const papers=atlas.papers(),paper=papers.find(p=>p.key===state.key);
   if(!paper) {

@@ -1,5 +1,5 @@
-import {esc,number,percent,attrs} from './html.js?v=polish-20261011c';
-import {valid} from '../engine/metrics.js?v=polish-20261011c';
+import {esc,number,percent,attrs} from './html.js?v=empty-20261011d';
+import {valid} from '../engine/metrics.js?v=empty-20261011d';
 const colors=['#376a9f','#333e4c','#8d9eaf','#6c879b'];
 const action=item=>item?.cmd?' data-plot-action="true" data-cmd="'+esc(item.cmd)+'"'+attrs(item.data||{})+' role="button" tabindex="0"':'';
 export function trajectory(id,labels,series,{suffix='',zero=false}={}) {

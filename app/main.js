@@ -1,19 +1,20 @@
-import {questionView,questionEvidence} from './ui/question.js?v=polish-20261011c';
-import {directoryFilterView} from './scenes/directory.js?v=polish-20261011c';
-import {renderInto} from './ui/render.js?v=polish-20261011c';
-import {installInteractions,enhance,prepareUpdate,shiftTable} from './ui/interactions.js?v=polish-20261011c';
-import {readingDefaults,readingView,applyReading} from './ui/reading.js?v=polish-20261011c';
-import {reportView} from './ui/report.js?v=polish-20261011c';
-import {Atlas} from './engine/atlas.js?v=polish-20261011c';
-import {normalizeDataset,SUBJECTS} from './data/compat.js?v=polish-20261011c';
-import {hydrate,save,sample,preference,remember,preserveUndo,previous,emptyDataset,loadNotebook,saveNotebook} from './data/workspace.js?v=polish-20261011c';
-import {mergeDatasets} from './data/parser.js?v=polish-20261011c';
-import {Inbox} from './data/inbox.js?v=polish-20261011c';
-import {esc,button,empty,table} from './ui/html.js?v=polish-20261011c';
-import {excel,word,print,download,chart,scoreRows,effectiveRows,subjectRows,answerRows,evidence} from './io/exports.js?v=polish-20261011c';
-import {directoryDefaults,lensValues,queryDirectory,directoryViewValues,directoryViewName} from './engine/directory.js?v=polish-20261011c';
-import {peekView,compareView,drawerEvidence} from './ui/explorer.js?v=polish-20261011c';
-import {dockIcon} from './ui/icons.js?v=polish-20261011c';
+import {questionView,questionEvidence} from './ui/question.js?v=empty-20261011d';
+import {directoryFilterView} from './scenes/directory.js?v=empty-20261011d';
+import {renderInto} from './ui/render.js?v=empty-20261011d';
+import {installInteractions,enhance,prepareUpdate,shiftTable} from './ui/interactions.js?v=empty-20261011d';
+import {readingDefaults,readingView,applyReading} from './ui/reading.js?v=empty-20261011d';
+import {reportView} from './ui/report.js?v=empty-20261011d';
+import {welcomeView} from './ui/welcome.js?v=empty-20261011d';
+import {Atlas} from './engine/atlas.js?v=empty-20261011d';
+import {normalizeDataset,SUBJECTS} from './data/compat.js?v=empty-20261011d';
+import {hydrate,save,restoreDataset,hasMaterials,preference,remember,preserveUndo,previous,emptyDataset,loadNotebook,saveNotebook} from './data/workspace.js?v=empty-20261011d';
+import {mergeDatasets} from './data/parser.js?v=empty-20261011d';
+import {Inbox} from './data/inbox.js?v=empty-20261011d';
+import {esc,button,empty,table} from './ui/html.js?v=empty-20261011d';
+import {excel,word,print,download,chart,scoreRows,effectiveRows,subjectRows,answerRows,evidence} from './io/exports.js?v=empty-20261011d';
+import {directoryDefaults,lensValues,queryDirectory,directoryViewValues,directoryViewName} from './engine/directory.js?v=empty-20261011d';
+import {peekView,compareView,drawerEvidence} from './ui/explorer.js?v=empty-20261011d';
+import {dockIcon} from './ui/icons.js?v=empty-20261011d';
 
 const routes=[['board','年级总览','▦'],['class','班级研究','▥'],['papers','试卷研究','▧'],['people','学生研究','◎'],['follow','教学跟进','↗'],['library','资料与报告','⊞']];
 const defaults={board:{mode:'overview',metric:'underRate',historyMetric:'mean',search:'',page:1},class:{tab:'snapshot',value:'score',trendMetric:'mean',matrix:'total',search:'',page:1,matched:false},papers:{key:'',tab:'map',classes:[],question:0,order:'paper',search:'',page:1},people:{sid:'',storyMetric:'total',...directoryDefaults,filtersOpen:innerWidth>760},follow:{tier:'under',band:20,side:'below',classes:[],search:'',page:1},library:{tab:'materials'}};
@@ -78,16 +79,23 @@ function nav() {
   requestAnimationFrame(positionDock);
   document.title=(routes.find(r=>r[0]===current)?.[1]||'教学证据台')+' · 衡迹';
   const state=books[current],breadcrumb=document.getElementById('workspace-location');
-  breadcrumb.textContent=(routes.find(r=>r[0]===current)?.[1]||'研究台')+(current==='class'?' / '+(state.no||'')+'班':current==='papers'&&state.key?' / '+state.key.split('|').join(' · '):current==='people'&&state.sid?' / '+atlas.name(state.sid):'');
+  const available=hasMaterials(atlas.data);
+  document.body.dataset.workspace=available?'ready':'empty';
+  document.querySelector('.masthead [data-cmd="find"]').hidden=!available;
+  breadcrumb.textContent=(routes.find(r=>r[0]===current)?.[1]||'研究台')+(available?(current==='class'?' / '+(state.no||'')+'班':current==='papers'&&state.key?' / '+state.key.split('|').join(' · '):current==='people'&&state.sid?' / '+atlas.name(state.sid):''):'');
 }
 function positionDock(){const dock=document.getElementById('navigation'),selected=dock.querySelector('[aria-current="page"]');if(selected){dock.style.setProperty('--dock-x',selected.offsetLeft+'px');dock.style.setProperty('--dock-w',selected.offsetWidth+'px');}}
 async function paint(transition=false,focus=null) {
   const serial=++paintId,scene=current;nav();
   try {
-    if(!loaded.has(scene))loaded.set(scene,import('./scenes/'+scene+'.js?v=polish-20261011c'));
-    const module=await loaded.get(scene);if(serial!==paintId)return;
-    const view=scene==='class'&&!atlas.classes.length?{html:empty('先带入一个班的材料','从导入原表开始建立班级画布。')+button('导入材料','import',{},'accent'),report:null}:module.render(atlas,books[scene],session);
-    const object=scene+'|'+(scene==='people'?books.people.sid:scene==='papers'?books.papers.key:scene==='class'?books.class.no:''),changed=object!==paintedObject,previousScroll=window.scrollY;
+    const available=hasMaterials(atlas.data);let view;
+    if(!available)view=welcomeView();
+    else {
+      if(!loaded.has(scene))loaded.set(scene,import('./scenes/'+scene+'.js?v=empty-20261011d'));
+      const module=await loaded.get(scene);if(serial!==paintId)return;
+      view=scene==='class'&&!atlas.classes.length?{html:empty('先带入一个班的材料','从导入原表开始建立班级画布。')+button('导入材料','import',{},'accent'),report:null}:module.render(atlas,books[scene],session);
+    }
+    const object=available?scene+'|'+(scene==='people'?books.people.sid:scene==='papers'?books.papers.key:scene==='class'?books.class.no:''):'empty',changed=object!==paintedObject,previousScroll=window.scrollY;
     const positions=new Map([...stage().querySelectorAll('[data-motion-key]')].map(el=>[el.dataset.motionKey,el.getBoundingClientRect()]));
     const focused=document.activeElement?.closest('[data-cmd]'),focusedData=focused&&stage().contains(focused)?{...focused.dataset}:null;
     for(const el of stage().querySelectorAll('.table-scroll'))paintedScrolls.set(tablePositionKey(el),el.scrollLeft);
@@ -127,9 +135,11 @@ function update(key,value,toggle=false) {
   persistBooks();paint(['tab','mode','view','exam','directoryExam','key'].includes(key)).then(()=>{if(drawerState?.type==='filters')drawDrawer();});
 }
 async function installDataset(dataset,{fresh=false}={}) {
-  atlas=new Atlas(dataset);ensureBooks();
-  if(fresh){books.board.exam=atlas.latest;books.follow.exam=atlas.latest;books.class.exam=atlas.classExams(books.class.no).at(-1)?.id||atlas.latest;books.class.exams=atlas.classExams(books.class.no).map(e=>e.id);books.papers.key='';books.people.exam=atlas.story(books.people.sid).at(-1)?.exam;}
-  document.getElementById('work-status').textContent=atlas.data.anonymous?'匿名成绩样本':atlas.data.scores.length?'本机教学资料':'空白工作区';
+  atlas=new Atlas(restoreDataset(dataset));const available=hasMaterials(atlas.data);
+  if(available)ensureBooks();
+  if(fresh&&available){books.board.exam=atlas.latest;books.follow.exam=atlas.latest;books.class.exam=atlas.classExams(books.class.no).at(-1)?.id||atlas.latest;books.class.exams=atlas.classExams(books.class.no).map(e=>e.id);books.papers.key='';books.people.exam=atlas.story(books.people.sid).at(-1)?.exam;}
+  if(!available){await closeDrawer();closeReader();const report=document.getElementById('report-dialog');if(report.open)report.close();exportReport=null;document.getElementById('report-content').replaceChildren();}
+  document.getElementById('work-status').textContent=available?'本机教学资料':'等待导入材料';
   persistBooks();await paint(true);
 }
 async function store() {try{await save(atlas.data);}catch{notify('本机保存暂时不可用，请下载完整备份保留材料。');}}
@@ -137,6 +147,7 @@ async function commitMaterial(incoming,mode) {
   if(atlas.data.anonymous&&!incoming.anonymous&&!incoming.scores.length)throw new Error('请先导入真实姓名的成绩原表，再补充这份小题。');
   revision++;try{await preserveUndo(atlas.data);}catch{}
   const dataset=normalizeDataset(mode==='replace'?incoming:mergeDatasets(atlas.data,incoming));
+  dataset.userImported=true;
   if(incoming.plans||incoming.actions)session.plans=(incoming.plans||incoming.actions).map(p=>({...p,status:p.status==='doing'?'active':['new','active','done'].includes(p.status)?p.status:'new'}));
   else session.plans=session.plans.filter(p=>dataset.students.some(person=>person.id===p.sid));
   remember('plans',session.plans);
@@ -236,7 +247,7 @@ async function commands(event) {
     if(d.cmd==='nav')go(d.scene);
     else if(d.cmd==='set'||d.cmd==='toggle')update(d.key,d.value,d.cmd==='toggle');
     else if(d.cmd==='import')inbox.choose();
-    else if(d.cmd==='find'){go('people',{sid:'',...directoryDefaults},true);setTimeout(()=>stage().querySelector('[data-field="search"]')?.focus(),100);}
+    else if(d.cmd==='find'){if(!hasMaterials(atlas.data)){notify('导入成绩材料后即可查找学生');return;}go('people',{sid:'',...directoryDefaults},true);setTimeout(()=>stage().querySelector('[data-field="search"]')?.focus(),100);}
     else if(d.cmd==='class') {
       const no=Number(d.no),exam=d.exam||(current==='board'?books.board.exam:current==='papers'?books.papers.key.split('|')[1]:books.class.exam);
       go('class',{no,exam:atlas.classAt(no,exam).length?exam:atlas.classExams(no).at(-1)?.id,search:'',page:1,exams:atlas.classExams(no).map(e=>e.id)});
@@ -303,8 +314,8 @@ async function commands(event) {
     else if(d.cmd==='backup')download(JSON.stringify({...atlas.data,plans:session.plans,notebook:session.notebook,savedPeople:session.savedPeople,comparePeople:session.comparePeople,directoryViews:session.directoryViews}),'衡迹-完整工作区-'+new Date().toLocaleDateString('sv-SE',{timeZone:'Asia/Shanghai'})+'.json','application/json');
     else if(d.cmd==='template')await template();
     else if(d.cmd==='four-sheets')await excel(fourSheets(),'衡迹-四表分析包');
-    else if(d.cmd==='undo'){const dataset=await previous();if(!dataset){notify('没有可撤回的材料替换');return;}revision++;await installDataset(dataset,{fresh:true});await store();notify('已恢复上一次材料');}
-    else if(d.cmd==='sample'||d.cmd==='clear'){revision++;try{await preserveUndo(atlas.data);}catch{}await installDataset(d.cmd==='sample'?await sample():emptyDataset(),{fresh:true});await store();notify(d.cmd==='sample'?'已打开匿名样本':'当前工作区已清空',{label:'撤回材料替换',cmd:'undo'});}
+    else if(d.cmd==='undo'){const dataset=await previous();if(!dataset){notify('没有可撤回的材料替换');return;}revision++;await installDataset(dataset,{fresh:true});await store();notify(hasMaterials(atlas.data)?'已恢复上一次材料':'已恢复空白工作区');}
+    else if(d.cmd==='clear'){revision++;try{await preserveUndo(atlas.data);}catch{}await installDataset(emptyDataset(),{fresh:true});await store();notify('当前工作区已清空',{label:'撤回材料替换',cmd:'undo'});}
     else if(d.cmd==='follow-add')addFollow(d.sid,d.exam,d.tier);
     else if(d.cmd==='follow-open'){await closeDrawer();go('follow');}
     else if(d.cmd==='follow-remove'){const index=session.plans.findIndex(p=>p.id===d.id),plan=session.plans[index];if(plan){session.plans.splice(index,1);remember('plans',session.plans);await paint();notify('已移除跟进记录',{undo:async()=>{if(!session.plans.some(p=>p.id===plan.id))session.plans.splice(Math.min(index,session.plans.length),0,plan);remember('plans',session.plans);await paint();}});}}
@@ -374,7 +385,7 @@ export async function mount() {
     if(target.dataset.evidenceNote){const note=session.notebook.find(n=>n.id===target.dataset.evidenceNote);if(note){note.note=target.value;clearTimeout(noteTimer);noteTimer=setTimeout(()=>saveNotebook(session.notebook).catch(()=>notify('请下载备份以保留摘录')),400);}}
     if(target.id==='report-note'&&exportReport){exportReport.note=target.value;if(exportReport.id){const note=session.notebook.find(n=>n.id===exportReport.id);if(note){note.note=target.value;clearTimeout(noteTimer);noteTimer=setTimeout(()=>saveNotebook(session.notebook).catch(()=>{}),400);}}}
   });
-  document.addEventListener('keydown',async event=>{if((event.metaKey||event.ctrlKey)&&event.key.toLowerCase()==='k'){event.preventDefault();if(document.getElementById('inbox').open)return;await closeDrawer();for(const dialog of document.querySelectorAll('dialog[open]'))if(dialog.id!=='inbox')dialog.close();go('people',{sid:'',...directoryDefaults},true);setTimeout(()=>stage().querySelector('[data-field="search"]')?.focus(),100);}});
+  document.addEventListener('keydown',async event=>{if((event.metaKey||event.ctrlKey)&&event.key.toLowerCase()==='k'){event.preventDefault();if(document.getElementById('inbox').open)return;if(!hasMaterials(atlas.data)){notify('导入成绩材料后即可查找学生');return;}await closeDrawer();for(const dialog of document.querySelectorAll('dialog[open]'))if(dialog.id!=='inbox')dialog.close();go('people',{sid:'',...directoryDefaults},true);setTimeout(()=>stage().querySelector('[data-field="search"]')?.focus(),100);}});
   document.addEventListener('dragstart',event=>{const card=event.target.closest('[data-plan]');if(card)event.dataTransfer.setData('text/plain',card.dataset.plan);});
   document.addEventListener('dragover',event=>{if(event.target.closest('.follow-lane'))event.preventDefault();});
   document.addEventListener('dragenter',event=>event.target.closest('.follow-lane')?.classList.add('dragover'));
@@ -383,14 +394,15 @@ export async function mount() {
     const lane=event.target.closest('.follow-lane');if(!lane)return;event.preventDefault();
     const plan=session.plans.find(p=>p.id===event.dataTransfer.getData('text/plain'));if(plan){plan.status=lane.dataset.status;remember('plans',session.plans);paint();}
   });
-  window.addEventListener('hashchange',async()=>{await closeDrawer();readRoute();if(atlas.exams.length)ensureBooks();persistBooks();paint(true);});
+  window.addEventListener('hashchange',async()=>{await closeDrawer();readRoute();if(hasMaterials(atlas.data))ensureBooks();persistBooks();paint(true);});
   readRoute();nav();window.dispatchEvent(new Event('hengji:ready'));
   const startRevision=revision;
+  await paint();
   try {
     const [materials,notebook]=await Promise.all([hydrate(),loadNotebook().catch(()=>[])]);
     if(startRevision!==revision)return;
     session.notebook=notebook||[];
-    if(!session.plans.length){try{session.plans=(JSON.parse(localStorage.getItem('jianwei:actions'))||[]).map(p=>({...p,status:p.status==='done'?'done':'active'}));}catch{}}
+    if(hasMaterials(materials.dataset)&&!session.plans.length){try{session.plans=(JSON.parse(localStorage.getItem('jianwei:actions'))||[]).map(p=>({...p,status:p.status==='done'?'done':'active'}));}catch{}}
     await installDataset(materials.dataset);if(materials.origin==='migrated')notify('原工作区材料已带入衡迹');
   }catch(error){if(startRevision!==revision)return;await paint();notify('材料尚未载入：'+error.message+'，可直接导入原表。');}
 }

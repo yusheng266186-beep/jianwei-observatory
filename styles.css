@@ -499,6 +499,19 @@ input:not([type=radio]),textarea{border:1px solid #dae1e8;border-radius:8px;padd
 .startup-bars i:nth-child(3){height:27px;animation-delay:.3s}
 .noscript{padding:30px}
 .startup .button{margin-top:10px}
+.welcome-workspace{display:grid;place-items:center;min-height:calc(100svh - 270px);padding:28px 0}
+.welcome-card{display:flex;flex-direction:column;align-items:center;width:min(100%,780px);padding:clamp(35px,6vw,70px) 24px 26px;text-align:center;border:1px solid #ffffffed;border-radius:24px;background:var(--paper);box-shadow:var(--shadow);backdrop-filter:blur(26px);-webkit-backdrop-filter:blur(26px);transition:border-color .25s,box-shadow .25s}
+.welcome-emblem{display:grid;place-items:center;width:80px;height:80px;margin-bottom:27px;border-radius:22px;border:1px solid #ffffffeb;background:linear-gradient(145deg,#ffffffc7,#e9eff585);box-shadow:inset 0 1px 0 #fff,0 8px 28px -18px #53657436;color:#6b8298}
+.welcome-emblem svg{width:46px;height:46px;stroke:currentColor;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round}
+.welcome-card>.overline{margin-bottom:13px;color:#8592a0}
+.welcome-card h1{font-size:clamp(25px,3vw,34px);letter-spacing:-.7px}
+.welcome-card>p{font-size:12px;margin-bottom:26px}
+.welcome-actions{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:10px;margin-bottom:18px}
+.welcome-actions .button{min-height:42px;padding-inline:19px;border-radius:10px}
+.welcome-formats{color:var(--muted);font-size:11px;line-height:1.9;max-width:360px}
+.welcome-card footer{width:100%;margin-top:37px;padding-top:19px;border-top:1px solid #dfe5eb9c;color:#8b96a3;font-size:10px}
+.welcome-workspace.dragover .welcome-card{border-color:#92b0cc;box-shadow:var(--shadow),0 0 0 5px #6b93b510}
+body[data-workspace=empty] .workspace-status i{background:#a4afbb;box-shadow:0 0 0 4px #a4afbb0d}
 body.drawer-open,body.modal-open{overflow:hidden}
 .research-drawer{position:fixed;inset:0 0 0 auto;margin:0;width:min(740px,calc(100vw - 20px));max-width:100vw;height:100dvh;max-height:100dvh;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;padding:0 28px calc(36px + env(safe-area-inset-bottom));border:1px solid #ffffffd9;border-right:0;border-radius:18px 0 0 18px;background:#f7fafdef;color:var(--ink);box-shadow:-18px 0 85px -25px #213b5350;backdrop-filter:blur(32px) saturate(1.04)}
 .research-drawer::backdrop{background:#253b4e36;backdrop-filter:blur(7px);animation:backdrop-in .35s ease-out}

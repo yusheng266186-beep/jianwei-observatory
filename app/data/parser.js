@@ -1,4 +1,4 @@
-import { SUBJECTS, EXAM_ORDER, EXAM_NAMES, classDefaults, finite, normalizeDataset } from './compat.js?v=polish-20261011c';
+import { SUBJECTS, EXAM_ORDER, EXAM_NAMES, classDefaults, finite, normalizeDataset } from './compat.js?v=empty-20261011d';
 const txt=v=>String(v??'').trim();
 const num=v=>v==null||txt(v)===''?null:Number.isFinite(Number(v))?Number(v):null;
 const code=v=>txt(v).replace(/[物历]$/,'');

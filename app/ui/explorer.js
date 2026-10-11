@@ -1,8 +1,8 @@
-import {button,badge,block,ribbon,table,number,integer,percent,delta,esc,empty} from './html.js?v=polish-20261011c';
-import {trajectory,bars,rateColor,chartButtons} from './plots.js?v=polish-20261011c';
-import {directoryEntries,standingLabels} from '../engine/directory.js?v=polish-20261011c';
-import {difference,valid} from '../engine/metrics.js?v=polish-20261011c';
-import {evidence,scoreRows,answerRows} from '../io/exports.js?v=polish-20261011c';
+import {button,badge,block,ribbon,table,number,integer,percent,delta,esc,empty} from './html.js?v=empty-20261011d';
+import {trajectory,bars,rateColor,chartButtons} from './plots.js?v=empty-20261011d';
+import {directoryEntries,standingLabels} from '../engine/directory.js?v=empty-20261011d';
+import {difference,valid} from '../engine/metrics.js?v=empty-20261011d';
+import {evidence,scoreRows,answerRows} from '../io/exports.js?v=empty-20261011d';
 export function peekView(atlas,sid,exam,session,state={}) {
   const e=directoryEntries(atlas,exam||'latest').find(e=>e.person.id===sid)||directoryEntries(atlas).find(e=>e.person.id===sid);
   if(!e)return empty('暂时没有这个学生的成绩');
