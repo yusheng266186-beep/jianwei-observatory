@@ -380,6 +380,16 @@ await group('17 手机条形图字号、行距和点击区域',async()=>{
  }
 });
 
+await group('18 自然动效的中断和连续导航',async()=>{
+ await page.emulateMedia({reducedMotion:'no-preference'});
+ await page.evaluate(()=>{const start=document.startViewTransition.bind(document);document.startViewTransition=callback=>{const transition=start(callback);transition.skipTransition();return transition;};});
+ for(const scene of ['class','papers','people','follow','library','board','class','people'])await nav(scene);
+ assert.equal(await page.locator('#stage').getAttribute('data-scene'),'people');
+ await page.evaluate(()=>{for(const scene of ['class','papers','board','library'])document.querySelector(`[data-cmd="nav"][data-scene="${scene}"]`).click();});
+ await page.waitForFunction(()=>document.getElementById('stage').dataset.scene==='library');await page.waitForTimeout(500);await layout('连续点击最后场景');
+ await click('[data-cmd="reading"]');await click('[data-cmd="reading-close"]');await page.waitForTimeout(300);
+});
+
 await browser.close();flush();
 const commands=unique(actions.map(a=>a.data.cmd).filter(Boolean)).sort();console.log('COVERAGE '+views.length+' views / '+actions.length+' clicks / '+commands.length+' commands / '+unique(forms).length+' forms');
 console.log('COMMANDS '+commands.join(' '));

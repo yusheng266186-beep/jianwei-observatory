@@ -196,7 +196,7 @@ async function paint(transition=false,focus=null) {
         for(const el of stage().querySelectorAll('[data-motion-key]')){const before=positions.get(el.dataset.motionKey),after=el.getBoundingClientRect();if(after.bottom<72||after.top>innerHeight)continue;if(before&&!changed&&(before.x!==after.x||before.y!==after.y))el.animate([{transform:'translate('+(before.x-after.x)+'px,'+(before.y-after.y)+'px)'},{transform:'translate(0,0)'}],{duration:420,easing:'cubic-bezier(.22,.8,.22,1)'});else if(!before)el.animate([{opacity:0,transform:'translateY(12px)'},{opacity:1,transform:'translateY(0)'}],{duration:420,delay:Math.min([...el.parentElement.children].indexOf(el),9)*22,fill:'backwards',easing:'cubic-bezier(.22,.8,.22,1)'});}
       }
     };
-    if((changed||transition)&&document.startViewTransition&&!reducedMotion()){sceneTransition?.skipTransition();const next=document.startViewTransition(apply);sceneTransition=next;next.finished.catch(()=>{}).finally(()=>{if(sceneTransition===next)sceneTransition=null;});await next.updateCallbackDone;}else apply();
+    if((changed||transition)&&document.startViewTransition&&!reducedMotion()){sceneTransition?.skipTransition();const next=document.startViewTransition(apply);sceneTransition=next;next.ready.catch(()=>{});next.finished.catch(()=>{}).finally(()=>{if(sceneTransition===next)sceneTransition=null;});await next.updateCallbackDone;}else apply();
   }catch(error){if(serial!==paintId)return;stage().innerHTML=empty('这张研究画布暂时没有打开',error.message)+button('重新打开','reload',{},'outline')+button('导入材料','import',{},'accent');activeReport=null;}
 }
 function update(key,value,toggle=false) {
