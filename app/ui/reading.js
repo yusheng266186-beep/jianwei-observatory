@@ -1,4 +1,4 @@
-import {button,esc} from './html.js?v=clarity-20261011e';
+import {button,esc} from './html.js?v=continuity-20261011f';
 export const readingDefaults={density:'comfortable',surface:'glass',motion:'system'};
 export function applyReading(reading) {for(const key of Object.keys(readingDefaults))document.body.dataset[key]=reading[key]||readingDefaults[key];}
 export function readingView(reading) {

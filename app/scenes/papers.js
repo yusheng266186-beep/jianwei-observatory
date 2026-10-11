@@ -1,7 +1,7 @@
-import {head,button,chips,badge,block,ribbon,table,number,integer,percent,esc,personButton,search,footnote,empty} from '../ui/html.js?v=clarity-20261011e';
-import {bars,rateColor,rateLegend,chartButtons} from '../ui/plots.js?v=clarity-20261011e';
-import {average,sum,valid} from '../engine/metrics.js?v=clarity-20261011e';
-import {answerRows,evidence} from '../io/exports.js?v=clarity-20261011e';
+import {head,button,chips,badge,block,ribbon,table,number,integer,percent,esc,personButton,search,footnote,empty} from '../ui/html.js?v=continuity-20261011f';
+import {bars,rateColor,rateLegend,chartButtons} from '../ui/plots.js?v=continuity-20261011f';
+import {average,sum,valid} from '../engine/metrics.js?v=continuity-20261011f';
+import {answerRows,evidence} from '../io/exports.js?v=continuity-20261011f';
 export function render(atlas,state) {
   const papers=atlas.papers(),paper=papers.find(p=>p.key===state.key);
   if(!paper) {

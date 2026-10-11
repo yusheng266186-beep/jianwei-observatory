@@ -1,8 +1,8 @@
-import {head,button,chips,badge,block,table,number,integer,delta,esc,search,empty,footnote} from '../ui/html.js?v=clarity-20261011e';
-import {mini,spread,chartButtons} from '../ui/plots.js?v=clarity-20261011e';
-import {valid} from '../engine/metrics.js?v=clarity-20261011e';
-import {queryDirectory,directoryLenses,standingLabels,directoryViewName} from '../engine/directory.js?v=clarity-20261011e';
-import {scoreRows,evidence} from '../io/exports.js?v=clarity-20261011e';
+import {head,button,chips,badge,block,table,number,integer,delta,esc,search,empty,footnote} from '../ui/html.js?v=continuity-20261011f';
+import {mini,spread,chartButtons} from '../ui/plots.js?v=continuity-20261011f';
+import {valid} from '../engine/metrics.js?v=continuity-20261011f';
+import {queryDirectory,directoryLenses,standingLabels,directoryViewName} from '../engine/directory.js?v=continuity-20261011f';
+import {scoreRows,evidence} from '../io/exports.js?v=continuity-20261011f';
 const filter=(label,body)=>'<section class="filter-section"><h3>'+label+'</h3>'+body+'</section>';
 const peek=e=>button(esc(e.person.name),'peek',{sid:e.person.id,exam:e.row.exam},'person-link');
 const subjectOptions=atlas=>[['all','全部学科'],...atlas.comparisonSubjects(atlas.data.scores).map(s=>[s,s])];

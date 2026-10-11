@@ -1,4 +1,4 @@
-import {esc,number,percent,signed} from '../ui/html.js?v=clarity-20261011e';
+import {esc,number,percent,signed} from '../ui/html.js?v=continuity-20261011f';
 export function download(content,name,type='application/octet-stream') {
   const blob=content instanceof Blob?content:new Blob([content],{type}),url=URL.createObjectURL(blob),anchor=document.createElement('a');
   anchor.href=url;anchor.download=name;anchor.click();setTimeout(()=>URL.revokeObjectURL(url),5000);
@@ -42,7 +42,7 @@ export function answerRows(atlas,answers) {
 }
 export function evidence(title,subtitle,sections,sheets={}) {return {title,subtitle,sections,sheets,created:new Date().toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'}),note:''};}
 export function reportHTML(report) {
-  return '<article class="print-paper"><div class="print-brand">衡迹 / 教学证据台</div><h1>'+esc(report.title)+'</h1><p>'+esc(report.subtitle)+'</p>'+report.sections.map(section=>'<section><h2>'+esc(section.title)+'</h2><table><thead><tr>'+section.headers.map(h=>'<th>'+esc(h)+'</th>').join('')+'</tr></thead><tbody>'+section.rows.map(row=>'<tr>'+row.map(value=>'<td>'+esc(value??'—')+'</td>').join('')+'</tr>').join('')+'</tbody></table></section>').join('')+(report.note?'<section><h2>教师判断与后续行动</h2><p class="written-note">'+esc(report.note)+'</p></section>':'')+'<footer>'+esc(report.created)+' · 缺失值保留为空，原排名保留原统计范围。</footer></article>';
+  return '<article class="print-paper"><div class="print-brand">衡迹 / 教学证据台</div><h1>'+esc(report.title)+'</h1><p>'+esc(report.subtitle)+'</p>'+(report.studyTitle?'<p>研究来源：'+esc(report.studyTitle)+'</p>':'')+report.sections.map(section=>'<section><h2>'+esc(section.title)+'</h2><table><thead><tr>'+section.headers.map(h=>'<th>'+esc(h)+'</th>').join('')+'</tr></thead><tbody>'+section.rows.map(row=>'<tr>'+row.map(value=>'<td>'+esc(value??'—')+'</td>').join('')+'</tr>').join('')+'</tbody></table></section>').join('')+(report.note?'<section><h2>教师判断与后续行动</h2><p class="written-note">'+esc(report.note)+'</p></section>':'')+'<footer>'+esc(report.created)+' · 缺失值保留为空，原排名保留原统计范围。</footer></article>';
 }
 export function print(report) {document.getElementById('print-area').innerHTML=reportHTML(report);window.print();}
 export async function word(report) {
@@ -51,7 +51,7 @@ export async function word(report) {
   const sections=report.sections.map(section=>paragraph(section.title,true)+'<w:tbl><w:tblPr><w:tblBorders>'+['top','left','bottom','right','insideH','insideV'].map(side=>'<w:'+side+' w:val="single" w:sz="4" w:color="C8CDD8"/>').join('')+'</w:tblBorders></w:tblPr>'+[section.headers,...section.rows].map((row,i)=>'<w:tr>'+row.map(value=>'<w:tc>'+paragraph(String(value??'—'),i===0)+'</w:tc>').join('')+'</w:tr>').join('')+'</w:tbl>').join('');
   zip.file('[Content_Types].xml','<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>');
   zip.file('_rels/.rels','<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>');
-  zip.file('word/document.xml','<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>'+paragraph('衡迹 · 教学证据台',true)+paragraph(report.title,true)+paragraph(report.subtitle)+sections+paragraph('教师判断与后续行动',true)+paragraph(report.note||'')+paragraph(report.created)+'<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="900" w:right="800" w:bottom="900" w:left="800"/></w:sectPr></w:body></w:document>');
+  zip.file('word/document.xml','<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>'+paragraph('衡迹 · 教学证据台',true)+paragraph(report.title,true)+paragraph(report.subtitle)+(report.studyTitle?paragraph('研究来源：'+report.studyTitle):'')+sections+paragraph('教师判断与后续行动',true)+paragraph(report.note||'')+paragraph(report.created)+'<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="900" w:right="800" w:bottom="900" w:left="800"/></w:sectPr></w:body></w:document>');
   download(await zip.generateAsync({type:'blob'}),report.title+'.docx');
 }
 export function chart(id,png=false) {

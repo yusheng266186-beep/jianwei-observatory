@@ -1,4 +1,4 @@
-import {button} from './html.js?v=clarity-20261011e';
+import {button} from './html.js?v=continuity-20261011f';
 
 export function welcomeView() {
   const template=document.getElementById('empty-workspace-template');
