@@ -1,4 +1,4 @@
-import {valid,difference} from './metrics.js?v=continuity-20261011f';
+import {valid,difference} from './metrics.js?v=evidence-20261011g';
 const cache=new WeakMap();
 export const directoryDefaults={search:'',page:1,directoryExam:'latest',track:'all',classes:[],language:'all',standing:'all',trend:'all',records:'all',savedOnly:false,minScore:'',maxScore:'',sort:'total',view:'cards',pageSize:24,lens:'all',focusSubject:'all',focusStatus:'below',maxExclusive:false,columns:'summary'};
 export function directoryEntries(atlas,exam='latest') {

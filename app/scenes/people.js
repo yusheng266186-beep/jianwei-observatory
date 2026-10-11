@@ -1,8 +1,8 @@
-import {renderDirectory} from './directory.js?v=continuity-20261011f';
-import {head,button,chips,badge,block,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote,empty} from '../ui/html.js?v=continuity-20261011f';
-import {trajectory,chartButtons,rateColor,rateLegend} from '../ui/plots.js?v=continuity-20261011f';
-import {difference,valid,sum} from '../engine/metrics.js?v=continuity-20261011f';
-import {scoreRows,answerRows,evidence} from '../io/exports.js?v=continuity-20261011f';
+import {renderDirectory} from './directory.js?v=evidence-20261011g';
+import {head,button,chips,badge,block,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote,empty} from '../ui/html.js?v=evidence-20261011g';
+import {trajectory,chartButtons,rateColor,rateLegend} from '../ui/plots.js?v=evidence-20261011g';
+import {difference,valid,sum} from '../engine/metrics.js?v=evidence-20261011g';
+import {scoreRows,answerRows,evidence} from '../io/exports.js?v=evidence-20261011g';
 export function render(atlas,state,session) {
   const story=state.sid?atlas.story(state.sid):[];
   if(!story.length)return renderDirectory(atlas,state,session);

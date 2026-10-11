@@ -1,6 +1,6 @@
-import {button,esc,empty} from './html.js?v=continuity-20261011f';
-import {directoryViewName} from '../engine/directory.js?v=continuity-20261011f';
-import {dockIcon} from './icons.js?v=continuity-20261011f';
+import {button,esc,empty} from './html.js?v=evidence-20261011g';
+import {directoryViewName} from '../engine/directory.js?v=evidence-20261011g';
+import {dockIcon} from './icons.js?v=evidence-20261011g';
 
 const scenes={board:'年级总览',class:'班级研究',papers:'试卷研究',people:'学生研究',follow:'教学跟进',library:'资料与报告'};
 const labels={overview:'本场概况',map:'逐题地图',targets:'有效与任务',subjects:'学科研究',history:'阶段对比',roster:'完整名单',snapshot:'本场剖面',knowledge:'知识点路径',classes:'班级热力',details:'逐题明细',students:'学生作答',responses:'单题作答',materials:'材料与备份',lines:'有效线',papers:'题目资料',exams:'考次与口径',notebook:'证据报告'};
@@ -16,6 +16,8 @@ export function studyDescription(atlas,study) {
   if(drawer?.type==='person'){title=atlas.name(drawer.sid)+' · '+({overview:'阶段线索',subjects:'学科成绩',questions:'逐题得分'}[drawer.tab]||'学生观察');scope=exam(drawer.exam)+' · 从'+scenes[scene]+'展开';}
   if(drawer?.type==='question'){const paper=atlas.papers().find(p=>p.key===drawer.key),q=paper?.questions[Number(drawer.question)];title=(paper?.subject||'试卷')+' · 第'+(q?.label??Number(drawer.question)+1)+'题';scope=exam(paper?.exam)+' · '+(drawer.classes?.length?drawer.classes.map(n=>n+'班').join('、'):'全部参考班');}
   if(drawer?.type==='compare'){title=(study.comparePeople||[]).map(sid=>atlas.name(sid)).join('、')+' · 并排研究';scope=drawer.context==='latest'?'每人最新':exam(drawer.context);}
+  if(drawer?.type==='subject'){title=drawer.no+'班 · '+drawer.subject+'学科研究';scope=exam(drawer.exam)+' · '+(drawer.tier==='top'?'特控':'本科')+'口径';}
+  if(drawer?.type==='knowledge'){const paper=atlas.papers().find(p=>p.key===drawer.key);title=drawer.knowledge+' · 知识点研究';scope=(paper?.subject||'试卷')+' · '+exam(paper?.exam)+' · '+(drawer.classes?.length?drawer.classes.map(n=>n+'班').join('、'):'全部参考班');}
   return {title,scope,scene:scenes[scene]||'研究记录'};
 }
 export function studyAvailable(atlas,study) {
@@ -28,9 +30,12 @@ export function studyAvailable(atlas,study) {
   if(s.key&&!paper(s.key))return false;
   if((s.classes||[]).some(no=>!atlas.classes.includes(Number(no)))||(s.exams||[]).some(id=>!hasExam(id)))return false;
   for(const d of [study.drawer,...(study.trail||[])].filter(Boolean)) {
+    if(!['person','question','compare','subject','knowledge'].includes(d.type))return false;
     if(d.type==='person'&&!person(d.sid,d.exam))return false;
     if(d.type==='question'&&(!Number.isInteger(Number(d.question))||!paper(d.key)?.questions[Number(d.question)]))return false;
     if(d.type==='compare'&&((study.comparePeople||[]).length<2||(study.comparePeople||[]).some(sid=>!atlas.people.has(sid))||!hasExam(d.context)))return false;
+    if(d.type==='subject'&&(!atlas.classes.includes(Number(d.no))||!hasExam(d.exam)||!atlas.comparisonSubjects(atlas.classAt(d.no,d.exam)).includes(d.subject)))return false;
+    if(d.type==='knowledge'&&!paper(d.key)?.questions.some(q=>(q.knowledge||'未标注').split(/[,，;；]/).map(s=>s.trim()).includes(d.knowledge)))return false;
     if((d.classes||[]).some(no=>!atlas.classes.includes(Number(no))))return false;
   }
   return true;

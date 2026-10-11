@@ -1,5 +1,5 @@
-import {classDefaults,SUBJECTS,normalizeDataset} from '../data/compat.js?v=continuity-20261011f';
-import {valid,average,sum,distribution,groupKey,GROUPS} from './metrics.js?v=continuity-20261011f';
+import {classDefaults,SUBJECTS,normalizeDataset} from '../data/compat.js?v=evidence-20261011g';
+import {valid,average,sum,distribution,groupKey,GROUPS} from './metrics.js?v=evidence-20261011g';
 const append=(map,key,value)=>{if(!map.has(key))map.set(key,[]);map.get(key).push(value);};
 export class Atlas {
   constructor(dataset) {
@@ -86,7 +86,7 @@ export class Atlas {
   paper(key,classes=[]) {
     const [subject,exam]=key.split('|'),bank=this.data.banks[key]||[];
     const answers=(this.paperRows.get(key)||[]).filter(a=>!classes.length||classes.includes(a.classNo));
-    const ordered=[...answers].sort((a,b)=>sum(b.values)-sum(a.values));
+    const measuredAnswers=answers.filter(a=>a.values.some(valid)),ordered=[...measuredAnswers].sort((a,b)=>sum(b.values)-sum(a.values));
     const size=Math.max(1,Math.floor(ordered.length*(this.data.rules?.topFraction??.27))),high=ordered.slice(0,size),low=ordered.slice(-size);
     const questions=bank.map((question,index)=>{
       const values=answers.map(a=>a.values[index]).filter(valid),mean=average(values),max=valid(question.max)&&question.max>0?question.max:null;
@@ -100,7 +100,7 @@ export class Atlas {
       return {name,questions:qs,rate,loss:known.length?sum(known.map(q=>q.loss)):null,advice:rate===null?'补充满分':rate<(this.data.rules?.lowRate??.5)?'优先修复':rate<(this.data.rules?.focusRate??.75)?'巩固迁移':'保持优势'};
     }).sort((a,b)=>(b.loss??-1)-(a.loss??-1));
     const eligible=new Set([...this.rows(exam).filter(r=>(!classes.length||classes.includes(r.classNo))&&valid(r.subjects?.[subject]?.score)).map(r=>r.sid+'|'+r.classNo),...answers.map(r=>r.sid+'|'+r.classNo)]);
-    return {key,subject,exam,answers,questions,skills,coverage:eligible.size?answers.length/eligible.size:0,mean:average(answers.map(a=>sum(a.values)))};
+    return {key,subject,exam,answers,questions,skills,coverage:eligible.size?answers.length/eligible.size:0,mean:average(measuredAnswers.map(a=>sum(a.values)))};
   }
   questionsFor(row,subject) {
     const answer=(this.personAnswers.get(row.sid+'|'+row.exam)||[]).find(a=>a.subject===subject&&a.classNo===row.classNo);

@@ -1,5 +1,5 @@
-import {esc,number,percent,attrs} from './html.js?v=continuity-20261011f';
-import {valid} from '../engine/metrics.js?v=continuity-20261011f';
+import {esc,number,percent,attrs} from './html.js?v=evidence-20261011g';
+import {valid} from '../engine/metrics.js?v=evidence-20261011g';
 export const seriesColors=['#365dff','#202735','#7996e4','#9689b7'];
 const colors=seriesColors;
 const action=item=>item?.cmd?' data-plot-action="true" data-cmd="'+esc(item.cmd)+'"'+attrs(item.data||{})+' role="button" tabindex="0"':'';

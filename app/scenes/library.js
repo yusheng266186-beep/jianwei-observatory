@@ -1,6 +1,6 @@
-import {SUBJECTS} from '../data/compat.js?v=continuity-20261011f';
-import {studyAvailable} from '../ui/research.js?v=continuity-20261011f';
-import {head,button,chips,badge,block,examRail,ribbon,table,number,integer,esc,empty,field,radio,footnote} from '../ui/html.js?v=continuity-20261011f';
+import {SUBJECTS} from '../data/compat.js?v=evidence-20261011g';
+import {studyAvailable} from '../ui/research.js?v=evidence-20261011g';
+import {head,button,chips,badge,block,examRail,ribbon,table,number,integer,esc,empty,field,radio,footnote} from '../ui/html.js?v=evidence-20261011g';
 export function render(atlas,state,session) {
   const tab=state.tab||'materials';let body='';
   const routes=[['materials','材料与备份',atlas.data.scores.length+' 条成绩','导入、合并、撤回与完整备份'],['classes','班级与任务',atlas.classes.length+' 个班级','人数任务、任课信息与班级档案'],['lines','有效线',atlas.data.lines.length+' 条口径','本场两科类总分与学科线'],['papers','题目资料',atlas.papers().length+' 张试卷','题号、满分与知识点维护'],['exams','考次与口径',atlas.exams.length+' 次考试','考试顺序、排名范围与分析参数'],['notebook','证据报告',(session.notebook||[]).length+' 份摘录','结果快照、教师判断与完整导出']];

@@ -1,8 +1,8 @@
-import {overview} from './overview.js?v=continuity-20261011f';
-import {head,button,chips,badge,block,examRail,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote} from '../ui/html.js?v=continuity-20261011f';
-import {mini,bars,trajectory,spread,chartButtons} from '../ui/plots.js?v=continuity-20261011f';
-import {difference,average} from '../engine/metrics.js?v=continuity-20261011f';
-import {scoreRows,effectiveRows,subjectRows,evidence} from '../io/exports.js?v=continuity-20261011f';
+import {overview} from './overview.js?v=evidence-20261011g';
+import {head,button,chips,badge,block,examRail,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote} from '../ui/html.js?v=evidence-20261011g';
+import {mini,bars,trajectory,spread,chartButtons} from '../ui/plots.js?v=evidence-20261011g';
+import {difference,average} from '../engine/metrics.js?v=evidence-20261011g';
+import {scoreRows,effectiveRows,subjectRows,evidence} from '../io/exports.js?v=evidence-20261011g';
 const tools=()=>button('摘录这页','capture',{},'outline')+button('导出','export',{},'accent');
 export function render(atlas,state) {
   const exam=state.exam||atlas.latest,groups=atlas.groups(exam),rows=atlas.rows(exam),s=atlas.summary(rows);

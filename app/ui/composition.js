@@ -1,4 +1,4 @@
-import {button,esc} from './html.js?v=continuity-20261011f';
+import {button,esc} from './html.js?v=evidence-20261011g';
 
 export function composeScene(html,{back=''}={}) {
   const template=document.createElement('template');template.innerHTML=html;

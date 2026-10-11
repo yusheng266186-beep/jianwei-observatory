@@ -1,8 +1,8 @@
-import {button,badge,block,ribbon,table,number,integer,percent,delta,esc,empty} from './html.js?v=continuity-20261011f';
-import {trajectory,bars,rateColor,rateLegend,seriesColors,chartButtons} from './plots.js?v=continuity-20261011f';
-import {directoryEntries,standingLabels} from '../engine/directory.js?v=continuity-20261011f';
-import {difference,valid} from '../engine/metrics.js?v=continuity-20261011f';
-import {evidence,scoreRows,answerRows} from '../io/exports.js?v=continuity-20261011f';
+import {button,badge,block,ribbon,table,number,integer,percent,delta,esc,empty} from './html.js?v=evidence-20261011g';
+import {trajectory,bars,rateColor,rateLegend,seriesColors,chartButtons} from './plots.js?v=evidence-20261011g';
+import {directoryEntries,standingLabels} from '../engine/directory.js?v=evidence-20261011g';
+import {difference,valid} from '../engine/metrics.js?v=evidence-20261011g';
+import {evidence,scoreRows,answerRows} from '../io/exports.js?v=evidence-20261011g';
 export function peekView(atlas,sid,exam,session,state={}) {
   const e=directoryEntries(atlas,exam||'latest').find(e=>e.person.id===sid)||directoryEntries(atlas).find(e=>e.person.id===sid);
   if(!e)return empty('暂时没有这个学生的成绩');
