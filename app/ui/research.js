@@ -1,6 +1,6 @@
-import {button,esc,empty} from './html.js?v=evidence-20261011g';
-import {directoryViewName} from '../engine/directory.js?v=evidence-20261011g';
-import {dockIcon} from './icons.js?v=evidence-20261011g';
+import {button,esc,empty} from './html.js?v=audit-20261011h';
+import {directoryViewName} from '../engine/directory.js?v=audit-20261011h';
+import {dockIcon} from './icons.js?v=audit-20261011h';
 
 const scenes={board:'年级总览',class:'班级研究',papers:'试卷研究',people:'学生研究',follow:'教学跟进',library:'资料与报告'};
 const labels={overview:'本场概况',map:'逐题地图',targets:'有效与任务',subjects:'学科研究',history:'阶段对比',roster:'完整名单',snapshot:'本场剖面',knowledge:'知识点路径',classes:'班级热力',details:'逐题明细',students:'学生作答',responses:'单题作答',materials:'材料与备份',lines:'有效线',papers:'题目资料',exams:'考次与口径',notebook:'证据报告'};
@@ -22,7 +22,7 @@ export function studyDescription(atlas,study) {
 }
 export function studyAvailable(atlas,study) {
   if(!study||!scenes[study.scene]||!study.values)return false;
-  const s=study.values,hasExam=id=>!id||['latest','all'].includes(id)||atlas.exams.some(e=>e.id===id),person=(sid,exam)=>atlas.people.has(sid)&&(!exam||atlas.story(sid).some(r=>r.exam===exam)),paper=key=>atlas.papers().find(p=>p.key===key);
+  const s=study.values,hasExam=id=>!id||['latest','all'].includes(id)||atlas.exams.some(e=>e.id===id),person=(sid,exam)=>atlas.people.has(sid)&&(!exam||Boolean(atlas.materialAt(sid,exam))),paper=key=>atlas.papers().find(p=>p.key===key);
   const relevant=study.scene==='people'?[s.sid?s.exam:s.directoryExam]:study.scene==='papers'?[s.key?undefined:s.shelfExam]:study.scene==='library'?[s.tab==='lines'?s.lineExam:undefined]:[s.exam];
   if(!relevant.every(hasExam))return false;
   if(study.scene==='class'&&!atlas.classes.includes(Number(s.no)))return false;

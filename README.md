@@ -94,6 +94,6 @@
 
 发布使用本独立仓库已有的 GitHub Pages 配置：main 分支、根目录。提交后由 GitHub 的 pages-build-deployment 发布。`.nojekyll` 保持静态文件直接发布。
 
-此次重建按委托人的要求不执行页面验收、数据校检、自动业务测试或浏览器截图验收；发布只跟踪 GitHub Pages 部署结果。
+此前重建按委托人的要求未执行页面验收或数据校检。2026-10-11 用户新指令授权校检，本轮已新增真实浏览器检查与数据回归脚本，发现的问题及验证范围见 [校检记录](docs/AUDIT-2026-10-11.md)。使用 `npm test` 运行数据回归；启动本地静态服务器后使用 `npm run test:browser` 运行浏览器流程。Playwright 为开发依赖，网页发布仍不需要构建。
 
 架构说明见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。历次要求与实现对应见 [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md)，实现对应不等于已完成数据或视觉验收。

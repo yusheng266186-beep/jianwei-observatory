@@ -1,4 +1,5 @@
-import { SUBJECTS, EXAM_ORDER, EXAM_NAMES, classDefaults, finite, normalizeDataset } from './compat.js?v=evidence-20261011g';
+import { SUBJECTS, EXAM_ORDER, EXAM_NAMES, classDefaults, finite, normalizeDataset } from './compat.js?v=audit-20261011h';
+import {mergeContext} from './context.js?v=audit-20261011h';
 const txt=v=>String(v??'').trim();
 const num=v=>v==null||txt(v)===''?null:Number.isFinite(Number(v))?Number(v):null;
 const code=v=>txt(v).replace(/[物历]$/,'');
@@ -163,5 +164,6 @@ export function mergeDatasets(current,incoming){
  data.lines=[...new Map([...data.lines,...incoming.lines].map(l=>[l.exam+'|'+l.track,l])).values()];
  data.exams=[...new Map([...data.exams,...incoming.exams].map(e=>[e.id,e])).values()];
  data.sheets=[...new Set([...data.sheets,...incoming.sheets])];data.sourceName=incoming.sourceName;data.importedAt=incoming.importedAt;data.anonymous=current.anonymous&&incoming.anonymous;
+ Object.assign(data,mergeContext(current,incoming,remap));
  return normalizeDataset(data);
 }

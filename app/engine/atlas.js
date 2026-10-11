@@ -1,13 +1,13 @@
-import {classDefaults,SUBJECTS,normalizeDataset} from '../data/compat.js?v=evidence-20261011g';
-import {valid,average,sum,distribution,groupKey,GROUPS} from './metrics.js?v=evidence-20261011g';
+import {classDefaults,SUBJECTS,normalizeDataset} from '../data/compat.js?v=audit-20261011h';
+import {valid,average,sum,distribution,groupKey,GROUPS} from './metrics.js?v=audit-20261011h';
 const append=(map,key,value)=>{if(!map.has(key))map.set(key,[]);map.get(key).push(value);};
 export class Atlas {
   constructor(dataset) {
     this.data=normalizeDataset(dataset);this.exams=this.data.exams;this.latest=this.exams.at(-1)?.id||'';
-    this.people=new Map(this.data.students.map(p=>[p.id,p]));this.examRows=new Map();this.classRows=new Map();this.stories=new Map();this.paperRows=new Map();this.personAnswers=new Map();this.percentiles=new Map();
+    this.people=new Map(this.data.students.map(p=>[p.id,p]));this.examRows=new Map();this.classRows=new Map();this.stories=new Map();this.paperRows=new Map();this.personAnswers=new Map();this.answerStories=new Map();this.materialStories=new Map();this.percentiles=new Map();
     this.lines=new Map(this.data.lines.map(l=>[l.exam+'|'+l.track,l]));
     for(const row of this.data.scores){append(this.examRows,row.exam,row);append(this.classRows,row.classNo+'|'+row.exam,row);append(this.stories,row.sid,row);}
-    for(const row of this.data.answers){append(this.paperRows,row.subject+'|'+row.exam,row);append(this.personAnswers,row.sid+'|'+row.exam,row);}
+    for(const row of this.data.answers){append(this.paperRows,row.subject+'|'+row.exam,row);append(this.personAnswers,row.sid+'|'+row.exam,row);append(this.answerStories,row.sid,row);}
     this.classes=[...new Set([...this.data.scores.map(r=>Number(r.classNo)),...this.data.answers.map(r=>Number(r.classNo))])].sort((a,b)=>a-b);
     const order=new Map(this.exams.map((e,i)=>[e.id,i]));
     for(const records of this.stories.values()) records.sort((a,b)=>(order.get(a.exam)??99)-(order.get(b.exam)??99));
@@ -32,7 +32,9 @@ export class Atlas {
     for(const tier of ['top','under']) {
       const eligible=measured.filter(r=>valid(this.line(r,tier,subject))),passing=eligible.filter(r=>this.gap(r,tier,subject)>=0);
       result[tier]=eligible.length?passing.length:null;result[tier+'Base']=eligible.length;result[tier+'Rate']=eligible.length?passing.length/eligible.length:null;
-      result[tier+'Double']=subject&&eligible.length?passing.filter(r=>this.gap(r,tier)!==null&&this.gap(r,tier)>=0).length:null;
+      const dualEligible=subject?eligible.filter(r=>this.gap(r,tier)!==null):[];
+      result[tier+'DoubleBase']=dualEligible.length;
+      result[tier+'Double']=dualEligible.length?dualEligible.filter(r=>this.gap(r,tier,subject)>=0&&this.gap(r,tier)>=0).length:null;
       result[tier+'Line']=average(eligible.map(r=>this.line(r,tier,subject)));
       result[tier+'Near10']=eligible.filter(r=>this.gap(r,tier,subject)<0&&this.gap(r,tier,subject)>=-10).length;
       result[tier+'Near20']=eligible.filter(r=>this.gap(r,tier,subject)<0&&this.gap(r,tier,subject)>=-20).length;
@@ -57,6 +59,16 @@ export class Atlas {
     return exams.map(exam=>{const rows=this.classAt(no,exam.id).filter(r=>!common||common.has(r.sid));return {exam,rows,summary:this.summary(rows)};});
   }
   story(sid){return this.stories.get(sid)||[];}
+  materialStory(sid) {
+    if(this.materialStories.has(sid))return this.materialStories.get(sid);
+    const records=[...this.story(sid)],seen=new Set(records.map(r=>r.exam+'|'+r.classNo)),order=new Map(this.exams.map((e,i)=>[e.id,i]));
+    for(const answer of (this.answerStories.get(sid)||[])) {
+      const key=answer.exam+'|'+answer.classNo;if(seen.has(key))continue;seen.add(key);
+      records.push({sid,exam:answer.exam,classNo:answer.classNo,track:answer.track||this.profile(answer.classNo).track,questionOnly:true,total:null,rawTotal:null,subjects:{},language:''});
+    }
+    records.sort((a,b)=>(order.get(a.exam)??99)-(order.get(b.exam)??99));this.materialStories.set(sid,records);return records;
+  }
+  materialAt(sid,exam='latest'){const records=this.materialStory(sid);return exam==='latest'||!exam?records.at(-1):records.find(r=>r.exam===exam);}
   subjectRank(row,subject){const score=this.subject(row,subject);return this.exam(row.exam).scope==='city'?score?.rank??null:score?.schoolRank??score?.rank??null;}
   percentile(row) {
     if(!valid(row?.total))return null;
@@ -86,7 +98,7 @@ export class Atlas {
   paper(key,classes=[]) {
     const [subject,exam]=key.split('|'),bank=this.data.banks[key]||[];
     const answers=(this.paperRows.get(key)||[]).filter(a=>!classes.length||classes.includes(a.classNo));
-    const measuredAnswers=answers.filter(a=>a.values.some(valid)),ordered=[...measuredAnswers].sort((a,b)=>sum(b.values)-sum(a.values));
+    const measuredAnswers=answers.filter(a=>a.values.some(valid)),ordered=answers.filter(a=>bank.length&&bank.every((_,i)=>valid(a.values[i]))).sort((a,b)=>sum(b.values)-sum(a.values));
     const size=Math.max(1,Math.floor(ordered.length*(this.data.rules?.topFraction??.27))),high=ordered.slice(0,size),low=ordered.slice(-size);
     const questions=bank.map((question,index)=>{
       const values=answers.map(a=>a.values[index]).filter(valid),mean=average(values),max=valid(question.max)&&question.max>0?question.max:null;

@@ -1,7 +1,7 @@
-import {head,button,chips,badge,block,ribbon,table,number,integer,percent,esc,personButton,search,footnote,empty} from '../ui/html.js?v=evidence-20261011g';
-import {bars,rateColor,rateLegend,chartButtons} from '../ui/plots.js?v=evidence-20261011g';
-import {average,sum,valid} from '../engine/metrics.js?v=evidence-20261011g';
-import {answerRows,evidence} from '../io/exports.js?v=evidence-20261011g';
+import {head,button,chips,badge,block,ribbon,table,number,integer,percent,esc,personButton,search,footnote,empty} from '../ui/html.js?v=audit-20261011h';
+import {bars,rateColor,rateLegend,chartButtons} from '../ui/plots.js?v=audit-20261011h';
+import {average,sum,valid} from '../engine/metrics.js?v=audit-20261011h';
+import {answerRows,evidence} from '../io/exports.js?v=audit-20261011h';
 export function render(atlas,state) {
   const papers=atlas.papers(),paper=papers.find(p=>p.key===state.key);
   if(!paper) {
@@ -37,7 +37,7 @@ export function render(atlas,state) {
 
   }
   const max=sum(lens.questions.map(q=>q.max)),known=lens.questions.every(q=>q.max!==null);
-  const html=head('03 / '+paper.subject+'试卷',atlas.exam(paper.exam).label,'小题是入口：点一道题，看班级差异，再进入具体学生。',button('← 回到卷架','paper-back',{},'outline')+button('摘录','capture',{},'outline')+button('导出','export',{},'accent'))+'<div class="audience-strip"><span>观察范围</span>'+button('全部参考班','set',{key:'classes',value:'all'},!scope.length?'chip selected':'chip')+chips('classes',paper.classes.map(no=>[no,no+'班'+(atlas.profile(no).cohort==='repeat'?' · 补习':'')]),scope,true)+'</div>'+ribbon([['作答记录',integer(lens.answers.length),paper.subject],['小题均分',number(lens.mean),'基于原始小题得分'],['试卷满分',known?number(max):'待补全','只采用明确的题目满分'],['作答覆盖',percent(lens.coverage),'有该科记录的参考学生']])+'<div class="scene-tabs">'+chips('tab',[['map','逐题地图'],['knowledge','知识点路径'],['classes','班级热力'],['details','逐题明细'],['students','学生作答'],['responses','单题作答']],state.tab||'map')+'</div>'+(['map','classes','students'].includes(state.tab||'map')?rateLegend():'')+body+footnote('区分度按小题合计的高低分组计算，默认各27%；样本少于6份时留空。没有明确满分的题保留得分，得分率留空。');
+  const html=head('03 / '+paper.subject+'试卷',atlas.exam(paper.exam).label,'小题是入口：点一道题，看班级差异，再进入具体学生。',button('← 回到卷架','paper-back',{},'outline')+button('摘录','capture',{},'outline')+button('导出','export',{},'accent'))+'<div class="audience-strip"><span>观察范围</span>'+button('全部参考班','set',{key:'classes',value:'all'},!scope.length?'chip selected':'chip')+chips('classes',paper.classes.map(no=>[no,no+'班'+(atlas.profile(no).cohort==='repeat'?' · 补习':'')]),scope,true)+'</div>'+ribbon([['作答记录',integer(lens.answers.length),paper.subject],['已填小题均值',number(lens.mean),'至少一题有分 · 包含未填齐作答'],['试卷满分',known?number(max):'待补全','只采用明确的题目满分'],['作答覆盖',percent(lens.coverage),'有该科记录的参考学生']])+'<div class="scene-tabs">'+chips('tab',[['map','逐题地图'],['knowledge','知识点路径'],['classes','班级热力'],['details','逐题明细'],['students','学生作答'],['responses','单题作答']],state.tab||'map')+'</div>'+(['map','classes','students'].includes(state.tab||'map')?rateLegend():'')+body+footnote('区分度仅用全卷得分已填齐的作答，按小题合计高低分组计算，默认各27%；完整作答少于6份时留空。没有明确满分的题保留得分，得分率留空。');
   const questionRows=[['题号','知识点','样本','均分','满分','得分率','平均失分','区分度','零分人数','满分人数'],...lens.questions.map(q=>[q.label,q.knowledge,q.count,q.mean,q.max,q.rate,q.loss,q.discrimination,q.zero,q.full])];
   const skills=[['知识点','得分率','平均失分','建议'],...lens.skills.map(k=>[k.name,k.rate,k.loss,k.advice])];
   return {html,report:evidence(paper.subject+' · '+atlas.exam(paper.exam).label+'试卷研究',scope.length?scope.map(n=>n+'班').join('、'):'全部参考班',[{title:'逐题诊断',headers:questionRows[0],rows:questionRows.slice(1).map(row=>row.map((v,i)=>i===5?percent(v):v))},{title:'知识点路径',headers:skills[0],rows:skills.slice(1).map(row=>row.map((v,i)=>i===1?percent(v):v))}],{'个人学科小题得分':answerRows(atlas,lens.answers),'逐题诊断':questionRows,'知识点':skills})};

@@ -1,12 +1,12 @@
-import {valid,difference} from './metrics.js?v=evidence-20261011g';
+import {valid,difference} from './metrics.js?v=audit-20261011h';
 const cache=new WeakMap();
 export const directoryDefaults={search:'',page:1,directoryExam:'latest',track:'all',classes:[],language:'all',standing:'all',trend:'all',records:'all',savedOnly:false,minScore:'',maxScore:'',sort:'total',view:'cards',pageSize:24,lens:'all',focusSubject:'all',focusStatus:'below',maxExclusive:false,columns:'summary'};
 export function directoryEntries(atlas,exam='latest') {
   if(!cache.has(atlas))cache.set(atlas,new Map());
   const index=cache.get(atlas);if(index.has(exam))return index.get(exam);
   const entries=atlas.data.students.flatMap(person=>{
-    const story=atlas.story(person.id),row=exam==='latest'?story.at(-1):story.find(r=>r.exam===exam);if(!row)return [];
-    const position=story.indexOf(row),previous=story.slice(0,position).reverse().find(r=>valid(r.total)&&atlas.profile(r.classNo).track===atlas.profile(row.classNo).track),points=atlas.percentile(row),change=previous?difference(points,atlas.percentile(previous)):null;
+    const story=atlas.story(person.id),row=atlas.materialAt(person.id,exam);if(!row)return [];
+    const order=new Map(atlas.exams.map((e,i)=>[e.id,i])),previous=story.filter(r=>(order.get(r.exam)??99)<(order.get(row.exam)??99)).reverse().find(r=>valid(r.total)&&atlas.profile(r.classNo).track===atlas.profile(row.classNo).track),points=atlas.percentile(row),change=previous?difference(points,atlas.percentile(previous)):null;
     const top=atlas.gap(row,'top'),under=atlas.gap(row,'under'),standing=top!==null&&top>=0?'top':under!==null&&under>=0?'under':under!==null?'below':'unknown';
     return [{person,row,story,previous,percentile:points,change,standing,top,under,track:atlas.profile(row.classNo).track,answers:(atlas.personAnswers.get(row.sid+'|'+row.exam)||[]).filter(a=>a.classNo===row.classNo)}];
   });index.set(exam,entries);return entries;
@@ -48,7 +48,7 @@ export function queryDirectory(atlas,state,session) {
   const size=[24,48,96].includes(Number(state.pageSize))?Number(state.pageSize):24,pages=Math.max(1,Math.ceil(matches.length/size)),page=Math.min(state.page||1,pages);
   return {all,matches,shown:matches.slice((page-1)*size,page*size),size,pages,page};
 }
-export const standingLabels={top:'特控达线',under:'本科达线',below:'本科线下',unknown:'有效线待补'};
+export const standingLabels={top:'特控达线',under:'本科达线',below:'本科线下',unknown:'成绩或有效线待补'};
 
 export const directoryLenses=[['all','全部学生','完整目录'],['nearUnder','本科临界','有效线两侧20分'],['nearTop','特控临界','有效线两侧20分'],['up','分位上升','相邻同科类记录提升≥3'],['down','分位下降','相邻同科类记录下降≥3'],['questions','有小题材料','本场至少一个学科'],['saved','我的收藏','保存在当前浏览器']];
 export function lensValues(lens) {
