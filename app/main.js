@@ -39,7 +39,7 @@ function placeNotification() {
   const toast=document.getElementById('toast'),focused=document.activeElement?.closest('dialog[open]');
   modalOrder=modalOrder.filter(dialog=>dialog.open);
   const host=focused||modalOrder.at(-1)||document.body;if(toast.parentElement===host)return;
-  const shown=toast.matches(':popover-open');if(shown)toast.hidePopover();
+  const shown=Boolean(toast.showPopover)&&toast.matches(':popover-open');if(shown)toast.hidePopover();
   host.append(toast);if(shown)toast.showPopover();
 }
 function notify(message,action={}) {

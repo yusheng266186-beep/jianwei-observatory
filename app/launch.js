@@ -30,5 +30,5 @@
   });
   const timer=setTimeout(()=>failure('启动等待已结束。你可以重试或先导入标准成绩工作簿。'),15000);
   window.addEventListener('hengji:ready',()=>{ready=true;clearTimeout(timer);},{once:true});
-  import(new URL('./main.js?v=surface-20261011j',base)).then(module=>module.mount()).catch(error=>{clearTimeout(timer);failure('启动组件未能载入：'+error.message);});
+  import(new URL('./main.js?v=surface-20261011k',base)).then(module=>module.mount()).catch(error=>{clearTimeout(timer);failure('启动组件未能载入：'+error.message);});
 })();
