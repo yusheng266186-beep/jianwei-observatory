@@ -26,7 +26,10 @@
 #toast{inset:94px 24px auto auto;transform:translateY(-8px);gap:10px;max-width:min(420px,calc(100vw - 32px));padding:10px 12px 10px 16px}
 #toast.visible{transform:translateY(0);pointer-events:none}
 #toast>span{min-width:0;overflow-wrap:anywhere}
-#toast .toast-action,#toast .toast-dismiss{pointer-events:auto;flex-shrink:0}
+#toast:not(.visible){display:none;pointer-events:none}
+dialog #toast{inset:auto 16px max(16px,env(safe-area-inset-bottom)) auto;transform:translateY(8px)}
+dialog #toast.visible{transform:translateY(0)}
+#toast.visible .toast-action,#toast.visible .toast-dismiss{pointer-events:auto;flex-shrink:0}
 #toast .toast-dismiss{min-height:28px;min-width:28px;padding:3px;font-size:19px;font-weight:400;color:#ffffffb8;background:transparent;border:0}
 @media(max-width:760px){
  :is(#stage,.scene-leaving-canvas)[data-scene=people]:has(.directory-head)>.study-return{min-height:34px;margin-bottom:12px}

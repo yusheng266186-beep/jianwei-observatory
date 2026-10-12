@@ -3,7 +3,17 @@ const spring='linear(0, .12, .35, .59, .78, .91, .98, 1.012, 1.016, 1.011, 1.005
 export const settle=typeof CSS!=='undefined'&&CSS.supports('animation-timing-function',spring)?spring:'cubic-bezier(.2,.9,.25,1)';
 export const motion={arrive:{duration:420,easing:'cubic-bezier(.16,1,.3,1)'},arrange:{duration:340,easing:settle},leave:{duration:180,easing:'cubic-bezier(.3,0,.7,1)'}};
 export function visualFrame(element){const style=getComputedStyle(element);return {opacity:style.opacity,transform:style.transform};}
-export function cancelOwnMotion(element){for(const animation of element.getAnimations())animation.cancel();}
+export function cancelOwnMotion(element){try{for(const animation of element.getAnimations?.()||[])try{animation.cancel();}catch{}}catch{}}
+// Exit animations are optional: a paused or unavailable animation must never
+// keep a dialog modal. Cancel the visual effect before its caller closes it.
+export function finishAnimation(animation,duration) {
+  return new Promise(resolve=>{
+    let completed=false;
+    const complete=()=>{if(completed)return;completed=true;clearTimeout(timer);try{animation?.cancel();}catch{}resolve();};
+    const timer=setTimeout(complete,duration+60);
+    try{if(animation?.finished?.then)animation.finished.then(complete,complete);else complete();}catch{complete();}
+  });
+}
 let canvasSlide=null,slideSerial=0;
 function pinFixed(node,box,rect) {
   Object.assign(node.style,{position:'absolute',left:(box.left-rect.left)+'px',top:(box.top-rect.top)+'px',bottom:'auto',right:'auto',width:box.width+'px',height:box.height+'px',margin:'0',transform:'none'});

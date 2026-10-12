@@ -1,6 +1,6 @@
-import {esc,number,percent,attrs} from './html.js?v=type-v16';
-import {valid} from '../engine/metrics.js?v=type-v16';
-import {plotPalette as palette} from './palette.js?v=type-v16';
+import {esc,number,percent,attrs} from './html.js?v=refine-v17';
+import {valid} from '../engine/metrics.js?v=refine-v17';
+import {plotPalette as palette} from './palette.js?v=refine-v17';
 export const seriesColors=palette.series;
 const colors=seriesColors;
 const action=item=>item?.cmd?' data-plot-action="true" data-cmd="'+esc(item.cmd)+'"'+attrs(item.data||{})+' role="button" tabindex="0"':'';
