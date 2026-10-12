@@ -13,7 +13,8 @@
     "profile:motion": "node tests/motion-profile.cjs",
     "test:evidence": "node tests/evidence.cjs",
     "test:directory": "node tests/directory.cjs",
-    "test:density": "node tests/density.cjs"
+    "test:density": "node tests/density.cjs",
+    "test:questions": "node tests/question-map.cjs"
   },
   "devDependencies": {
     "playwright": "1.62.1"

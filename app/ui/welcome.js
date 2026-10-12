@@ -1,4 +1,4 @@
-import {button} from './html.js?v=layout-v9';
+import {button} from './html.js?v=research-v10';
 
 export function welcomeView() {
   const template=document.getElementById('empty-workspace-template');

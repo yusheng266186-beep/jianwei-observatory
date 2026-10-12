@@ -1,7 +1,7 @@
-import {esc,number,integer,percent,button} from './html.js?v=layout-v9';
-import {valid} from '../engine/metrics.js?v=layout-v9';
-import {plotPalette as palette} from './palette.js?v=layout-v9';
-import {rateColor} from './plots.js?v=layout-v9';
+import {esc,number,integer,percent,button} from './html.js?v=research-v10';
+import {valid} from '../engine/metrics.js?v=research-v10';
+import {plotPalette as palette} from './palette.js?v=research-v10';
+import {rateColor} from './plots.js?v=research-v10';
 
 export function thresholdProfile(id,summary) {
   const prefix='profile-'+[...String(id)].map(c=>c.codePointAt(0).toString(16)).join('-');

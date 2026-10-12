@@ -1,6 +1,6 @@
-import {button,esc,empty} from './html.js?v=layout-v9';
-import {directoryViewName} from '../engine/directory.js?v=layout-v9';
-import {dockIcon} from './icons.js?v=layout-v9';
+import {button,esc,empty} from './html.js?v=research-v10';
+import {directoryViewName} from '../engine/directory.js?v=research-v10';
+import {dockIcon} from './icons.js?v=research-v10';
 
 const scenes={board:'年级总览',class:'班级研究',papers:'试卷研究',people:'学生研究',follow:'教学跟进',library:'资料与报告'};
 const labels={overview:'本场概况',map:'逐题地图',targets:'有效与任务',subjects:'学科研究',history:'阶段对比',roster:'完整名单',snapshot:'本场剖面',knowledge:'知识点路径',classes:'班级热力',details:'逐题明细',students:'学生作答',responses:'单题作答',materials:'材料与备份',lines:'有效线',papers:'题目资料',exams:'考次与口径',notebook:'证据报告'};
@@ -9,7 +9,7 @@ export function studyDescription(atlas,study) {
   let title=scenes[scene]||'研究记录',scope='';
   if(scene==='board'){title=({overview:'本场概况',map:'班级分布',targets:'班级有效账',subjects:'学科有效',history:'年级阶段对比',roster:'完整成绩名册'}[s.mode])||'年级研究';scope=exam(s.exam)+(s.mode==='subjects'&&s.subject?' · '+s.subject:'');}
   if(scene==='class'){title=s.no+'班 · '+(labels[s.tab]||'班级研究');scope=s.tab==='history'?(s.exams||[]).map(exam).join(' / '):exam(s.exam);}
-  if(scene==='papers'){const paper=atlas.papers().find(p=>p.key===s.key);title=paper?paper.subject+' · '+(labels[s.tab]||'试卷研究'):'试卷资料架';scope=paper?exam(paper.exam)+' · '+(s.classes?.length?s.classes.map(n=>n+'班').join('、'):'全部参考班'):s.shelfExam==='all'?'全部考试':exam(s.shelfExam||atlas.latest);}
+  if(scene==='papers'){const paper=atlas.papers().find(p=>p.key===s.key);title=paper?paper.subject+' · '+(labels[s.tab]||'试卷研究'):'试卷资料架';scope=paper?exam(paper.exam)+' · '+(s.classes?.length?s.classes.map(n=>n+'班').join('、'):'全部参考班'):s.shelfExam==='all'?'全部考试':exam(s.shelfExam||atlas.latest);if(paper&&(!s.tab||s.tab==='map'))scope+=(s.questionFocus&&s.questionFocus!=='all'?' · '+({low:'低得分率',missing:'作答未齐',max:'满分待补'}[s.questionFocus]||'全部题目'):'')+(s.questionSearch?.trim()?' · 检索 '+s.questionSearch.trim():'')+(s.order==='loss'?' · 按平均失分':'');}
   if(scene==='people'){title=s.sid?atlas.name(s.sid)+' · 学生档案':directoryViewName(s);scope=s.sid?exam(s.exam):'学生目录 · '+({cards:'卡片',table:'表格',landscape:'分布图'}[s.view]||'研究视图');}
   if(scene==='follow')scope=exam(s.exam)+' · '+(s.tier==='top'?'特控':'本科')+'临界';
   if(scene==='library'){title=s.tab==='classes'?'班级与任务':labels[s.tab]||'资料与报告';scope=s.tab==='lines'?exam(s.lineExam):'资料整理';}

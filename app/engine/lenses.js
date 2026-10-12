@@ -1,4 +1,4 @@
-import {valid,sum,difference} from './metrics.js?v=layout-v9';
+import {valid,sum,difference} from './metrics.js?v=research-v10';
 
 export function subjectLens(atlas,state) {
   const no=Number(state.no),subject=['英语','日语'].includes(state.subject)?'外语':state.subject,tier=state.tier==='top'?'top':'under',snapshot=atlas.snapshot(no,state.exam),own=atlas.summary(snapshot.rows,subject),peers=atlas.summary(snapshot.peers,subject);
