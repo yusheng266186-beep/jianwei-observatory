@@ -1,13 +1,13 @@
-import {head,button,chips,badge,block,ribbon,table,number,integer,percent,esc,personButton,search,footnote,empty} from '../ui/html.js?v=controls-v12';
-import {bars,rateColor,rateLegend,chartButtons} from '../ui/plots.js?v=controls-v12';
-import {average,sum,valid} from '../engine/metrics.js?v=controls-v12';
-import {answerRows,evidence} from '../io/exports.js?v=controls-v12';
-import {queryQuestionMap} from '../engine/question-map.js?v=controls-v12';
+import {head,button,chips,examChips,badge,block,ribbon,table,number,integer,percent,esc,personButton,search,footnote,empty} from '../ui/html.js?v=slides-v13';
+import {bars,rateColor,rateLegend,chartButtons} from '../ui/plots.js?v=slides-v13';
+import {average,sum,valid} from '../engine/metrics.js?v=slides-v13';
+import {answerRows,evidence} from '../io/exports.js?v=slides-v13';
+import {queryQuestionMap} from '../engine/question-map.js?v=slides-v13';
 export function render(atlas,state) {
   const papers=atlas.papers(),paper=papers.find(p=>p.key===state.key);
   if(!paper) {
     const chosen=state.shelfExam||atlas.latest,scope=chosen==='all'?papers:papers.filter(p=>p.exam===chosen),subjects=[...new Set(papers.map(p=>['英语','日语'].includes(p.subject)?'外语':p.subject))],visible=scope.filter(p=>!state.shelfSubject||state.shelfSubject==='all'||(['英语','日语'].includes(p.subject)?'外语':p.subject)===state.shelfSubject);
-    const controls='<div class="paper-browser"><div class="directory-exams"><span>考试档案</span>'+chips('shelfExam',[[atlas.latest,'最新考试'],['all','全部考次'],...atlas.exams.filter(e=>e.id!==atlas.latest).map(e=>[e.id,e.id])],chosen)+'</div><div class="paper-browser-tools">'+chips('shelfSubject',[['all','全部学科'],...subjects],state.shelfSubject||'all')+chips('shelfView',[['cards','卷面卡片'],['table','归档清单']],state.shelfView||'cards')+'</div></div>';
+    const controls='<div class="paper-browser"><div class="directory-exams"><span>考试档案</span>'+examChips(atlas,'shelfExam',[atlas.exam(atlas.latest),{id:'all',label:'全部考次'},...atlas.exams.filter(e=>e.id!==atlas.latest)],chosen)+'</div><div class="paper-browser-tools">'+chips('shelfSubject',[['all','全部学科'],...subjects],state.shelfSubject||'all')+chips('shelfView',[['cards','卷面卡片'],['table','归档清单']],state.shelfView||'cards')+'</div></div>';
     let shelf='';
     if(state.shelfView==='table')shelf=block('全部 '+visible.length+' 张试卷',table(['试卷','考次','小题数','作答份数','参考班级'],visible.map(p=>[button(esc(p.subject),'paper',{key:p.key},'person-link'),esc(atlas.exam(p.exam).label),p.questions.length,p.answers.length,p.classes.map(n=>n+'班').join('、')]),{label:'完整试卷档案'}));
     else shelf='<div class="paper-catalog">'+visible.map(p=>paperCover(atlas,p)).join('')+'</div>';

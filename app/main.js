@@ -1,28 +1,28 @@
-import {questionView,questionEvidence} from './ui/question.js?v=controls-v12';
-import {queryQuestionMap,questionSequence} from './engine/question-map.js?v=controls-v12';
-import {SITE_NAME} from './brand.js?v=controls-v12';
-import {subjectView,knowledgeView,lensEvidence} from './ui/lenses.js?v=controls-v12';
-import {subjectLens,skillLens,questionLens} from './engine/lenses.js?v=controls-v12';
-import {directoryFilterView} from './scenes/directory.js?v=controls-v12';
-import {renderInto} from './ui/render.js?v=controls-v12';
-import {installInteractions,enhance,prepareUpdate,shiftTable} from './ui/interactions.js?v=controls-v12';
-import {readingDefaults,readingView,applyReading} from './ui/reading.js?v=controls-v12';
-import {reportView} from './ui/report.js?v=controls-v12';
-import {welcomeView} from './ui/welcome.js?v=controls-v12';
-import {composeScene} from './ui/composition.js?v=controls-v12';
-import {researchView,studyDescription,studyAvailable,studyKey} from './ui/research.js?v=controls-v12';
-import {Atlas} from './engine/atlas.js?v=controls-v12';
-import {normalizeDataset,SUBJECTS} from './data/compat.js?v=controls-v12';
-import {hydrate,save,saveWorkspace,restoreDataset,hasMaterials,preference,remember,previous,emptyDataset,loadNotebook,saveNotebook} from './data/workspace.js?v=controls-v12';
-import {mergeDatasets} from './data/parser.js?v=controls-v12';
-import {Inbox} from './data/inbox.js?v=controls-v12';
-import {NoteJournal} from './data/notes.js?v=controls-v12';
-import {motion,settle,visualFrame,cancelOwnMotion,enterCanvas,arrangeRows} from './ui/motion.js?v=controls-v12';
-import {esc,button,empty,table} from './ui/html.js?v=controls-v12';
-import {excel,word,print,download,chart,scoreRows,effectiveRows,subjectRows,answerRows,evidence} from './io/exports.js?v=controls-v12';
-import {directoryDefaults,lensValues,queryDirectory,directoryViewValues,directoryViewName} from './engine/directory.js?v=controls-v12';
-import {peekView,compareView,drawerEvidence} from './ui/explorer.js?v=controls-v12';
-import {dockIcon} from './ui/icons.js?v=controls-v12';
+import {questionView,questionEvidence} from './ui/question.js?v=slides-v13';
+import {queryQuestionMap,questionSequence} from './engine/question-map.js?v=slides-v13';
+import {SITE_NAME} from './brand.js?v=slides-v13';
+import {subjectView,knowledgeView,lensEvidence} from './ui/lenses.js?v=slides-v13';
+import {subjectLens,skillLens,questionLens} from './engine/lenses.js?v=slides-v13';
+import {directoryFilterView} from './scenes/directory.js?v=slides-v13';
+import {renderInto} from './ui/render.js?v=slides-v13';
+import {installInteractions,enhance,prepareUpdate,pruneInteractions,shiftTable} from './ui/interactions.js?v=slides-v13';
+import {readingDefaults,readingView,applyReading} from './ui/reading.js?v=slides-v13';
+import {reportView} from './ui/report.js?v=slides-v13';
+import {welcomeView} from './ui/welcome.js?v=slides-v13';
+import {composeScene} from './ui/composition.js?v=slides-v13';
+import {researchView,studyDescription,studyAvailable,studyKey} from './ui/research.js?v=slides-v13';
+import {Atlas} from './engine/atlas.js?v=slides-v13';
+import {normalizeDataset,SUBJECTS} from './data/compat.js?v=slides-v13';
+import {hydrate,save,saveWorkspace,restoreDataset,hasMaterials,preference,remember,previous,emptyDataset,loadNotebook,saveNotebook} from './data/workspace.js?v=slides-v13';
+import {mergeDatasets} from './data/parser.js?v=slides-v13';
+import {Inbox} from './data/inbox.js?v=slides-v13';
+import {NoteJournal} from './data/notes.js?v=slides-v13';
+import {motion,settle,visualFrame,cancelOwnMotion,enterCanvas,arrangeRows,prepareCanvasSlide,finishCanvasSlide} from './ui/motion.js?v=slides-v13';
+import {esc,button,empty,table} from './ui/html.js?v=slides-v13';
+import {excel,word,print,download,chart,scoreRows,effectiveRows,subjectRows,answerRows,evidence} from './io/exports.js?v=slides-v13';
+import {directoryDefaults,lensValues,queryDirectory,directoryViewValues,directoryViewName} from './engine/directory.js?v=slides-v13';
+import {peekView,compareView,drawerEvidence} from './ui/explorer.js?v=slides-v13';
+import {dockIcon} from './ui/icons.js?v=slides-v13';
 
 const routes=[['board','年级总览','▦'],['class','班级研究','▥'],['papers','试卷研究','▧'],['people','学生研究','◎'],['follow','教学跟进','↗'],['library','资料与报告','⊞']];
 const defaults={board:{mode:'overview',metric:'underRate',historyMetric:'mean',search:'',page:1},class:{tab:'snapshot',value:'score',trendMetric:'mean',matrix:'total',search:'',page:1,matched:false},papers:{key:'',tab:'map',classes:[],question:0,order:'paper',questionSearch:'',questionFocus:'all',search:'',page:1},people:{sid:'',storyMetric:'total',...directoryDefaults,filtersOpen:innerWidth>760},follow:{tier:'under',band:20,side:'below',classes:[],search:'',page:1},library:{tab:'materials'}};
@@ -71,7 +71,7 @@ function scenePending(serial,scene){
   if(pending)sceneLoadingTimer=setTimeout(()=>{if(serial!==paintId)return;const status=document.getElementById('scene-status');status.textContent='正在打开'+routes.find(r=>r[0]===scene)[1]+'…';status.hidden=false;stage().dataset.loading='true';},180);
 }
 function sceneReady(serial){if(serial!==paintId)return;clearTimeout(sceneLoadingTimer);document.getElementById('scene-status').hidden=true;stage().inert=false;stage().setAttribute('aria-busy','false');delete stage().dataset.loading;}
-function staleStage(target){return stage().contains(target)&&(stage().inert||sceneObject()!==paintedObject);}
+function staleStage(target){return Boolean(target.closest('.scene-leaving-viewport'))||stage().contains(target)&&(stage().inert||sceneObject()!==paintedObject);}
 
 function persistBooks(){remember('books',books);}
 async function flushSearch(){if(searchTimer){clearTimeout(searchTimer);searchTimer=null;searchPaint=paint();}const pending=searchPaint;if(pending)await pending;if(searchPaint===pending)searchPaint=null;}
@@ -203,7 +203,7 @@ async function paint(transition=false,focus=null) {
     const available=hasMaterials(atlas.data);let view;
     if(!available)view=welcomeView();
     else {
-      if(!loaded.has(scene))loaded.set(scene,import('./scenes/'+scene+'.js?v=controls-v12'));
+      if(!loaded.has(scene))loaded.set(scene,import('./scenes/'+scene+'.js?v=slides-v13'));
       const module=await loaded.get(scene);if(serial!==paintId)return;
       view=scene==='class'&&!atlas.classes.length?{html:empty('先带入一个班的材料','从导入原表开始建立班级画布。')+button('导入材料','import',{},'accent'),report:null}:module.render(atlas,books[scene],session);
     }
@@ -218,21 +218,26 @@ async function paint(transition=false,focus=null) {
     const apply=()=>{
       if(serial!==paintId)return;
       activeReport=view.report;sceneReady(serial);
-      prepareUpdate();if(!changed)for(const el of stage().querySelectorAll('[data-motion-key]'))cancelOwnMotion(el);renderInto(stage(),view.html,{replace:changed});stage().dataset.scene=scene;stage().dataset.animate=!changed&&transition&&!reducedMotion()?'true':'false';paintedObject=object;
+      prepareUpdate();
+      const slide=available&&transition&&oldScene&&oldScene!==scene&&!reducedMotion()?prepareCanvasSlide(stage(),direction,{onCleanup:pruneInteractions}):null;
+      if(!slide)finishCanvasSlide();
+      if(!changed)for(const el of stage().querySelectorAll('[data-motion-key]'))cancelOwnMotion(el);
+      renderInto(stage(),view.html,{replace:changed});stage().dataset.scene=scene;stage().dataset.animate=!changed&&transition&&!reducedMotion()?'true':'false';paintedObject=object;
       if(focus){const root=focus.inDrawer?document.getElementById('drawer-content'):stage(),input=root.querySelector('[data-field="'+focus.key+'"]');input?.focus({preventScroll:true});if(input&&input.type!=='number')try{input.setSelectionRange(focus.position,focus.position);}catch{}}
       else if(focusedData&&!changed){const next=[...stage().querySelectorAll('[data-cmd]')].find(el=>Object.entries(focusedData).every(([k,v])=>el.dataset[k]===v));next?.focus({preventScroll:true});}
       for(const el of stage().querySelectorAll('.table-scroll'))el.scrollLeft=paintedScrolls.get(tablePositionKey(el))||0;
       for(const rail of stage().querySelectorAll('.exam-rail')){const selected=rail.querySelector('.selected');if(selected)rail.scrollLeft=selected.offsetLeft-rail.offsetLeft-rail.clientWidth/2+selected.clientWidth/2;}
-      enhance(stage());
+      enhance(stage(),{reveal:!slide});
       if(changed||scrollResets.has(object))window.scrollTo({top:scrollResets.has(object)?0:pagePositions.get(object)||0,behavior:'instant'});else window.scrollTo({top:previousScroll,behavior:'instant'});scrollResets.delete(object);
       paintedStudy=available?{scene,values:structuredClone(books[scene])}:null;scheduleResearch();
       if(!reducedMotion()) {
-        if(changed)enterCanvas(stage(),direction);
+        if(slide)slide();
+        else if(changed)enterCanvas(stage(),direction);
         else arrangeRows(stage(),positions);
       }
     };
     apply();
-  }catch(error){if(serial!==paintId)return;sceneReady(serial);stage().dataset.scene=scene;paintedObject=sceneObject(scene);stage().innerHTML=empty('这张研究画布暂时没有打开',error.message)+button('重新打开','reload',{},'outline')+button('导入材料','import',{},'accent');activeReport=null;}
+  }catch(error){if(serial!==paintId)return;finishCanvasSlide();sceneReady(serial);stage().dataset.scene=scene;paintedObject=sceneObject(scene);stage().innerHTML=empty('这张研究画布暂时没有打开',error.message)+button('重新打开','reload',{},'outline')+button('导入材料','import',{},'accent');activeReport=null;}
 }
 function update(key,value,toggle=false) {
   archiveStudy();
@@ -452,7 +457,7 @@ async function commands(event) {
     if(d.cmd==='table-shift'){shiftTable(b);return;}
     if(d.cmd==='reading'){const dialog=document.getElementById('reading-dialog');renderInto(document.getElementById('reading-content'),readingView(reading));if(!dialog.open)dialog.showModal();return;}
     if(d.cmd==='reading-close'){await dismissDialog('reading-dialog');return;}
-    if(d.cmd==='reading-set'||d.cmd==='reading-reset'){if(d.cmd==='reading-reset')Object.assign(reading,readingDefaults);else if(Object.hasOwn(readingDefaults,d.key))reading[d.key]=d.value;remember('reading',reading);applyReading(reading);if(reducedMotion())for(const animation of document.getAnimations())animation.cancel();renderInto(document.getElementById('reading-content'),readingView(reading));enhance();positionDock();return;}
+    if(d.cmd==='reading-set'||d.cmd==='reading-reset'){if(d.cmd==='reading-reset')Object.assign(reading,readingDefaults);else if(Object.hasOwn(readingDefaults,d.key))reading[d.key]=d.value;remember('reading',reading);applyReading(reading);if(reducedMotion()){finishCanvasSlide();for(const animation of document.getAnimations())animation.cancel();}renderInto(document.getElementById('reading-content'),readingView(reading));enhance();positionDock();return;}
     if(d.cmd==='undo-action'){const undo=pendingUndo;pendingUndo=null;if(undo){await undo();notify('已撤销刚才的操作');}return;}
     if(b.closest('#research-drawer')&&['nav','class','paper','lens-paper','subject-open','people-lens','inspect-bin','workbook-open','library-open'].includes(d.cmd)&&!await closeDrawer())return;
     if(d.cmd==='toast-close'){const toast=document.getElementById('toast');clearTimeout(notify.timer);toast.classList.remove('visible');if(toast.hidePopover&&toast.matches(':popover-open'))toast.hidePopover();pendingUndo=null;}
@@ -613,6 +618,8 @@ export async function mount() {
   const shortcut=document.getElementById('find-shortcut');if(shortcut)shortcut.textContent=/Mac|iPhone|iPad/.test(navigator.platform)?'⌘ K':'Ctrl K';
   inbox=new Inbox(commitMaterial,notify,()=>atlas.data);
   installInteractions({reducedMotion});
+  window.addEventListener('resize',finishCanvasSlide,{passive:true});
+  matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change',event=>{if(event.matches)finishCanvasSlide();});
   document.addEventListener('click',commands);document.addEventListener('submit',forms);
   const syncOverlays=event=>{const dialog=event.target;if(dialog?.matches?.('dialog')){modalOrder=modalOrder.filter(item=>item!==dialog&&item.open);if(dialog.open)modalOrder.push(dialog);}document.body.classList.toggle('modal-open',Boolean(document.querySelector('dialog[open]')));placeNotification();};
   for(const dialog of document.querySelectorAll('dialog')){dialog.addEventListener('toggle',syncOverlays);dialog.addEventListener('close',syncOverlays);}

@@ -1,4 +1,4 @@
-import {motion} from './motion.js?v=controls-v12';
+import {motion} from './motion.js?v=slides-v13';
 let motionPreference=()=>false,resizeObserver,plotObserver,railObserver,drawerHeaderObserver,revealObserver,tooltipTarget=null,tooltipOriginal=null,tooltipFrame=0,outlineFrame=0,drawerOutlineFrame=0,pointerFrame=0,outline=null,outlineEntries=[];
 const observedTables=new Set(),observedPlots=new Set(),observedReveals=new Set(),revealed=new WeakSet(),disclosures=new WeakMap();
 const selectionRails=new Set(),railStates=new WeakMap();
@@ -70,23 +70,26 @@ function refreshTable(frame) {
   const track=frame.querySelector('.table-overflow-note i');if(track){track.style.setProperty('--scroll-progress',overflow?Math.max(0,Math.min(100,scroll.scrollLeft/extent*100))+'%':'0%');track.style.setProperty('--scroll-thumb',Math.max(12,Math.min(100,scroll.clientWidth/Math.max(1,scroll.scrollWidth)*100))+'%');}
 }
 function revealSelectedClasses(root=document){for(const rail of root.querySelectorAll('.class-picker section>div,.audience-strip>.chips')){const active=document.activeElement?.closest('.selected'),selected=active&&rail.contains(active)?active:rail.querySelector('.class-key.selected,.chip.selected');if(!selected||rail.scrollWidth<=rail.clientWidth+1)continue;const target=selected.getBoundingClientRect(),host=rail.getBoundingClientRect();if(target.left<host.left||target.right>host.right)rail.scrollLeft+=target.left-host.left-(host.width-target.width)/2;}}
-export function prepareUpdate(){hideTooltip();sampleRails();samplePlots();for(const rail of document.querySelectorAll('.goal-cards[data-scroll-key]'))galleryOffsets.set(rail.dataset.scrollKey,rail.scrollLeft);}
+export function prepareUpdate(){hideTooltip();sampleRails();samplePlots();for(const rail of document.querySelectorAll('.goal-cards[data-scroll-key]'))if(!rail.closest('.scene-leaving-viewport'))galleryOffsets.set(rail.dataset.scrollKey,rail.scrollLeft);}
+export function pruneInteractions() {
+  for(const frame of observedTables)if(!frame.isConnected){resizeObserver?.unobserve(frame);observedTables.delete(frame);}
+  for(const svg of observedPlots)if(!svg.isConnected){plotObserver?.unobserve(svg);observedPlots.delete(svg);}
+  for(const rail of selectionRails)if(!rail.isConnected){railObserver?.unobserve(rail);selectionRails.delete(rail);}
+  for(const node of observedReveals)if(!node.isConnected){revealObserver?.unobserve(node);observedReveals.delete(node);}
+}
 export function enhance(root=document,{reveal=true}={}) {
   hideTooltip();
+  pruneInteractions();
   for(const button of root.querySelectorAll('[data-cmd="svg"],[data-cmd="png"]')) {
     const available=Boolean(document.getElementById(button.dataset.id));button.disabled=!available;
     button.setAttribute('aria-label',(button.dataset.cmd==='svg'?'SVG':'PNG')+'图表导出'+(available?'':'，当前没有可绘制的数据'));
     button.closest('.chart-buttons')?.setAttribute('data-empty',String(!available));
   }
-  for(const frame of observedTables)if(!frame.isConnected){resizeObserver?.unobserve(frame);observedTables.delete(frame);}
   for(const frame of root.querySelectorAll('.table-frame')){refreshTable(frame);if(!observedTables.has(frame)){observedTables.add(frame);resizeObserver?.observe(frame);}}
-  for(const svg of observedPlots)if(!svg.isConnected){plotObserver?.unobserve(svg);observedPlots.delete(svg);}
   for(const svg of root.querySelectorAll('.bars,.trajectory,.spread,.landscape')){refreshPlot(svg);animatePlot(svg);if(!observedPlots.has(svg)){observedPlots.add(svg);plotObserver?.observe(svg);}}
-  for(const rail of selectionRails)if(!rail.isConnected){railObserver?.unobserve(rail);selectionRails.delete(rail);}
   for(const rail of root.querySelectorAll('.scene-tabs > .chips,.drawer-tabs'))selectionRail(rail);
   revealSelectedClasses(root);
   for(const rail of root.querySelectorAll('.goal-cards[data-scroll-key]'))rail.scrollLeft=galleryOffsets.get(rail.dataset.scrollKey)||0;
-  for(const node of observedReveals)if(!node.isConnected){revealObserver?.unobserve(node);observedReveals.delete(node);}
   if(reveal&&revealObserver&&!motionPreference())for(const node of root.querySelectorAll('.block,.student-scope,.follow-workbench,.knowledge-card,.personal-skills article,.source-launchpad>button,.student-card,.paper-cover,.question-tile'))if(!revealed.has(node)){revealed.add(node);if(node.getBoundingClientRect().top>innerHeight-25){observedReveals.add(node);revealObserver.observe(node);}}
   outline=document.querySelector('#stage .study-outline');
   outlineEntries=outline?[...outline.querySelectorAll('[data-target]')].map(button=>({button,section:document.getElementById(button.dataset.target)})).filter(entry=>entry.section):[];

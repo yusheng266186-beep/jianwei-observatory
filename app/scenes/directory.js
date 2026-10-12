@@ -1,8 +1,8 @@
-import {head,button,chips,badge,block,table,number,integer,delta,esc,search,empty,footnote} from '../ui/html.js?v=controls-v12';
-import {mini,spread,chartButtons,seriesColors} from '../ui/plots.js?v=controls-v12';
-import {valid} from '../engine/metrics.js?v=controls-v12';
-import {queryDirectory,directoryLenses,standingLabels,directoryViewName} from '../engine/directory.js?v=controls-v12';
-import {scoreRows,evidence} from '../io/exports.js?v=controls-v12';
+import {head,button,chips,examChips,badge,block,table,number,integer,delta,esc,search,empty,footnote} from '../ui/html.js?v=slides-v13';
+import {mini,spread,chartButtons,seriesColors} from '../ui/plots.js?v=slides-v13';
+import {valid} from '../engine/metrics.js?v=slides-v13';
+import {queryDirectory,directoryLenses,standingLabels,directoryViewName} from '../engine/directory.js?v=slides-v13';
+import {scoreRows,evidence} from '../io/exports.js?v=slides-v13';
 const filter=(label,body)=>'<section class="filter-section"><h3>'+label+'</h3>'+body+'</section>';
 const peek=e=>button(esc(e.person.name),'peek',{sid:e.person.id,exam:e.row.exam},'person-link');
 const subjectOptions=atlas=>[['all','全部学科'],...atlas.comparisonSubjects(atlas.data.scores).map(s=>[s,s])];
@@ -15,7 +15,7 @@ export function renderDirectory(atlas,state,session) {
   const scopeLabel=(state.track==='physics'?'物理类':state.track==='history'?'历史类':'全部科类')+' · '+(state.classes?.length?state.classes.map(no=>no+'班').join('、'):'全部班级');
   const classRail='<div class="student-scope" data-expanded="'+Boolean(state.scopeExpanded)+'"><div class="scope-summary-mobile"><div><span>当前范围</span><b>'+esc(scopeLabel)+'</b></div>'+button('调整范围 <span aria-hidden="true">⌄</span>','directory-scope',{},'scope-adjust','aria-expanded="'+Boolean(state.scopeExpanded)+'" aria-controls="directory-scope-controls"')+'</div><div class="scope-controls" id="directory-scope-controls"><div class="scope-heading"><b>班级范围</b>'+button('全部班级','set',{key:'classes',value:'all'},!state.classes?.length?'chip selected':'chip')+chips('track',[['all','全部科类'],['physics','物理类'],['history','历史类']],state.track||'all')+'</div><div class="class-filter-grid">'+atlas.classes.filter(no=>state.track==='all'||atlas.profile(no).track===state.track).map(no=>{const on=state.classes?.includes(no),count=all.filter(e=>e.row.classNo===no).length;return button('<b>'+no+'<small>班</small></b><span>'+count+'人</span>','toggle',{key:'classes',value:no},'scope-class '+(on?'selected':''),'aria-pressed="'+Boolean(on)+'"');}).join('')+'</div></div></div>';
   const query='<div class="directory-query">'+search('search',state.search,'姓名 / 班级；多个姓名用逗号隔开')+button('细化筛选','directory-filters',{},'outline')+button('导出全部结果','export',{},'outline')+'</div>';
-  const exams='<div class="directory-exams"><span>观察考次</span>'+chips('directoryExam',[['latest','每人最新'],...atlas.exams.map(e=>[e.id,e.id])],state.directoryExam||'latest')+'</div>';
+  const exams='<div class="directory-exams"><span>观察考次</span>'+examChips(atlas,'directoryExam',[{id:'latest',label:'每人最新'},...atlas.exams],state.directoryExam||'latest')+'</div>';
   const focus='<div class="subject-focus"><span>按学科找人</span>'+chips('focusSubject',subjectOptions(atlas),state.focusSubject||'all')+(state.focusSubject&&state.focusSubject!=='all'?'<div class="subject-focus-status">'+chips('focusStatus',statusOptions,state.focusStatus||'below')+'</div>':'')+'</div>';
   const materialChoices=[['scoreStatus','missing','总分待补',coverage.scores.missing],['records','history','多次成绩',coverage.records.history],['records','questions','本场小题',coverage.records.questions]];
   const materialBar='<div class="directory-materials" role="group" aria-label="材料条件快捷筛选">'+materialChoices.map(([key,value,label,count])=>{const on=state[key]===value;return button('<span>'+label+'</span><strong>'+integer(count)+'</strong><i aria-hidden="true">'+(on?'✓':'↗')+'</i>','directory-material',{key,value},'material-pick '+(on?'selected':''),'aria-pressed="'+on+'" aria-label="'+(on?'当前':'切换到')+label+'条件，'+count+'人；'+(on?'点击取消，':'')+'保留其他筛选"');}).join('')+'</div>';

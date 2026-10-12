@@ -1,5 +1,5 @@
-import { SUBJECTS, EXAM_ORDER, EXAM_NAMES, classDefaults, finite, normalizeDataset } from './compat.js?v=controls-v12';
-import {mergeContext} from './context.js?v=controls-v12';
+import { SUBJECTS, EXAM_ORDER, EXAM_NAMES, classDefaults, finite, normalizeDataset } from './compat.js?v=slides-v13';
+import {mergeContext} from './context.js?v=slides-v13';
 const txt=v=>String(v??'').trim();
 const num=v=>v==null||txt(v)===''?null:Number.isFinite(Number(v))?Number(v):null;
 const code=v=>txt(v).replace(/[物历]$/,'');
@@ -60,7 +60,9 @@ export function parseWorkbook(XLSX,buffer,source,progress=()=>{},mapping=null){
    const subject=n===9&&s==='生物'?'地理':s;
    subjects[subject]={score:num(r[assigned]),raw:num(r[raw]),rank:num(r[ranking]),schoolRank:school==null?null:num(r[school])};
   }
-  data.scores.push({exam:e,rawExam:txt(r[0]),sid:idFor(name),classNo:n,track:t,total:num(r[5]),rawTotal:num(r[4]),cityRank:cityExam(e)?num(r[7]):null,schoolRank:cityExam(e)?null:num(r[9])??num(r[7]),subjects,language,sourceRow:i+1});
+  // A city-wide exam can also contain a school rank. Preserve the explicit
+  // school column; only a school exam may use its generic rank as a fallback.
+  data.scores.push({exam:e,rawExam:txt(r[0]),sid:idFor(name),classNo:n,track:t,total:num(r[5]),rawTotal:num(r[4]),cityRank:cityExam(e)?num(r[7]):null,schoolRank:num(r[9])??(cityExam(e)?null:num(r[7])),subjects,language,sourceRow:i+1});
   data.profiles[n]||={...classDefaults(n),track:t};
  }
  progress('提取班级目标与任课信息',35);
@@ -120,7 +122,7 @@ function parseItems(data,workbook,XLSX,idFor,progress){
  });
 }
 export const FLAT_FIELDS=[['name','姓名'],['classNo','班级'],['exam','考试'],['total','赋分总分'],['rawTotal','原始总分'],['track','类别'],['language','外语语种'],['cityRank','市排名'],['schoolRank','校排名'],...SUBJECTS.map(s=>[s,s+'成绩'])];
-const ALIASES={name:['姓名','学生姓名','name'],classNo:['班级','班号','行政班','class','classno'],exam:['考试','考试名称','考次','exam'],total:['赋分总分','总赋分','总分','total'],rawTotal:['原始总分','原分总分','原始分'],track:['类别','科类','track'],language:['外语语种','语种','language'],cityRank:['市排名','全市名次','cityrank'],schoolRank:['校排名','校名次','年级名次','schoolrank']};
+const ALIASES={name:['姓名','学生姓名','name'],classNo:['班级','班号','行政班','class','classno'],exam:['考试','考试名称','考次','exam'],total:['赋分总分','总赋分','总分','total'],rawTotal:['原始总分','原分总分','原始分'],track:['类别','科类','track'],language:['外语语种','语种','language'],cityRank:['市排名','全市名次','cityrank'],schoolRank:['校排名','校名次','校排','年级排名','年级名次','schoolrank']};
 export function detectFlat(rows){
  const headerRow=rows.findIndex(r=>r.some(c=>['姓名','学生姓名','name'].includes(txt(c).toLowerCase())));
  const rowIndex=headerRow<0?0:headerRow,headers=(rows[rowIndex]||[]).map(txt),mapping={};

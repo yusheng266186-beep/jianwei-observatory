@@ -17,7 +17,8 @@
     "test:questions": "node tests/question-map.cjs",
     "test:answers": "node tests/answer-structure.cjs",
     "test:controls": "node tests/controls.cjs",
-    "test:entries": "node tests/entry-navigation.cjs"
+    "test:entries": "node tests/entry-navigation.cjs",
+    "test:slides": "node tests/scene-slides.cjs"
   },
   "devDependencies": {
     "playwright": "1.62.1"

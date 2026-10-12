@@ -6,6 +6,13 @@ export const signed=(value,digits=1)=>typeof value==='number'&&Number.isFinite(v
 export const attrs=values=>Object.entries(values).map(([key,value])=>' data-'+key+'="'+esc(value)+'"').join('');
 export function button(label,cmd,values={},style='quiet',extra='') {return '<button type="button" class="button '+style+'" data-cmd="'+cmd+'"'+attrs(values)+' '+extra+'>'+label+'</button>';}
 export function chips(key,options,value,multi=false) {return '<div class="chips" role="group">'+options.map(option=>{const [id,label]=Array.isArray(option)?option:[option,option];const on=multi?value.includes(id):String(value)===String(id);return button(esc(label),multi?'toggle':'set',{key,value:id},on?'chip selected':'chip','aria-pressed="'+on+'"');}).join('')+'</div>';}
+export function examChips(atlas,key,exams,value) {
+  const known=new Set(atlas.exams.map(exam=>exam.id));
+  return '<div class="chips exam-choices" role="group" aria-label="选择考试">'+exams.map(exam=>{
+    const on=String(value)===String(exam.id),label=exam.label||exam.id,code=known.has(exam.id)&&String(label)!==String(exam.id)?esc(exam.id):'',latest=exam.id===atlas.latest;
+    return button('<span class="exam-choice-name">'+esc(label)+'</span>'+((code||latest)?'<span class="exam-choice-meta">'+(code?'<span>'+code+'</span>':'')+(latest?'<small>最新</small>':'')+'</span>':''),'set',{key,value:exam.id},'chip exam-choice'+(on?' selected':''),'aria-pressed="'+on+'"');
+  }).join('')+'</div>';
+}
 export const badge=(label,style='')=>'<span class="badge '+style+'">'+esc(label)+'</span>';
 export const empty=(title,detail='')=>'<div class="empty"><span class="empty-symbol">＋</span><h3>'+esc(title)+'</h3><p>'+esc(detail)+'</p></div>';
 export function head(kicker,title,detail='',actions='') {return '<header class="scene-head"><div><div class="overline">'+esc(kicker)+'</div><h1>'+esc(title)+'</h1><p>'+esc(detail)+'</p></div><div class="head-actions">'+actions+'</div></header>';}
@@ -19,7 +26,7 @@ export function ribbon(items) {return '<div class="number-ribbon">'+items.map(([
 export function examRail(atlas,selected,key='exam',exams=atlas.exams,multi=false) {
   return '<div class="exam-rail" aria-label="考试时间轴">'+exams.map((exam,i)=>{
     const on=multi?selected.includes(exam.id):String(selected)===String(exam.id);
-    return '<button class="exam-stop '+(on?'selected':'')+'" data-cmd="'+(multi?'toggle':'set')+'"'+attrs({key,value:exam.id,tip:exam.label})+' aria-pressed="'+on+'"><span class="stop-index">'+String(i+1).padStart(2,'0')+'</span><b>'+esc(exam.id)+'</b><small>'+esc(exam.label)+'</small></button>';
+    return '<button class="exam-stop '+(on?'selected':'')+'" data-cmd="'+(multi?'toggle':'set')+'"'+attrs({key,value:exam.id,tip:exam.label})+' aria-pressed="'+on+'"><span class="stop-index">'+String(i+1).padStart(2,'0')+'</span><b>'+esc(exam.id)+(exam.id===atlas.latest?'<span class="exam-latest">最新</span>':'')+'</b><small>'+esc(exam.label||exam.id)+'</small></button>';
   }).join('')+'</div>';
 }
 export const personButton=(atlas,sid,exam='')=>button(esc(atlas.name(sid)),'peek',{sid,exam},'person-link');

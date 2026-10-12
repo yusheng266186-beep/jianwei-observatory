@@ -29,7 +29,7 @@
 #toast .toast-action,#toast .toast-dismiss{pointer-events:auto;flex-shrink:0}
 #toast .toast-dismiss{min-height:28px;min-width:28px;padding:3px;font-size:19px;font-weight:400;color:#ffffffb8;background:transparent;border:0}
 @media(max-width:760px){
- #stage[data-scene=people]:has(.directory-head)>.study-return{min-height:34px;margin-bottom:12px}
+ :is(#stage,.scene-leaving-canvas)[data-scene=people]:has(.directory-head)>.study-return{min-height:34px;margin-bottom:12px}
  .directory-head{position:relative;padding-right:36px;margin-bottom:12px;gap:10px}
  .directory-head h1{font-size:28px;letter-spacing:-1px}
  .directory-head .head-actions{position:absolute;right:0;top:5px}

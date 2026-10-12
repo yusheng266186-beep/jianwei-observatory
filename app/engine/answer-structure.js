@@ -1,4 +1,4 @@
-import {valid} from './metrics.js?v=controls-v12';
+import {valid} from './metrics.js?v=slides-v13';
 
 export function answerStructure(answers,question,rules={}) {
   const score=answer=>answer.values[question.index],knownMax=valid(question.max)&&question.max>0;

@@ -1,7 +1,7 @@
-importScripts('../../vendor/xlsx.full.min.js?v=controls-v12');
+importScripts('../../vendor/xlsx.full.min.js?v=slides-v13');
 self.onmessage=async ({data:input})=>{
   try {
-    const parser=await import('./parser.js?v=controls-v12');
+    const parser=await import('./parser.js?v=slides-v13');
     const progress=(message,percent)=>self.postMessage({type:'progress',message,percent});
     let dataset;
     if(/\.json$/i.test(input.name)) dataset=parser.adaptJSON(JSON.parse(new TextDecoder().decode(input.buffer)),input.name);

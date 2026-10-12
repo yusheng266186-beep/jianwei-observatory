@@ -1,5 +1,5 @@
-import {esc,number,percent,signed} from '../ui/html.js?v=controls-v12';
-import {SITE_NAME,CREST_URL} from '../brand.js?v=controls-v12';
+import {esc,number,percent,signed} from '../ui/html.js?v=slides-v13';
+import {SITE_NAME,CREST_URL} from '../brand.js?v=slides-v13';
 export function download(content,name,type='application/octet-stream') {
   const blob=content instanceof Blob?content:new Blob([content],{type}),url=URL.createObjectURL(blob),anchor=document.createElement('a');
   anchor.href=url;anchor.download=name;anchor.click();setTimeout(()=>URL.revokeObjectURL(url),5000);
