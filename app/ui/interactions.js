@@ -1,4 +1,5 @@
-import {motion} from './motion.js?v=slides-v13';
+import {motion} from './motion.js?v=lines-v14';
+import {positionSpreadLabels} from './plots.js?v=lines-v14';
 let motionPreference=()=>false,resizeObserver,plotObserver,railObserver,drawerHeaderObserver,revealObserver,tooltipTarget=null,tooltipOriginal=null,tooltipFrame=0,outlineFrame=0,drawerOutlineFrame=0,pointerFrame=0,outline=null,outlineEntries=[];
 const observedTables=new Set(),observedPlots=new Set(),observedReveals=new Set(),revealed=new WeakSet(),disclosures=new WeakMap();
 const selectionRails=new Set(),railStates=new WeakMap();
@@ -30,7 +31,7 @@ function selectionRail(rail){
 }
 function refreshPlot(svg) {
   const width=svg.getBoundingClientRect().width,viewWidth=svg.viewBox?.baseVal.width;if(!width||!viewWidth)return;
-  const scale=viewWidth/width,size=Math.max(12,svg.classList.contains('bars')?11.5*scale:Math.min(34,11.5*scale));svg.style.setProperty('--plot-label-size',size+'px');
+  const scale=viewWidth/width,size=Math.max(12,svg.classList.contains('spread')?12*scale:svg.classList.contains('bars')?11.5*scale:Math.min(34,11.5*scale));svg.style.setProperty('--plot-label-size',size+'px');
   const row=Math.max(37,32*scale),barHeight=Math.max(22,18*scale);
   if(svg.classList.contains('bars')) {
     const items=[...svg.querySelectorAll(':scope > .plot-item')];svg.viewBox.baseVal.height=Math.max(70,items.length*row+20);
@@ -52,13 +53,42 @@ function refreshPlot(svg) {
     }
   }
   if(svg.classList.contains('spread')){
-    const placed=[],overlaps=(a,b)=>a.x<b.x+b.width+2&&a.x+a.width+2>b.x&&a.y<b.y+b.height+2&&a.y+a.height+2>b.y;
-    for(const text of svg.querySelectorAll('.plot-item .plot-value')){
-      text.dataset.baseY??=text.getAttribute('y');text.setAttribute('y',text.dataset.baseY);
+    const markers=[...svg.querySelectorAll('.spread-threshold')],margin=11*scale,labelX=margin;
+    const sizes=markers.map((marker,index)=>{
+      const main=marker.querySelector('.spread-threshold-label'),detail=marker.querySelector('.spread-threshold-detail'),range=marker.querySelector('.spread-threshold-range');
+      main.style.fontSize=13*scale+'px';detail.style.fontSize=11*scale+'px';if(range)range.style.fontSize=10.5*scale+'px';
+      main.setAttribute('x',labelX);main.setAttribute('y',margin+17*scale*.85);detail.setAttribute('x',margin);detail.setAttribute('y',margin+17*scale+7*scale+11*scale*.85);
+      if(range){range.setAttribute('x',margin);range.setAttribute('y',margin+17*scale+7*scale+11*scale+5*scale+10.5*scale*.85);}
+      const width=Math.max(main.getBBox().width+labelX+margin,detail.getBBox().width+2*margin,range?range.getBBox().width+2*margin:0),height=margin*2+17*scale+7*scale+11*scale+(range?15.5*scale:0);
+      return {index,x:Number(marker.dataset.x),width,height};
+    }),placed=positionSpreadLabels(sizes),cardHeight=Math.max(0,...sizes.map(s=>s.height)),lanes=placed.length?Math.max(...placed.map(s=>s.lane))+1:0;
+    const top=markers.length?8*scale+lanes*(cardHeight+8*scale)+24*scale:Math.max(40,25*scale),height=Math.max(155,110*scale),bottom=top+height;
+    svg.dataset.plotTop=top;svg.dataset.plotBottom=bottom;svg.viewBox.baseVal.height=bottom+34*scale;
+    for(const {index,left,width,lane} of placed){
+      const marker=markers[index],y=8*scale+lane*(cardHeight+8*scale),card=marker.querySelector('.spread-threshold-card'),rect=card.querySelector('rect'),sample=card.querySelector('.spread-threshold-swatch'),anchor=Number(marker.dataset.x),start=Math.max(left+margin,Math.min(left+width-margin,anchor));
+      card.setAttribute('transform','translate('+left+','+y+')');rect.setAttribute('width',width);rect.setAttribute('height',cardHeight);rect.setAttribute('rx',8*scale);
+      sample.setAttribute('x1',margin);sample.setAttribute('x2',Math.min(width-margin,margin+32*scale));sample.setAttribute('y1',6*scale);sample.setAttribute('y2',6*scale);
+      marker.querySelector('.spread-threshold-leader').setAttribute('d','M'+start+','+(y+cardHeight)+' L'+anchor+','+(top-18*scale));
+      marker.querySelector('.spread-threshold-pin').setAttribute('cy',top-18*scale);marker.querySelector('.spread-threshold-pin').setAttribute('r',3*scale);
+      for(const line of marker.querySelectorAll('.spread-threshold-line,.spread-threshold-halo')){line.setAttribute('y1',top-18*scale);line.setAttribute('y2',bottom);}
+      const outside=marker.querySelector('.spread-threshold-outside');if(outside){const leftSide=marker.dataset.outside.startsWith('低');outside.setAttribute('d','M'+(anchor+(leftSide?12:-12)*scale)+','+(top-18*scale)+' h'+(leftSide?-12:12)*scale+' m'+(leftSide?4:-4)*scale+','+(-4*scale)+' l'+(leftSide?-4:4)*scale+','+(4*scale)+' l'+(leftSide?4:-4)*scale+','+(4*scale));}
+    }
+    svg.querySelectorAll('.plot-grid').forEach((line,i)=>{line.setAttribute('y1',top+i*height/2);line.setAttribute('y2',top+i*height/2);});
+    for(const band of svg.querySelectorAll('.spread-score-band')){band.setAttribute('y',top);band.setAttribute('height',height);}
+    const columns=[...svg.querySelectorAll('.plot-column')],maximum=Math.max(1,...columns.map(column=>Number(column.dataset.count)));
+    for(const column of columns){const h=Number(column.dataset.count)/maximum*height;column.setAttribute('y',bottom-h);column.setAttribute('height',h);const hit=column.parentElement.querySelector('rect:not(.plot-column)');hit.setAttribute('y',top);hit.setAttribute('height',height);}
+    let tickEdge=-Infinity;
+    for(const tick of svg.querySelectorAll('.spread-tick')){
+      tick.setAttribute('y',bottom+27*scale);tick.style.fontSize=11.5*scale+'px';tick.style.removeProperty('display');tick.setAttribute('text-anchor','middle');
+      let box=tick.getBBox();if(box.x<4){tick.setAttribute('text-anchor','start');box=tick.getBBox();}else if(box.x+box.width>viewWidth-4){tick.setAttribute('text-anchor','end');box=tick.getBBox();}
+      if(box.x<tickEdge+6*scale)tick.style.display='none';else tickEdge=box.x+box.width;
+    }
+    const countPlacements=[],overlaps=(a,b)=>a.x<b.x+b.width+2&&a.x+a.width+2>b.x&&a.y<b.y+b.height+2&&a.y+a.height+2>b.y;
+    for(const text of svg.querySelectorAll('.spread-counts .plot-value')){
+      const column=columns[Number(text.dataset.bin)],base=Number(column.getAttribute('y'))-7*scale;text.setAttribute('y',base);
       let box=text.getBBox();
-      const column=text.parentElement.querySelector('.plot-column');
-      for(let lane=1;lane<=3&&placed.some(previous=>overlaps(box,previous));lane++){const inside=Number(column.getAttribute('y'))+size*1.5*lane;const y=inside<=svg.viewBox.baseVal.height-58?inside:Math.max(size+6,Number(text.dataset.baseY)-size*1.5*lane);text.setAttribute('y',y);box=text.getBBox();}
-      placed.push({x:box.x,y:box.y,width:box.width,height:box.height});
+      for(let lane=1;lane<=6&&countPlacements.some(previous=>overlaps(box,previous));lane++){const inside=Number(column.getAttribute('y'))+size*(1.05+(lane-1)*1.3);const y=inside<=bottom-3*scale?inside:Math.max(top-7*scale,base-size*1.3*lane);text.setAttribute('y',y);box=text.getBBox();}
+      countPlacements.push({x:box.x,y:box.y,width:box.width,height:box.height});
     }
   }
 }

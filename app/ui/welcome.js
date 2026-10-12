@@ -1,4 +1,4 @@
-import {button} from './html.js?v=slides-v13';
+import {button} from './html.js?v=lines-v14';
 
 export function welcomeView() {
   const template=document.getElementById('empty-workspace-template');

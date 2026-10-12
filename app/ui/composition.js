@@ -1,4 +1,4 @@
-import {button,esc} from './html.js?v=slides-v13';
+import {button,esc} from './html.js?v=lines-v14';
 
 export function composeScene(html,{back=''}={}) {
   const template=document.createElement('template');template.innerHTML=html;

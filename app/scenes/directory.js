@@ -1,8 +1,8 @@
-import {head,button,chips,examChips,badge,block,table,number,integer,delta,esc,search,empty,footnote} from '../ui/html.js?v=slides-v13';
-import {mini,spread,chartButtons,seriesColors} from '../ui/plots.js?v=slides-v13';
-import {valid} from '../engine/metrics.js?v=slides-v13';
-import {queryDirectory,directoryLenses,standingLabels,directoryViewName} from '../engine/directory.js?v=slides-v13';
-import {scoreRows,evidence} from '../io/exports.js?v=slides-v13';
+import {head,button,chips,examChips,badge,block,table,number,integer,delta,esc,search,empty,footnote} from '../ui/html.js?v=lines-v14';
+import {mini,spread,chartButtons,seriesColors} from '../ui/plots.js?v=lines-v14';
+import {valid} from '../engine/metrics.js?v=lines-v14';
+import {queryDirectory,directoryLenses,standingLabels,directoryViewName} from '../engine/directory.js?v=lines-v14';
+import {scoreRows,evidence} from '../io/exports.js?v=lines-v14';
 const filter=(label,body)=>'<section class="filter-section"><h3>'+label+'</h3>'+body+'</section>';
 const peek=e=>button(esc(e.person.name),'peek',{sid:e.person.id,exam:e.row.exam},'person-link');
 const subjectOptions=atlas=>[['all','全部学科'],...atlas.comparisonSubjects(atlas.data.scores).map(s=>[s,s])];

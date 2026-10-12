@@ -1,10 +1,10 @@
-import {button,badge,block,ribbon,table,number,integer,percent,esc,empty} from './html.js?v=slides-v13';
-import {bars,chartButtons} from './plots.js?v=slides-v13';
-import {average,valid} from '../engine/metrics.js?v=slides-v13';
-import {evidence} from '../io/exports.js?v=slides-v13';
-import {questionLens} from '../engine/lenses.js?v=slides-v13';
-import {questionSequence} from '../engine/question-map.js?v=slides-v13';
-import {plotPalette} from './palette.js?v=slides-v13';
+import {button,badge,block,ribbon,table,number,integer,percent,esc,empty} from './html.js?v=lines-v14';
+import {bars,chartButtons} from './plots.js?v=lines-v14';
+import {average,valid} from '../engine/metrics.js?v=lines-v14';
+import {evidence} from '../io/exports.js?v=lines-v14';
+import {questionLens} from '../engine/lenses.js?v=lines-v14';
+import {questionSequence} from '../engine/question-map.js?v=lines-v14';
+import {plotPalette} from './palette.js?v=lines-v14';
 
 function structureView(model) {
   const {structure:s,selectedId}=model;

@@ -18,7 +18,8 @@
     "test:answers": "node tests/answer-structure.cjs",
     "test:controls": "node tests/controls.cjs",
     "test:entries": "node tests/entry-navigation.cjs",
-    "test:slides": "node tests/scene-slides.cjs"
+    "test:slides": "node tests/scene-slides.cjs",
+    "test:thresholds": "node tests/threshold-guides.cjs"
   },
   "devDependencies": {
     "playwright": "1.62.1"

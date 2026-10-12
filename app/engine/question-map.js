@@ -1,4 +1,4 @@
-import {valid} from './metrics.js?v=slides-v13';
+import {valid} from './metrics.js?v=lines-v14';
 
 const normalize=value=>String(value??'').normalize('NFKC').trim().toLocaleLowerCase('zh-CN');
 export function queryQuestionMap(lens,state={},rules={}) {
