@@ -1,8 +1,8 @@
-import {head,button,chips,badge,block,table,number,integer,delta,esc,search,empty,footnote} from '../ui/html.js?v=atelier-20261012c';
-import {mini,spread,chartButtons,seriesColors} from '../ui/plots.js?v=atelier-20261012c';
-import {valid} from '../engine/metrics.js?v=atelier-20261012c';
-import {queryDirectory,directoryLenses,standingLabels,directoryViewName} from '../engine/directory.js?v=atelier-20261012c';
-import {scoreRows,evidence} from '../io/exports.js?v=atelier-20261012c';
+import {head,button,chips,badge,block,table,number,integer,delta,esc,search,empty,footnote} from '../ui/html.js?v=solar-20261012d';
+import {mini,spread,chartButtons,seriesColors} from '../ui/plots.js?v=solar-20261012d';
+import {valid} from '../engine/metrics.js?v=solar-20261012d';
+import {queryDirectory,directoryLenses,standingLabels,directoryViewName} from '../engine/directory.js?v=solar-20261012d';
+import {scoreRows,evidence} from '../io/exports.js?v=solar-20261012d';
 const filter=(label,body)=>'<section class="filter-section"><h3>'+label+'</h3>'+body+'</section>';
 const peek=e=>button(esc(e.person.name),'peek',{sid:e.person.id,exam:e.row.exam},'person-link');
 const subjectOptions=atlas=>[['all','全部学科'],...atlas.comparisonSubjects(atlas.data.scores).map(s=>[s,s])];
@@ -43,7 +43,7 @@ function directoryTable(atlas,shown,state,saved,compare) {
 function actions(e,saved,compare) {return button(saved.has(e.person.id)?'★':'☆','save-person',{sid:e.person.id},'card-action '+(saved.has(e.person.id)?'on':''),'aria-label="'+(saved.has(e.person.id)?'取消收藏':'收藏')+'" aria-pressed="'+saved.has(e.person.id)+'"')+button(compare.includes(e.person.id)?'已选':'＋ 对比','compare-toggle',{sid:e.person.id},'card-action '+(compare.includes(e.person.id)?'on':''),'aria-pressed="'+compare.includes(e.person.id)+'"');}
 function card(atlas,e,saved,compare) {
   const subjects=atlas.comparisonSubjects([e.row]);
-  return '<article class="student-card" data-motion-key="student-'+esc(e.person.id)+'"><header><div><button class="student-name" data-cmd="peek" data-sid="'+esc(e.person.id)+'" data-exam="'+esc(e.row.exam)+'">'+esc(e.person.name)+' ↗</button><p>'+e.row.classNo+'班 · '+(e.track==='physics'?'物理类':'历史类')+' · '+esc(e.row.exam)+'</p></div><div class="student-actions">'+actions(e,saved,compare)+'</div></header><div class="student-score"><strong>'+number(e.row.total)+'</strong><span>折合总分</span>'+badge(standingLabels[e.standing],'standing-'+e.standing)+'</div><div class="position-track"><span>同类分位 <b>'+number(e.percentile)+'</b></span><i><em style="width:'+Math.max(0,Math.min(100,e.percentile||0))+'%"></em></i></div><div class="student-stage"><span>相邻分位变化 '+delta(e.change)+'</span>'+mini(e.story.map(r=>atlas.percentile(r)))+'</div><details class="card-scores" data-render-key="scores-'+esc(e.person.id)+'"><summary>'+subjects.length+' 科成绩 <span>'+e.story.length+' 次阶段 · '+e.answers.length+' 科小题</span></summary><div>'+subjects.map(s=>'<span>'+esc(s)+' <b>'+number(atlas.subject(e.row,s)?.score)+'</b></span>').join('')+'</div></details></article>';
+  return '<article class="student-card" data-motion-key="student-'+esc(e.person.id)+'"><header><div class="student-identity"><span class="student-initial" aria-hidden="true">'+esc(String(e.person.name||'').slice(0,1))+'</span><div><button class="student-name" data-cmd="peek" data-sid="'+esc(e.person.id)+'" data-exam="'+esc(e.row.exam)+'">'+esc(e.person.name)+' ↗</button><p>'+e.row.classNo+'班 · '+(e.track==='physics'?'物理类':'历史类')+' · '+esc(e.row.exam)+'</p></div></div><div class="student-actions">'+actions(e,saved,compare)+'</div></header><div class="student-score"><strong>'+number(e.row.total)+'</strong><span>折合总分</span>'+badge(standingLabels[e.standing],'standing-'+e.standing)+'</div><div class="position-track"><span>同类分位 <b>'+number(e.percentile)+'</b></span><i><em style="width:'+Math.max(0,Math.min(100,e.percentile||0))+'%"></em></i></div><div class="student-stage"><span>相邻分位变化 '+delta(e.change)+'</span>'+mini(e.story.map(r=>atlas.percentile(r)))+'</div><details class="card-scores" data-render-key="scores-'+esc(e.person.id)+'"><summary>'+subjects.length+' 科成绩 <span>'+e.story.length+' 次阶段 · '+e.answers.length+' 科小题</span></summary><div>'+subjects.map(s=>'<span>'+esc(s)+' <b>'+number(atlas.subject(e.row,s)?.score)+'</b></span>').join('')+'</div></details></article>';
 }
 export function directoryFilterView(atlas,state,session) {
   const {matches}=queryDirectory(atlas,state,session),issue=rangeIssue(state);

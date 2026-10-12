@@ -1,4 +1,4 @@
-import {button} from './html.js?v=atelier-20261012c';
+import {button} from './html.js?v=solar-20261012d';
 
 export function welcomeView() {
   const template=document.getElementById('empty-workspace-template');

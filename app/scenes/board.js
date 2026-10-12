@@ -1,8 +1,9 @@
-import {overview} from './overview.js?v=atelier-20261012c';
-import {head,button,chips,badge,block,examRail,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote} from '../ui/html.js?v=atelier-20261012c';
-import {mini,bars,trajectory,spread,chartButtons} from '../ui/plots.js?v=atelier-20261012c';
-import {difference,average} from '../engine/metrics.js?v=atelier-20261012c';
-import {scoreRows,effectiveRows,subjectRows,evidence} from '../io/exports.js?v=atelier-20261012c';
+import {goalCards} from '../ui/solar.js?v=solar-20261012d';
+import {overview} from './overview.js?v=solar-20261012d';
+import {head,button,chips,badge,block,examRail,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote} from '../ui/html.js?v=solar-20261012d';
+import {mini,bars,trajectory,spread,chartButtons} from '../ui/plots.js?v=solar-20261012d';
+import {difference,average} from '../engine/metrics.js?v=solar-20261012d';
+import {scoreRows,effectiveRows,subjectRows,evidence} from '../io/exports.js?v=solar-20261012d';
 const tools=()=>button('摘录这页','capture',{},'outline')+button('导出','export',{},'accent');
 export function render(atlas,state) {
   const exam=state.exam||atlas.latest,groups=atlas.groups(exam),rows=atlas.rows(exam),s=atlas.summary(rows);
@@ -25,7 +26,7 @@ export function render(atlas,state) {
     const previous=atlas.exams.some(e=>e.id===state.comparison)&&state.comparison!==exam?state.comparison:atlas.exams[atlas.exams.findIndex(e=>e.id===exam)-1]?.id||'';
     const target=(actual,value)=>value>0?'<div class="target-track"><i style="width:'+Math.max(0,Math.min(100,(actual??0)/value*100))+'%"></i><span>'+integer(actual)+' / '+integer(value)+'</span></div>':'<span class="muted">未设任务</span>';
     body='<div class="comparison-bar"><span>增量对照</span>'+chips('comparison',atlas.exams.filter(e=>e.id!==exam).map(e=>[e.id,e.id]),previous)+'</div>';
-    body+=groups.map(group=>block(group.title,table(['班级','班主任','人数','均分 / 增量','特控 / 增量','外语有效','特控任务','本科 / 增量','外语有效','本科任务','线下10 / 20分'],group.classes.map(no=>{
+    body+=groups.map(group=>block(group.title,goalCards(atlas,group.classes,exam)+table(['班级','班主任','人数','均分 / 增量','特控 / 增量','外语有效','特控任务','本科 / 增量','外语有效','本科任务','线下10 / 20分'],group.classes.map(no=>{
       const snapshot=atlas.snapshot(no,exam),p=snapshot.profile,d=snapshot.summary,old=atlas.summary(atlas.classAt(no,previous));
       const foreignEffective=tier=>integer(atlas.summary(snapshot.rows,'外语')[tier]);
       return [button(no+'班','class',{no},'person-link'),esc(p.lead||'—'),integer(d.count),number(d.mean)+'<small>'+delta(difference(d.mean,old.mean))+'</small>',integer(d.top)+'<small>'+delta(difference(d.top,old.top))+'</small>',foreignEffective('top'),target(d.top,p.targets?.top),integer(d.under)+'<small>'+delta(difference(d.under,old.under))+'</small>',foreignEffective('under'),target(d.under,p.targets?.under),'<small>特控 '+d.topNear10+' / '+d.topNear20+'</small><small>本科 '+d.underNear10+' / '+d.underNear20+'</small>'];

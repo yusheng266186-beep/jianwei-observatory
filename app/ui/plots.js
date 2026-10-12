@@ -1,6 +1,6 @@
-import {esc,number,percent,attrs} from './html.js?v=atelier-20261012c';
-import {valid} from '../engine/metrics.js?v=atelier-20261012c';
-export const seriesColors=['#648572','#a18b65','#78969e','#ad8281'];
+import {esc,number,percent,attrs} from './html.js?v=solar-20261012d';
+import {valid} from '../engine/metrics.js?v=solar-20261012d';
+export const seriesColors=['#bc914f','#74958f','#87a3ac','#b18978'];
 const colors=seriesColors;
 const action=item=>item?.cmd?' data-plot-action="true" data-cmd="'+esc(item.cmd)+'"'+attrs(item.data||{})+' role="button" tabindex="0"':'';
 const key=id=>'glass-'+[...String(id)].map(char=>char.codePointAt(0).toString(16)).join('-');
@@ -36,7 +36,7 @@ export function trajectory(id,labels,series,{suffix='',zero=false}={}) {
 }
 export function bars(id,items,{percentages=false,signed=false}={}) {
   const measured=items.map(r=>r.value).filter(valid),max=Math.max(1,...measured.map(Math.abs)),w=1060,h=Math.max(70,items.length*37+20),base=signed?490:190,prefix=key(id);
-  const defs=gradient(prefix+'-positive','#a8bea0','#72926f')+gradient(prefix+'-negative','#d6b0a4','#b68379');
+  const defs=gradient(prefix+'-positive','#dec38e','#b38d4c')+gradient(prefix+'-negative','#d6b0a4','#b68379');
   return '<svg id="'+esc(id)+'" class="bars" viewBox="0 0 '+w+' '+h+'" role="group" aria-label="横向比较"><defs>'+defs+'</defs>'+items.map((item,i)=>{
     const y=15+i*37,value=item.value,width=valid(value)?Math.abs(value)/max*(signed?260:540):0,start=signed&&value<0?base-width:base,label=String(item.label),display=label.length>14?label.slice(0,13)+'…':label;
     const track=!signed&&valid(value)?'<rect class="plot-track" x="'+base+'" y="'+y+'" width="540" height="22" rx="6" fill="#919b7b12"/>':'';
@@ -50,7 +50,7 @@ export function spread(id,values,lines=[],scope=null) {
   const grid=Array.from({length:3},(_,i)=>'<line class="plot-grid" x1="'+l+'" x2="'+(w-r)+'" y1="'+(t+i*(h-b-t)/2)+'" y2="'+(t+i*(h-b-t)/2)+'" stroke="#dde4d8" stroke-dasharray="2 6"/>').join('');
   const columns=bins.map((bin,i)=>{const height=bin.count/max*(h-t-b),x=l+i*bw+2;return '<g class="plot-item"'+action(scope?{cmd:'inspect-bin',data:{...scope,min:bin.start,max:bin.start+step}}:null)+'><title>'+bin.start+'–'+(bin.start+step)+'分（不含上界）：'+bin.count+'人</title><rect x="'+x+'" y="'+t+'" width="'+Math.max(1,bw-4)+'" height="'+(h-b-t)+'" fill="transparent"/><rect class="plot-column" x="'+x+'" y="'+(h-b-height)+'" width="'+Math.max(1,bw-4)+'" height="'+height+'" rx="4" fill="url(#'+prefix+'-column)"/>'+(bins.length<=18?'<text class="plot-value" x="'+(x+(bw-4)/2)+'" y="'+(h-b-height-7)+'" text-anchor="middle">'+bin.count+'</text>':'')+'</g>';}).join('');
   const markers=lines.filter(line=>valid(line.value)&&line.value>=lo&&line.value<=hi).map((line,i)=>'<line x1="'+xy(line.value)+'" x2="'+xy(line.value)+'" y1="8" y2="'+(h-b)+'" stroke="#967b49" stroke-width="1.5" stroke-dasharray="4 4"/><text x="'+(xy(line.value)+4)+'" y="'+(12+i*13)+'" fill="#967b49">'+esc(line.label)+' '+number(line.value,0)+'</text>').join('');
-  return '<svg id="'+esc(id)+'" viewBox="0 0 '+w+' '+h+'" class="spread" role="group" aria-label="总分分布"><defs>'+gradient(prefix+'-column','#b6c7a2','#85a17c',true)+'</defs>'+grid+columns+markers+bins.filter((_,i)=>i%Math.max(1,Math.ceil(bins.length/10))===0).map(bin=>'<text x="'+xy(bin.start)+'" y="'+(h-8)+'">'+bin.start+'</text>').join('')+'</svg>';
+  return '<svg id="'+esc(id)+'" viewBox="0 0 '+w+' '+h+'" class="spread" role="group" aria-label="总分分布"><defs>'+gradient(prefix+'-column','#dfc898','#b39864',true)+'</defs>'+grid+columns+markers+bins.filter((_,i)=>i%Math.max(1,Math.ceil(bins.length/10))===0).map(bin=>'<text x="'+xy(bin.start)+'" y="'+(h-8)+'">'+bin.start+'</text>').join('')+'</svg>';
 }
 export function mini(values) {
   const list=values.filter(valid);if(list.length<2)return '<svg viewBox="0 0 110 28" class="mini"></svg>';
@@ -58,7 +58,7 @@ export function mini(values) {
   values.forEach((v,i)=>{if(!valid(v)){previous=false;return;}path+=(previous?'L':'M')+i*105/Math.max(1,values.length-1)+','+(25-(v-low)/(high-low||1)*22)+' ';previous=true;});
   return '<svg viewBox="0 0 110 28" class="mini" aria-hidden="true"><path d="'+path+'" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
 }
-export const rateColor=rate=>!valid(rate)?'#ecece7':rate<.5?'#f0e5dc':rate<.75?'#f0eddf':'#dce8df';
+export const rateColor=rate=>!valid(rate)?'#e9e8e1':rate<.5?'#eee0d3':rate<.75?'#f1ead8':'#e9d6a4';
 export function rateLegend() {
   return '<div class="rate-legend" aria-label="得分率颜色说明"><span>得分率</span>'+[[.25,'低于50%'],[.6,'50%至75%以下'],[.9,'75%及以上'],[null,'无法计算']].map(([rate,label])=>'<span><i style="background:'+rateColor(rate)+'"></i>'+label+'</span>').join('')+'</div>';
 }

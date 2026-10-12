@@ -1,26 +1,26 @@
-import {questionView,questionEvidence} from './ui/question.js?v=atelier-20261012c';
-import {subjectView,knowledgeView,lensEvidence} from './ui/lenses.js?v=atelier-20261012c';
-import {subjectLens,skillLens,questionLens} from './engine/lenses.js?v=atelier-20261012c';
-import {directoryFilterView} from './scenes/directory.js?v=atelier-20261012c';
-import {renderInto} from './ui/render.js?v=atelier-20261012c';
-import {installInteractions,enhance,prepareUpdate,shiftTable} from './ui/interactions.js?v=atelier-20261012c';
-import {readingDefaults,readingView,applyReading} from './ui/reading.js?v=atelier-20261012c';
-import {reportView} from './ui/report.js?v=atelier-20261012c';
-import {welcomeView} from './ui/welcome.js?v=atelier-20261012c';
-import {composeScene} from './ui/composition.js?v=atelier-20261012c';
-import {researchView,studyDescription,studyAvailable,studyKey} from './ui/research.js?v=atelier-20261012c';
-import {Atlas} from './engine/atlas.js?v=atelier-20261012c';
-import {normalizeDataset,SUBJECTS} from './data/compat.js?v=atelier-20261012c';
-import {hydrate,save,saveWorkspace,restoreDataset,hasMaterials,preference,remember,previous,emptyDataset,loadNotebook,saveNotebook} from './data/workspace.js?v=atelier-20261012c';
-import {mergeDatasets} from './data/parser.js?v=atelier-20261012c';
-import {Inbox} from './data/inbox.js?v=atelier-20261012c';
-import {NoteJournal} from './data/notes.js?v=atelier-20261012c';
-import {motion,settle,visualFrame,cancelOwnMotion,enterCanvas,arrangeRows} from './ui/motion.js?v=atelier-20261012c';
-import {esc,button,empty,table} from './ui/html.js?v=atelier-20261012c';
-import {excel,word,print,download,chart,scoreRows,effectiveRows,subjectRows,answerRows,evidence} from './io/exports.js?v=atelier-20261012c';
-import {directoryDefaults,lensValues,queryDirectory,directoryViewValues,directoryViewName} from './engine/directory.js?v=atelier-20261012c';
-import {peekView,compareView,drawerEvidence} from './ui/explorer.js?v=atelier-20261012c';
-import {dockIcon} from './ui/icons.js?v=atelier-20261012c';
+import {questionView,questionEvidence} from './ui/question.js?v=solar-20261012d';
+import {subjectView,knowledgeView,lensEvidence} from './ui/lenses.js?v=solar-20261012d';
+import {subjectLens,skillLens,questionLens} from './engine/lenses.js?v=solar-20261012d';
+import {directoryFilterView} from './scenes/directory.js?v=solar-20261012d';
+import {renderInto} from './ui/render.js?v=solar-20261012d';
+import {installInteractions,enhance,prepareUpdate,shiftTable} from './ui/interactions.js?v=solar-20261012d';
+import {readingDefaults,readingView,applyReading} from './ui/reading.js?v=solar-20261012d';
+import {reportView} from './ui/report.js?v=solar-20261012d';
+import {welcomeView} from './ui/welcome.js?v=solar-20261012d';
+import {composeScene} from './ui/composition.js?v=solar-20261012d';
+import {researchView,studyDescription,studyAvailable,studyKey} from './ui/research.js?v=solar-20261012d';
+import {Atlas} from './engine/atlas.js?v=solar-20261012d';
+import {normalizeDataset,SUBJECTS} from './data/compat.js?v=solar-20261012d';
+import {hydrate,save,saveWorkspace,restoreDataset,hasMaterials,preference,remember,previous,emptyDataset,loadNotebook,saveNotebook} from './data/workspace.js?v=solar-20261012d';
+import {mergeDatasets} from './data/parser.js?v=solar-20261012d';
+import {Inbox} from './data/inbox.js?v=solar-20261012d';
+import {NoteJournal} from './data/notes.js?v=solar-20261012d';
+import {motion,settle,visualFrame,cancelOwnMotion,enterCanvas,arrangeRows} from './ui/motion.js?v=solar-20261012d';
+import {esc,button,empty,table} from './ui/html.js?v=solar-20261012d';
+import {excel,word,print,download,chart,scoreRows,effectiveRows,subjectRows,answerRows,evidence} from './io/exports.js?v=solar-20261012d';
+import {directoryDefaults,lensValues,queryDirectory,directoryViewValues,directoryViewName} from './engine/directory.js?v=solar-20261012d';
+import {peekView,compareView,drawerEvidence} from './ui/explorer.js?v=solar-20261012d';
+import {dockIcon} from './ui/icons.js?v=solar-20261012d';
 
 const routes=[['board','年级总览','▦'],['class','班级研究','▥'],['papers','试卷研究','▧'],['people','学生研究','◎'],['follow','教学跟进','↗'],['library','资料与报告','⊞']];
 const defaults={board:{mode:'overview',metric:'underRate',historyMetric:'mean',search:'',page:1},class:{tab:'snapshot',value:'score',trendMetric:'mean',matrix:'total',search:'',page:1,matched:false},papers:{key:'',tab:'map',classes:[],question:0,order:'paper',search:'',page:1},people:{sid:'',storyMetric:'total',...directoryDefaults,filtersOpen:innerWidth>760},follow:{tier:'under',band:20,side:'below',classes:[],search:'',page:1},library:{tab:'materials'}};
@@ -190,7 +190,7 @@ async function paint(transition=false,focus=null) {
     const available=hasMaterials(atlas.data);let view;
     if(!available)view=welcomeView();
     else {
-      if(!loaded.has(scene))loaded.set(scene,import('./scenes/'+scene+'.js?v=atelier-20261012c'));
+      if(!loaded.has(scene))loaded.set(scene,import('./scenes/'+scene+'.js?v=solar-20261012d'));
       const module=await loaded.get(scene);if(serial!==paintId)return;
       view=scene==='class'&&!atlas.classes.length?{html:empty('先带入一个班的材料','从导入原表开始建立班级画布。')+button('导入材料','import',{},'accent'),report:null}:module.render(atlas,books[scene],session);
     }
@@ -448,7 +448,7 @@ async function commands(event) {
     else if(d.cmd==='find'){if(!hasMaterials(atlas.data)){notify('导入成绩材料后即可查找学生');return;}go('people',{sid:'',...directoryDefaults},true);setTimeout(()=>stage().querySelector('[data-field="search"]')?.focus(),100);}
     else if(d.cmd==='class') {
       const no=Number(d.no),exam=d.exam||(current==='board'?books.board.exam:current==='papers'?books.papers.key.split('|')[1]:books.class.exam);
-      go('class',{no,exam:atlas.classAt(no,exam).length?exam:atlas.classExams(no).at(-1)?.id,search:'',page:1,exams:atlas.classExams(no).map(e=>e.id)});
+      go('class',{no,exam:atlas.classAt(no,exam).length?exam:atlas.classExams(no).at(-1)?.id,search:'',page:1,exams:atlas.classExams(no).map(e=>e.id),...(['snapshot','history','targets'].includes(d.tab)?{tab:d.tab}:{})});
     }
     else if(d.cmd==='person') {
       const exam=d.exam||sourceExam(d.sid);

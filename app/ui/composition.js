@@ -1,4 +1,4 @@
-import {button,esc} from './html.js?v=atelier-20261012c';
+import {button,esc} from './html.js?v=solar-20261012d';
 
 export function composeScene(html,{back=''}={}) {
   const template=document.createElement('template');template.innerHTML=html;
