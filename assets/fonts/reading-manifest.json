@@ -1,0 +1,44 @@
+[
+  {
+    "file": "reading-serif-core.woff2",
+    "family": "Rongxian Reading Serif",
+    "section": "core",
+    "glyphs": 701,
+    "bytes": 252892
+  },
+  {
+    "file": "reading-serif-common.woff2",
+    "family": "Rongxian Reading Serif",
+    "section": "common",
+    "glyphs": 3181,
+    "bytes": 1267984
+  },
+  {
+    "file": "reading-serif-extended.woff2",
+    "family": "Rongxian Reading Serif",
+    "section": "extended",
+    "glyphs": 3007,
+    "bytes": 1329936
+  },
+  {
+    "file": "reading-copy-core.woff2",
+    "family": "Rongxian Reading Copy",
+    "section": "core",
+    "glyphs": 702,
+    "bytes": 151372
+  },
+  {
+    "file": "reading-copy-common.woff2",
+    "family": "Rongxian Reading Copy",
+    "section": "common",
+    "glyphs": 3181,
+    "bytes": 755504
+  },
+  {
+    "file": "reading-copy-extended.woff2",
+    "family": "Rongxian Reading Copy",
+    "section": "extended",
+    "glyphs": 3007,
+    "bytes": 781696
+  }
+]

@@ -1,5 +1,5 @@
-import {motion} from './motion.js?v=lines-v14';
-import {positionSpreadLabels} from './plots.js?v=lines-v14';
+import {motion} from './motion.js?v=type-v15';
+import {positionSpreadLabels} from './plots.js?v=type-v15';
 let motionPreference=()=>false,resizeObserver,plotObserver,railObserver,drawerHeaderObserver,revealObserver,tooltipTarget=null,tooltipOriginal=null,tooltipFrame=0,outlineFrame=0,drawerOutlineFrame=0,pointerFrame=0,outline=null,outlineEntries=[];
 const observedTables=new Set(),observedPlots=new Set(),observedReveals=new Set(),revealed=new WeakSet(),disclosures=new WeakMap();
 const selectionRails=new Set(),railStates=new WeakMap();
@@ -174,6 +174,9 @@ async function toggleDetails(details) {
 }
 export function installInteractions({reducedMotion}) {
   motionPreference=reducedMotion;
+  const fontsReady=()=>{pruneInteractions();for(const svg of observedPlots)refreshPlot(svg);for(const rail of selectionRails)selectionRail(rail);refreshOutline();refreshDrawerSections();};
+  document.fonts?.addEventListener('loadingdone',fontsReady);
+  document.fonts?.ready.then(fontsReady);
   if('ResizeObserver' in window)resizeObserver=new ResizeObserver(entries=>{for(const entry of entries)refreshTable(entry.target);});
   if('ResizeObserver' in window)plotObserver=new ResizeObserver(entries=>{for(const entry of entries)refreshPlot(entry.target);});
   if('ResizeObserver' in window)railObserver=new ResizeObserver(entries=>{for(const entry of entries)if(entry.target.isConnected)selectionRail(entry.target);});

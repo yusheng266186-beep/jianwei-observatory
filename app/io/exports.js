@@ -1,5 +1,6 @@
-import {esc,number,percent,signed} from '../ui/html.js?v=lines-v14';
-import {SITE_NAME,CREST_URL} from '../brand.js?v=lines-v14';
+import {esc,number,percent,signed} from '../ui/html.js?v=type-v15';
+import {SITE_NAME,CREST_URL} from '../brand.js?v=type-v15';
+import {chartFontRules} from '../ui/font-export.js?v=type-v15';
 export function download(content,name,type='application/octet-stream') {
   const blob=content instanceof Blob?content:new Blob([content],{type}),url=URL.createObjectURL(blob),anchor=document.createElement('a');
   anchor.href=url;anchor.download=name;anchor.click();setTimeout(()=>URL.revokeObjectURL(url),5000);
@@ -74,12 +75,18 @@ export async function word(report) {
   zip.file('word/document.xml','<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>'+paragraph(SITE_NAME,true)+paragraph(report.title,true)+paragraph(report.subtitle)+(report.studyTitle?paragraph('研究来源：'+report.studyTitle):'')+sections+paragraph('教师判断与后续行动',true)+paragraph(report.note||'')+paragraph(report.created)+'<w:sectPr><w:pgSz w:w="16838" w:h="11906" w:orient="landscape"/><w:pgMar w:top="900" w:right="800" w:bottom="900" w:left="800"/></w:sectPr></w:body></w:document>');
   download(await zip.generateAsync({type:'blob'}),report.title+'.docx');
 }
-export function chart(id,png=false) {
+export async function chart(id,png=false) {
   const svg=document.getElementById(id);if(!svg)throw new Error('当前没有可导出的图表，请先补充可绘制的数据。');
   const copy=svg.cloneNode(true),dimensions=svg.viewBox.baseVal;copy.setAttribute('xmlns','http://www.w3.org/2000/svg');copy.setAttribute('width',dimensions.width);copy.setAttribute('height',dimensions.height);
-  const labels=[...svg.querySelectorAll('text')];copy.querySelectorAll('text').forEach((text,index)=>{const style=getComputedStyle(labels[index]);text.style.font=style.font;text.style.fill=style.fill;});
+  const labels=[...svg.querySelectorAll('text')];copy.querySelectorAll('text').forEach((text,index)=>{const style=getComputedStyle(labels[index]);for(const key of ['fontFamily','fontSize','fontWeight','fontStyle','fontStretch','fontVariantNumeric','letterSpacing','fill'])text.style[key]=style[key];});
+  const fonts=await chartFontRules(labels);if(fonts){const style=document.createElementNS('http://www.w3.org/2000/svg','style');style.textContent=fonts;copy.prepend(style);}
   const blob=new Blob([new XMLSerializer().serializeToString(copy)],{type:'image/svg+xml'});
   if(!png){download(blob,SITE_NAME+'-'+id+'.svg');return;}
   const url=URL.createObjectURL(blob),image=new Image();
-  image.onload=()=>{const canvas=document.createElement('canvas');canvas.width=dimensions.width*2;canvas.height=dimensions.height*2;const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(image,0,0,canvas.width,canvas.height);canvas.toBlob(b=>download(b,SITE_NAME+'-'+id+'.png'));URL.revokeObjectURL(url);};image.onerror=()=>URL.revokeObjectURL(url);image.src=url;
+  try {
+    await new Promise((resolve,reject)=>{
+      image.onload=()=>{try{const canvas=document.createElement('canvas');canvas.width=dimensions.width*2;canvas.height=dimensions.height*2;const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(image,0,0,canvas.width,canvas.height);canvas.toBlob(bytes=>{if(!bytes){reject(new Error('PNG暂时未能生成，请重试或下载SVG。'));return;}download(bytes,SITE_NAME+'-'+id+'.png');resolve();});}catch(error){reject(error);}};
+      image.onerror=()=>reject(new Error('图表图片未能打开，请重试或下载SVG。'));image.src=url;
+    });
+  }finally{URL.revokeObjectURL(url);}
 }

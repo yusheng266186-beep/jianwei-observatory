@@ -1,28 +1,28 @@
-import {questionView,questionEvidence} from './ui/question.js?v=lines-v14';
-import {queryQuestionMap,questionSequence} from './engine/question-map.js?v=lines-v14';
-import {SITE_NAME} from './brand.js?v=lines-v14';
-import {subjectView,knowledgeView,lensEvidence} from './ui/lenses.js?v=lines-v14';
-import {subjectLens,skillLens,questionLens} from './engine/lenses.js?v=lines-v14';
-import {directoryFilterView} from './scenes/directory.js?v=lines-v14';
-import {renderInto} from './ui/render.js?v=lines-v14';
-import {installInteractions,enhance,prepareUpdate,pruneInteractions,shiftTable} from './ui/interactions.js?v=lines-v14';
-import {readingDefaults,readingView,applyReading} from './ui/reading.js?v=lines-v14';
-import {reportView} from './ui/report.js?v=lines-v14';
-import {welcomeView} from './ui/welcome.js?v=lines-v14';
-import {composeScene} from './ui/composition.js?v=lines-v14';
-import {researchView,studyDescription,studyAvailable,studyKey} from './ui/research.js?v=lines-v14';
-import {Atlas} from './engine/atlas.js?v=lines-v14';
-import {normalizeDataset,SUBJECTS} from './data/compat.js?v=lines-v14';
-import {hydrate,save,saveWorkspace,restoreDataset,hasMaterials,preference,remember,previous,emptyDataset,loadNotebook,saveNotebook} from './data/workspace.js?v=lines-v14';
-import {mergeDatasets} from './data/parser.js?v=lines-v14';
-import {Inbox} from './data/inbox.js?v=lines-v14';
-import {NoteJournal} from './data/notes.js?v=lines-v14';
-import {motion,settle,visualFrame,cancelOwnMotion,enterCanvas,arrangeRows,prepareCanvasSlide,finishCanvasSlide} from './ui/motion.js?v=lines-v14';
-import {esc,button,empty,table} from './ui/html.js?v=lines-v14';
-import {excel,word,print,download,chart,scoreRows,effectiveRows,subjectRows,answerRows,evidence} from './io/exports.js?v=lines-v14';
-import {directoryDefaults,lensValues,queryDirectory,directoryViewValues,directoryViewName} from './engine/directory.js?v=lines-v14';
-import {peekView,compareView,drawerEvidence} from './ui/explorer.js?v=lines-v14';
-import {dockIcon} from './ui/icons.js?v=lines-v14';
+import {questionView,questionEvidence} from './ui/question.js?v=type-v15';
+import {queryQuestionMap,questionSequence} from './engine/question-map.js?v=type-v15';
+import {SITE_NAME} from './brand.js?v=type-v15';
+import {subjectView,knowledgeView,lensEvidence} from './ui/lenses.js?v=type-v15';
+import {subjectLens,skillLens,questionLens} from './engine/lenses.js?v=type-v15';
+import {directoryFilterView} from './scenes/directory.js?v=type-v15';
+import {renderInto} from './ui/render.js?v=type-v15';
+import {installInteractions,enhance,prepareUpdate,pruneInteractions,shiftTable} from './ui/interactions.js?v=type-v15';
+import {readingDefaults,readingView,applyReading} from './ui/reading.js?v=type-v15';
+import {reportView} from './ui/report.js?v=type-v15';
+import {welcomeView} from './ui/welcome.js?v=type-v15';
+import {composeScene} from './ui/composition.js?v=type-v15';
+import {researchView,studyDescription,studyAvailable,studyKey} from './ui/research.js?v=type-v15';
+import {Atlas} from './engine/atlas.js?v=type-v15';
+import {normalizeDataset,SUBJECTS} from './data/compat.js?v=type-v15';
+import {hydrate,save,saveWorkspace,restoreDataset,hasMaterials,preference,remember,previous,emptyDataset,loadNotebook,saveNotebook} from './data/workspace.js?v=type-v15';
+import {mergeDatasets} from './data/parser.js?v=type-v15';
+import {Inbox} from './data/inbox.js?v=type-v15';
+import {NoteJournal} from './data/notes.js?v=type-v15';
+import {motion,settle,visualFrame,cancelOwnMotion,enterCanvas,arrangeRows,prepareCanvasSlide,finishCanvasSlide} from './ui/motion.js?v=type-v15';
+import {esc,button,empty,table} from './ui/html.js?v=type-v15';
+import {excel,word,print,download,chart,scoreRows,effectiveRows,subjectRows,answerRows,evidence} from './io/exports.js?v=type-v15';
+import {directoryDefaults,lensValues,queryDirectory,directoryViewValues,directoryViewName} from './engine/directory.js?v=type-v15';
+import {peekView,compareView,drawerEvidence} from './ui/explorer.js?v=type-v15';
+import {dockIcon} from './ui/icons.js?v=type-v15';
 
 const routes=[['board','年级总览','▦'],['class','班级研究','▥'],['papers','试卷研究','▧'],['people','学生研究','◎'],['follow','教学跟进','↗'],['library','资料与报告','⊞']];
 const defaults={board:{mode:'overview',metric:'underRate',historyMetric:'mean',search:'',page:1},class:{tab:'snapshot',value:'score',trendMetric:'mean',matrix:'total',search:'',page:1,matched:false},papers:{key:'',tab:'map',classes:[],question:0,order:'paper',questionSearch:'',questionFocus:'all',search:'',page:1},people:{sid:'',storyMetric:'total',...directoryDefaults,filtersOpen:innerWidth>760},follow:{tier:'under',band:20,side:'below',classes:[],search:'',page:1},library:{tab:'materials'}};
@@ -203,7 +203,7 @@ async function paint(transition=false,focus=null) {
     const available=hasMaterials(atlas.data);let view;
     if(!available)view=welcomeView();
     else {
-      if(!loaded.has(scene))loaded.set(scene,import('./scenes/'+scene+'.js?v=lines-v14'));
+      if(!loaded.has(scene))loaded.set(scene,import('./scenes/'+scene+'.js?v=type-v15'));
       const module=await loaded.get(scene);if(serial!==paintId)return;
       view=scene==='class'&&!atlas.classes.length?{html:empty('先带入一个班的材料','从导入原表开始建立班级画布。')+button('导入材料','import',{},'accent'),report:null}:module.render(atlas,books[scene],session);
     }
@@ -560,7 +560,7 @@ async function commands(event) {
     else if(d.cmd==='report-excel'){const noteSheet=Object.hasOwn(exportReport.sheets,'教师判断')?'本份报告说明':'教师判断';await excel({...exportReport.sheets,[noteSheet]:[['摘录时间','研究来源','教师判断'],[exportReport.created||'',exportReport.studyTitle||exportReport.subtitle||'',exportReport.note||'']]},exportReport.title);}
     else if(d.cmd==='report-word')await word(exportReport);
     else if(d.cmd==='report-print')print(exportReport);
-    else if(d.cmd==='svg'||d.cmd==='png')chart(d.id,d.cmd==='png');
+    else if(d.cmd==='svg'||d.cmd==='png')await chart(d.id,d.cmd==='png');
     else if(d.cmd==='backup'){archiveStudy();download(JSON.stringify({...atlas.data,plans:session.plans,notebook:session.notebook,savedPeople:session.savedPeople,comparePeople:session.comparePeople,directoryViews:session.directoryViews,research}),SITE_NAME+'-完整工作区-'+new Date().toLocaleDateString('sv-SE',{timeZone:'Asia/Shanghai'})+'.json','application/json');}
     else if(d.cmd==='template')await template();
     else if(d.cmd==='four-sheets')await excel(fourSheets(),SITE_NAME+'-四表分析包');

@@ -1,0 +1,31 @@
+/* School reading: Chinese serif headings, humanist copy, crisp controls. */
+:root{
+ --sans:'PingFang SC','Noto Sans CJK SC','Microsoft YaHei',system-ui,sans-serif;
+ --reading:'Rongxian Reading Copy','LXGW WenKai','Kaiti SC','KaiTi','Noto Serif CJK SC',serif;
+ --editorial:'Rongxian Reading Serif','Hengji Editorial','Noto Serif CJK SC','Songti SC','STSong','SimSun',serif;
+ --chart-font:'Hengji Numbers',var(--reading);
+}
+body{font-family:var(--reading);font-size:15px;line-height:1.75}
+button,input,textarea,select,.table-scroll,.table-reader,.navigation-dock,.chips,.badge,.overline,.brand-wordmark>span,.number-ribbon span,.number-ribbon small,.student-identity p,.student-card footer,.exam-rail,.student-rank,.scope-heading,.pagination,.chart-buttons,.source-caption{font-family:var(--sans)}
+h1,h2,h3,.block-head h2,.drawer-title h2,.sheet-dialog h2,.source-route h3,.library-route>b,.student-name,.person-link,.lens-button b,.knowledge-card h3,.subject-card h3{font-family:var(--editorial);font-weight:500;letter-spacing:.2px}
+.scene-head h1,.directory-head h1,.welcome-copy h1{font-weight:500;letter-spacing:.35px;line-height:1.4}
+.block-head h2{font-size:21px;line-height:1.55}
+.student-card .student-name{font-size:17px;letter-spacing:.25px;font-weight:600}
+.student-name,.person-link{font-family:var(--editorial)}
+.paper-cover>header>span{font-weight:500;letter-spacing:.5px}
+.scene-head p,.directory-head p,.block-head p,.welcome-copy>p,.lens-button small,.teaching-hint,.lens-note,.research-brief,.drawer-clue-note,.footnote,.method-note p,.percentile-note,.story-caption{font-family:var(--reading);letter-spacing:.1px;line-height:1.85}
+.scene-head p,.directory-head p{font-size:14px}
+.block-head p,.drawer-clue-note,.footnote,.method-note p,.percentile-note,.lens-note{font-size:12.5px}
+.lens-button small{font-size:12px;line-height:1.65}
+.number-ribbon strong,.hero-count>strong,.student-score>strong,.student-rank strong,.goal-levels strong,.delta,.metric-card strong,.cover-diagram i,.class-key b,.scope-class b,.paper-switcher>header strong,.table-scroll :is(td,th){font-variant-numeric:tabular-nums}
+.class-key b,.scope-class b,.scope-class strong,.metric-card strong,.delta,.question-tile strong,.personal-question-card strong{font-family:var(--numbers)}
+.trajectory text,.bars text,.spread text,.landscape text,.threshold-profile text{font-family:var(--chart-font)}
+.spread-threshold-label{font-weight:550;letter-spacing:.1px}
+.spread-threshold-detail,.spread-threshold-range{font-weight:400}
+@media(max-width:760px){
+ body{font-size:14px}
+ .scene-head p,.directory-head p{font-size:13px;line-height:1.85}
+ .block-head h2{font-size:19px;line-height:1.55}
+ .block-head p,.drawer-clue-note,.footnote,.percentile-note,.lens-note{font-size:12px}
+ .student-card .student-name{font-size:17px}
+}

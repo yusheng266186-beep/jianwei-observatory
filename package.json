@@ -19,7 +19,8 @@
     "test:controls": "node tests/controls.cjs",
     "test:entries": "node tests/entry-navigation.cjs",
     "test:slides": "node tests/scene-slides.cjs",
-    "test:thresholds": "node tests/threshold-guides.cjs"
+    "test:thresholds": "node tests/threshold-guides.cjs",
+    "test:typography": "node tests/typography.cjs"
   },
   "devDependencies": {
     "playwright": "1.62.1"
