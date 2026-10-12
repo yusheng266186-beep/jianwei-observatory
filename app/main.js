@@ -1,26 +1,26 @@
-import {questionView,questionEvidence} from './ui/question.js?v=solar-20261012d';
-import {subjectView,knowledgeView,lensEvidence} from './ui/lenses.js?v=solar-20261012d';
-import {subjectLens,skillLens,questionLens} from './engine/lenses.js?v=solar-20261012d';
-import {directoryFilterView} from './scenes/directory.js?v=solar-20261012d';
-import {renderInto} from './ui/render.js?v=solar-20261012d';
-import {installInteractions,enhance,prepareUpdate,shiftTable} from './ui/interactions.js?v=solar-20261012d';
-import {readingDefaults,readingView,applyReading} from './ui/reading.js?v=solar-20261012d';
-import {reportView} from './ui/report.js?v=solar-20261012d';
-import {welcomeView} from './ui/welcome.js?v=solar-20261012d';
-import {composeScene} from './ui/composition.js?v=solar-20261012d';
-import {researchView,studyDescription,studyAvailable,studyKey} from './ui/research.js?v=solar-20261012d';
-import {Atlas} from './engine/atlas.js?v=solar-20261012d';
-import {normalizeDataset,SUBJECTS} from './data/compat.js?v=solar-20261012d';
-import {hydrate,save,saveWorkspace,restoreDataset,hasMaterials,preference,remember,previous,emptyDataset,loadNotebook,saveNotebook} from './data/workspace.js?v=solar-20261012d';
-import {mergeDatasets} from './data/parser.js?v=solar-20261012d';
-import {Inbox} from './data/inbox.js?v=solar-20261012d';
-import {NoteJournal} from './data/notes.js?v=solar-20261012d';
-import {motion,settle,visualFrame,cancelOwnMotion,enterCanvas,arrangeRows} from './ui/motion.js?v=solar-20261012d';
-import {esc,button,empty,table} from './ui/html.js?v=solar-20261012d';
-import {excel,word,print,download,chart,scoreRows,effectiveRows,subjectRows,answerRows,evidence} from './io/exports.js?v=solar-20261012d';
-import {directoryDefaults,lensValues,queryDirectory,directoryViewValues,directoryViewName} from './engine/directory.js?v=solar-20261012d';
-import {peekView,compareView,drawerEvidence} from './ui/explorer.js?v=solar-20261012d';
-import {dockIcon} from './ui/icons.js?v=solar-20261012d';
+import {questionView,questionEvidence} from './ui/question.js?v=folio-v5';
+import {subjectView,knowledgeView,lensEvidence} from './ui/lenses.js?v=folio-v5';
+import {subjectLens,skillLens,questionLens} from './engine/lenses.js?v=folio-v5';
+import {directoryFilterView} from './scenes/directory.js?v=folio-v5';
+import {renderInto} from './ui/render.js?v=folio-v5';
+import {installInteractions,enhance,prepareUpdate,shiftTable} from './ui/interactions.js?v=folio-v5';
+import {readingDefaults,readingView,applyReading} from './ui/reading.js?v=folio-v5';
+import {reportView} from './ui/report.js?v=folio-v5';
+import {welcomeView} from './ui/welcome.js?v=folio-v5';
+import {composeScene} from './ui/composition.js?v=folio-v5';
+import {researchView,studyDescription,studyAvailable,studyKey} from './ui/research.js?v=folio-v5';
+import {Atlas} from './engine/atlas.js?v=folio-v5';
+import {normalizeDataset,SUBJECTS} from './data/compat.js?v=folio-v5';
+import {hydrate,save,saveWorkspace,restoreDataset,hasMaterials,preference,remember,previous,emptyDataset,loadNotebook,saveNotebook} from './data/workspace.js?v=folio-v5';
+import {mergeDatasets} from './data/parser.js?v=folio-v5';
+import {Inbox} from './data/inbox.js?v=folio-v5';
+import {NoteJournal} from './data/notes.js?v=folio-v5';
+import {motion,settle,visualFrame,cancelOwnMotion,enterCanvas,arrangeRows} from './ui/motion.js?v=folio-v5';
+import {esc,button,empty,table} from './ui/html.js?v=folio-v5';
+import {excel,word,print,download,chart,scoreRows,effectiveRows,subjectRows,answerRows,evidence} from './io/exports.js?v=folio-v5';
+import {directoryDefaults,lensValues,queryDirectory,directoryViewValues,directoryViewName} from './engine/directory.js?v=folio-v5';
+import {peekView,compareView,drawerEvidence} from './ui/explorer.js?v=folio-v5';
+import {dockIcon} from './ui/icons.js?v=folio-v5';
 
 const routes=[['board','年级总览','▦'],['class','班级研究','▥'],['papers','试卷研究','▧'],['people','学生研究','◎'],['follow','教学跟进','↗'],['library','资料与报告','⊞']];
 const defaults={board:{mode:'overview',metric:'underRate',historyMetric:'mean',search:'',page:1},class:{tab:'snapshot',value:'score',trendMetric:'mean',matrix:'total',search:'',page:1,matched:false},papers:{key:'',tab:'map',classes:[],question:0,order:'paper',search:'',page:1},people:{sid:'',storyMetric:'total',...directoryDefaults,filtersOpen:innerWidth>760},follow:{tier:'under',band:20,side:'below',classes:[],search:'',page:1},library:{tab:'materials'}};
@@ -190,7 +190,7 @@ async function paint(transition=false,focus=null) {
     const available=hasMaterials(atlas.data);let view;
     if(!available)view=welcomeView();
     else {
-      if(!loaded.has(scene))loaded.set(scene,import('./scenes/'+scene+'.js?v=solar-20261012d'));
+      if(!loaded.has(scene))loaded.set(scene,import('./scenes/'+scene+'.js?v=folio-v5'));
       const module=await loaded.get(scene);if(serial!==paintId)return;
       view=scene==='class'&&!atlas.classes.length?{html:empty('先带入一个班的材料','从导入原表开始建立班级画布。')+button('导入材料','import',{},'accent'),report:null}:module.render(atlas,books[scene],session);
     }

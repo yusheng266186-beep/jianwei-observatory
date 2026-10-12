@@ -1,7 +1,7 @@
-importScripts('../../vendor/xlsx.full.min.js?v=solar-20261012d');
+importScripts('../../vendor/xlsx.full.min.js?v=folio-v5');
 self.onmessage=async ({data:input})=>{
   try {
-    const parser=await import('./parser.js?v=solar-20261012d');
+    const parser=await import('./parser.js?v=folio-v5');
     const progress=(message,percent)=>self.postMessage({type:'progress',message,percent});
     let dataset;
     if(/\.json$/i.test(input.name)) dataset=parser.adaptJSON(JSON.parse(new TextDecoder().decode(input.buffer)),input.name);

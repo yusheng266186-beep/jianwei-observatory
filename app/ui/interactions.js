@@ -1,5 +1,5 @@
-import {motion} from './motion.js?v=solar-20261012d';
-let motionPreference=()=>false,resizeObserver,plotObserver,railObserver,revealObserver,tooltipTarget=null,tooltipOriginal=null,tooltipFrame=0,outlineFrame=0,pointerFrame=0,outline=null,outlineEntries=[],shineTarget=null;
+import {motion} from './motion.js?v=folio-v5';
+let motionPreference=()=>false,resizeObserver,plotObserver,railObserver,revealObserver,tooltipTarget=null,tooltipOriginal=null,tooltipFrame=0,outlineFrame=0,pointerFrame=0,outline=null,outlineEntries=[];
 const observedTables=new Set(),observedPlots=new Set(),observedReveals=new Set(),revealed=new WeakSet(),disclosures=new WeakMap();
 const selectionRails=new Set(),railStates=new WeakMap();
 const plotFrames=new WeakMap(),galleryOffsets=new Map();
@@ -133,11 +133,9 @@ export function installInteractions({reducedMotion}) {
   document.addEventListener('pointermove',event=>{if(!tooltipTarget)return;cancelAnimationFrame(tooltipFrame);tooltipFrame=requestAnimationFrame(()=>placeTooltip(event.clientX,event.clientY));});
   document.addEventListener('pointermove',event=>{
     if(event.pointerType==='touch'||motionPreference())return;
-    const target=event.target.closest('.source-launchpad>button,.class-tile,.paper-cover,.student-card,.library-route,.welcome-art'),dock=event.target.closest('#navigation');
-    if(shineTarget&&shineTarget!==target){for(const key of ['--pointer-x','--pointer-y','--tilt-x','--tilt-y'])shineTarget.style.removeProperty(key);}shineTarget=target;
-    if(!target&&!dock)return;cancelAnimationFrame(pointerFrame);
+    const dock=event.target.closest('#navigation');
+    if(!dock)return;cancelAnimationFrame(pointerFrame);
     pointerFrame=requestAnimationFrame(()=>{
-      if(target?.isConnected){const rect=target.getBoundingClientRect(),x=event.clientX-rect.left,y=event.clientY-rect.top;target.style.setProperty('--pointer-x',x+'px');target.style.setProperty('--pointer-y',y+'px');if(target.classList.contains('welcome-art')){target.style.setProperty('--tilt-y',(x/rect.width-.5)*8+'deg');target.style.setProperty('--tilt-x',(y/rect.height-.5)*-6+'deg');}}
       if(dock){const local=event.clientX-dock.getBoundingClientRect().left;for(const button of dock.querySelectorAll('button')){const proximity=Math.max(0,1-Math.abs(local-button.offsetLeft-button.offsetWidth/2)/120);button.style.setProperty('--dock-lift',-proximity*5+'px');button.style.setProperty('--dock-scale',1+proximity*.045);}}
     });
   },{passive:true});

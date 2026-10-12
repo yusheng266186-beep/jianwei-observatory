@@ -1,7 +1,7 @@
-import {head,button,chips,badge,block,ribbon,table,number,integer,percent,esc,personButton,search,footnote,empty} from '../ui/html.js?v=solar-20261012d';
-import {bars,rateColor,rateLegend,chartButtons} from '../ui/plots.js?v=solar-20261012d';
-import {average,sum,valid} from '../engine/metrics.js?v=solar-20261012d';
-import {answerRows,evidence} from '../io/exports.js?v=solar-20261012d';
+import {head,button,chips,badge,block,ribbon,table,number,integer,percent,esc,personButton,search,footnote,empty} from '../ui/html.js?v=folio-v5';
+import {bars,rateColor,rateLegend,chartButtons} from '../ui/plots.js?v=folio-v5';
+import {average,sum,valid} from '../engine/metrics.js?v=folio-v5';
+import {answerRows,evidence} from '../io/exports.js?v=folio-v5';
 export function render(atlas,state) {
   const papers=atlas.papers(),paper=papers.find(p=>p.key===state.key);
   if(!paper) {
@@ -9,7 +9,7 @@ export function render(atlas,state) {
     const controls='<div class="paper-browser"><div class="directory-exams"><span>考试档案</span>'+chips('shelfExam',[[atlas.latest,'最新考试'],['all','全部考次'],...atlas.exams.filter(e=>e.id!==atlas.latest).map(e=>[e.id,e.id])],chosen)+'</div><div class="paper-browser-tools">'+chips('shelfSubject',[['all','全部学科'],...subjects],state.shelfSubject||'all')+chips('shelfView',[['cards','卷面卡片'],['table','归档清单']],state.shelfView||'cards')+'</div></div>';
     let shelf='';
     if(state.shelfView==='table')shelf=block('全部 '+visible.length+' 张试卷',table(['试卷','考次','小题数','作答份数','参考班级'],visible.map(p=>[button(esc(p.subject),'paper',{key:p.key},'person-link'),esc(atlas.exam(p.exam).label),p.questions.length,p.answers.length,p.classes.map(n=>n+'班').join('、')]),{label:'完整试卷档案'}));
-    else shelf='<div class="paper-catalog">'+visible.map(p=>{const known=p.questions.filter(q=>q.max!==null).length;return '<button class="paper-cover" data-motion-key="paper-'+esc(p.key)+'" data-cmd="paper" data-key="'+esc(p.key)+'"><header><span>'+esc(p.subject)+'</span><small>'+esc(p.exam)+'</small></header><div class="cover-diagram">'+p.questions.slice(0,24).map((q,i)=>'<i style="--tile:'+i+'"></i>').join('')+'</div><h3>'+esc(atlas.exam(p.exam).label)+'</h3><dl><dt>小题</dt><dd>'+p.questions.length+'</dd><dt>作答</dt><dd>'+p.answers.length+'</dd><dt>明确满分</dt><dd>'+known+' / '+p.questions.length+'</dd></dl><footer><span>'+p.classes.length+' 个班</span><b>研究这张卷 ↗</b></footer></button>';}).join('')+'</div>';
+    else shelf='<div class="paper-catalog">'+visible.map(p=>{const known=p.questions.filter(q=>q.max!==null).length;return '<button class="paper-cover" data-motion-key="paper-'+esc(p.key)+'" data-cmd="paper" data-key="'+esc(p.key)+'"><header><span>'+esc(p.subject)+'</span><small>'+esc(p.exam)+'</small></header><div class="cover-diagram">'+p.questions.slice(0,24).map(q=>'<i title="第'+esc(q.label)+'题">'+esc(q.label)+'</i>').join('')+'</div><h3>'+esc(atlas.exam(p.exam).label)+'</h3><dl><dt>小题</dt><dd>'+p.questions.length+'</dd><dt>作答</dt><dd>'+p.answers.length+'</dd><dt>明确满分</dt><dd>'+known+' / '+p.questions.length+'</dd></dl><footer><span>'+p.classes.length+' 个班</span><b>研究这张卷 ↗</b></footer></button>';}).join('')+'</div>';
     return {html:head('03 / 试卷研究','试卷档案','小题地图、知识点、班级差异和每份作答保留在同一张卷里。',button('导入小题','import',{},'accent'))+controls+(visible.length?shelf:empty('这个范围还没有试卷','切换考次或导入该次小题表。')),report:null};
   }
   const scope=(state.classes||[]).filter(no=>paper.classes.includes(no)),lens=atlas.paper(paper.key,scope),selected=lens.questions.find(q=>q.index===Number(state.question))||lens.questions[0];

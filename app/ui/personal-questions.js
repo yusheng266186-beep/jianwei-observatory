@@ -1,6 +1,6 @@
-import {button,esc,number} from './html.js?v=solar-20261012d';
-import {rateColor} from './plots.js?v=solar-20261012d';
-import {valid} from '../engine/metrics.js?v=solar-20261012d';
+import {button,esc,number} from './html.js?v=folio-v5';
+import {rateColor} from './plots.js?v=folio-v5';
+import {valid} from '../engine/metrics.js?v=folio-v5';
 
 export function personalQuestionLink(q,context,label,style='person-link',extra='') {
   return button(label,'answer-question',{key:context.subject+'|'+context.exam,index:q.index,sid:context.sid,classes:context.classNo},style,

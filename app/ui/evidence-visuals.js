@@ -1,14 +1,18 @@
-import {esc,number,integer,percent,button} from './html.js?v=solar-20261012d';
-import {valid} from '../engine/metrics.js?v=solar-20261012d';
-import {rateColor} from './plots.js?v=solar-20261012d';
+import {esc,number,integer,percent,button} from './html.js?v=folio-v5';
+import {valid} from '../engine/metrics.js?v=folio-v5';
+import {rateColor} from './plots.js?v=folio-v5';
 
-export function achievementDial(id,summary) {
-  const prefix='sun-'+[...id].map(c=>c.codePointAt(0).toString(16)).join('-');
-  const tiers=[['under','本科',130,'#bd8c45'],['top','特控',108,'#6d938a']];
-  const ticks=Array.from({length:48},(_,i)=>{const angle=i*Math.PI/24,x=r=>180+Math.cos(angle)*r,y=r=>170+Math.sin(angle)*r;return '<line x1="'+x(150)+'" y1="'+y(150)+'" x2="'+x(i%4===0?156:153)+'" y2="'+y(i%4===0?156:153)+'" stroke="#b8945a" stroke-opacity=".33"/>';}).join('');
-  const rings=tiers.map(([tier,label,r,color])=>{const rate=summary[tier]===null?null:summary[tier+'Rate'],known=valid(rate),amount=known?Math.max(0,Math.min(1,rate))*1000:0;return '<g><title>'+label+'达线率 '+percent(rate)+'，'+integer(summary[tier])+' / '+integer(summary[tier+'Base'])+'人</title><circle cx="180" cy="170" r="'+r+'" fill="none" stroke="#d4c7a740" stroke-width="12"'+(!known?' stroke-dasharray="3 7"':'')+'/>'+(known?'<circle class="solar-progress" cx="180" cy="170" r="'+r+'" pathLength="1000" fill="none" stroke="'+color+'" stroke-width="12" stroke-linecap="round" stroke-dasharray="'+amount+' 1000" style="--ring-length:'+amount+'" stroke-opacity="'+(amount?1:0)+'" transform="rotate(-90 180 170)"/>':'')+'</g>';}).join('');
-  const under=summary.under===null?null:summary.underRate,top=summary.top===null?null:summary.topRate;
-  return '<figure class="achievement-dial"><svg id="'+esc(id)+'" class="solar-dial" viewBox="0 0 360 340" role="img" aria-label="本科达线率'+percent(under)+'，特控达线率'+percent(top)+'，分别按各自可判定人数计算"><defs><radialGradient id="'+prefix+'-light" cx=".34" cy=".27" r=".8"><stop stop-color="#fffdf1"/><stop offset=".58" stop-color="#f8e5b7"/><stop offset="1" stop-color="#ebc57e"/></radialGradient></defs><circle cx="180" cy="170" r="95" fill="url(#'+prefix+'-light)" fill-opacity=".67"/>'+ticks+rings+'<text x="180" y="135" text-anchor="middle" fill="#866d47" font-size="18">本科达线率</text><text x="180" y="181" text-anchor="middle" fill="#6a522e" font-size="42" font-family="system-ui,sans-serif">'+percent(under)+'</text><text x="180" y="209" text-anchor="middle" fill="#55796f" font-size="18">特控 '+percent(top)+'</text></svg><figcaption><span>本科可判定 '+integer(summary.underBase)+' 人</span><span>特控可判定 '+integer(summary.topBase)+' 人</span></figcaption></figure>';
+export function thresholdProfile(id,summary) {
+  const prefix='profile-'+[...String(id)].map(c=>c.codePointAt(0).toString(16)).join('-');
+  const tiers=[['under','本科',0,'#b38d50','#e6d3ac'],['top','特控',118,'#72888d','#c6d3d5']];
+  const rate=tier=>valid(summary[tier])?summary[tier+'Rate']:null;
+  const defs=tiers.map(([tier,,,color,light])=>'<linearGradient id="'+prefix+'-'+tier+'"><stop stop-color="'+light+'"/><stop offset="1" stop-color="'+color+'"/></linearGradient>').join('');
+  const rows=tiers.map(([tier,label,offset,color])=>{
+    const value=rate(tier),known=valid(value),width=known?Math.max(0,Math.min(1,value))*308:0,x=26+width,y=offset+54;
+    const ticks=Array.from({length:5},(_,i)=>'<line x1="'+(26+i*77)+'" x2="'+(26+i*77)+'" y1="'+(y+19)+'" y2="'+(y+24)+'" stroke="#b5ab964f"/>').join('');
+    return '<g><title>'+label+'达线率 '+percent(value)+'，'+integer(summary[tier])+' / '+integer(summary[tier+'Base'])+'人</title><text class="profile-label" x="26" y="'+(offset+31)+'" fill="#756952" font-size="18">'+label+'</text><text class="profile-value" x="334" y="'+(offset+32)+'" text-anchor="end" fill="'+color+'" font-size="30" font-family="system-ui,sans-serif">'+percent(value)+'</text><rect x="26" y="'+y+'" width="308" height="15" rx="3" fill="#b7ab891b" stroke="#fff"'+(!known?' stroke-dasharray="3 5"':'')+'/>'+(known?'<rect class="threshold-progress" x="26" y="'+y+'" width="'+width+'" height="15" rx="3" fill="url(#'+prefix+'-'+tier+')"/>':'')+(known?'<path class="profile-marker" d="M'+x+' '+(y-6)+'l4 4-4 4-4-4Z" fill="'+color+'"/>':'')+ticks+'<text class="profile-caption" x="26" y="'+(offset+99)+'" fill="#7a7569" font-size="13">达线 '+integer(summary[tier])+' / 可判定 '+integer(summary[tier+'Base'])+' 人</text><text class="profile-axis" x="334" y="'+(offset+99)+'" text-anchor="end" fill="#9c9380" font-size="11">0 — 100%</text></g>';
+  }).join('');
+  return '<figure class="threshold-figure"><svg id="'+esc(id)+'" class="threshold-profile" viewBox="0 0 360 230" role="img" aria-label="本科达线率'+percent(rate('under'))+'，特控达线率'+percent(rate('top'))+'，分别按各自可判定人数计算"><defs>'+defs+'</defs>'+rows+'</svg><figcaption>两条标尺分别按各自可判定人数计算</figcaption></figure>';
 }
 
 export function progressMeter(actual,target,label='完成率') {

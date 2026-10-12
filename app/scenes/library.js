@@ -1,10 +1,10 @@
-import {SUBJECTS} from '../data/compat.js?v=solar-20261012d';
-import {studyAvailable} from '../ui/research.js?v=solar-20261012d';
-import {head,button,chips,badge,block,examRail,ribbon,table,number,integer,esc,empty,field,radio,footnote} from '../ui/html.js?v=solar-20261012d';
+import {SUBJECTS} from '../data/compat.js?v=folio-v5';
+import {studyAvailable} from '../ui/research.js?v=folio-v5';
+import {head,button,chips,badge,block,examRail,ribbon,table,number,integer,esc,empty,field,radio,footnote} from '../ui/html.js?v=folio-v5';
 export function render(atlas,state,session) {
   const tab=state.tab||'materials';let body='';
   const routes=[['materials','材料与备份',atlas.data.scores.length+' 条成绩','导入、合并、撤回与完整备份'],['classes','班级与任务',atlas.classes.length+' 个班级','人数任务、任课信息与班级档案'],['lines','有效线',atlas.data.lines.length+' 条口径','本场两科类总分与学科线'],['papers','题目资料',atlas.papers().length+' 张试卷','题号、满分与知识点维护'],['exams','考次与口径',atlas.exams.length+' 次考试','考试顺序、排名范围与分析参数'],['notebook','证据报告',(session.notebook||[]).length+' 份摘录','结果快照、教师判断与完整导出']];
-  const navigation='<nav class="library-routes" aria-label="资料与报告入口">'+routes.map(([id,title,count,detail])=>'<button class="library-route '+(tab===id?'selected':'')+'" data-cmd="set" data-key="tab" data-value="'+id+'" aria-pressed="'+(tab===id)+'"><i class="library-folder" aria-hidden="true"></i><span>'+count+'</span><b>'+title+'</b><small>'+detail+'</small></button>').join('')+'</nav>';
+  const navigation='<nav class="library-routes" aria-label="资料与报告入口">'+routes.map(([id,title,count,detail],index)=>'<button class="library-route '+(tab===id?'selected':'')+'" data-cmd="set" data-key="tab" data-value="'+id+'" aria-pressed="'+(tab===id)+'"><i class="library-index" aria-hidden="true">'+String(index+1).padStart(2,'0')+'</i><span>'+count+'</span><b>'+title+'</b><small>'+detail+'</small></button>').join('')+'</nav>';
 
   if(tab==='classes') {
     const no=Number(state.profileNo)||atlas.classes[0]||4,profile=atlas.profile(no);

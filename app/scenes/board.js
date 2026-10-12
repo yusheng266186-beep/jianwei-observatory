@@ -1,9 +1,9 @@
-import {goalCards} from '../ui/solar.js?v=solar-20261012d';
-import {overview} from './overview.js?v=solar-20261012d';
-import {head,button,chips,badge,block,examRail,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote} from '../ui/html.js?v=solar-20261012d';
-import {mini,bars,trajectory,spread,chartButtons} from '../ui/plots.js?v=solar-20261012d';
-import {difference,average} from '../engine/metrics.js?v=solar-20261012d';
-import {scoreRows,effectiveRows,subjectRows,evidence} from '../io/exports.js?v=solar-20261012d';
+import {goalCards} from '../ui/evidence-visuals.js?v=folio-v5';
+import {overview} from './overview.js?v=folio-v5';
+import {head,button,chips,badge,block,examRail,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote} from '../ui/html.js?v=folio-v5';
+import {mini,bars,trajectory,spread,chartButtons} from '../ui/plots.js?v=folio-v5';
+import {difference,average} from '../engine/metrics.js?v=folio-v5';
+import {scoreRows,effectiveRows,subjectRows,evidence} from '../io/exports.js?v=folio-v5';
 const tools=()=>button('摘录这页','capture',{},'outline')+button('导出','export',{},'accent');
 export function render(atlas,state) {
   const exam=state.exam||atlas.latest,groups=atlas.groups(exam),rows=atlas.rows(exam),s=atlas.summary(rows);

@@ -11,7 +11,7 @@
     "test:motion": "node tests/motion.cjs",
     "test:polish": "node tests/polish.cjs",
     "profile:motion": "node tests/motion-profile.cjs",
-    "test:solar": "node tests/solar.cjs"
+    "test:evidence": "node tests/evidence.cjs"
   },
   "devDependencies": {
     "playwright": "1.62.1"

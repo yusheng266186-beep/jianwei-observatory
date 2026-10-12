@@ -1,6 +1,6 @@
-import {esc,number,percent,attrs} from './html.js?v=solar-20261012d';
-import {valid} from '../engine/metrics.js?v=solar-20261012d';
-export const seriesColors=['#bc914f','#74958f','#87a3ac','#b18978'];
+import {esc,number,percent,attrs} from './html.js?v=folio-v5';
+import {valid} from '../engine/metrics.js?v=folio-v5';
+export const seriesColors=['#b38d50','#72888d','#91a591','#ad7765'];
 const colors=seriesColors;
 const action=item=>item?.cmd?' data-plot-action="true" data-cmd="'+esc(item.cmd)+'"'+attrs(item.data||{})+' role="button" tabindex="0"':'';
 const key=id=>'glass-'+[...String(id)].map(char=>char.codePointAt(0).toString(16)).join('-');

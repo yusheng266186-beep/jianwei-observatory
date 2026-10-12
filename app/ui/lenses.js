@@ -1,8 +1,8 @@
-import {button,block,table,ribbon,number,integer,percent,delta,esc,empty} from './html.js?v=solar-20261012d';
-import {trajectory,bars,rateColor,chartButtons} from './plots.js?v=solar-20261012d';
-import {subjectLens,skillLens} from '../engine/lenses.js?v=solar-20261012d';
-import {valid} from '../engine/metrics.js?v=solar-20261012d';
-import {evidence,scoreRows} from '../io/exports.js?v=solar-20261012d';
+import {button,block,table,ribbon,number,integer,percent,delta,esc,empty} from './html.js?v=folio-v5';
+import {trajectory,bars,rateColor,chartButtons} from './plots.js?v=folio-v5';
+import {subjectLens,skillLens} from '../engine/lenses.js?v=folio-v5';
+import {valid} from '../engine/metrics.js?v=folio-v5';
+import {evidence,scoreRows} from '../io/exports.js?v=folio-v5';
 
 const tabs=(options,value)=>'<nav class="drawer-tabs lens-tabs" aria-label="观察视角">'+options.map(([id,label])=>button(label,'drawer-tab',{value:id},id===value?'chip selected':'chip','aria-pressed="'+(id===value)+'"')).join('')+'</nav>';
 const filters=(items,value)=>'<div class="lens-filters" role="group" aria-label="当前观察窗的名单条件">'+items.map(item=>button('<span>'+esc(item.label)+'</span><b>'+integer(item.count)+'</b>','lens-filter',{value:item.id},item.id===value?'lens-filter selected':'lens-filter','aria-pressed="'+(item.id===value)+'"')).join('')+'</div>';
