@@ -1,6 +1,6 @@
-import {esc,number,percent,attrs} from './html.js?v=crest-v8';
-import {valid} from '../engine/metrics.js?v=crest-v8';
-import {plotPalette as palette} from './palette.js?v=crest-v8';
+import {esc,number,percent,attrs} from './html.js?v=layout-v9';
+import {valid} from '../engine/metrics.js?v=layout-v9';
+import {plotPalette as palette} from './palette.js?v=layout-v9';
 export const seriesColors=palette.series;
 const colors=seriesColors;
 const action=item=>item?.cmd?' data-plot-action="true" data-cmd="'+esc(item.cmd)+'"'+attrs(item.data||{})+' role="button" tabindex="0"':'';

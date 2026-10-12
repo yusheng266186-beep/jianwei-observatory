@@ -1,8 +1,8 @@
-import {button,block,table,ribbon,number,integer,percent,delta,esc,empty} from './html.js?v=crest-v8';
-import {trajectory,bars,rateColor,chartButtons} from './plots.js?v=crest-v8';
-import {subjectLens,skillLens} from '../engine/lenses.js?v=crest-v8';
-import {valid} from '../engine/metrics.js?v=crest-v8';
-import {evidence,scoreRows} from '../io/exports.js?v=crest-v8';
+import {button,block,table,ribbon,number,integer,percent,delta,esc,empty} from './html.js?v=layout-v9';
+import {trajectory,bars,rateColor,chartButtons} from './plots.js?v=layout-v9';
+import {subjectLens,skillLens} from '../engine/lenses.js?v=layout-v9';
+import {valid} from '../engine/metrics.js?v=layout-v9';
+import {evidence,scoreRows} from '../io/exports.js?v=layout-v9';
 
 const tabs=(options,value)=>'<nav class="drawer-tabs lens-tabs" aria-label="观察视角">'+options.map(([id,label])=>button(label,'drawer-tab',{value:id},id===value?'chip selected':'chip','aria-pressed="'+(id===value)+'"')).join('')+'</nav>';
 const filters=(items,value)=>'<div class="lens-filters" role="group" aria-label="当前观察窗的名单条件">'+items.map(item=>button('<span>'+esc(item.label)+'</span><b>'+integer(item.count)+'</b>','lens-filter',{value:item.id},item.id===value?'lens-filter selected':'lens-filter','aria-pressed="'+(item.id===value)+'"')).join('')+'</div>';

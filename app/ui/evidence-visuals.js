@@ -1,7 +1,7 @@
-import {esc,number,integer,percent,button} from './html.js?v=crest-v8';
-import {valid} from '../engine/metrics.js?v=crest-v8';
-import {plotPalette as palette} from './palette.js?v=crest-v8';
-import {rateColor} from './plots.js?v=crest-v8';
+import {esc,number,integer,percent,button} from './html.js?v=layout-v9';
+import {valid} from '../engine/metrics.js?v=layout-v9';
+import {plotPalette as palette} from './palette.js?v=layout-v9';
+import {rateColor} from './plots.js?v=layout-v9';
 
 export function thresholdProfile(id,summary) {
   const prefix='profile-'+[...String(id)].map(c=>c.codePointAt(0).toString(16)).join('-');

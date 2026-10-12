@@ -1,6 +1,6 @@
-import {button,esc,number} from './html.js?v=crest-v8';
-import {rateColor} from './plots.js?v=crest-v8';
-import {valid} from '../engine/metrics.js?v=crest-v8';
+import {button,esc,number} from './html.js?v=layout-v9';
+import {rateColor} from './plots.js?v=layout-v9';
+import {valid} from '../engine/metrics.js?v=layout-v9';
 
 export function personalQuestionLink(q,context,label,style='person-link',extra='') {
   return button(label,'answer-question',{key:context.subject+'|'+context.exam,index:q.index,sid:context.sid,classes:context.classNo},style,

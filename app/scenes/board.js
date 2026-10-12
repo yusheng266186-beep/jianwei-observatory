@@ -1,9 +1,9 @@
-import {goalCards} from '../ui/evidence-visuals.js?v=crest-v8';
-import {overview} from './overview.js?v=crest-v8';
-import {head,button,chips,badge,block,examRail,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote} from '../ui/html.js?v=crest-v8';
-import {mini,bars,trajectory,spread,chartButtons} from '../ui/plots.js?v=crest-v8';
-import {difference,average} from '../engine/metrics.js?v=crest-v8';
-import {scoreRows,effectiveRows,subjectRows,evidence} from '../io/exports.js?v=crest-v8';
+import {goalCards} from '../ui/evidence-visuals.js?v=layout-v9';
+import {overview} from './overview.js?v=layout-v9';
+import {head,button,chips,badge,block,examRail,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote} from '../ui/html.js?v=layout-v9';
+import {mini,bars,trajectory,spread,chartButtons} from '../ui/plots.js?v=layout-v9';
+import {difference,average} from '../engine/metrics.js?v=layout-v9';
+import {scoreRows,effectiveRows,subjectRows,evidence} from '../io/exports.js?v=layout-v9';
 const tools=()=>button('摘录这页','capture',{},'outline')+button('导出','export',{},'accent');
 export function render(atlas,state) {
   const exam=state.exam||atlas.latest,groups=atlas.groups(exam),rows=atlas.rows(exam),s=atlas.summary(rows);

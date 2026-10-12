@@ -1,9 +1,9 @@
-import {personalQuestionCard} from './personal-questions.js?v=crest-v8';
-import {button,badge,block,ribbon,table,number,integer,percent,delta,esc,empty} from './html.js?v=crest-v8';
-import {trajectory,bars,rateColor,rateLegend,seriesColors,chartButtons} from './plots.js?v=crest-v8';
-import {directoryEntries,standingLabels} from '../engine/directory.js?v=crest-v8';
-import {difference,valid} from '../engine/metrics.js?v=crest-v8';
-import {evidence,scoreRows,answerRows} from '../io/exports.js?v=crest-v8';
+import {personalQuestionCard} from './personal-questions.js?v=layout-v9';
+import {button,badge,block,ribbon,table,number,integer,percent,delta,esc,empty} from './html.js?v=layout-v9';
+import {trajectory,bars,rateColor,rateLegend,seriesColors,chartButtons} from './plots.js?v=layout-v9';
+import {directoryEntries,standingLabels} from '../engine/directory.js?v=layout-v9';
+import {difference,valid} from '../engine/metrics.js?v=layout-v9';
+import {evidence,scoreRows,answerRows} from '../io/exports.js?v=layout-v9';
 export function peekView(atlas,sid,exam,session,state={}) {
   const e=directoryEntries(atlas,exam||'latest').find(e=>e.person.id===sid)||directoryEntries(atlas).find(e=>e.person.id===sid);
   if(!e)return empty('暂时没有这个学生的成绩');

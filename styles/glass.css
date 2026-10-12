@@ -456,3 +456,79 @@ body[data-surface=paper] .source-route,body[data-surface=paper] .goal-card{backg
 .lens-paper-grid{align-items:start;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr))}
 .personal-skills,.subject-evidence-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,350px),1fr))}
 @media(max-width:760px){.personal-skills,.subject-evidence-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr))}}
+/* Class charts occupy the full reading surface; metadata cannot stretch their card. */
+.overview-grid{display:grid;grid-template-columns:minmax(0,1fr);align-items:start;gap:18px;margin-top:24px}
+.overview-grid>.overview-main{margin:0;padding:24px}
+.achievement-groups{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:28px}
+.achievement-groups>section{min-width:0}
+.overview-side{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:18px}
+.overview-side>.block{margin:0;padding:22px}
+.overview-side .block-head{margin-bottom:16px}
+.overview-side .scope-row{padding-block:10px}.overview-side .scope-row dl{margin:9px 0}
+@media(min-width:981px){.overview-side .scope-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;align-items:center}.overview-side .scope-row dl{margin:0}}
+@media(max-width:600px){.overview-grid{gap:14px;margin-top:20px}.overview-grid>.overview-main,.overview-side>.block{padding:20px}.achievement-groups,.overview-side{grid-template-columns:minmax(0,1fr);gap:16px}.overview-main .block-head{gap:10px}}
+/* Sparse sets use compact evidence rows; adding columns never inflates two small records. */
+.paper-cover{padding:18px 21px}.paper-cover>header>span{font-size:27px}.paper-cover h3{margin:5px 0 10px}
+.cover-preview{padding:9px 0;margin-bottom:10px}.cover-preview>span{margin-bottom:6px}.cover-diagram i{min-height:36px;padding:5px 3px;gap:4px}
+.paper-cover dl{gap:4px}.paper-cover footer{margin-top:11px;padding-top:9px}
+.question-tile .question-context{display:flex;flex-direction:column;gap:5px;padding-top:10px;margin-top:10px;border-top:1px solid var(--line);font-size:10px;color:var(--muted)}
+.question-context>span{display:flex;justify-content:space-between;gap:8px}.question-context b{font-size:11px;font-weight:500}
+.question-tile footer{display:flex;justify-content:space-between;gap:8px;white-space:normal;min-width:0}.question-tile footer>span{overflow-wrap:anywhere}.question-tile footer>i{font-style:normal;flex-shrink:0;color:var(--blue-ink)}
+.question-map:not(:has(>.question-tile:nth-child(5))){grid-template-columns:minmax(0,1fr);gap:10px}
+.question-map:not(:has(>.question-tile:nth-child(5)))>.question-tile{display:grid;grid-template-columns:68px minmax(130px,.8fr) minmax(140px,1fr) minmax(0,1.3fr);grid-template-rows:auto auto;gap:3px 22px;align-items:center;padding:15px 19px;min-width:0}
+.question-map:not(:has(>.question-tile:nth-child(5))) .question-identity{grid-column:1;grid-row:1/3;display:block}.question-identity>span{display:block;margin-top:4px}
+.question-map:not(:has(>.question-tile:nth-child(5))) .question-tile>strong{grid-column:2;grid-row:1;margin:0;font-size:28px;line-height:1.25}
+.question-map:not(:has(>.question-tile:nth-child(5))) .question-tile>small{grid-column:2;grid-row:2}
+.question-map:not(:has(>.question-tile:nth-child(5))) .question-context{grid-column:3;grid-row:1/3;border:0;margin:0;padding:0;max-width:220px}
+.question-map:not(:has(>.question-tile:nth-child(5))) .question-tile>footer{grid-column:4;grid-row:1/3;border:0;border-left:1px solid var(--line);margin:0;padding:6px 0 6px 18px}
+.lens-question-grid:not(:has(>.lens-question:nth-child(5))){grid-template-columns:minmax(0,1fr);gap:10px;margin-top:18px}
+.lens-question-grid:not(:has(>.lens-question:nth-child(5)))>.lens-question{display:grid;grid-template-columns:minmax(85px,.8fr) minmax(100px,1fr) minmax(110px,1.2fr);grid-template-rows:auto auto;align-items:center;gap:3px 14px;padding:16px 18px}
+.lens-question-grid:not(:has(>.lens-question:nth-child(5))) .lens-question>header{grid-column:1;grid-row:1/3;display:block;margin:0}.lens-question-grid:not(:has(>.lens-question:nth-child(5))) .lens-question>header>span{display:block;margin-top:6px}
+.lens-question-grid:not(:has(>.lens-question:nth-child(5))) .lens-question>strong{grid-column:2;grid-row:1;font-size:27px;margin:0}.lens-question-grid:not(:has(>.lens-question:nth-child(5))) .lens-question>p{grid-column:2;grid-row:2;margin:0;font-size:10px}
+.lens-question-grid:not(:has(>.lens-question:nth-child(5))) .lens-question>footer{grid-column:3;grid-row:1/3;margin:0;font-size:10px}
+:is(.personal-questions,.drawer-person-questions):not(:has(>.personal-question-card:nth-child(5))){grid-template-columns:minmax(0,1fr)}
+:is(.personal-questions,.drawer-person-questions):not(:has(>.personal-question-card:nth-child(5)))>.personal-question-card{display:grid;grid-template-columns:minmax(0,1fr) minmax(120px,.7fr) minmax(130px,.7fr);gap:15px;align-items:center;padding:15px 18px}
+:is(.personal-questions,.drawer-person-questions):not(:has(>.personal-question-card:nth-child(5))) .personal-question-card>header>span{min-height:0}:is(.personal-questions,.drawer-person-questions):not(:has(>.personal-question-card:nth-child(5))) .personal-question-card>strong{margin:0;font-size:25px}:is(.personal-questions,.drawer-person-questions):not(:has(>.personal-question-card:nth-child(5))) .personal-question-card>footer{padding:0;border:0}
+@media(max-width:760px){
+ .question-map:not(:has(>.question-tile:nth-child(5)))>.question-tile{grid-template-columns:68px minmax(0,1fr);gap:4px 14px;padding:14px 16px}
+ .question-map:not(:has(>.question-tile:nth-child(5))) .question-context{grid-column:1/-1;grid-row:3;flex-direction:row;justify-content:space-between;gap:14px;max-width:none;margin-top:6px;padding-top:8px;border-top:1px solid var(--line)}
+ .question-map:not(:has(>.question-tile:nth-child(5))) .question-context>span{gap:5px}
+ .question-map:not(:has(>.question-tile:nth-child(5))) .question-tile>footer{grid-column:1/-1;grid-row:4;border:0;margin:5px 0 0;padding:0}
+ .lens-question-grid:not(:has(>.lens-question:nth-child(5)))>.lens-question{grid-template-columns:minmax(65px,.8fr) minmax(0,1fr);gap:4px 12px;padding:14px 16px}
+ .lens-question-grid:not(:has(>.lens-question:nth-child(5))) .lens-question>footer{grid-column:1/-1;grid-row:3;margin-top:5px;border-top:1px solid var(--line);padding-top:7px}
+ :is(.personal-questions,.drawer-person-questions):not(:has(>.personal-question-card:nth-child(5)))>.personal-question-card{grid-template-columns:minmax(0,1fr) auto;gap:9px;padding:14px 16px}
+ :is(.personal-questions,.drawer-person-questions):not(:has(>.personal-question-card:nth-child(5))) .personal-question-card>footer{grid-column:1/-1;padding-top:8px;border-top:1px solid var(--line)}
+}
+.personal-skills:not(:has(>article:nth-child(3))){grid-template-columns:minmax(0,1fr)}
+.personal-skills:not(:has(>article:nth-child(3)))>article{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:8px 24px;padding:18px}
+.personal-skills:not(:has(>article:nth-child(3)))>article>header{grid-column:1;grid-row:1}.personal-skills:not(:has(>article:nth-child(3)))>article>.skill-track{grid-column:1;grid-row:2}
+.personal-skills:not(:has(>article:nth-child(3)))>article>p{grid-column:2;grid-row:1;margin:0;font-size:11px}.personal-skills:not(:has(>article:nth-child(3)))>article>div:last-child{grid-column:2;grid-row:2}
+.lens-paper-grid:not(:has(>article:nth-child(3))){grid-template-columns:minmax(0,1fr)}
+.lens-paper-grid:not(:has(>article:nth-child(3)))>article{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:7px 20px;padding:18px}
+.lens-paper-grid:not(:has(>article:nth-child(3)))>article>header{grid-column:1;grid-row:1;margin:0}.lens-paper-grid:not(:has(>article:nth-child(3)))>article>h3{grid-column:1;grid-row:2;margin:0;font-size:14px}
+.lens-paper-grid:not(:has(>article:nth-child(3)))>article>p{grid-column:1;grid-row:3;margin:0}.lens-paper-grid:not(:has(>article:nth-child(3)))>article>div:not(.lens-skill-links){grid-column:2;grid-row:1;text-align:right}
+.lens-paper-grid:not(:has(>article:nth-child(3))) .lens-skill-links{grid-column:2;grid-row:2/4;align-self:start;margin:0;padding:0;border:0}
+@media(max-width:760px){.personal-skills:not(:has(>article:nth-child(3)))>article{display:block;padding:16px}.personal-skills:not(:has(>article:nth-child(3)))>article>.skill-track{margin:10px 0}.personal-skills:not(:has(>article:nth-child(3)))>article>p{margin-bottom:9px}.lens-paper-grid:not(:has(>article:nth-child(3)))>article{column-gap:12px}.lens-paper-grid:not(:has(>article:nth-child(3)))>article>div:not(.lens-skill-links) .button{white-space:normal;font-size:11px;padding:6px}.lens-paper-grid:not(:has(>article:nth-child(3)))>article>header{display:block}.lens-paper-grid:not(:has(>article:nth-child(3)))>article>header>small{display:block;margin-top:5px}}
+.question-tile .question-context>span{max-width:none;font-size:10px;color:var(--muted)}
+.knowledge-card{padding:17px 20px;grid-template-columns:28px minmax(0,1fr) 90px;gap:18px;align-items:center}
+.knowledge-card>div:not(.knowledge-order){display:grid;grid-template-columns:minmax(150px,.8fr) minmax(0,1fr);gap:4px 20px;align-items:center}
+.knowledge-card .overline{grid-column:1;grid-row:1}.knowledge-card h2{grid-column:1;grid-row:2;margin:0;font-size:18px}.knowledge-card p{grid-column:2;grid-row:1;margin:0;font-size:11px}.knowledge-card .question-links{grid-column:2;grid-row:2;margin:0}.knowledge-card>strong{font-size:27px}
+.class-tiles:not(:has(>.class-tile:nth-child(3))){grid-template-columns:minmax(0,1fr)}
+.class-tiles:not(:has(>.class-tile:nth-child(3)))>.class-tile{display:grid;grid-template-columns:64px minmax(100px,.6fr) minmax(90px,1fr) minmax(0,1fr);gap:15px;align-items:center;padding:15px 18px}
+.class-tiles:not(:has(>.class-tile:nth-child(3))) .tile-top{margin:0}.class-tiles:not(:has(>.class-tile:nth-child(3))) .tile-top>i{display:none}.class-tiles:not(:has(>.class-tile:nth-child(3))) .tile-value{margin:0;font-size:29px}
+.class-tiles:not(:has(>.class-tile:nth-child(3))) .mini{margin:0;width:100%;max-width:180px}.class-tiles:not(:has(>.class-tile:nth-child(3))) .class-tile>footer{margin:0;padding:0;border:0}
+.class-tile:has(>.mini:empty)>footer{grid-column:3/-1}
+@media(max-width:760px){
+ .knowledge-card{grid-template-columns:21px minmax(0,1fr) 62px;gap:12px;padding:16px}.knowledge-card>div:not(.knowledge-order){display:block}.knowledge-card h2{font-size:16px;margin:5px 0}.knowledge-card p{font-size:10px;margin:6px 0}.knowledge-card>strong{font-size:22px}
+ .class-tiles:not(:has(>.class-tile:nth-child(3)))>.class-tile{grid-template-columns:48px minmax(0,1fr);gap:7px 14px;padding:13px 15px}.class-tiles:not(:has(>.class-tile:nth-child(3))) .tile-value{font-size:26px}.class-tiles:not(:has(>.class-tile:nth-child(3))) .mini{grid-column:1;max-width:50px}.class-tiles:not(:has(>.class-tile:nth-child(3))) .class-tile>footer{grid-column:2}
+}
+.subject-evidence-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.subject-evidence-grid:not(:has(>article:nth-child(3))){grid-template-columns:minmax(0,1fr)}
+.subject-evidence-grid:not(:has(>article:nth-child(3)))>article{display:grid;grid-template-columns:minmax(130px,.7fr) minmax(160px,1fr) minmax(180px,1.2fr);gap:9px 24px;align-items:center;padding:17px 20px}
+.subject-evidence-grid:not(:has(>article:nth-child(3)))>article>header{display:block}.subject-evidence-grid:not(:has(>article:nth-child(3)))>article>header>span{display:block;margin-top:6px}
+.subject-evidence-grid:not(:has(>article:nth-child(3))) .subject-primary,.subject-evidence-grid:not(:has(>article:nth-child(3))) .subject-pass-meter{margin:0}
+.subject-evidence-grid:not(:has(>article:nth-child(3))) .card-meta{grid-column:1/-1}.subject-evidence-grid:not(:has(>article:nth-child(3))) .card-meta summary{text-align:right;padding-top:8px}
+.subject-evidence-grid:not(:has(>article:nth-child(3))) .card-meta dl{grid-template-columns:repeat(3,minmax(0,1fr) minmax(0,1fr));gap:7px 12px}
+.class-tiles:not(:has(>.class-tile:nth-child(3))) .class-tile>.mini:empty{display:none}
+@media(min-width:761px) and (max-width:1100px){.subject-evidence-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.subject-evidence-grid:not(:has(>article:nth-child(3))){grid-template-columns:minmax(0,1fr)}}
+@media(max-width:760px){.subject-evidence-grid{grid-template-columns:minmax(0,1fr)}.subject-evidence-grid:not(:has(>article:nth-child(3)))>article{display:block;padding:17px}.subject-evidence-grid:not(:has(>article:nth-child(3)))>article>header{display:flex}.subject-evidence-grid:not(:has(>article:nth-child(3)))>article>header>span{margin-top:0}.subject-evidence-grid:not(:has(>article:nth-child(3))) .subject-primary{margin:13px 0}.subject-evidence-grid:not(:has(>article:nth-child(3))) .subject-pass-meter{margin:11px 0 13px}.subject-evidence-grid:not(:has(>article:nth-child(3))) .card-meta dl{grid-template-columns:1fr 1fr}}

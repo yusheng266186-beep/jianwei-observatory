@@ -1,7 +1,7 @@
-import {head,button,chips,badge,block,ribbon,table,number,integer,percent,esc,personButton,search,footnote,empty} from '../ui/html.js?v=crest-v8';
-import {bars,rateColor,rateLegend,chartButtons} from '../ui/plots.js?v=crest-v8';
-import {average,sum,valid} from '../engine/metrics.js?v=crest-v8';
-import {answerRows,evidence} from '../io/exports.js?v=crest-v8';
+import {head,button,chips,badge,block,ribbon,table,number,integer,percent,esc,personButton,search,footnote,empty} from '../ui/html.js?v=layout-v9';
+import {bars,rateColor,rateLegend,chartButtons} from '../ui/plots.js?v=layout-v9';
+import {average,sum,valid} from '../engine/metrics.js?v=layout-v9';
+import {answerRows,evidence} from '../io/exports.js?v=layout-v9';
 export function render(atlas,state) {
   const papers=atlas.papers(),paper=papers.find(p=>p.key===state.key);
   if(!paper) {
@@ -32,7 +32,7 @@ export function render(atlas,state) {
     body=block('第 '+selected.label+' 题 · 全体作答',chips('question',lens.questions.map(q=>[q.index,q.label+'题']),selected.index)+'<div class="roster-bar">'+search('search',state.search)+chips('answerOrder',[['low','得分从低到高'],['high','得分从高到低']],state.answerOrder||'low')+'<span>'+answers.length+' 人 · 含未填写得分</span></div>'+table(['学生','班级','得分','满分','失分','得分率'],shown.map(a=>{const score=a.values[selected.index],rate=selected.max&&valid(score)?score/selected.max:null;return [personButton(atlas,a.sid),a.classNo+'班',number(score),number(selected.max),number(valid(score)&&valid(selected.max)?Math.max(0,selected.max-score):null),percent(rate)];}))+'<div class="pagination">'+button('←','page',{step:-1},'outline',page<=1?'disabled':'')+'<span>'+page+' / '+Math.max(1,Math.ceil(answers.length/40))+'</span>'+button('→','page',{step:1},'outline',page*40>=answers.length?'disabled':'')+'</div>','空缺得分保持为空。点击学生展开阶段、学科与小题档案。');
   } else {
     const questions=state.order==='loss'?[...lens.questions].sort((a,b)=>(b.loss??-1)-(a.loss??-1)):lens.questions;
-    const map='<div class="question-map">'+questions.map(q=>'<button class="question-tile '+(q.index===selected?.index?'selected':'')+'" data-cmd="question" data-index="'+q.index+'" style="--rate-color:'+rateColor(q.rate)+'" aria-pressed="'+(q.index===selected?.index)+'"><div><b>'+esc(q.label)+'</b><span>'+esc(q.maxNote||'')+'</span></div><strong>'+percent(q.rate)+'</strong><small>均分 '+number(q.mean)+' / '+number(q.max)+'</small><footer>'+esc(q.knowledge||'知识点未标注')+'</footer></button>').join('')+'</div>';
+    const map='<div class="question-map">'+questions.map(q=>'<button class="question-tile '+(q.index===selected?.index?'selected':'')+'" data-cmd="question" data-index="'+q.index+'" style="--rate-color:'+rateColor(q.rate)+'" aria-pressed="'+(q.index===selected?.index)+'"><div class="question-identity"><b>'+esc(q.label)+'题</b><span>'+esc(q.maxNote||'')+'</span></div><strong>'+percent(q.rate)+'</strong><small>均分 '+number(q.mean)+' / '+number(q.max)+'</small><div class="question-context"><span>有效作答 <b>'+integer(q.count)+'</b></span><span>平均失分 <b>'+number(q.loss)+'</b></span></div><footer><span>'+esc(q.knowledge||'知识点未标注')+'</span><i aria-hidden="true">↗</i></footer></button>').join('')+'</div>';
     body='<div class="paper-map-workspace"><div><div class="question-map-tools">'+chips('order',[['paper','按题目顺序'],['loss','按平均失分']],state.order||'paper')+'<span>点一道题，在抽屉展开班级与全体作答</span></div>'+map+'</div></div>';
 
   }
