@@ -78,7 +78,7 @@ async function inspect(name,{tables=true,charts=true,mobile=true}={}){
 }
 async function attempt(name,fn){try{await fn();}catch(e){issues.push({group:activeGroup,name,error:e.message});console.log('ISSUE '+name+' '+e.message.slice(0,250));await page.screenshot({path:output+'/issue-'+issues.length+'.png'});}flush();}
 async function group(name,fn,{empty=false}={}){
- if(process.argv[2]&&!name.includes(process.argv[2]))return;
+ if(process.argv[2]&&!new RegExp(process.argv[2]).test(name))return;
  activeGroup=name;context=await browser.newContext({viewport:{width:1440,height:1000},reducedMotion:'reduce',acceptDownloads:true});page=await context.newPage();page.setDefaultTimeout(5000);
  page.on('pageerror',e=>errors.push({group:name,error:e.message}));page.on('response',r=>{if(r.status()>=400)resources.push({group:name,status:r.status(),url:r.url()});});
  await page.addInitScript(()=>{window.print=()=>{window.__printCalled=(window.__printCalled||0)+1;};});
@@ -172,7 +172,7 @@ await group('05 每张试卷六视角与所有小题卡片',async()=>{
   await set('tab','map');await options('order');const indices=await page.locator('.question-map [data-cmd="question"]').evaluateAll(es=>es.map(e=>e.dataset.index));
   for(const index of indices){await click(`.question-map [data-index="${index}"]`);await inspect('单题:'+key+':'+index);await closeDrawer();}
   await set('tab','responses');await options('question');await options('answerOrder');
-  await click('[data-cmd="paper-back"]');
+  await click('[data-cmd="paper-back"]');await set('shelfExam','all');
  }
 });
 
@@ -394,6 +394,18 @@ await group('18 自然动效的中断和连续导航',async()=>{
  await page.evaluate(()=>{for(const scene of ['class','papers','board','library'])document.querySelector(`[data-cmd="nav"][data-scene="${scene}"]`).click();});
  await page.waitForFunction(()=>document.getElementById('stage').dataset.scene==='library');await page.waitForTimeout(500);await layout('连续点击最后场景');
  await click('[data-cmd="reading"]');await click('[data-cmd="reading-close"]');await page.waitForTimeout(300);
+});
+
+await group('19 统一入口与本轮新增试卷和单题控件',async()=>{
+ await click('.brand');assert.equal(await page.locator('.overview-hero').count(),1);
+ await nav('papers');await click('[data-cmd="paper"][data-key="数学|52"]');
+ await click('[data-cmd="paper-switch"][data-key="英语|52"]');await click('[data-cmd="paper-switch"][data-key="数学|52"]');
+ await click('[data-cmd="paper-exam"][data-exam="51"]');await click('[data-cmd="paper-exam"][data-exam="52"]');
+ await page.locator('[data-field="questionSearch"]').fill('第1题');await page.waitForTimeout(300);await click('[data-cmd="question-map-reset"]');
+ await click('.question-map [data-index="0"]');await click('[data-cmd="question-band"][data-value="zero"]');
+ await click('[data-cmd="drawer-section"][data-target="question-classes"]');await click('[data-cmd="drawer-section"][data-target="question-answers"]');
+ await page.locator('[data-drawer-field="search"]').fill('校检');await page.waitForTimeout(300);await click('[data-cmd="drawer-search-clear"]');
+ await click('[data-cmd="question-sequence-all"]');await closeDrawer();await nav('papers');assert.ok(await page.locator('.paper-cover').count()>1);assert.equal(await page.locator('[data-cmd="research-back"]').count(),0);
 });
 
 await browser.close();flush();

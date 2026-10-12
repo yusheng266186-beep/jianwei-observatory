@@ -1,4 +1,4 @@
-import {valid,difference} from './metrics.js?v=evidence-v11';
+import {valid,difference} from './metrics.js?v=controls-v12';
 const cache=new WeakMap();
 export const directoryDefaults={search:'',page:1,directoryExam:'latest',track:'all',classes:[],language:'all',standing:'all',scoreStatus:'all',trend:'all',records:'all',savedOnly:false,minScore:'',maxScore:'',sort:'total',view:'cards',pageSize:24,lens:'all',focusSubject:'all',focusStatus:'below',maxExclusive:false,columns:'summary'};
 export function directoryEntries(atlas,exam='latest') {
@@ -8,7 +8,7 @@ export function directoryEntries(atlas,exam='latest') {
     const story=atlas.story(person.id),row=atlas.materialAt(person.id,exam);if(!row)return [];
     const order=new Map(atlas.exams.map((e,i)=>[e.id,i])),previous=story.filter(r=>(order.get(r.exam)??99)<(order.get(row.exam)??99)).reverse().find(r=>valid(r.total)&&atlas.profile(r.classNo).track===atlas.profile(row.classNo).track),points=atlas.percentile(row),change=previous?difference(points,atlas.percentile(previous)):null;
     const top=atlas.gap(row,'top'),under=atlas.gap(row,'under'),standing=top!==null&&top>=0?'top':under!==null&&under>=0?'under':under!==null?'below':'unknown';
-    return [{person,row,story,previous,percentile:points,change,standing,top,under,track:atlas.profile(row.classNo).track,answers:(atlas.personAnswers.get(row.sid+'|'+row.exam)||[]).filter(a=>a.classNo===row.classNo)}];
+    return [{person,row,story,previous,rank:atlas.gradeRank(row),percentile:points,change,standing,top,under,track:atlas.profile(row.classNo).track,answers:(atlas.personAnswers.get(row.sid+'|'+row.exam)||[]).filter(a=>a.classNo===row.classNo)}];
   });index.set(exam,entries);return entries;
 }
 export function queryDirectory(atlas,state,session) {
@@ -54,13 +54,13 @@ export function queryDirectory(atlas,state,session) {
     if(accepts(entry,'records')){coverage.records.all++;if(entry.story.length>=2)coverage.records.history++;if(entry.answers.length)coverage.records.questions++;}
   }
   const metric=state.sort==='growth'?e=>e.change:state.sort==='gap'?e=>e.under:state.sort==='records'?e=>e.story.length:state.sort==='percentile'?e=>e.percentile:e=>e.row.total;
-  matches.sort((a,b)=>state.sort==='name'?a.person.name.localeCompare(b.person.name,'zh-CN'):state.sort==='low'?(a.row.total??Infinity)-(b.row.total??Infinity):((metric(b)??-Infinity)-(metric(a)??-Infinity)||a.person.name.localeCompare(b.person.name,'zh-CN')));
+  matches.sort((a,b)=>state.sort==='name'?a.person.name.localeCompare(b.person.name,'zh-CN'):state.sort==='rank'?(a.rank??Infinity)-(b.rank??Infinity):state.sort==='low'?(a.row.total??Infinity)-(b.row.total??Infinity):((metric(b)??-Infinity)-(metric(a)??-Infinity)||a.person.name.localeCompare(b.person.name,'zh-CN')));
   const size=[24,48,96].includes(Number(state.pageSize))?Number(state.pageSize):24,pages=Math.max(1,Math.ceil(matches.length/size)),page=Math.min(state.page||1,pages);
   return {all,matches,shown:matches.slice((page-1)*size,page*size),size,pages,page,coverage};
 }
 export const standingLabels={top:'特控达线',under:'本科达线',below:'本科线下',unknown:'成绩或有效线待补'};
 
-export const directoryLenses=[['all','全部学生','完整目录'],['nearUnder','本科临界','有效线两侧20分'],['nearTop','特控临界','有效线两侧20分'],['up','分位上升','相邻同科类记录提升≥3'],['down','分位下降','相邻同科类记录下降≥3'],['questions','有小题材料','本场至少一个学科'],['saved','我的收藏','保存在当前浏览器']];
+export const directoryLenses=[['all','全部学生','完整目录'],['nearUnder','本科临界','有效线两侧20分'],['nearTop','特控临界','有效线两侧20分'],['up','位置上升','已导入同科类相对位置提升≥3点'],['down','位置下降','已导入同科类相对位置下降≥3点'],['questions','有小题材料','本场至少一个学科'],['saved','我的收藏','保存在当前浏览器']];
 export function lensValues(lens) {
   const base={standing:'all',scoreStatus:'all',trend:'all',records:'all',savedOnly:false,minScore:'',maxScore:'',maxExclusive:false,focusSubject:'all',focusStatus:'below',page:1,lens};
   return {...base,...({passUnder:{standing:'underAll'},passTop:{standing:'top'},nearUnder:{standing:'nearUnder'},nearTop:{standing:'nearTop'},up:{trend:'up'},down:{trend:'down'},questions:{records:'questions'},saved:{savedOnly:true}}[lens]||{})};
@@ -71,6 +71,6 @@ export function directoryViewValues(state) {return Object.fromEntries(viewFields
 export function directoryViewName(state) {
   const scope=state.classes?.length?state.classes.map(no=>no+'班').join('、'):state.track==='physics'?'物理类':state.track==='history'?'历史类':'全体学生';
   const subject=state.focusSubject&&state.focusSubject!=='all'?state.focusSubject+' · '+({below:'学科线下',near:'线下10分',above:'学科达线',double:'双上线',totalOnly:'总分达线学科偏弱',subjectOnly:'学科达线总分偏弱',bothBelow:'双未上线',missing:'缺学科成绩',unknown:'缺有效线'}[state.focusStatus]||'学科观察'):'';
-  const clue=subject||directoryLenses.find(([id])=>id===state.lens&&id!=='all')?.[1]||({nearUnder:'本科临界',nearTop:'特控临界',top:'特控达线',under:'本科达线 · 未达特控',underAll:'本科达线 · 含特控',below:'本科线下'}[state.standing])||({missing:'总分待补',present:'已填写总分'}[state.scoreStatus])||({up:'分位上升',down:'分位下降'}[state.trend])||(state.search?'姓名检索':'学生目录');
+  const clue=subject||directoryLenses.find(([id])=>id===state.lens&&id!=='all')?.[1]||({nearUnder:'本科临界',nearTop:'特控临界',top:'特控达线',under:'本科达线 · 未达特控',underAll:'本科达线 · 含特控',below:'本科线下'}[state.standing])||({missing:'总分待补',present:'已填写总分'}[state.scoreStatus])||({up:'位置上升',down:'位置下降'}[state.trend])||(state.search?'姓名检索':'学生目录');
   return [scope,clue,state.directoryExam==='latest'||!state.directoryExam?'每人最新':state.directoryExam].join(' · ').slice(0,80);
 }

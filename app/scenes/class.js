@@ -1,8 +1,8 @@
-import {goalCards} from '../ui/evidence-visuals.js?v=evidence-v11';
-import {head,button,chips,badge,block,examRail,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote,classPicker} from '../ui/html.js?v=evidence-v11';
-import {trajectory,bars,spread,chartButtons} from '../ui/plots.js?v=evidence-v11';
-import {difference,average,valid,maxScore} from '../engine/metrics.js?v=evidence-v11';
-import {scoreRows,evidence} from '../io/exports.js?v=evidence-v11';
+import {goalCards} from '../ui/evidence-visuals.js?v=controls-v12';
+import {head,button,chips,badge,block,examRail,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote,classPicker} from '../ui/html.js?v=controls-v12';
+import {trajectory,bars,spread,chartButtons} from '../ui/plots.js?v=controls-v12';
+import {difference,average,valid,maxScore} from '../engine/metrics.js?v=controls-v12';
+import {scoreRows,evidence} from '../io/exports.js?v=controls-v12';
 const rowsSection=(title,headers,rows)=>({title,headers,rows});
 export function render(atlas,state) {
   const no=state.no||atlas.classes[0],available=atlas.classExams(no),exam=available.some(e=>e.id===state.exam)?state.exam:available.at(-1)?.id||atlas.latest;
@@ -19,7 +19,7 @@ export function render(atlas,state) {
     const summaryRows=timeline.map(t=>[t.exam.label,t.summary.count,t.summary.mean,t.summary.median,t.summary.sd,t.summary.top,t.summary.topRate,t.summary.under,t.summary.underRate]);
     content+=block('每个考次的参照面',table(['考试','人数','均分','中位数','标准差','特控人数','特控率','本科人数','本科率'],summaryRows.map(row=>row.map((v,i)=>i===6||i===8?percent(v):i>=2&&i<=4?number(v):esc(v)))));
     const people=[...new Set(timeline.flatMap(t=>t.rows.map(r=>r.sid)))].filter(sid=>atlas.name(sid).includes(state.search||''));
-    const matrix=state.matrix||'total',matrixNames=[['total','赋分总分'],['percentile','同类分位'],['rank','原考试排名'],['top','特控分差'],['under','本科分差'],...subjectNames];
+    const matrix=state.matrix||'total',matrixNames=[['total','赋分总分'],['percentile','同科类相对位置'],['rank','原考试排名'],['top','特控分差'],['under','本科分差'],...subjectNames];
     const matrixRows=people.map(sid=>{const records=timeline.map(t=>t.rows.find(r=>r.sid===sid)),values=records.map(r=>atlas.value(r,matrix)).filter(valid);return {sid,records,change:values.length>1?difference(values.at(-1),values[0]):null};});
     if(state.growth)matrixRows.sort((a,b)=>(b.change??-Infinity)-(a.change??-Infinity));
     const matrixPage=Math.min(state.page||1,Math.max(1,Math.ceil(matrixRows.length/40))),displayed=matrixRows.slice((matrixPage-1)*40,matrixPage*40);

@@ -1,4 +1,4 @@
-import {button,esc} from './html.js?v=evidence-v11';
+import {button,esc} from './html.js?v=controls-v12';
 
 export function composeScene(html,{back=''}={}) {
   const template=document.createElement('template');template.innerHTML=html;

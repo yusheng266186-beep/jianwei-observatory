@@ -1,4 +1,4 @@
-import {motion} from './motion.js?v=evidence-v11';
+import {motion} from './motion.js?v=controls-v12';
 let motionPreference=()=>false,resizeObserver,plotObserver,railObserver,drawerHeaderObserver,revealObserver,tooltipTarget=null,tooltipOriginal=null,tooltipFrame=0,outlineFrame=0,drawerOutlineFrame=0,pointerFrame=0,outline=null,outlineEntries=[];
 const observedTables=new Set(),observedPlots=new Set(),observedReveals=new Set(),revealed=new WeakSet(),disclosures=new WeakMap();
 const selectionRails=new Set(),railStates=new WeakMap();
@@ -49,6 +49,16 @@ function refreshPlot(svg) {
         const full=text.dataset.fullLabel||text.textContent; text.dataset.fullLabel=full;
         const limit=Math.max(3,Math.floor(160/size));text.textContent=full.length>limit?full.slice(0,limit-1)+'…':full;
       }
+    }
+  }
+  if(svg.classList.contains('spread')){
+    const placed=[],overlaps=(a,b)=>a.x<b.x+b.width+2&&a.x+a.width+2>b.x&&a.y<b.y+b.height+2&&a.y+a.height+2>b.y;
+    for(const text of svg.querySelectorAll('.plot-item .plot-value')){
+      text.dataset.baseY??=text.getAttribute('y');text.setAttribute('y',text.dataset.baseY);
+      let box=text.getBBox();
+      const column=text.parentElement.querySelector('.plot-column');
+      for(let lane=1;lane<=3&&placed.some(previous=>overlaps(box,previous));lane++){const inside=Number(column.getAttribute('y'))+size*1.5*lane;const y=inside<=svg.viewBox.baseVal.height-58?inside:Math.max(size+6,Number(text.dataset.baseY)-size*1.5*lane);text.setAttribute('y',y);box=text.getBBox();}
+      placed.push({x:box.x,y:box.y,width:box.width,height:box.height});
     }
   }
 }

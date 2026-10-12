@@ -1,4 +1,4 @@
-import {valid} from './metrics.js?v=evidence-v11';
+import {valid} from './metrics.js?v=controls-v12';
 
 const normalize=value=>String(value??'').normalize('NFKC').trim().toLocaleLowerCase('zh-CN');
 export function queryQuestionMap(lens,state={},rules={}) {

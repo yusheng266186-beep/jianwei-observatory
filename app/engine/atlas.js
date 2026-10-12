@@ -1,5 +1,5 @@
-import {classDefaults,SUBJECTS,normalizeDataset} from '../data/compat.js?v=evidence-v11';
-import {valid,average,sum,distribution,groupKey,GROUPS} from './metrics.js?v=evidence-v11';
+import {classDefaults,SUBJECTS,normalizeDataset} from '../data/compat.js?v=controls-v12';
+import {valid,average,sum,distribution,groupKey,GROUPS} from './metrics.js?v=controls-v12';
 const append=(map,key,value)=>{if(!map.has(key))map.set(key,[]);map.get(key).push(value);};
 export class Atlas {
   constructor(dataset) {
@@ -70,6 +70,7 @@ export class Atlas {
   }
   materialAt(sid,exam='latest'){const records=this.materialStory(sid);return exam==='latest'||!exam?records.at(-1):records.find(r=>r.exam===exam);}
   subjectRank(row,subject){const score=this.subject(row,subject);return this.exam(row.exam).scope==='city'?score?.rank??null:score?.schoolRank??score?.rank??null;}
+  gradeRank(row){const rank=valid(row?.schoolRank)?row.schoolRank:this.exam(row?.exam).scope==='school'?row?.rank:null;return valid(rank)&&rank>=1?rank:null;}
   percentile(row) {
     if(!valid(row?.total))return null;
     const key=row.exam+'|'+groupKey(this.profile(row.classNo));
@@ -83,6 +84,7 @@ export class Atlas {
   value(row,metric) {
     if(!row)return null;
     if(metric==='total')return row.total;
+    if(metric==='gradeRank')return this.gradeRank(row);
     if(metric==='percentile')return this.percentile(row);
     if(metric==='rank')return this.exam(row.exam).scope==='city'?row.cityRank:row.schoolRank;
     if(metric==='top'||metric==='under')return this.gap(row,metric);
