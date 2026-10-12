@@ -1,9 +1,9 @@
-import {goalCards} from '../ui/evidence-visuals.js?v=paper-v18';
-import {overview} from './overview.js?v=paper-v18';
-import {head,button,chips,examChips,badge,block,examRail,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote} from '../ui/html.js?v=paper-v18';
-import {mini,bars,trajectory,spread,chartButtons} from '../ui/plots.js?v=paper-v18';
-import {difference,average} from '../engine/metrics.js?v=paper-v18';
-import {scoreRows,effectiveRows,subjectRows,evidence} from '../io/exports.js?v=paper-v18';
+import {goalCards} from '../ui/evidence-visuals.js?v=workbench-v19';
+import {overview} from './overview.js?v=workbench-v19';
+import {head,button,chips,examChips,badge,block,examRail,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote} from '../ui/html.js?v=workbench-v19';
+import {mini,bars,trajectory,spread,chartButtons} from '../ui/plots.js?v=workbench-v19';
+import {difference,average} from '../engine/metrics.js?v=workbench-v19';
+import {scoreRows,effectiveRows,subjectRows,evidence} from '../io/exports.js?v=workbench-v19';
 const tools=()=>button('摘录这页','capture',{},'outline')+button('导出','export',{},'accent');
 export function render(atlas,state) {
   const exam=state.exam||atlas.latest,groups=atlas.groups(exam),rows=atlas.rows(exam),s=atlas.summary(rows);

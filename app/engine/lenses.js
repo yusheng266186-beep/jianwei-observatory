@@ -1,5 +1,5 @@
-import {valid,sum,difference} from './metrics.js?v=paper-v18';
-import {answerStructure} from './answer-structure.js?v=paper-v18';
+import {valid,sum,difference} from './metrics.js?v=workbench-v19';
+import {answerStructure} from './answer-structure.js?v=workbench-v19';
 
 export function subjectLens(atlas,state) {
   const no=Number(state.no),subject=['英语','日语'].includes(state.subject)?'外语':state.subject,tier=state.tier==='top'?'top':'under',snapshot=atlas.snapshot(no,state.exam),own=atlas.summary(snapshot.rows,subject),peers=atlas.summary(snapshot.peers,subject);

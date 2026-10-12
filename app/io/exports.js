@@ -1,6 +1,6 @@
-import {esc,number,percent,signed} from '../ui/html.js?v=paper-v18';
-import {SITE_NAME,CREST_URL} from '../brand.js?v=paper-v18';
-import {chartFontRules} from '../ui/font-export.js?v=paper-v18';
+import {esc,number,percent,signed} from '../ui/html.js?v=workbench-v19';
+import {SITE_NAME,CREST_URL} from '../brand.js?v=workbench-v19';
+import {chartFontRules} from '../ui/font-export.js?v=workbench-v19';
 export function download(content,name,type='application/octet-stream') {
   const blob=content instanceof Blob?content:new Blob([content],{type}),url=URL.createObjectURL(blob),anchor=document.createElement('a');
   anchor.href=url;anchor.download=name;anchor.click();setTimeout(()=>URL.revokeObjectURL(url),5000);

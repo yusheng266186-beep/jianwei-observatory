@@ -1,28 +1,28 @@
-import {questionView,questionEvidence} from './ui/question.js?v=paper-v18';
-import {queryQuestionMap,questionSequence} from './engine/question-map.js?v=paper-v18';
-import {SITE_NAME} from './brand.js?v=paper-v18';
-import {subjectView,knowledgeView,lensEvidence} from './ui/lenses.js?v=paper-v18';
-import {subjectLens,skillLens,questionLens} from './engine/lenses.js?v=paper-v18';
-import {directoryFilterView} from './scenes/directory.js?v=paper-v18';
-import {renderInto} from './ui/render.js?v=paper-v18';
-import {installInteractions,enhance,prepareUpdate,pruneInteractions,shiftTable} from './ui/interactions.js?v=paper-v18';
-import {readingDefaults,readingView,applyReading} from './ui/reading.js?v=paper-v18';
-import {reportView} from './ui/report.js?v=paper-v18';
-import {welcomeView} from './ui/welcome.js?v=paper-v18';
-import {composeScene} from './ui/composition.js?v=paper-v18';
-import {researchView,studyDescription,studyAvailable,studyKey} from './ui/research.js?v=paper-v18';
-import {Atlas} from './engine/atlas.js?v=paper-v18';
-import {normalizeDataset,SUBJECTS} from './data/compat.js?v=paper-v18';
-import {hydrate,save,saveWorkspace,restoreDataset,hasMaterials,preference,remember,previous,emptyDataset,loadNotebook,saveNotebook} from './data/workspace.js?v=paper-v18';
-import {mergeDatasets} from './data/parser.js?v=paper-v18';
-import {Inbox} from './data/inbox.js?v=paper-v18';
-import {NoteJournal} from './data/notes.js?v=paper-v18';
-import {motion,settle,visualFrame,cancelOwnMotion,finishAnimation,enterCanvas,arrangeRows,prepareCanvasSlide,finishCanvasSlide} from './ui/motion.js?v=paper-v18';
-import {esc,button,empty,table} from './ui/html.js?v=paper-v18';
-import {excel,word,print,download,chart,scoreRows,effectiveRows,subjectRows,answerRows,evidence} from './io/exports.js?v=paper-v18';
-import {directoryDefaults,lensValues,queryDirectory,directoryViewValues,directoryViewName} from './engine/directory.js?v=paper-v18';
-import {peekView,compareView,drawerEvidence} from './ui/explorer.js?v=paper-v18';
-import {dockIcon} from './ui/icons.js?v=paper-v18';
+import {questionView,questionEvidence} from './ui/question.js?v=workbench-v19';
+import {queryQuestionMap,questionSequence} from './engine/question-map.js?v=workbench-v19';
+import {SITE_NAME} from './brand.js?v=workbench-v19';
+import {subjectView,knowledgeView,lensEvidence} from './ui/lenses.js?v=workbench-v19';
+import {subjectLens,skillLens,questionLens} from './engine/lenses.js?v=workbench-v19';
+import {directoryFilterView} from './scenes/directory.js?v=workbench-v19';
+import {renderInto} from './ui/render.js?v=workbench-v19';
+import {installInteractions,enhance,prepareUpdate,pruneInteractions,shiftTable} from './ui/interactions.js?v=workbench-v19';
+import {readingDefaults,readingView,applyReading} from './ui/reading.js?v=workbench-v19';
+import {reportView} from './ui/report.js?v=workbench-v19';
+import {welcomeView} from './ui/welcome.js?v=workbench-v19';
+import {composeScene} from './ui/composition.js?v=workbench-v19';
+import {researchView,studyDescription,studyAvailable,studyKey} from './ui/research.js?v=workbench-v19';
+import {Atlas} from './engine/atlas.js?v=workbench-v19';
+import {normalizeDataset,SUBJECTS} from './data/compat.js?v=workbench-v19';
+import {hydrate,save,saveWorkspace,restoreDataset,hasMaterials,preference,remember,previous,emptyDataset,loadNotebook,saveNotebook} from './data/workspace.js?v=workbench-v19';
+import {mergeDatasets} from './data/parser.js?v=workbench-v19';
+import {Inbox} from './data/inbox.js?v=workbench-v19';
+import {NoteJournal} from './data/notes.js?v=workbench-v19';
+import {motion,settle,visualFrame,cancelOwnMotion,finishAnimation,enterCanvas,arrangeRows,prepareCanvasSlide,finishCanvasSlide} from './ui/motion.js?v=workbench-v19';
+import {esc,button,empty,table} from './ui/html.js?v=workbench-v19';
+import {excel,word,print,download,chart,scoreRows,effectiveRows,subjectRows,answerRows,evidence} from './io/exports.js?v=workbench-v19';
+import {directoryDefaults,lensValues,queryDirectory,directoryViewValues,directoryViewName} from './engine/directory.js?v=workbench-v19';
+import {peekView,compareView,drawerEvidence} from './ui/explorer.js?v=workbench-v19';
+import {dockIcon} from './ui/icons.js?v=workbench-v19';
 
 const routes=[['board','年级总览','▦'],['class','班级研究','▥'],['papers','试卷研究','▧'],['people','学生研究','◎'],['follow','教学跟进','↗'],['library','资料与报告','⊞']];
 const defaults={board:{mode:'overview',metric:'underRate',historyMetric:'mean',search:'',page:1},class:{tab:'snapshot',value:'score',trendMetric:'mean',matrix:'total',search:'',page:1,matched:false},papers:{key:'',tab:'map',classes:[],question:0,order:'paper',questionSearch:'',questionFocus:'all',search:'',page:1},people:{sid:'',storyMetric:'total',...directoryDefaults,filtersOpen:innerWidth>760},follow:{tier:'under',band:20,side:'below',classes:[],search:'',page:1},library:{tab:'materials'}};
@@ -204,7 +204,7 @@ async function paint(transition=false,focus=null) {
     const available=hasMaterials(atlas.data);let view;
     if(!available)view=welcomeView();
     else {
-      if(!loaded.has(scene))loaded.set(scene,import('./scenes/'+scene+'.js?v=paper-v18'));
+      if(!loaded.has(scene))loaded.set(scene,import('./scenes/'+scene+'.js?v=workbench-v19'));
       const module=await loaded.get(scene);if(serial!==paintId)return;
       view=scene==='class'&&!atlas.classes.length?{html:empty('先带入一个班的材料','从导入原表开始建立班级画布。')+button('导入材料','import',{},'accent'),report:null}:module.render(atlas,books[scene],session);
     }
@@ -455,6 +455,7 @@ async function commands(event) {
       const content=document.getElementById('table-reader-content'),label=frame.querySelector('table').getAttribute('aria-label');
       content.innerHTML='<header class="reader-head"><div><span class="overline">展开阅读</span><h2 id="table-reader-title">'+esc(label)+'</h2><p>保留当前表格的全部行与列，点击姓名可打开学生观察。</p></div>'+button('收起 ×','table-close',{},'outline')+'</header><div class="reader-canvas"></div>';content.querySelector('.reader-canvas').append(copy);showDialog(document.getElementById('table-reader'));enhance(content);return;
     }
+    if(d.cmd==='paper-profile-shift'){const rail=b.closest('.paper-profile')?.querySelector('.paper-profile-scroll');if(rail)rail.scrollBy({left:(Number(d.direction)<0?-1:1)*Math.max(200,rail.clientWidth*.7),behavior:reducedMotion()?'instant':'smooth'});return;}
     if(d.cmd==='table-close'){await dismissDialog('table-reader');return;}
     if(d.cmd==='table-shift'){shiftTable(b);return;}
     if(d.cmd==='reading'){const dialog=document.getElementById('reading-dialog');renderInto(document.getElementById('reading-content'),readingView(reading));showDialog(dialog);return;}
@@ -548,9 +549,10 @@ async function commands(event) {
     else if(d.cmd==='paper')go('papers',{key:d.key,classes:[],question:0,tab:'map',page:1,questionSearch:'',questionFocus:'all',order:'paper',search:''});
     else if(d.cmd==='lens-paper')go('papers',{key:d.key,classes:[Number(d.no)],question:0,tab:'map',page:1,questionSearch:'',questionFocus:'all',order:'paper',search:''});
     else if(d.cmd==='paper-back')go('papers',{key:'',shelfExam:state.key.split('|')[1]||atlas.latest,shelfSubject:'all'},true,{root:true});
+    else if(d.cmd==='paper-focus'&&current==='papers'&&['all','low','missing','max'].includes(d.value)){archiveStudy();const key=state.key;Object.assign(state,{tab:'map',questionSearch:'',questionFocus:d.value,page:1});persistBooks();await paint();if(current==='papers'&&books.papers.key===key&&state.questionFocus===d.value&&!state.questionSearch){const target=document.getElementById('paper-question-evidence');target?.scrollIntoView({behavior:reducedMotion()?'instant':'smooth',block:'start'});stage().querySelector('.question-focus[data-value="'+d.value+'"]')?.focus({preventScroll:true});}}
     else if(d.cmd==='question-map-reset'){Object.assign(state,{questionSearch:'',questionFocus:'all',page:1});persistBooks();await paint();}
     else if(d.cmd==='subject-open')go('board',{mode:'subjects',subject:d.subject,exam:d.exam});
-    else if(d.cmd==='question'){const key=d.key||books.papers.key,classes=d.no?[Number(d.no)]:d.classes!==undefined?d.classes.split(',').filter(Boolean).map(Number):[...(books.papers.classes||[])];let sequence={};if(current==='papers'&&books.papers.key===key){if(b.closest('.question-map')){const model=queryQuestionMap(atlas.paper(key,classes),books.papers,atlas.data.rules);sequence={queue:model.matches.map(q=>q.index),queueScope:model.label+(model.query?' · 检索 '+model.query:'')+' · '+model.orderLabel};}books.papers.question=Number(d.index);persistBooks();await paint();}openDrawer({type:'question',key,classes,question:Number(d.index),page:1,search:'',...sequence});}
+    else if(d.cmd==='question'){const navigation=navigationEpoch,key=d.key||books.papers.key,classes=d.no?[Number(d.no)]:d.classes!==undefined?d.classes.split(',').filter(Boolean).map(Number):[...(books.papers.classes||[])];let sequence={};if(current==='papers'&&books.papers.key===key){if(b.closest('.question-map')){const model=queryQuestionMap(atlas.paper(key,classes),books.papers,atlas.data.rules);sequence={queue:model.matches.map(q=>q.index),queueScope:model.label+(model.query?' · 检索 '+model.query:'')+' · '+model.orderLabel};}books.papers.question=Number(d.index);persistBooks();await paint();if(navigation!==navigationEpoch||current!=='papers'||books.papers.key!==key||books.papers.question!==Number(d.index))return;}if(navigation!==navigationEpoch)return;openDrawer({type:'question',key,classes,question:Number(d.index),page:1,search:'',...sequence});}
     else if(d.cmd==='page'){state.page=Math.max(1,(state.page||1)+Number(d.step));persistBooks();await paint();revealResults(stage());}
     else if(d.cmd==='capture')await capture();
     else if(d.cmd==='export')openReport(activeReport);

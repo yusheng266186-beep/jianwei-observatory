@@ -1,10 +1,10 @@
-import {button,badge,block,ribbon,table,number,integer,percent,esc,empty} from './html.js?v=paper-v18';
-import {bars,chartButtons} from './plots.js?v=paper-v18';
-import {average,valid} from '../engine/metrics.js?v=paper-v18';
-import {evidence} from '../io/exports.js?v=paper-v18';
-import {questionLens} from '../engine/lenses.js?v=paper-v18';
-import {questionSequence} from '../engine/question-map.js?v=paper-v18';
-import {plotPalette} from './palette.js?v=paper-v18';
+import {button,badge,block,ribbon,table,number,integer,percent,esc,empty} from './html.js?v=workbench-v19';
+import {bars,chartButtons} from './plots.js?v=workbench-v19';
+import {average,valid} from '../engine/metrics.js?v=workbench-v19';
+import {evidence} from '../io/exports.js?v=workbench-v19';
+import {questionLens} from '../engine/lenses.js?v=workbench-v19';
+import {questionSequence} from '../engine/question-map.js?v=workbench-v19';
+import {plotPalette} from './palette.js?v=workbench-v19';
 
 function structureView(model) {
   const {structure:s,selectedId}=model;

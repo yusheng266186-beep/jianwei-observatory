@@ -1,4 +1,4 @@
-import {valid} from './metrics.js?v=paper-v18';
+import {valid} from './metrics.js?v=workbench-v19';
 
 const normalize=value=>String(value??'').normalize('NFKC').trim().toLocaleLowerCase('zh-CN');
 export function queryQuestionMap(lens,state={},rules={}) {
