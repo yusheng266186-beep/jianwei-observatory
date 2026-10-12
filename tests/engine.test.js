@@ -2,11 +2,38 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {Atlas} from '../app/engine/atlas.js';
 import {mergeDatasets} from '../app/data/parser.js';
-import {directoryEntries,queryDirectory,directoryDefaults,lensValues} from '../app/engine/directory.js';
+import {directoryEntries,queryDirectory,directoryDefaults,lensValues,directoryViewValues} from '../app/engine/directory.js';
 import {questionLens,skillLens} from '../app/engine/lenses.js';
 import {studyAvailable} from '../app/ui/research.js';
 import fixtures from './fixtures.cjs';
 const {makeFixture}=fixtures;
+
+test('总分填写筛选区分真实0与缺失，不依赖是否已经填写有效线',()=>{
+  const fixture=makeFixture();fixture.lines=[];
+  fixture.scores.find(r=>r.sid==='test-4-0'&&r.exam==='52').total=0;
+  const atlas=new Atlas(fixture),state={...directoryDefaults,directoryExam:'52',classes:[4]};
+  const present=queryDirectory(atlas,{...state,scoreStatus:'present'},{});
+  assert.equal(present.matches.length,34);
+  assert.ok(present.matches.some(e=>e.person.id==='test-4-0'&&e.row.total===0));
+  assert.deepEqual(queryDirectory(atlas,{...state,scoreStatus:'missing'},{}).matches.map(e=>e.person.id),['test-4-1']);
+  const questionsOnly=makeFixture();questionsOnly.scores=[];
+  const onlyAtlas=new Atlas(questionsOnly);
+  assert.equal(queryDirectory(onlyAtlas,{...state,scoreStatus:'present'},{}).matches.length,0);
+  assert.equal(queryDirectory(onlyAtlas,{...state,scoreStatus:'missing'},{}).matches.length,35);
+});
+
+test('材料快捷入口人数预测只替换自身条件，保存和切换线索保留完整筛选语义',()=>{
+  const fixture=makeFixture();fixture.answers=fixture.answers.filter(r=>r.sid!=='test-4-1');
+  const atlas=new Atlas(fixture),state={...directoryDefaults,directoryExam:'52',classes:[4],savedOnly:true,scoreStatus:'missing',records:'questions'},session={savedPeople:['test-4-0','test-4-1','test-4-2','test-10-0']};
+  const result=queryDirectory(atlas,state,session);
+  assert.equal(result.matches.length,0);
+  assert.deepEqual(result.coverage.scores,{all:2,present:2,missing:0});
+  assert.deepEqual(result.coverage.records,{all:1,history:1,questions:0});
+  assert.deepEqual(queryDirectory(atlas,{...state,records:'history'},session).matches.map(e=>e.person.id),['test-4-1']);
+  assert.deepEqual(queryDirectory(atlas,{...state,scoreStatus:'present'},session).matches.map(e=>e.person.id).sort(),['test-4-0','test-4-2']);
+  assert.equal(directoryViewValues(state).scoreStatus,'missing');
+  assert.equal(lensValues('all').scoreStatus,'all');
+});
 
 test('本科达线下钻包含特控学生，与同班同考次概况人数一致',()=>{
   const atlas=new Atlas(makeFixture()),rows=atlas.classAt(4,'52');

@@ -1,5 +1,5 @@
-import {esc,number,percent,attrs} from './html.js?v=school-v6';
-import {valid} from '../engine/metrics.js?v=school-v6';
+import {esc,number,percent,attrs} from './html.js?v=study-v7';
+import {valid} from '../engine/metrics.js?v=study-v7';
 export const seriesColors=['#b38d50','#72888d','#91a591','#ad7765'];
 const colors=seriesColors;
 const action=item=>item?.cmd?' data-plot-action="true" data-cmd="'+esc(item.cmd)+'"'+attrs(item.data||{})+' role="button" tabindex="0"':'';

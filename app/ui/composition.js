@@ -1,4 +1,4 @@
-import {button,esc} from './html.js?v=school-v6';
+import {button,esc} from './html.js?v=study-v7';
 
 export function composeScene(html,{back=''}={}) {
   const template=document.createElement('template');template.innerHTML=html;

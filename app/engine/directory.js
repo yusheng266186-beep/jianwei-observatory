@@ -1,6 +1,6 @@
-import {valid,difference} from './metrics.js?v=school-v6';
+import {valid,difference} from './metrics.js?v=study-v7';
 const cache=new WeakMap();
-export const directoryDefaults={search:'',page:1,directoryExam:'latest',track:'all',classes:[],language:'all',standing:'all',trend:'all',records:'all',savedOnly:false,minScore:'',maxScore:'',sort:'total',view:'cards',pageSize:24,lens:'all',focusSubject:'all',focusStatus:'below',maxExclusive:false,columns:'summary'};
+export const directoryDefaults={search:'',page:1,directoryExam:'latest',track:'all',classes:[],language:'all',standing:'all',scoreStatus:'all',trend:'all',records:'all',savedOnly:false,minScore:'',maxScore:'',sort:'total',view:'cards',pageSize:24,lens:'all',focusSubject:'all',focusStatus:'below',maxExclusive:false,columns:'summary'};
 export function directoryEntries(atlas,exam='latest') {
   if(!cache.has(atlas))cache.set(atlas,new Map());
   const index=cache.get(atlas);if(index.has(exam))return index.get(exam);
@@ -13,7 +13,7 @@ export function directoryEntries(atlas,exam='latest') {
 }
 export function queryDirectory(atlas,state,session) {
   const all=directoryEntries(atlas,state.directoryExam||'latest'),queries=(state.search||'').split(/[,，;；\n]+/).map(q=>q.trim()).filter(Boolean),classes=state.classes||[],saved=new Set(session.savedPeople||[]);
-  const matches=all.filter(e=>{
+  const accepts=(e,ignore='')=>{
     if(queries.length&&!queries.some(q=>e.person.name.includes(q)||(/^\d+班?$/.test(q)&&Number(q.replace('班',''))===e.row.classNo)))return false;
     if(state.track!=='all'&&state.track&&e.track!==state.track)return false;
     if(classes.length&&!classes.includes(Number(e.row.classNo)))return false;
@@ -25,8 +25,10 @@ export function queryDirectory(atlas,state,session) {
     if(state.trend==='down'&&!(e.change!==null&&e.change<=-3))return false;
     if(state.trend==='steady'&&!(e.change!==null&&Math.abs(e.change)<3))return false;
     if(state.trend==='unknown'&&e.change!==null)return false;
-    if(state.records==='history'&&e.story.length<2)return false;
-    if(state.records==='questions'&&!e.answers.length)return false;
+    if(ignore!=='scoreStatus'&&state.scoreStatus==='present'&&!valid(e.row.total))return false;
+    if(ignore!=='scoreStatus'&&state.scoreStatus==='missing'&&valid(e.row.total))return false;
+    if(ignore!=='records'&&state.records==='history'&&e.story.length<2)return false;
+    if(ignore!=='records'&&state.records==='questions'&&!e.answers.length)return false;
     if(state.focusSubject&&state.focusSubject!=='all') {
       const score=atlas.subject(e.row,state.focusSubject)?.score,gap=atlas.gap(e.row,'under',state.focusSubject),total=e.under,status=state.focusStatus||'below';
       if(status==='missing'&&valid(score))return false;
@@ -43,25 +45,32 @@ export function queryDirectory(atlas,state,session) {
     if(String(state.minScore??'').trim()!==''&&(!valid(e.row.total)||e.row.total<Number(state.minScore)))return false;
     if(String(state.maxScore??'').trim()!==''&&(!valid(e.row.total)||(state.maxExclusive?e.row.total>=Number(state.maxScore):e.row.total>Number(state.maxScore))))return false;
     return true;
-  });
+  };
+  const matches=[],coverage={scores:{all:0,present:0,missing:0},records:{all:0,history:0,questions:0}};
+  for(const entry of all) {
+    if(accepts(entry))matches.push(entry);
+    // Each choice predicts the result of replacing just its own condition.
+    if(accepts(entry,'scoreStatus')){coverage.scores.all++;coverage.scores[valid(entry.row.total)?'present':'missing']++;}
+    if(accepts(entry,'records')){coverage.records.all++;if(entry.story.length>=2)coverage.records.history++;if(entry.answers.length)coverage.records.questions++;}
+  }
   const metric=state.sort==='growth'?e=>e.change:state.sort==='gap'?e=>e.under:state.sort==='records'?e=>e.story.length:state.sort==='percentile'?e=>e.percentile:e=>e.row.total;
   matches.sort((a,b)=>state.sort==='name'?a.person.name.localeCompare(b.person.name,'zh-CN'):state.sort==='low'?(a.row.total??Infinity)-(b.row.total??Infinity):((metric(b)??-Infinity)-(metric(a)??-Infinity)||a.person.name.localeCompare(b.person.name,'zh-CN')));
   const size=[24,48,96].includes(Number(state.pageSize))?Number(state.pageSize):24,pages=Math.max(1,Math.ceil(matches.length/size)),page=Math.min(state.page||1,pages);
-  return {all,matches,shown:matches.slice((page-1)*size,page*size),size,pages,page};
+  return {all,matches,shown:matches.slice((page-1)*size,page*size),size,pages,page,coverage};
 }
 export const standingLabels={top:'特控达线',under:'本科达线',below:'本科线下',unknown:'成绩或有效线待补'};
 
 export const directoryLenses=[['all','全部学生','完整目录'],['nearUnder','本科临界','有效线两侧20分'],['nearTop','特控临界','有效线两侧20分'],['up','分位上升','相邻同科类记录提升≥3'],['down','分位下降','相邻同科类记录下降≥3'],['questions','有小题材料','本场至少一个学科'],['saved','我的收藏','保存在当前浏览器']];
 export function lensValues(lens) {
-  const base={standing:'all',trend:'all',records:'all',savedOnly:false,minScore:'',maxScore:'',maxExclusive:false,focusSubject:'all',focusStatus:'below',page:1,lens};
+  const base={standing:'all',scoreStatus:'all',trend:'all',records:'all',savedOnly:false,minScore:'',maxScore:'',maxExclusive:false,focusSubject:'all',focusStatus:'below',page:1,lens};
   return {...base,...({passUnder:{standing:'underAll'},passTop:{standing:'top'},nearUnder:{standing:'nearUnder'},nearTop:{standing:'nearTop'},up:{trend:'up'},down:{trend:'down'},questions:{records:'questions'},saved:{savedOnly:true}}[lens]||{})};
 }
 
-const viewFields=['directoryExam','track','classes','standing','trend','records','savedOnly','minScore','maxScore','maxExclusive','focusSubject','focusStatus','search','sort','view','columns'];
+const viewFields=['directoryExam','track','classes','standing','scoreStatus','trend','records','savedOnly','minScore','maxScore','maxExclusive','focusSubject','focusStatus','search','sort','view','columns'];
 export function directoryViewValues(state) {return Object.fromEntries(viewFields.map(key=>[key,structuredClone(state[key]??directoryDefaults[key])]));}
 export function directoryViewName(state) {
   const scope=state.classes?.length?state.classes.map(no=>no+'班').join('、'):state.track==='physics'?'物理类':state.track==='history'?'历史类':'全体学生';
   const subject=state.focusSubject&&state.focusSubject!=='all'?state.focusSubject+' · '+({below:'学科线下',near:'线下10分',above:'学科达线',double:'双上线',totalOnly:'总分达线学科偏弱',subjectOnly:'学科达线总分偏弱',bothBelow:'双未上线',missing:'缺学科成绩',unknown:'缺有效线'}[state.focusStatus]||'学科观察'):'';
-  const clue=subject||directoryLenses.find(([id])=>id===state.lens&&id!=='all')?.[1]||({nearUnder:'本科临界',nearTop:'特控临界',top:'特控达线',under:'本科达线 · 未达特控',underAll:'本科达线 · 含特控',below:'本科线下'}[state.standing])||({up:'分位上升',down:'分位下降'}[state.trend])||(state.search?'姓名检索':'学生目录');
+  const clue=subject||directoryLenses.find(([id])=>id===state.lens&&id!=='all')?.[1]||({nearUnder:'本科临界',nearTop:'特控临界',top:'特控达线',under:'本科达线 · 未达特控',underAll:'本科达线 · 含特控',below:'本科线下'}[state.standing])||({missing:'总分待补',present:'已填写总分'}[state.scoreStatus])||({up:'分位上升',down:'分位下降'}[state.trend])||(state.search?'姓名检索':'学生目录');
   return [scope,clue,state.directoryExam==='latest'||!state.directoryExam?'每人最新':state.directoryExam].join(' · ').slice(0,80);
 }

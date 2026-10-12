@@ -1,9 +1,9 @@
-import {goalCards} from '../ui/evidence-visuals.js?v=school-v6';
-import {overview} from './overview.js?v=school-v6';
-import {head,button,chips,badge,block,examRail,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote} from '../ui/html.js?v=school-v6';
-import {mini,bars,trajectory,spread,chartButtons} from '../ui/plots.js?v=school-v6';
-import {difference,average} from '../engine/metrics.js?v=school-v6';
-import {scoreRows,effectiveRows,subjectRows,evidence} from '../io/exports.js?v=school-v6';
+import {goalCards} from '../ui/evidence-visuals.js?v=study-v7';
+import {overview} from './overview.js?v=study-v7';
+import {head,button,chips,badge,block,examRail,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote} from '../ui/html.js?v=study-v7';
+import {mini,bars,trajectory,spread,chartButtons} from '../ui/plots.js?v=study-v7';
+import {difference,average} from '../engine/metrics.js?v=study-v7';
+import {scoreRows,effectiveRows,subjectRows,evidence} from '../io/exports.js?v=study-v7';
 const tools=()=>button('摘录这页','capture',{},'outline')+button('导出','export',{},'accent');
 export function render(atlas,state) {
   const exam=state.exam||atlas.latest,groups=atlas.groups(exam),rows=atlas.rows(exam),s=atlas.summary(rows);

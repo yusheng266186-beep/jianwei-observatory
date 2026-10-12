@@ -1,6 +1,6 @@
-import {esc,number,integer,percent,button} from './html.js?v=school-v6';
-import {valid} from '../engine/metrics.js?v=school-v6';
-import {rateColor} from './plots.js?v=school-v6';
+import {esc,number,integer,percent,button} from './html.js?v=study-v7';
+import {valid} from '../engine/metrics.js?v=study-v7';
+import {rateColor} from './plots.js?v=study-v7';
 
 export function thresholdProfile(id,summary) {
   const prefix='profile-'+[...String(id)].map(c=>c.codePointAt(0).toString(16)).join('-');

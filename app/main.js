@@ -1,27 +1,27 @@
-import {questionView,questionEvidence} from './ui/question.js?v=school-v6';
-import {SITE_NAME} from './brand.js?v=school-v6';
-import {subjectView,knowledgeView,lensEvidence} from './ui/lenses.js?v=school-v6';
-import {subjectLens,skillLens,questionLens} from './engine/lenses.js?v=school-v6';
-import {directoryFilterView} from './scenes/directory.js?v=school-v6';
-import {renderInto} from './ui/render.js?v=school-v6';
-import {installInteractions,enhance,prepareUpdate,shiftTable} from './ui/interactions.js?v=school-v6';
-import {readingDefaults,readingView,applyReading} from './ui/reading.js?v=school-v6';
-import {reportView} from './ui/report.js?v=school-v6';
-import {welcomeView} from './ui/welcome.js?v=school-v6';
-import {composeScene} from './ui/composition.js?v=school-v6';
-import {researchView,studyDescription,studyAvailable,studyKey} from './ui/research.js?v=school-v6';
-import {Atlas} from './engine/atlas.js?v=school-v6';
-import {normalizeDataset,SUBJECTS} from './data/compat.js?v=school-v6';
-import {hydrate,save,saveWorkspace,restoreDataset,hasMaterials,preference,remember,previous,emptyDataset,loadNotebook,saveNotebook} from './data/workspace.js?v=school-v6';
-import {mergeDatasets} from './data/parser.js?v=school-v6';
-import {Inbox} from './data/inbox.js?v=school-v6';
-import {NoteJournal} from './data/notes.js?v=school-v6';
-import {motion,settle,visualFrame,cancelOwnMotion,enterCanvas,arrangeRows} from './ui/motion.js?v=school-v6';
-import {esc,button,empty,table} from './ui/html.js?v=school-v6';
-import {excel,word,print,download,chart,scoreRows,effectiveRows,subjectRows,answerRows,evidence} from './io/exports.js?v=school-v6';
-import {directoryDefaults,lensValues,queryDirectory,directoryViewValues,directoryViewName} from './engine/directory.js?v=school-v6';
-import {peekView,compareView,drawerEvidence} from './ui/explorer.js?v=school-v6';
-import {dockIcon} from './ui/icons.js?v=school-v6';
+import {questionView,questionEvidence} from './ui/question.js?v=study-v7';
+import {SITE_NAME} from './brand.js?v=study-v7';
+import {subjectView,knowledgeView,lensEvidence} from './ui/lenses.js?v=study-v7';
+import {subjectLens,skillLens,questionLens} from './engine/lenses.js?v=study-v7';
+import {directoryFilterView} from './scenes/directory.js?v=study-v7';
+import {renderInto} from './ui/render.js?v=study-v7';
+import {installInteractions,enhance,prepareUpdate,shiftTable} from './ui/interactions.js?v=study-v7';
+import {readingDefaults,readingView,applyReading} from './ui/reading.js?v=study-v7';
+import {reportView} from './ui/report.js?v=study-v7';
+import {welcomeView} from './ui/welcome.js?v=study-v7';
+import {composeScene} from './ui/composition.js?v=study-v7';
+import {researchView,studyDescription,studyAvailable,studyKey} from './ui/research.js?v=study-v7';
+import {Atlas} from './engine/atlas.js?v=study-v7';
+import {normalizeDataset,SUBJECTS} from './data/compat.js?v=study-v7';
+import {hydrate,save,saveWorkspace,restoreDataset,hasMaterials,preference,remember,previous,emptyDataset,loadNotebook,saveNotebook} from './data/workspace.js?v=study-v7';
+import {mergeDatasets} from './data/parser.js?v=study-v7';
+import {Inbox} from './data/inbox.js?v=study-v7';
+import {NoteJournal} from './data/notes.js?v=study-v7';
+import {motion,settle,visualFrame,cancelOwnMotion,enterCanvas,arrangeRows} from './ui/motion.js?v=study-v7';
+import {esc,button,empty,table} from './ui/html.js?v=study-v7';
+import {excel,word,print,download,chart,scoreRows,effectiveRows,subjectRows,answerRows,evidence} from './io/exports.js?v=study-v7';
+import {directoryDefaults,lensValues,queryDirectory,directoryViewValues,directoryViewName} from './engine/directory.js?v=study-v7';
+import {peekView,compareView,drawerEvidence} from './ui/explorer.js?v=study-v7';
+import {dockIcon} from './ui/icons.js?v=study-v7';
 
 const routes=[['board','年级总览','▦'],['class','班级研究','▥'],['papers','试卷研究','▧'],['people','学生研究','◎'],['follow','教学跟进','↗'],['library','资料与报告','⊞']];
 const defaults={board:{mode:'overview',metric:'underRate',historyMetric:'mean',search:'',page:1},class:{tab:'snapshot',value:'score',trendMetric:'mean',matrix:'total',search:'',page:1,matched:false},papers:{key:'',tab:'map',classes:[],question:0,order:'paper',search:'',page:1},people:{sid:'',storyMetric:'total',...directoryDefaults,filtersOpen:innerWidth>760},follow:{tier:'under',band:20,side:'below',classes:[],search:'',page:1},library:{tab:'materials'}};
@@ -191,7 +191,7 @@ async function paint(transition=false,focus=null) {
     const available=hasMaterials(atlas.data);let view;
     if(!available)view=welcomeView();
     else {
-      if(!loaded.has(scene))loaded.set(scene,import('./scenes/'+scene+'.js?v=school-v6'));
+      if(!loaded.has(scene))loaded.set(scene,import('./scenes/'+scene+'.js?v=study-v7'));
       const module=await loaded.get(scene);if(serial!==paintId)return;
       view=scene==='class'&&!atlas.classes.length?{html:empty('先带入一个班的材料','从导入原表开始建立班级画布。')+button('导入材料','import',{},'accent'),report:null}:module.render(atlas,books[scene],session);
     }
@@ -233,7 +233,7 @@ function update(key,value,toggle=false) {
     if(key==='exams'&&!value.length){notify('请保留至少一个考次');return;}
   }
   state[key]=value;state.page=1;
-  if(current==='people'&&['standing','trend','records','focusSubject','focusStatus','savedOnly'].includes(key))state.lens='custom';
+  if(current==='people'&&['standing','scoreStatus','trend','records','focusSubject','focusStatus','savedOnly'].includes(key))state.lens='custom';
   if(current==='people'&&key==='track')state.classes=[];
   if(current==='papers'&&key==='classes')state.question=0;
   if(current==='class'&&key==='tab')history.replaceState(null,'',path());
@@ -445,6 +445,9 @@ async function commands(event) {
     if(d.cmd==='toast-close'){const toast=document.getElementById('toast');clearTimeout(notify.timer);toast.classList.remove('visible');if(toast.hidePopover&&toast.matches(':popover-open'))toast.hidePopover();pendingUndo=null;}
     else if(d.cmd==='nav')go(d.scene);
     else if(d.cmd==='set'||d.cmd==='toggle')update(d.key,d.value,d.cmd==='toggle');
+    else if(d.cmd==='directory-material'&&current==='people'){
+      if((d.key==='scoreStatus'&&d.value==='missing')||(d.key==='records'&&['history','questions'].includes(d.value)))update(d.key,state[d.key]===d.value?'all':d.value);
+    }
     else if(d.cmd==='import')inbox.choose();
     else if(d.cmd==='find'){if(!hasMaterials(atlas.data)){notify('导入成绩材料后即可查找学生');return;}go('people',{sid:'',...directoryDefaults},true);setTimeout(()=>stage().querySelector('[data-field="search"]')?.focus(),100);}
     else if(d.cmd==='class') {

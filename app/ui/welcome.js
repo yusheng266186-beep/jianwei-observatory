@@ -1,4 +1,4 @@
-import {button} from './html.js?v=school-v6';
+import {button} from './html.js?v=study-v7';
 
 export function welcomeView() {
   const template=document.getElementById('empty-workspace-template');
