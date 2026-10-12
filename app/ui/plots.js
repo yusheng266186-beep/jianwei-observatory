@@ -1,6 +1,6 @@
-import {esc,number,percent,attrs} from './html.js?v=research-v10';
-import {valid} from '../engine/metrics.js?v=research-v10';
-import {plotPalette as palette} from './palette.js?v=research-v10';
+import {esc,number,percent,attrs} from './html.js?v=evidence-v11';
+import {valid} from '../engine/metrics.js?v=evidence-v11';
+import {plotPalette as palette} from './palette.js?v=evidence-v11';
 export const seriesColors=palette.series;
 const colors=seriesColors;
 const action=item=>item?.cmd?' data-plot-action="true" data-cmd="'+esc(item.cmd)+'"'+attrs(item.data||{})+' role="button" tabindex="0"':'';

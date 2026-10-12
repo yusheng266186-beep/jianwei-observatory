@@ -1,8 +1,8 @@
-import {head,button,chips,badge,block,ribbon,table,number,integer,percent,esc,personButton,search,footnote,empty} from '../ui/html.js?v=research-v10';
-import {bars,rateColor,rateLegend,chartButtons} from '../ui/plots.js?v=research-v10';
-import {average,sum,valid} from '../engine/metrics.js?v=research-v10';
-import {answerRows,evidence} from '../io/exports.js?v=research-v10';
-import {queryQuestionMap} from '../engine/question-map.js?v=research-v10';
+import {head,button,chips,badge,block,ribbon,table,number,integer,percent,esc,personButton,search,footnote,empty} from '../ui/html.js?v=evidence-v11';
+import {bars,rateColor,rateLegend,chartButtons} from '../ui/plots.js?v=evidence-v11';
+import {average,sum,valid} from '../engine/metrics.js?v=evidence-v11';
+import {answerRows,evidence} from '../io/exports.js?v=evidence-v11';
+import {queryQuestionMap} from '../engine/question-map.js?v=evidence-v11';
 export function render(atlas,state) {
   const papers=atlas.papers(),paper=papers.find(p=>p.key===state.key);
   if(!paper) {
@@ -45,7 +45,7 @@ export function render(atlas,state) {
   const mapView=!state.tab||state.tab==='map',conditions=[['考次',atlas.exam(paper.exam).label],['学科',paper.subject],['班级',scope.length?scope.map(n=>n+'班').join('、'):'全部参考班'],['当前视图',({map:'逐题地图',knowledge:'知识点路径',classes:'班级热力',details:'逐题明细',students:'学生作答',responses:'单题作答'})[state.tab||'map']]];
   if(mapView)conditions.push(['题目检索',state.questionSearch?.trim()||'不限'],['题目条件',mapModel.label],['低得分率口径','低于 '+percent(mapModel.threshold)],['排列顺序',mapModel.orderLabel],['匹配题目',mapModel.matches.length+' / '+lens.questions.length]);
   const matchedRows=[questionRows[0],...mapModel.matches.map(q=>questionRows[q.index+1])],diagnosis=rows=>rows.map(row=>row.map((v,i)=>i===5?percent(v):v));
-  return {html,report:evidence(paper.subject+' · '+atlas.exam(paper.exam).label+'试卷研究',conditions[2][1]+(mapView?' · '+mapModel.label+' · '+mapModel.matches.length+' 道题':''),[{title:'观察条件',headers:['项目','范围'],rows:conditions},...(mapView?[{title:'当前题目地图',headers:questionRows[0],rows:diagnosis(matchedRows.slice(1))}]:[]),{title:'逐题诊断',headers:questionRows[0],rows:diagnosis(questionRows.slice(1))},{title:'知识点路径',headers:skills[0],rows:skills.slice(1).map(row=>row.map((v,i)=>i===1?percent(v):v))}],{'观察条件':[['项目','范围'],...conditions],...(mapView?{'当前题目地图':matchedRows}:{}),'个人学科小题得分':answerRows(atlas,lens.answers),'逐题诊断':questionRows,'知识点':skills})};
+  return {html,report:evidence(paper.subject+' · '+atlas.exam(paper.exam).label+'试卷研究',conditions[2][1]+(mapView?' · '+mapModel.label+' · '+mapModel.matches.length+' 道题':''),[{title:'观察条件',headers:['项目','范围'],rows:conditions},...(mapView?[{title:'当前题目地图',headers:questionRows[0],rows:diagnosis(matchedRows.slice(1))}]:[]),{title:'逐题诊断',headers:questionRows[0],rows:diagnosis(questionRows.slice(1))},{title:'知识点路径',headers:skills[0],rows:skills.slice(1).map(row=>row.map((v,i)=>i===1?percent(v):v))}],{'观察条件':[['项目','范围'],...conditions],...(mapView?{'当前题目地图':matchedRows}:{}),'个人学科小题得分':answerRows(atlas,lens.answers,paper.key),'逐题诊断':questionRows,'知识点':skills})};
 }
 function paperCover(atlas,paper) {
   const known=paper.questions.filter(q=>valid(q.max)&&q.max>0).length;

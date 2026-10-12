@@ -1,5 +1,5 @@
-import {esc,number,percent,signed} from '../ui/html.js?v=research-v10';
-import {SITE_NAME,CREST_URL} from '../brand.js?v=research-v10';
+import {esc,number,percent,signed} from '../ui/html.js?v=evidence-v11';
+import {SITE_NAME,CREST_URL} from '../brand.js?v=evidence-v11';
 export function download(content,name,type='application/octet-stream') {
   const blob=content instanceof Blob?content:new Blob([content],{type}),url=URL.createObjectURL(blob),anchor=document.createElement('a');
   anchor.href=url;anchor.download=name;anchor.click();setTimeout(()=>URL.revokeObjectURL(url),5000);
@@ -43,9 +43,10 @@ export function subjectRows(atlas,exam) {
     const s=atlas.summary(atlas.classAt(no,exam),subject);return [no,subject,atlas.teacher(no,subject),s.count,s.mean,s.raw,s.top,s.topDouble,s.topRate,s.under,s.underDouble,s.underRate];
   }))];
 }
-export function answerRows(atlas,answers) {
-  const max=Math.max(0,...answers.map(a=>a.values.length));
-  return [['考试','姓名','班级','学科',...Array.from({length:max},(_,i)=>'第'+(i+1)+'题')],...answers.map(a=>[atlas.exam(a.exam).label,atlas.name(a.sid),a.classNo,a.subject,...a.values])];
+export function answerRows(atlas,answers,paperKey='') {
+  const keys=[...new Set(answers.map(a=>a.subject+'|'+a.exam))],key=paperKey||(keys.length===1?keys[0]:''),bank=atlas.data.banks[key]||[];
+  const max=answers.reduce((length,a)=>Math.max(length,a.values.length),bank.length);
+  return [['考试','姓名','班级','学科',...Array.from({length:max},(_,i)=>'第'+(bank[i]?.label??i+1)+'题')],...answers.map(a=>[atlas.exam(a.exam).label,atlas.name(a.sid),a.classNo,a.subject,...a.values])];
 }
 export function evidence(title,subtitle,sections,sheets={}) {return {title,subtitle,sections,sheets,created:new Date().toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'}),note:''};}
 function documentSections(report) {

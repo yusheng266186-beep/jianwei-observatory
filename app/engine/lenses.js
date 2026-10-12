@@ -1,4 +1,5 @@
-import {valid,sum,difference} from './metrics.js?v=research-v10';
+import {valid,sum,difference} from './metrics.js?v=evidence-v11';
+import {answerStructure} from './answer-structure.js?v=evidence-v11';
 
 export function subjectLens(atlas,state) {
   const no=Number(state.no),subject=['英语','日语'].includes(state.subject)?'外语':state.subject,tier=state.tier==='top'?'top':'under',snapshot=atlas.snapshot(no,state.exam),own=atlas.summary(snapshot.rows,subject),peers=atlas.summary(snapshot.peers,subject);
@@ -34,7 +35,8 @@ export function questionLens(atlas,state) {
   if(!question)return {lens,question:null,filters:[],matches:[],selected:'全部作答'};
   const score=a=>a.values[question.index],knownMax=valid(question.max)&&question.max>0;
   const filters=[['all','全部作答',a=>true,true],['zero','零分',a=>score(a)===0,true],['partial','未得满分',a=>valid(score(a))&&score(a)<question.max,knownMax],['full','满分',a=>valid(score(a))&&score(a)>=question.max,knownMax],['missing','未填得分',a=>!valid(score(a)),true]];
-  const selected=filters.find(([id,,,available])=>id===(state.filter||'all')&&available)||filters[0],query=(state.search||'').trim(),matches=lens.answers.filter(a=>selected[2](a)&&(!query||atlas.name(a.sid).includes(query)));
+  const structure=answerStructure(lens.answers,question,atlas.data.rules),extra=structure.groups.filter(g=>!filters.some(([id])=>id===g.id)).map(g=>[g.id,g.label+' · '+g.range,g.test,true]);
+  const selected=[...filters,...extra].find(([id,,,available])=>id===(state.filter||'all')&&available)||filters[0],query=(state.search||'').trim(),matches=lens.answers.filter(a=>selected[2](a)&&(!query||atlas.name(a.sid).includes(query)));
   matches.sort((a,b)=>state.sort==='name'?atlas.name(a.sid).localeCompare(atlas.name(b.sid),'zh'):state.sort==='high'?(score(b)??-Infinity)-(score(a)??-Infinity):(score(a)??Infinity)-(score(b)??Infinity));
-  return {lens,question,matches,selected:selected[1],selectedId:selected[0],filters:filters.map(([id,label,test,available])=>({id,label,count:available?lens.answers.filter(test).length:null,available}))};
+  return {lens,question,matches,structure,selected:selected[1],selectedId:selected[0],filters:filters.map(([id,label,test,available])=>({id,label,count:available?lens.answers.filter(test).length:null,available}))};
 }

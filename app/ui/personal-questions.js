@@ -1,6 +1,6 @@
-import {button,esc,number} from './html.js?v=research-v10';
-import {rateColor} from './plots.js?v=research-v10';
-import {valid} from '../engine/metrics.js?v=research-v10';
+import {button,esc,number} from './html.js?v=evidence-v11';
+import {rateColor} from './plots.js?v=evidence-v11';
+import {valid} from '../engine/metrics.js?v=evidence-v11';
 
 export function personalQuestionLink(q,context,label,style='person-link',extra='') {
   return button(label,'answer-question',{key:context.subject+'|'+context.exam,index:q.index,sid:context.sid,classes:context.classNo},style,

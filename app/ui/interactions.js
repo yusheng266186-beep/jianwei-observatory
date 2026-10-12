@@ -1,5 +1,5 @@
-import {motion} from './motion.js?v=research-v10';
-let motionPreference=()=>false,resizeObserver,plotObserver,railObserver,revealObserver,tooltipTarget=null,tooltipOriginal=null,tooltipFrame=0,outlineFrame=0,pointerFrame=0,outline=null,outlineEntries=[];
+import {motion} from './motion.js?v=evidence-v11';
+let motionPreference=()=>false,resizeObserver,plotObserver,railObserver,drawerHeaderObserver,revealObserver,tooltipTarget=null,tooltipOriginal=null,tooltipFrame=0,outlineFrame=0,drawerOutlineFrame=0,pointerFrame=0,outline=null,outlineEntries=[];
 const observedTables=new Set(),observedPlots=new Set(),observedReveals=new Set(),revealed=new WeakSet(),disclosures=new WeakMap();
 const selectionRails=new Set(),railStates=new WeakMap();
 const plotFrames=new WeakMap(),galleryOffsets=new Map();
@@ -81,6 +81,14 @@ export function enhance(root=document,{reveal=true}={}) {
   outline=document.querySelector('#stage .study-outline');
   outlineEntries=outline?[...outline.querySelectorAll('[data-target]')].map(button=>({button,section:document.getElementById(button.dataset.target)})).filter(entry=>entry.section):[];
   refreshOutline();
+  refreshDrawerSections();
+}
+function refreshDrawerSections(){
+  const dialog=document.getElementById('research-drawer'),nav=dialog?.querySelector('.drawer-section-nav');if(!nav)return;
+  nav.style.setProperty('--drawer-header-height',Math.max(66,dialog.querySelector('.drawer-top')?.getBoundingClientRect().height||0)+'px');
+  const entries=[...nav.querySelectorAll('.drawer-section-link[data-target]')].map(button=>({button,section:document.getElementById(button.dataset.target)})).filter(e=>e.section&&dialog.contains(e.section));if(!entries.length)return;
+  let selected=entries[0];if(dialog.open){const edge=nav.getBoundingClientRect().bottom+24;selected=entries.find(entry=>entry.section.getBoundingClientRect().bottom>edge)||entries.at(-1);}
+  for(const entry of entries)if(entry===selected)entry.button.setAttribute('aria-current','location');else entry.button.removeAttribute('aria-current');
 }
 function refreshOutline() {
   if(!outline?.isConnected||!outlineEntries.length)return;
@@ -126,8 +134,9 @@ export function installInteractions({reducedMotion}) {
   if('ResizeObserver' in window)resizeObserver=new ResizeObserver(entries=>{for(const entry of entries)refreshTable(entry.target);});
   if('ResizeObserver' in window)plotObserver=new ResizeObserver(entries=>{for(const entry of entries)refreshPlot(entry.target);});
   if('ResizeObserver' in window)railObserver=new ResizeObserver(entries=>{for(const entry of entries)if(entry.target.isConnected)selectionRail(entry.target);});
+  if('ResizeObserver' in window){drawerHeaderObserver=new ResizeObserver(refreshDrawerSections);const header=document.querySelector('#research-drawer .drawer-top');if(header)drawerHeaderObserver.observe(header);}
   if('IntersectionObserver' in window)revealObserver=new IntersectionObserver(entries=>{let order=0;for(const entry of entries)if(entry.isIntersecting){revealObserver.unobserve(entry.target);observedReveals.delete(entry.target);if(!motionPreference())entry.target.animate([{opacity:.55,translate:'0px 12px'},{opacity:1,translate:'0px 0px'}],{...motion.arrive,delay:Math.min(order++,3)*22,fill:'backwards'});}},{rootMargin:'0px 0px -25px 0px',threshold:.06});
-  document.addEventListener('scroll',event=>{if(event.target?.matches?.('.goal-cards[data-scroll-key]')){galleryOffsets.set(event.target.dataset.scrollKey,event.target.scrollLeft);hideTooltip();}else if(event.target?.matches?.('.table-scroll'))refreshTable(event.target.closest('.table-frame'));else {hideTooltip();if(event.target===document||event.target===document.documentElement){document.body.dataset.scrolled=String(window.scrollY>18);cancelAnimationFrame(outlineFrame);outlineFrame=requestAnimationFrame(refreshOutline);}}},true);
+  document.addEventListener('scroll',event=>{if(event.target?.matches?.('.goal-cards[data-scroll-key]')){galleryOffsets.set(event.target.dataset.scrollKey,event.target.scrollLeft);hideTooltip();}else if(event.target?.matches?.('.table-scroll'))refreshTable(event.target.closest('.table-frame'));else {hideTooltip();if(event.target?.id==='research-drawer'){cancelAnimationFrame(drawerOutlineFrame);drawerOutlineFrame=requestAnimationFrame(refreshDrawerSections);}else if(event.target===document||event.target===document.documentElement){document.body.dataset.scrolled=String(window.scrollY>18);cancelAnimationFrame(outlineFrame);outlineFrame=requestAnimationFrame(refreshOutline);}}},true);
   document.addEventListener('click',event=>{const summary=event.target.closest('summary');if(!summary||event.target.closest('button,a,input'))return;const details=summary.parentElement;if(details.matches('.card-scores,.card-meta,.record-accordion,.method-note,.class-profile')){event.preventDefault();toggleDetails(details);}});
   document.addEventListener('pointerover',event=>{if(event.pointerType==='touch')return;const target=event.target.closest('[data-plot-action],.plot-item,.plot-point,.student-dot,.heat-cell[title],[data-tip]');if(target)showTooltip(target,event.clientX,event.clientY);});
   document.addEventListener('pointermove',event=>{if(!tooltipTarget)return;cancelAnimationFrame(tooltipFrame);tooltipFrame=requestAnimationFrame(()=>placeTooltip(event.clientX,event.clientY));});
@@ -143,5 +152,5 @@ export function installInteractions({reducedMotion}) {
   document.addEventListener('pointerout',event=>{if(tooltipTarget&&!tooltipTarget.contains(event.relatedTarget))hideTooltip();});
   document.addEventListener('focusin',event=>{const target=event.target.closest('[data-plot-action],.student-dot,[data-tip]');if(target){const rect=target.getBoundingClientRect();showTooltip(target,rect.left+rect.width/2,rect.bottom);}});
   document.addEventListener('focusout',event=>{if(tooltipTarget&&!tooltipTarget.contains(event.relatedTarget))hideTooltip();});
-  window.addEventListener('resize',()=>{for(const frame of observedTables)refreshTable(frame);for(const svg of observedPlots)refreshPlot(svg);for(const rail of selectionRails)selectionRail(rail);revealSelectedClasses();hideTooltip();refreshOutline();});
+  window.addEventListener('resize',()=>{for(const frame of observedTables)refreshTable(frame);for(const svg of observedPlots)refreshPlot(svg);for(const rail of selectionRails)selectionRail(rail);revealSelectedClasses();hideTooltip();refreshOutline();refreshDrawerSections();});
 }
