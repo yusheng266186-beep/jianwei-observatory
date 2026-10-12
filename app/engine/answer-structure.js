@@ -1,4 +1,4 @@
-import {valid} from './metrics.js?v=refine-v17';
+import {valid} from './metrics.js?v=paper-v18';
 
 export function answerStructure(answers,question,rules={}) {
   const score=answer=>answer.values[question.index],knownMax=valid(question.max)&&question.max>0;

@@ -1,8 +1,8 @@
-import {goalCards} from '../ui/evidence-visuals.js?v=refine-v17';
-import {head,button,chips,badge,block,examRail,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote,classPicker} from '../ui/html.js?v=refine-v17';
-import {trajectory,bars,spread,chartButtons} from '../ui/plots.js?v=refine-v17';
-import {difference,average,valid,maxScore} from '../engine/metrics.js?v=refine-v17';
-import {scoreRows,evidence} from '../io/exports.js?v=refine-v17';
+import {goalCards} from '../ui/evidence-visuals.js?v=paper-v18';
+import {head,button,chips,badge,block,examRail,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote,classPicker} from '../ui/html.js?v=paper-v18';
+import {trajectory,bars,spread,chartButtons} from '../ui/plots.js?v=paper-v18';
+import {difference,average,valid,maxScore} from '../engine/metrics.js?v=paper-v18';
+import {scoreRows,evidence} from '../io/exports.js?v=paper-v18';
 const rowsSection=(title,headers,rows)=>({title,headers,rows});
 export function render(atlas,state) {
   const no=state.no||atlas.classes[0],available=atlas.classExams(no),exam=available.some(e=>e.id===state.exam)?state.exam:available.at(-1)?.id||atlas.latest;

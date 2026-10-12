@@ -1,4 +1,4 @@
-import {button,esc} from './html.js?v=refine-v17';
+import {button,esc} from './html.js?v=paper-v18';
 export const readingDefaults={density:'comfortable',surface:'glass',motion:'system'};
 export function applyReading(reading) {for(const key of Object.keys(readingDefaults))document.body.dataset[key]=reading[key]||readingDefaults[key];}
 export function readingView(reading) {

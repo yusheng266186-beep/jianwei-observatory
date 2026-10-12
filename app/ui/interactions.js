@@ -1,5 +1,5 @@
-import {motion} from './motion.js?v=refine-v17';
-import {positionSpreadLabels} from './plots.js?v=refine-v17';
+import {motion} from './motion.js?v=paper-v18';
+import {positionSpreadLabels} from './plots.js?v=paper-v18';
 let motionPreference=()=>false,resizeObserver,plotObserver,railObserver,drawerHeaderObserver,revealObserver,tooltipTarget=null,tooltipOriginal=null,tooltipFrame=0,outlineFrame=0,drawerOutlineFrame=0,pointerFrame=0,outline=null,outlineEntries=[];
 const observedTables=new Set(),observedPlots=new Set(),observedReveals=new Set(),revealed=new WeakSet(),disclosures=new WeakMap();
 const selectionRails=new Set(),railStates=new WeakMap();

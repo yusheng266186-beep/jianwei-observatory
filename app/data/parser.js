@@ -1,5 +1,5 @@
-import { SUBJECTS, EXAM_ORDER, EXAM_NAMES, classDefaults, finite, normalizeDataset } from './compat.js?v=refine-v17';
-import {mergeContext} from './context.js?v=refine-v17';
+import { SUBJECTS, EXAM_ORDER, EXAM_NAMES, classDefaults, finite, normalizeDataset } from './compat.js?v=paper-v18';
+import {mergeContext} from './context.js?v=paper-v18';
 const txt=v=>String(v??'').trim();
 const num=v=>v==null||txt(v)===''?null:Number.isFinite(Number(v))?Number(v):null;
 const code=v=>txt(v).replace(/[物历]$/,'');
