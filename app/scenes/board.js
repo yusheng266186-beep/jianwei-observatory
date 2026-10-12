@@ -1,9 +1,9 @@
-import {goalCards} from '../ui/evidence-visuals.js?v=folio-v5';
-import {overview} from './overview.js?v=folio-v5';
-import {head,button,chips,badge,block,examRail,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote} from '../ui/html.js?v=folio-v5';
-import {mini,bars,trajectory,spread,chartButtons} from '../ui/plots.js?v=folio-v5';
-import {difference,average} from '../engine/metrics.js?v=folio-v5';
-import {scoreRows,effectiveRows,subjectRows,evidence} from '../io/exports.js?v=folio-v5';
+import {goalCards} from '../ui/evidence-visuals.js?v=school-v6';
+import {overview} from './overview.js?v=school-v6';
+import {head,button,chips,badge,block,examRail,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote} from '../ui/html.js?v=school-v6';
+import {mini,bars,trajectory,spread,chartButtons} from '../ui/plots.js?v=school-v6';
+import {difference,average} from '../engine/metrics.js?v=school-v6';
+import {scoreRows,effectiveRows,subjectRows,evidence} from '../io/exports.js?v=school-v6';
 const tools=()=>button('摘录这页','capture',{},'outline')+button('导出','export',{},'accent');
 export function render(atlas,state) {
   const exam=state.exam||atlas.latest,groups=atlas.groups(exam),rows=atlas.rows(exam),s=atlas.summary(rows);
@@ -57,5 +57,5 @@ export function render(atlas,state) {
   const isOverview=!state.mode||state.mode==='overview',titles={map:'班级地图',targets:'班级有效与任务',subjects:'学科横向比较',history:'年级阶段对比',roster:'年级学生清册'};
   const toolbar='<div class="scene-toolbar board-toolbar"><div class="scene-tabs">'+chips('mode',[['overview','研究总览'],['map','班级地图'],['targets','有效账'],['subjects','学科横向'],['history','历次变化'],['roster','学生清册']],state.mode||'overview')+'</div>'+examRail(atlas,exam)+'</div>';
   const html=head('01 / 年级总览',isOverview?'年级总览':titles[state.mode]||'年级研究',[atlas.data.grade,atlas.exam(exam).label].filter(Boolean).join(' · '),tools())+toolbar+(isOverview?'':ribbon([['成绩记录',integer(rows.length),'有总分 '+s.count+' 人 · 缺 '+s.missing+' 人'],['特控人数',integer(s.top),'按各生所属科类判断'],['本科人数',integer(s.under),'按各生所属科类判断'],['本科临界',integer(s.underNear20),'线下20分 · 含10分']]))+body+footnote('空缺成绩不补0；任务留空或为0时不计算完成率。10分临界带包含在20分临界带内。');
-  return {html,report:evidence('年级研究 · '+atlas.exam(exam).label,atlas.data.school||'衡迹教学证据台',sections,sheets)};
+  return {html,report:evidence('年级研究 · '+atlas.exam(exam).label,atlas.data.school||'荣县第一中学高三成绩分析',sections,sheets)};
 }

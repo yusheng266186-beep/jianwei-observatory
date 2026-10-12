@@ -4,26 +4,27 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#faf7ee">
-  <meta name="description" content="衡迹教学证据台：班级画布、试卷地图与完整学生档案。">
-  <title>衡迹 · 教学证据台</title>
-  <link rel="icon" href="./favicon.svg?v=folio-v5">
-  <link rel="stylesheet" href="./styles.css?v=folio-v5">
-  <link rel="stylesheet" href="./styles/journey.css?v=folio-v5">
-  <link rel="stylesheet" href="./styles/glass.css?v=folio-v5">
-  <script src="./app/launch.js?v=folio-v5" defer></script>
+  <meta name="description" content="荣县第一中学高三成绩分析：年级与班级分析、试卷小题研究、学生成长档案和教学跟进。">
+  <title>荣县第一中学高三成绩分析</title>
+  <link rel="icon" type="image/png" href="./assets/school-crest.png?v=school-v6">
+  <link rel="apple-touch-icon" href="./assets/school-crest.png?v=school-v6">
+  <link rel="stylesheet" href="./styles.css?v=school-v6">
+  <link rel="stylesheet" href="./styles/journey.css?v=school-v6">
+  <link rel="stylesheet" href="./styles/glass.css?v=school-v6">
+  <script src="./app/launch.js?v=school-v6" defer></script>
 </head>
 <body data-workspace="empty">
   <header class="masthead">
-    <a class="brand" href="#board" aria-label="衡迹首页"><span class="brand-mark"><i></i><i></i><i></i></span><strong>衡迹</strong><span class="brand-description">教学证据台</span></a>
+    <a class="brand" href="#board" aria-label="荣县第一中学高三成绩分析首页"><img class="school-crest" src="./assets/school-crest.png?v=school-v6" width="44" height="44" alt="荣县第一中学校徽"><span class="brand-wordmark"><strong>荣县第一中学</strong><span>高三成绩分析</span></span></a>
     <div class="workspace-location" id="workspace-location"></div>
     <div class="workspace-status"><i></i><span id="work-status">等待导入材料</span></div>
-    <div class="masthead-tools"><button class="button header-button research-button" data-cmd="research" aria-haspopup="dialog" aria-label="打开研究夹" title="研究夹" hidden><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M7 3.5h10a1 1 0 0 1 1 1v16l-6-4-6 4v-16a1 1 0 0 1 1-1Z"/></svg><span>研究夹</span></button><button class="button header-button find-button" data-cmd="find" aria-label="找学生" title="找学生" hidden><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg><span>找学生</span><kbd id="find-shortcut">Ctrl K</kbd></button><button class="button header-button reading-button" data-cmd="reading"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 7h16M4 17h16"/><rect x="8" y="4" width="4" height="6" rx="1" fill="var(--canvas)"/><rect x="14" y="14" width="4" height="6" rx="1" fill="var(--canvas)"/></svg><span class="reading-title">阅读设置</span><span class="reading-title-mobile">阅读</span></button><button class="button header-import" data-cmd="import">＋ 导入材料</button></div>
+    <div class="masthead-tools"><button class="button header-button research-button" data-cmd="research" aria-haspopup="dialog" aria-label="打开研究夹" title="研究夹" hidden><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M7 3.5h10a1 1 0 0 1 1 1v16l-6-4-6 4v-16a1 1 0 0 1 1-1Z"/></svg><span>研究夹</span></button><button class="button header-button find-button" data-cmd="find" aria-label="找学生" title="找学生" hidden><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg><span>找学生</span><kbd id="find-shortcut">Ctrl K</kbd></button><button class="button header-button reading-button" data-cmd="reading" aria-label="阅读设置" title="阅读设置"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 7h16M4 17h16"/><rect x="8" y="4" width="4" height="6" rx="1" fill="var(--canvas)"/><rect x="14" y="14" width="4" height="6" rx="1" fill="var(--canvas)"/></svg><span class="reading-title">阅读设置</span><span class="reading-title-mobile">阅读</span></button><button class="button header-import" data-cmd="import" aria-label="导入成绩材料"><span aria-hidden="true">＋</span><span class="import-full-label">导入材料</span><span class="import-compact-label">导入</span></button></div>
   </header>
   <div id="scene-status" class="scene-status" role="status" aria-live="polite" hidden></div>
   <main id="stage" tabindex="-1"><div class="startup"><h1>导入材料，开启研究。</h1><p>导入后，再呈现班级、学生、成绩与试题分析。</p><button class="button accent" data-cmd="import">选择成绩工作簿</button></div></main>
   <template id="empty-workspace-template">
     <section class="welcome-workspace" id="drop-zone" aria-labelledby="welcome-title">
-      <div class="welcome-copy"><span class="welcome-eyebrow"><i></i>衡迹 · 空白工作区</span><h1 id="welcome-title">把成绩，<br><span>读成线索。</span></h1><p>班级、学生、阶段变化与每一道小题，<br>将在你的材料中展开。</p><div class="welcome-actions"><button class="button accent" data-cmd="import">选择成绩工作簿 <span aria-hidden="true">↗</span></button><button class="button quiet" data-cmd="template">下载录入模板</button></div><span class="welcome-formats">Excel / CSV / JSON 备份<br>支持多份文件，也可以直接拖入。</span></div>
+      <div class="welcome-copy"><div class="welcome-school"><img src="./assets/school-crest.png?v=school-v6" width="62" height="62" alt="荣县第一中学校徽"><div><span>荣县第一中学</span><b>高三成绩分析</b><small>空白工作区 · 等待你的教学材料</small></div></div><h1 id="welcome-title">把成绩，<br><span>读成线索。</span></h1><p>班级、学生、阶段变化与每一道小题，<br>将在你的材料中展开。</p><div class="welcome-actions"><button class="button accent" data-cmd="import">选择成绩工作簿 <span aria-hidden="true">↗</span></button><button class="button quiet" data-cmd="template">下载录入模板</button></div><span class="welcome-formats">Excel / CSV / JSON 备份<br>支持多份文件，也可以直接拖入。</span></div>
       <div class="welcome-art" aria-hidden="true"><img class="folio-art" src="./assets/folio-sheet.svg" alt=""></div>
       <footer class="welcome-footer"><span><i aria-hidden="true"></i>材料在当前浏览器处理与保存</span><span>导入前不呈现具体成绩或样本</span></footer>
     </section>
@@ -35,10 +36,10 @@
   <dialog id="research-dialog" class="sheet-dialog research-dialog" aria-labelledby="research-title"><div id="research-content"></div></dialog>
   <dialog id="reading-dialog" class="sheet-dialog reading-dialog" aria-label="阅读偏好"><div id="reading-content"></div></dialog>
   <dialog id="table-reader" class="table-reader" aria-labelledby="table-reader-title"><div id="table-reader-content"></div></dialog>
-  <dialog id="research-drawer" class="research-drawer" aria-labelledby="drawer-title"><div class="drawer-top"><button class="button drawer-back" id="drawer-back" data-cmd="drawer-back" hidden>← 返回</button><span id="drawer-context">衡迹 / 研究观察窗</span><button class="button icon-only" data-cmd="drawer-close" aria-label="关闭观察窗">×</button></div><div id="drawer-content"></div></dialog>
+  <dialog id="research-drawer" class="research-drawer" aria-labelledby="drawer-title"><div class="drawer-top"><button class="button drawer-back" id="drawer-back" data-cmd="drawer-back" hidden>← 返回</button><span id="drawer-context">荣县第一中学高三成绩分析 / 研究观察窗</span><button class="button icon-only" data-cmd="drawer-close" aria-label="关闭观察窗">×</button></div><div id="drawer-content"></div></dialog>
   <div id="toast" popover="manual" role="status" aria-live="polite"></div>
   <div id="chart-tooltip" class="chart-tooltip" popover="manual" role="tooltip" hidden></div>
   <div id="print-area"></div>
-  <noscript><p class="noscript">请启用浏览器 JavaScript 后打开衡迹。</p></noscript>
+  <noscript><p class="noscript">请启用浏览器 JavaScript 后打开荣县第一中学高三成绩分析。</p></noscript>
 </body>
 </html>

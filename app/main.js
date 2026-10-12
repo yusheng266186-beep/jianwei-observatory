@@ -1,26 +1,27 @@
-import {questionView,questionEvidence} from './ui/question.js?v=folio-v5';
-import {subjectView,knowledgeView,lensEvidence} from './ui/lenses.js?v=folio-v5';
-import {subjectLens,skillLens,questionLens} from './engine/lenses.js?v=folio-v5';
-import {directoryFilterView} from './scenes/directory.js?v=folio-v5';
-import {renderInto} from './ui/render.js?v=folio-v5';
-import {installInteractions,enhance,prepareUpdate,shiftTable} from './ui/interactions.js?v=folio-v5';
-import {readingDefaults,readingView,applyReading} from './ui/reading.js?v=folio-v5';
-import {reportView} from './ui/report.js?v=folio-v5';
-import {welcomeView} from './ui/welcome.js?v=folio-v5';
-import {composeScene} from './ui/composition.js?v=folio-v5';
-import {researchView,studyDescription,studyAvailable,studyKey} from './ui/research.js?v=folio-v5';
-import {Atlas} from './engine/atlas.js?v=folio-v5';
-import {normalizeDataset,SUBJECTS} from './data/compat.js?v=folio-v5';
-import {hydrate,save,saveWorkspace,restoreDataset,hasMaterials,preference,remember,previous,emptyDataset,loadNotebook,saveNotebook} from './data/workspace.js?v=folio-v5';
-import {mergeDatasets} from './data/parser.js?v=folio-v5';
-import {Inbox} from './data/inbox.js?v=folio-v5';
-import {NoteJournal} from './data/notes.js?v=folio-v5';
-import {motion,settle,visualFrame,cancelOwnMotion,enterCanvas,arrangeRows} from './ui/motion.js?v=folio-v5';
-import {esc,button,empty,table} from './ui/html.js?v=folio-v5';
-import {excel,word,print,download,chart,scoreRows,effectiveRows,subjectRows,answerRows,evidence} from './io/exports.js?v=folio-v5';
-import {directoryDefaults,lensValues,queryDirectory,directoryViewValues,directoryViewName} from './engine/directory.js?v=folio-v5';
-import {peekView,compareView,drawerEvidence} from './ui/explorer.js?v=folio-v5';
-import {dockIcon} from './ui/icons.js?v=folio-v5';
+import {questionView,questionEvidence} from './ui/question.js?v=school-v6';
+import {SITE_NAME} from './brand.js?v=school-v6';
+import {subjectView,knowledgeView,lensEvidence} from './ui/lenses.js?v=school-v6';
+import {subjectLens,skillLens,questionLens} from './engine/lenses.js?v=school-v6';
+import {directoryFilterView} from './scenes/directory.js?v=school-v6';
+import {renderInto} from './ui/render.js?v=school-v6';
+import {installInteractions,enhance,prepareUpdate,shiftTable} from './ui/interactions.js?v=school-v6';
+import {readingDefaults,readingView,applyReading} from './ui/reading.js?v=school-v6';
+import {reportView} from './ui/report.js?v=school-v6';
+import {welcomeView} from './ui/welcome.js?v=school-v6';
+import {composeScene} from './ui/composition.js?v=school-v6';
+import {researchView,studyDescription,studyAvailable,studyKey} from './ui/research.js?v=school-v6';
+import {Atlas} from './engine/atlas.js?v=school-v6';
+import {normalizeDataset,SUBJECTS} from './data/compat.js?v=school-v6';
+import {hydrate,save,saveWorkspace,restoreDataset,hasMaterials,preference,remember,previous,emptyDataset,loadNotebook,saveNotebook} from './data/workspace.js?v=school-v6';
+import {mergeDatasets} from './data/parser.js?v=school-v6';
+import {Inbox} from './data/inbox.js?v=school-v6';
+import {NoteJournal} from './data/notes.js?v=school-v6';
+import {motion,settle,visualFrame,cancelOwnMotion,enterCanvas,arrangeRows} from './ui/motion.js?v=school-v6';
+import {esc,button,empty,table} from './ui/html.js?v=school-v6';
+import {excel,word,print,download,chart,scoreRows,effectiveRows,subjectRows,answerRows,evidence} from './io/exports.js?v=school-v6';
+import {directoryDefaults,lensValues,queryDirectory,directoryViewValues,directoryViewName} from './engine/directory.js?v=school-v6';
+import {peekView,compareView,drawerEvidence} from './ui/explorer.js?v=school-v6';
+import {dockIcon} from './ui/icons.js?v=school-v6';
 
 const routes=[['board','年级总览','▦'],['class','班级研究','▥'],['papers','试卷研究','▧'],['people','学生研究','◎'],['follow','教学跟进','↗'],['library','资料与报告','⊞']];
 const defaults={board:{mode:'overview',metric:'underRate',historyMetric:'mean',search:'',page:1},class:{tab:'snapshot',value:'score',trendMetric:'mean',matrix:'total',search:'',page:1,matched:false},papers:{key:'',tab:'map',classes:[],question:0,order:'paper',search:'',page:1},people:{sid:'',storyMetric:'total',...directoryDefaults,filtersOpen:innerWidth>760},follow:{tier:'under',band:20,side:'below',classes:[],search:'',page:1},library:{tab:'materials'}};
@@ -175,7 +176,7 @@ function nav() {
   if(!dock.children.length)dock.innerHTML='<span class="dock-indicator" aria-hidden="true"></span>'+routes.map(([id,label])=>'<button data-cmd="nav" data-scene="'+id+'"><span class="dock-symbol">'+dockIcon(id)+'</span><span>'+label+'</span><i></i></button>').join('');
   for(const b of dock.querySelectorAll('button'))if(b.dataset.scene===current)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');
   requestAnimationFrame(positionDock);
-  document.title=(routes.find(r=>r[0]===current)?.[1]||'教学证据台')+' · 衡迹';
+  document.title=SITE_NAME+' · '+(routes.find(r=>r[0]===current)?.[1]||'成绩研究');
   const state=books[current],breadcrumb=document.getElementById('workspace-location');
   const available=hasMaterials(atlas.data);
   document.body.dataset.workspace=available?'ready':'empty';
@@ -190,7 +191,7 @@ async function paint(transition=false,focus=null) {
     const available=hasMaterials(atlas.data);let view;
     if(!available)view=welcomeView();
     else {
-      if(!loaded.has(scene))loaded.set(scene,import('./scenes/'+scene+'.js?v=folio-v5'));
+      if(!loaded.has(scene))loaded.set(scene,import('./scenes/'+scene+'.js?v=school-v6'));
       const module=await loaded.get(scene);if(serial!==paintId)return;
       view=scene==='class'&&!atlas.classes.length?{html:empty('先带入一个班的材料','从导入原表开始建立班级画布。')+button('导入材料','import',{},'accent'),report:null}:module.render(atlas,books[scene],session);
     }
@@ -326,7 +327,7 @@ function drawDrawer() {
   const object=[drawerState.type,drawerState.sid||drawerState.no||drawerState.key||'',drawerState.subject||drawerState.knowledge||drawerState.question||'',drawerState.tab||''].join('|'),same=dialog.dataset.object===object,positions=new Map([...content.querySelectorAll('tr[data-motion-key]')].map(el=>[el,el.getBoundingClientRect()]));dialog.dataset.object=object;
   if(drawerState.type==='person'&&!drawerState.queue){const active=drawerState;drawerState=drawerTrail.at(-1)||null;const queue=personQueue(active.sid,active.exam);drawerState=active;Object.assign(active,queue);}
   document.getElementById('drawer-back').hidden=!drawerTrail.length;
-  dialog.classList.toggle('comparison-drawer',drawerState.type==='compare');dialog.dataset.kind=drawerState.type;document.getElementById('drawer-context').textContent='衡迹 / '+({person:'学生观察',question:'单题研究',filters:'名单筛选',compare:'并排比较',subject:'班级学科',knowledge:'知识点研究'}[drawerState.type]||'研究观察窗');
+  dialog.classList.toggle('comparison-drawer',drawerState.type==='compare');dialog.dataset.kind=drawerState.type;document.getElementById('drawer-context').textContent=SITE_NAME+' / '+({person:'学生观察',question:'单题研究',filters:'名单筛选',compare:'并排比较',subject:'班级学科',knowledge:'知识点研究'}[drawerState.type]||'研究观察窗');
   const views={question:()=>questionView(atlas,drawerState),filters:()=>directoryFilterView(atlas,books.people,session),compare:()=>compareView(atlas,session.comparePeople,drawerState,drawerState.context),subject:()=>subjectView(atlas,drawerState),knowledge:()=>knowledgeView(atlas,drawerState),person:()=>peekView(atlas,drawerState.sid,drawerState.exam,session,drawerState)};
   prepareUpdate();for(const row of content.querySelectorAll('tr[data-motion-key]'))cancelOwnMotion(row);renderInto(content,views[drawerState.type]());
   if(drawerState.type!=='filters'){
@@ -400,7 +401,7 @@ function fourSheets() {
 }
 async function template() {
   const headers=['考试(如53物/53历)','学校','班级','姓名','原始总分','赋分总分','原分市排名','赋分市排名','原分校排名','赋分校排名','语文','语文市排名','语文校排名','数学','数学市排名','数学校排名','外语','外语市排名','外语校排名','物理/历史','首选科市排名','首选科校排名','政治原分','政治赋分','政治原分排名','政治赋分排名','地理原分','地理赋分','地理原分排名','地理赋分排名','化学原分','化学赋分','化学原分排名','化学赋分排名','生物原分(9班为地理)','生物赋分(9班为地理)','生物原分排名','生物赋分排名','外语语种'];
-  await excel({'学生基础':[headers],'语文':[[null,'53','题号','1','2','3'],[null,null,'分值',5,5,10],[null,null,'知识点','现代文阅读','文言基础','表达与写作'],['53物',4,'请填写姓名',null,null,null]],'填写说明':[['项目','说明'],['成绩','考试代码以物或历结尾，原分与赋分分别填写，缺失留空。'],['小题','复制语文表并改为对应学科名，保留题号、分值、知识点三行。'],['联结','不同考试与小题表的姓名保持一致，班级填写当次实际班级。'],['有效线','在衡迹资料仓按考次设置物理、历史两类有效线。']]},'衡迹-成绩与小题录入模板');
+  await excel({'学生基础':[headers],'语文':[[null,'53','题号','1','2','3'],[null,null,'分值',5,5,10],[null,null,'知识点','现代文阅读','文言基础','表达与写作'],['53物',4,'请填写姓名',null,null,null]],'填写说明':[['项目','说明'],['成绩','考试代码以物或历结尾，原分与赋分分别填写，缺失留空。'],['小题','复制语文表并改为对应学科名，保留题号、分值、知识点三行。'],['联结','不同考试与小题表的姓名保持一致，班级填写当次实际班级。'],['有效线','在资料与报告中按考次设置物理、历史两类有效线。']]},SITE_NAME+'-成绩与小题录入模板');
 }
 async function commands(event) {
   if(event.target.closest('#inbox')&&!event.target.closest('#toast'))return;
@@ -525,9 +526,9 @@ async function commands(event) {
     else if(d.cmd==='report-word')await word(exportReport);
     else if(d.cmd==='report-print')print(exportReport);
     else if(d.cmd==='svg'||d.cmd==='png')chart(d.id,d.cmd==='png');
-    else if(d.cmd==='backup'){archiveStudy();download(JSON.stringify({...atlas.data,plans:session.plans,notebook:session.notebook,savedPeople:session.savedPeople,comparePeople:session.comparePeople,directoryViews:session.directoryViews,research}),'衡迹-完整工作区-'+new Date().toLocaleDateString('sv-SE',{timeZone:'Asia/Shanghai'})+'.json','application/json');}
+    else if(d.cmd==='backup'){archiveStudy();download(JSON.stringify({...atlas.data,plans:session.plans,notebook:session.notebook,savedPeople:session.savedPeople,comparePeople:session.comparePeople,directoryViews:session.directoryViews,research}),SITE_NAME+'-完整工作区-'+new Date().toLocaleDateString('sv-SE',{timeZone:'Asia/Shanghai'})+'.json','application/json');}
     else if(d.cmd==='template')await template();
-    else if(d.cmd==='four-sheets')await excel(fourSheets(),'衡迹-四表分析包');
+    else if(d.cmd==='four-sheets')await excel(fourSheets(),SITE_NAME+'-四表分析包');
     else if(d.cmd==='undo')await changeMaterials(async()=>{const dataset=inMemoryUndo||await previous();if(!dataset){notify('没有可撤回的材料替换');return;}await applyMaterials(dataset,workspaceSnapshot(),hasMaterials(dataset)?'已恢复上一次材料':'已恢复空白工作区',{undo:false});});
     else if(d.cmd==='clear')await changeMaterials(async()=>{archiveStudy();await applyMaterials(emptyDataset(),workspaceSnapshot(),'当前工作区已清空');});
     else if(d.cmd==='follow-add')addFollow(d.sid,d.exam,d.tier);
@@ -542,7 +543,7 @@ async function commands(event) {
       const sections=session.notebook.flatMap(note=>[...note.sections.map(section=>({...section,title:note.title+' / '+section.title})),{title:note.title+' / 教师判断',headers:['记录'],rows:[[note.note||'']]}]);
       const sheets=Object.fromEntries(session.notebook.flatMap((note,i)=>Object.entries(note.sheets).map(([name,rows])=>[(i+1)+'-'+name,rows])));
       sheets['教师判断']=[['证据标题','摘录时间','研究来源','教师判断'],...session.notebook.map(note=>[note.title,note.created,note.studyTitle||note.subtitle||'',note.note||''])];
-      openReport(evidence('衡迹 · 教学证据摘录',atlas.data.school||'',sections,sheets));
+      openReport(evidence(SITE_NAME+' · 教学证据摘录',atlas.data.school||'',sections,sheets));
     }
     else if(d.cmd==='reload')location.reload();
   }catch(error){notify(error.message);}
@@ -628,6 +629,6 @@ export async function mount() {
     if(startRevision!==revision)return;
     session.notebook=noteJournal.restore(notebook||[]);
     if(hasMaterials(materials.dataset)&&!session.plans.length){try{session.plans=(JSON.parse(localStorage.getItem('jianwei:actions'))||[]).map(p=>({...p,status:p.status==='done'?'done':'active'}));}catch{}}
-    await installDataset(materials.dataset);if(Object.keys(noteJournal.drafts).length){persistNotebook().catch(()=>notify('教师判断已从本机草稿恢复，请下载材料保留记录。'));}if(materials.origin==='migrated')notify('原工作区材料已带入衡迹');
+    await installDataset(materials.dataset);if(Object.keys(noteJournal.drafts).length){persistNotebook().catch(()=>notify('教师判断已从本机草稿恢复，请下载材料保留记录。'));}if(materials.origin==='migrated')notify('原工作区材料已恢复');
   }catch(error){if(startRevision!==revision)return;await paint();notify('材料尚未载入：'+error.message+'，可直接导入原表。');}
 }

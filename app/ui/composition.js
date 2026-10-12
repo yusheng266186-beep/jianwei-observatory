@@ -1,4 +1,4 @@
-import {button,esc} from './html.js?v=folio-v5';
+import {button,esc} from './html.js?v=school-v6';
 
 export function composeScene(html,{back=''}={}) {
   const template=document.createElement('template');template.innerHTML=html;

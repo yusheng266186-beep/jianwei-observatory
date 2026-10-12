@@ -1,7 +1,7 @@
-import {head,button,chips,badge,block,ribbon,table,number,integer,percent,esc,personButton,search,footnote,empty} from '../ui/html.js?v=folio-v5';
-import {bars,rateColor,rateLegend,chartButtons} from '../ui/plots.js?v=folio-v5';
-import {average,sum,valid} from '../engine/metrics.js?v=folio-v5';
-import {answerRows,evidence} from '../io/exports.js?v=folio-v5';
+import {head,button,chips,badge,block,ribbon,table,number,integer,percent,esc,personButton,search,footnote,empty} from '../ui/html.js?v=school-v6';
+import {bars,rateColor,rateLegend,chartButtons} from '../ui/plots.js?v=school-v6';
+import {average,sum,valid} from '../engine/metrics.js?v=school-v6';
+import {answerRows,evidence} from '../io/exports.js?v=school-v6';
 export function render(atlas,state) {
   const papers=atlas.papers(),paper=papers.find(p=>p.key===state.key);
   if(!paper) {

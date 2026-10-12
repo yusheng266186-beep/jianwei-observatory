@@ -1,8 +1,8 @@
-import {head,button,chips,badge,block,table,number,integer,delta,esc,search,empty,footnote} from '../ui/html.js?v=folio-v5';
-import {mini,spread,chartButtons,seriesColors} from '../ui/plots.js?v=folio-v5';
-import {valid} from '../engine/metrics.js?v=folio-v5';
-import {queryDirectory,directoryLenses,standingLabels,directoryViewName} from '../engine/directory.js?v=folio-v5';
-import {scoreRows,evidence} from '../io/exports.js?v=folio-v5';
+import {head,button,chips,badge,block,table,number,integer,delta,esc,search,empty,footnote} from '../ui/html.js?v=school-v6';
+import {mini,spread,chartButtons,seriesColors} from '../ui/plots.js?v=school-v6';
+import {valid} from '../engine/metrics.js?v=school-v6';
+import {queryDirectory,directoryLenses,standingLabels,directoryViewName} from '../engine/directory.js?v=school-v6';
+import {scoreRows,evidence} from '../io/exports.js?v=school-v6';
 const filter=(label,body)=>'<section class="filter-section"><h3>'+label+'</h3>'+body+'</section>';
 const peek=e=>button(esc(e.person.name),'peek',{sid:e.person.id,exam:e.row.exam},'person-link');
 const subjectOptions=atlas=>[['all','全部学科'],...atlas.comparisonSubjects(atlas.data.scores).map(s=>[s,s])];

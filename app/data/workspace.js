@@ -1,4 +1,5 @@
-import {normalizeDataset} from './compat.js?v=folio-v5';
+import {normalizeDataset} from './compat.js?v=school-v6';
+import {SITE_NAME} from '../brand.js?v=school-v6';
 const DB='hengji-evidence-workspace',TABLE='materials';
 const localPrefix='hengji:';
 export function preference(key,fallback) { try {return JSON.parse(localStorage.getItem(localPrefix+key))??fallback;}catch{return fallback;} }
@@ -55,4 +56,4 @@ export async function hydrate() {
 }
 export const preserveUndo=dataset=>write([['previous',dataset]]);
 export const previous=()=>access('previous');
-export function emptyDataset(){return normalizeDataset({title:'衡迹工作区',school:'',grade:'',anonymous:false});}
+export function emptyDataset(){return normalizeDataset({title:SITE_NAME+'工作区',school:'',grade:'',anonymous:false});}

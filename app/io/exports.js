@@ -1,4 +1,5 @@
-import {esc,number,percent,signed} from '../ui/html.js?v=folio-v5';
+import {esc,number,percent,signed} from '../ui/html.js?v=school-v6';
+import {SITE_NAME,CREST_URL} from '../brand.js?v=school-v6';
 export function download(content,name,type='application/octet-stream') {
   const blob=content instanceof Blob?content:new Blob([content],{type}),url=URL.createObjectURL(blob),anchor=document.createElement('a');
   anchor.href=url;anchor.download=name;anchor.click();setTimeout(()=>URL.revokeObjectURL(url),5000);
@@ -16,7 +17,7 @@ export async function vendors() {
   }
   await loaded;return {XLSX:window.XLSX,JSZip:window.JSZip};
 }
-export async function excel(sheets,name='衡迹分析材料') {
+export async function excel(sheets,name=SITE_NAME+'-分析材料') {
   const {XLSX}=await vendors(),book=XLSX.utils.book_new();
   for(const [label,rows] of Object.entries(sheets)) {
     const sheet=XLSX.utils.aoa_to_sheet(rows);sheet['!cols']=(rows[0]||[]).map((_,i)=>({wch:i===0?24:16}));
@@ -60,7 +61,7 @@ function documentSections(report) {
   });
 }
 export function reportHTML(report) {
-  return '<article class="print-paper"><div class="print-brand">衡迹 / 教学证据台</div><h1>'+esc(report.title)+'</h1><p>'+esc(report.subtitle)+'</p>'+(report.studyTitle?'<p>研究来源：'+esc(report.studyTitle)+'</p>':'')+documentSections(report).map(section=>'<section><h2>'+esc(section.title)+'</h2><table><thead><tr>'+section.headers.map(h=>'<th>'+esc(h)+'</th>').join('')+'</tr></thead><tbody>'+section.rows.map(row=>'<tr>'+row.map(value=>'<td>'+esc(value??'—')+'</td>').join('')+'</tr>').join('')+'</tbody></table></section>').join('')+(report.note?'<section><h2>教师判断与后续行动</h2><p class="written-note">'+esc(report.note)+'</p></section>':'')+'<footer>'+esc(report.created)+' · 缺失值保留为空，原排名保留原统计范围。</footer></article>';
+  return '<article class="print-paper"><div class="print-brand"><img src="'+esc(CREST_URL)+'" width="38" height="38" alt="荣县第一中学校徽">'+esc(SITE_NAME)+'</div><h1>'+esc(report.title)+'</h1><p>'+esc(report.subtitle)+'</p>'+(report.studyTitle?'<p>研究来源：'+esc(report.studyTitle)+'</p>':'')+documentSections(report).map(section=>'<section><h2>'+esc(section.title)+'</h2><table><thead><tr>'+section.headers.map(h=>'<th>'+esc(h)+'</th>').join('')+'</tr></thead><tbody>'+section.rows.map(row=>'<tr>'+row.map(value=>'<td>'+esc(value??'—')+'</td>').join('')+'</tr>').join('')+'</tbody></table></section>').join('')+(report.note?'<section><h2>教师判断与后续行动</h2><p class="written-note">'+esc(report.note)+'</p></section>':'')+'<footer>'+esc(report.created)+' · 缺失值保留为空，原排名保留原统计范围。</footer></article>';
 }
 export function print(report) {document.getElementById('print-area').innerHTML=reportHTML(report);window.print();}
 export async function word(report) {
@@ -69,7 +70,7 @@ export async function word(report) {
   const sections=documentSections(report).map(section=>paragraph(section.title,true)+'<w:tbl><w:tblPr><w:tblBorders>'+['top','left','bottom','right','insideH','insideV'].map(side=>'<w:'+side+' w:val="single" w:sz="4" w:color="C8CDD8"/>').join('')+'</w:tblBorders></w:tblPr>'+[section.headers,...section.rows].map((row,i)=>'<w:tr>'+(i===0?'<w:trPr><w:tblHeader/></w:trPr>':'')+row.map(value=>'<w:tc>'+paragraph(String(value??'—'),i===0)+'</w:tc>').join('')+'</w:tr>').join('')+'</w:tbl>').join('');
   zip.file('[Content_Types].xml','<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>');
   zip.file('_rels/.rels','<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>');
-  zip.file('word/document.xml','<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>'+paragraph('衡迹 · 教学证据台',true)+paragraph(report.title,true)+paragraph(report.subtitle)+(report.studyTitle?paragraph('研究来源：'+report.studyTitle):'')+sections+paragraph('教师判断与后续行动',true)+paragraph(report.note||'')+paragraph(report.created)+'<w:sectPr><w:pgSz w:w="16838" w:h="11906" w:orient="landscape"/><w:pgMar w:top="900" w:right="800" w:bottom="900" w:left="800"/></w:sectPr></w:body></w:document>');
+  zip.file('word/document.xml','<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>'+paragraph(SITE_NAME,true)+paragraph(report.title,true)+paragraph(report.subtitle)+(report.studyTitle?paragraph('研究来源：'+report.studyTitle):'')+sections+paragraph('教师判断与后续行动',true)+paragraph(report.note||'')+paragraph(report.created)+'<w:sectPr><w:pgSz w:w="16838" w:h="11906" w:orient="landscape"/><w:pgMar w:top="900" w:right="800" w:bottom="900" w:left="800"/></w:sectPr></w:body></w:document>');
   download(await zip.generateAsync({type:'blob'}),report.title+'.docx');
 }
 export function chart(id,png=false) {
@@ -77,7 +78,7 @@ export function chart(id,png=false) {
   const copy=svg.cloneNode(true),dimensions=svg.viewBox.baseVal;copy.setAttribute('xmlns','http://www.w3.org/2000/svg');copy.setAttribute('width',dimensions.width);copy.setAttribute('height',dimensions.height);
   const labels=[...svg.querySelectorAll('text')];copy.querySelectorAll('text').forEach((text,index)=>{const style=getComputedStyle(labels[index]);text.style.font=style.font;text.style.fill=style.fill;});
   const blob=new Blob([new XMLSerializer().serializeToString(copy)],{type:'image/svg+xml'});
-  if(!png){download(blob,'衡迹-'+id+'.svg');return;}
+  if(!png){download(blob,SITE_NAME+'-'+id+'.svg');return;}
   const url=URL.createObjectURL(blob),image=new Image();
-  image.onload=()=>{const canvas=document.createElement('canvas');canvas.width=dimensions.width*2;canvas.height=dimensions.height*2;const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(image,0,0,canvas.width,canvas.height);canvas.toBlob(b=>download(b,'衡迹-'+id+'.png'));URL.revokeObjectURL(url);};image.onerror=()=>URL.revokeObjectURL(url);image.src=url;
+  image.onload=()=>{const canvas=document.createElement('canvas');canvas.width=dimensions.width*2;canvas.height=dimensions.height*2;const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(image,0,0,canvas.width,canvas.height);canvas.toBlob(b=>download(b,SITE_NAME+'-'+id+'.png'));URL.revokeObjectURL(url);};image.onerror=()=>URL.revokeObjectURL(url);image.src=url;
 }
