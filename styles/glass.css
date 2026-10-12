@@ -1,10 +1,8 @@
 /* School crest system: navy identity, ice-blue glass, consistent blue-gray signals. */
-@font-face{font-family:'Hengji Editorial';src:url('../assets/fonts/editorial.woff') format('woff');font-weight:200 900;font-style:normal;font-display:swap}
-@font-face{font-family:'Hengji Numbers';src:url('../assets/fonts/numbers.woff') format('woff');font-weight:200 800;font-style:normal;font-display:swap}
 :root {
   --ink:#19364f; --muted:#536c82; --blue:#24588b; --blue-ink:#1b4c7d;
   --canvas:#edf4f9; --line:#416b9024; --copper:#526b83; --lime:#e8f2fa;
-  --editorial:'Hengji Editorial','Songti SC',serif; --numbers:'Hengji Numbers',var(--sans);
+  --editorial:'Rongxian Display','Songti SC',serif; --numbers:'Rongxian Metric',var(--sans);
   --school-blue:#123f73; --school-sky:#b9def3; --school-mark:#4a7fa6;
   --accent-fill:linear-gradient(145deg,#316797,#174675);
   --accent-hover:linear-gradient(145deg,#285b8b,#103c68);

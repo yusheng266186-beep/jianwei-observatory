@@ -1,8 +1,8 @@
-import {head,button,chips,examChips,badge,block,ribbon,table,number,integer,percent,esc,personButton,search,footnote,empty} from '../ui/html.js?v=type-v15';
-import {bars,rateColor,rateLegend,chartButtons} from '../ui/plots.js?v=type-v15';
-import {average,sum,valid} from '../engine/metrics.js?v=type-v15';
-import {answerRows,evidence} from '../io/exports.js?v=type-v15';
-import {queryQuestionMap} from '../engine/question-map.js?v=type-v15';
+import {head,button,chips,examChips,badge,block,ribbon,table,number,integer,percent,esc,personButton,search,footnote,empty} from '../ui/html.js?v=type-v16';
+import {bars,rateColor,rateLegend,chartButtons} from '../ui/plots.js?v=type-v16';
+import {average,sum,valid} from '../engine/metrics.js?v=type-v16';
+import {answerRows,evidence} from '../io/exports.js?v=type-v16';
+import {queryQuestionMap} from '../engine/question-map.js?v=type-v16';
 export function render(atlas,state) {
   const papers=atlas.papers(),paper=papers.find(p=>p.key===state.key);
   if(!paper) {

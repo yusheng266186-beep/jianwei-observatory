@@ -1,31 +1,64 @@
-/* School reading: Chinese serif headings, humanist copy, crisp controls. */
+/* An academic display voice, a precise reading voice, and measured figures. */
 :root{
- --sans:'PingFang SC','Noto Sans CJK SC','Microsoft YaHei',system-ui,sans-serif;
- --reading:'Rongxian Reading Copy','LXGW WenKai','Kaiti SC','KaiTi','Noto Serif CJK SC',serif;
- --editorial:'Rongxian Reading Serif','Hengji Editorial','Noto Serif CJK SC','Songti SC','STSong','SimSun',serif;
- --chart-font:'Hengji Numbers',var(--reading);
+ --sans:'Rongxian Metric','Rongxian Interface','PingFang SC','Noto Sans CJK SC','Microsoft YaHei',system-ui,sans-serif;
+ --reading:var(--sans);
+ --editorial:'Rongxian Display','Source Han Serif SC','Noto Serif CJK SC','Songti SC','STSong',serif;
+ --numbers:'Rongxian Metric',var(--sans);
+ --mono:var(--numbers);
+ --chart-font:var(--numbers);
 }
-body{font-family:var(--reading);font-size:15px;line-height:1.75}
-button,input,textarea,select,.table-scroll,.table-reader,.navigation-dock,.chips,.badge,.overline,.brand-wordmark>span,.number-ribbon span,.number-ribbon small,.student-identity p,.student-card footer,.exam-rail,.student-rank,.scope-heading,.pagination,.chart-buttons,.source-caption{font-family:var(--sans)}
-h1,h2,h3,.block-head h2,.drawer-title h2,.sheet-dialog h2,.source-route h3,.library-route>b,.student-name,.person-link,.lens-button b,.knowledge-card h3,.subject-card h3{font-family:var(--editorial);font-weight:500;letter-spacing:.2px}
-.scene-head h1,.directory-head h1,.welcome-copy h1{font-weight:500;letter-spacing:.35px;line-height:1.4}
-.block-head h2{font-size:21px;line-height:1.55}
-.student-card .student-name{font-size:17px;letter-spacing:.25px;font-weight:600}
-.student-name,.person-link{font-family:var(--editorial)}
-.paper-cover>header>span{font-weight:500;letter-spacing:.5px}
-.scene-head p,.directory-head p,.block-head p,.welcome-copy>p,.lens-button small,.teaching-hint,.lens-note,.research-brief,.drawer-clue-note,.footnote,.method-note p,.percentile-note,.story-caption{font-family:var(--reading);letter-spacing:.1px;line-height:1.85}
-.scene-head p,.directory-head p{font-size:14px}
-.block-head p,.drawer-clue-note,.footnote,.method-note p,.percentile-note,.lens-note{font-size:12.5px}
-.lens-button small{font-size:12px;line-height:1.65}
-.number-ribbon strong,.hero-count>strong,.student-score>strong,.student-rank strong,.goal-levels strong,.delta,.metric-card strong,.cover-diagram i,.class-key b,.scope-class b,.paper-switcher>header strong,.table-scroll :is(td,th){font-variant-numeric:tabular-nums}
-.class-key b,.scope-class b,.scope-class strong,.metric-card strong,.delta,.question-tile strong,.personal-question-card strong{font-family:var(--numbers)}
-.trajectory text,.bars text,.spread text,.landscape text,.threshold-profile text{font-family:var(--chart-font)}
-.spread-threshold-label{font-weight:550;letter-spacing:.1px}
+body{font-family:var(--reading);font-size:14px;font-weight:400;line-height:1.75;font-synthesis:none}
+button,input,textarea,select{font-family:var(--sans)}
+h1,h2,h3{font-family:var(--sans);font-weight:500;letter-spacing:0}
+.scene-head h1,.directory-head h1,.welcome-copy h1,.startup h1{font-family:var(--editorial);font-weight:600;color:var(--school-blue);letter-spacing:-.035em;line-height:1.35}
+.scene-head h1,.directory-head h1{font-size:clamp(30px,2.8vw,40px);margin-bottom:10px}
+.scene-head p,.directory-head p{font-size:13px;font-weight:400;line-height:1.8;letter-spacing:.02em}
+.overline{font-family:var(--sans);font-size:10px;font-weight:500;letter-spacing:.12em;line-height:1.5}
+.brand strong{font-family:var(--editorial);font-weight:600;letter-spacing:.035em}
+.brand-wordmark>span{font-family:var(--sans);font-weight:400;letter-spacing:.2em}
+.welcome-copy h1{font-size:clamp(48px,5.3vw,76px);letter-spacing:-.04em;line-height:1.23}
+.welcome-copy>p{font-size:15px;line-height:1.9;letter-spacing:.025em}
+.welcome-school b{font-weight:500}
+.overview-featured>h2{font-family:var(--editorial);font-weight:600;line-height:1.5;letter-spacing:-.02em}
+.block-head h2,.drawer-section>h3,.sheet-dialog h2,.directory-controls h2,.research-heading{font-family:var(--sans);font-size:19px;font-weight:500;line-height:1.5;letter-spacing:-.015em}
+.block-head h2{margin-bottom:5px}
+.block-head p,.drawer-clue-note,.footnote,.method-note p,.percentile-note,.lens-note{font-family:var(--reading);font-size:12px;font-weight:400;line-height:1.8;letter-spacing:.015em}
+.drawer-title h2{font-family:var(--editorial);font-size:34px;font-weight:600;letter-spacing:-.03em;line-height:1.4}
+.drawer-title p{font-family:var(--reading);font-size:13px;line-height:1.85}
+.source-route b,.library-route>b,.lens-button b,.knowledge-card h3,.subject-card h3,.student-name,.person-link{font-family:var(--sans);font-weight:500;letter-spacing:0}
+.student-card .student-name{font-size:16px;line-height:1.55;font-weight:500}
+.student-identity p,.student-card footer{font-family:var(--reading);font-weight:400}
+.paper-cover>header>span{font-family:var(--editorial);font-size:27px;font-weight:600;letter-spacing:-.025em;line-height:1.4}
+.paper-cover h3{font-family:var(--sans);font-weight:400;line-height:1.7}
+.lens-button small,.teaching-hint,.research-brief,.story-caption{font-family:var(--reading);letter-spacing:.01em;line-height:1.75}
+.lens-button small{font-size:11px}
+.number-ribbon span,.number-ribbon small,.metric-card span,.metric-card small,.hero-count small,.overview-measures small,.student-score small{font-family:var(--sans);font-weight:400;letter-spacing:.01em}
+.number-ribbon strong,.hero-count>strong,.student-score>strong,.student-rank strong,.overview-measures strong,.inquiry-grid strong,.goal-levels strong,.lens-button strong,.delta,.metric-card strong,.question-tile strong,.personal-question-card strong,.class-key b,.scope-class b,.scope-class strong{font-family:var(--numbers);font-variant-numeric:lining-nums tabular-nums}
+.number-ribbon strong{font-size:36px;font-weight:500;letter-spacing:-.035em;line-height:1.45}
+.hero-count>strong{font-weight:400;letter-spacing:-.05em}
+.overview-measures strong,.student-score>strong{font-weight:500;letter-spacing:-.03em}
+.number-ribbon strong small,.student-score>strong small,.goal-levels strong small,.personal-question-card strong small,.question-tile strong small{font-family:var(--sans);font-weight:400;letter-spacing:0}
+.chip,.chips .chip,.button,.navigation-dock button{font-weight:500}
+.exam-choice-name,.exam-stop b{font-weight:500}
+.exam-stop small{font-weight:400}
+.table-scroll table{font-family:var(--sans);font-variant-numeric:lining-nums tabular-nums}
+.table-scroll th{font-weight:500;letter-spacing:.015em}
+.table-scroll td{font-weight:400;line-height:1.65}
+.trajectory text,.bars text,.spread text,.landscape text,.threshold-profile text{font-family:var(--chart-font);font-variant-numeric:lining-nums tabular-nums}
+.spread-threshold-label{font-weight:500;letter-spacing:0}
 .spread-threshold-detail,.spread-threshold-range{font-weight:400}
 @media(max-width:760px){
- body{font-size:14px}
- .scene-head p,.directory-head p{font-size:13px;line-height:1.85}
- .block-head h2{font-size:19px;line-height:1.55}
- .block-head p,.drawer-clue-note,.footnote,.percentile-note,.lens-note{font-size:12px}
- .student-card .student-name{font-size:17px}
+ .scene-head h1,.directory-head h1{font-size:29px;margin-bottom:8px}
+ .scene-head p,.directory-head p{font-size:12px;line-height:1.8}
+ .block-head h2,.directory-controls h2,.sheet-dialog h2{font-size:18px}
+ .block-head p,.drawer-clue-note,.footnote,.percentile-note,.lens-note{font-size:11.5px}
+ .drawer-title h2{font-size:28px}
+ .student-card .student-name{font-size:15px}
+ .number-ribbon strong{font-size:30px}
+ .welcome-copy h1{font-size:49px}
+}
+@media(max-width:380px){
+ .scene-head h1,.directory-head h1{font-size:27px}
+ .brand strong{letter-spacing:0}
+ .welcome-copy h1{font-size:46px}
 }

@@ -1,44 +1,82 @@
 [
   {
-    "file": "reading-serif-core.woff2",
-    "family": "Rongxian Reading Serif",
+    "file": "reading-display-core.woff2",
+    "family": "Rongxian Display",
+    "weight": "600",
     "section": "core",
     "glyphs": 701,
-    "bytes": 252892
+    "bytes": 255892
   },
   {
-    "file": "reading-serif-common.woff2",
-    "family": "Rongxian Reading Serif",
+    "file": "reading-display-common.woff2",
+    "family": "Rongxian Display",
+    "weight": "600",
     "section": "common",
     "glyphs": 3181,
-    "bytes": 1267984
+    "bytes": 1290652
   },
   {
-    "file": "reading-serif-extended.woff2",
-    "family": "Rongxian Reading Serif",
+    "file": "reading-display-extended.woff2",
+    "family": "Rongxian Display",
+    "weight": "600",
     "section": "extended",
     "glyphs": 3007,
-    "bytes": 1329936
+    "bytes": 1354312
   },
   {
-    "file": "reading-copy-core.woff2",
-    "family": "Rongxian Reading Copy",
+    "file": "reading-ui-regular-core.woff2",
+    "family": "Rongxian Interface",
+    "weight": "400",
     "section": "core",
-    "glyphs": 702,
-    "bytes": 151372
+    "glyphs": 701,
+    "bytes": 187232
   },
   {
-    "file": "reading-copy-common.woff2",
-    "family": "Rongxian Reading Copy",
+    "file": "reading-ui-regular-common.woff2",
+    "family": "Rongxian Interface",
+    "weight": "400",
     "section": "common",
     "glyphs": 3181,
-    "bytes": 755504
+    "bytes": 954172
   },
   {
-    "file": "reading-copy-extended.woff2",
-    "family": "Rongxian Reading Copy",
+    "file": "reading-ui-regular-extended.woff2",
+    "family": "Rongxian Interface",
+    "weight": "400",
     "section": "extended",
     "glyphs": 3007,
-    "bytes": 781696
+    "bytes": 981848
+  },
+  {
+    "file": "reading-ui-medium-core.woff2",
+    "family": "Rongxian Interface",
+    "weight": "500",
+    "section": "core",
+    "glyphs": 701,
+    "bytes": 187332
+  },
+  {
+    "file": "reading-ui-medium-common.woff2",
+    "family": "Rongxian Interface",
+    "weight": "500",
+    "section": "common",
+    "glyphs": 3181,
+    "bytes": 958956
+  },
+  {
+    "file": "reading-ui-medium-extended.woff2",
+    "family": "Rongxian Interface",
+    "weight": "500",
+    "section": "extended",
+    "glyphs": 3007,
+    "bytes": 989780
+  },
+  {
+    "file": "reading-metrics.woff2",
+    "family": "Rongxian Metric",
+    "weight": "100 700",
+    "section": "metrics",
+    "glyphs": 101,
+    "bytes": 27692
   }
 ]

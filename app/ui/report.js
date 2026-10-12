@@ -1,4 +1,4 @@
-import {button,table,esc,empty} from './html.js?v=type-v15';
+import {button,table,esc,empty} from './html.js?v=type-v16';
 export function reportView(report,state,{noteState='preview',canReturn=false}={}) {
   const sections=report.sections||[],selected=Math.min(state.section||0,Math.max(0,sections.length-1)),section=sections[selected],query=(state.search||'').trim(),rows=(section?.rows||[]).filter(row=>!query||row.some(value=>String(value??'').includes(query))),pages=Math.max(1,Math.ceil(rows.length/50)),page=Math.min(state.page||1,pages),shown=rows.slice((page-1)*50,page*50);
   const navigation='<div class="report-sections" role="group" aria-label="报告内容">'+sections.map((s,index)=>button(esc(s.title)+' <small>'+s.rows.length+'</small>','report-section',{index},index===selected?'chip selected':'chip','aria-pressed="'+(index===selected)+'"')).join('')+'</div>';
