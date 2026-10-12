@@ -202,12 +202,18 @@ await group('06 热力格子、知识点路径与单题所有控件',async()=>{
 
 await group('07 学生目录、档案、收藏与并排比较全部控件',async()=>{
  await nav('people');
+ const materials=await page.locator('[data-cmd="directory-material"]').evaluateAll(es=>es.map(e=>({key:e.dataset.key,value:e.dataset.value})));
+ for(const {key,value} of materials){
+  const selector=`[data-cmd="directory-material"][data-key="${key}"][data-value="${value}"]`;
+  await click(selector);assert.equal(await page.evaluate(key=>JSON.parse(localStorage.getItem('hengji:books')).people[key],key),value);await layout('材料快捷筛选:'+key+'='+value);
+  await click(selector);assert.equal(await page.evaluate(key=>JSON.parse(localStorage.getItem('hengji:books')).people[key],key),'all');
+ }
  await page.setViewportSize({width:390,height:900});await click('[data-cmd="directory-scope"]');await click('.scope-controls [data-cmd="toggle"][data-value="4"]');await click('[data-cmd="directory-scope"]');await click('[data-cmd="directory-clear"][data-key="classes"]');await page.setViewportSize({width:1440,height:1000});
  for(const key of ['view','columns','sort','pageSize','directoryExam','track','focusSubject']){if(key==='columns')await set('view','table');await options(key);}
  await click('[data-cmd="directory-reset"]');
  for(const lens of unique(await page.locator('[data-cmd="directory-lens"]').evaluateAll(es=>es.map(e=>e.dataset.lens))))await click(`[data-cmd="directory-lens"][data-lens="${lens}"]`);
  await click('[data-cmd="directory-reset"]');await click('[data-cmd="directory-filters"]');
- for(const key of ['standing','trend','records','focusSubject','focusStatus','sort'])await options(key,'#drawer-content');
+ for(const key of ['scoreStatus','standing','trend','records','focusSubject','focusStatus','sort'])await options(key,'#drawer-content');
  await click('[data-cmd="directory-reset"]');await click('[data-cmd="directory-apply"]');await set('view','cards');
  const people=await page.locator('.student-name').evaluateAll(es=>es.map(e=>e.dataset.sid));
  for(const sid of people){await click(`.student-name[data-sid="${sid}"]`);await layout('学生:'+sid);await closeDrawer();}

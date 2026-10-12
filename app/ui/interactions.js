@@ -1,4 +1,4 @@
-import {motion} from './motion.js?v=study-v7';
+import {motion} from './motion.js?v=crest-v8';
 let motionPreference=()=>false,resizeObserver,plotObserver,railObserver,revealObserver,tooltipTarget=null,tooltipOriginal=null,tooltipFrame=0,outlineFrame=0,pointerFrame=0,outline=null,outlineEntries=[];
 const observedTables=new Set(),observedPlots=new Set(),observedReveals=new Set(),revealed=new WeakSet(),disclosures=new WeakMap();
 const selectionRails=new Set(),railStates=new WeakMap();

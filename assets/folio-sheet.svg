@@ -1,31 +1,31 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 440" fill="none">
   <defs>
-    <linearGradient id="paper" x1=".1" y1="0" x2=".85" y2="1"><stop stop-color="#ffffff" stop-opacity=".92"/><stop offset="1" stop-color="#fff9e8" stop-opacity=".25"/></linearGradient>
-    <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffffff" stop-opacity=".7"/><stop offset=".55" stop-color="#ebdfc6" stop-opacity=".25"/><stop offset="1" stop-color="#ffffff" stop-opacity=".64"/></linearGradient>
-    <linearGradient id="edge"><stop stop-color="#d3c4a4" stop-opacity=".1"/><stop offset=".5" stop-color="#a28b58" stop-opacity=".56"/><stop offset="1" stop-color="#d3c4a4" stop-opacity=".13"/></linearGradient>
-    <filter id="shadow" x="-30%" y="-30%" width="160%" height="190%"><feDropShadow dx="0" dy="20" stdDeviation="13" flood-color="#716444" flood-opacity=".1"/></filter>
+    <linearGradient id="paper" x1=".1" y1="0" x2=".85" y2="1"><stop stop-color="#ffffff" stop-opacity=".92"/><stop offset="1" stop-color="#edf3fa" stop-opacity=".25"/></linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffffff" stop-opacity=".7"/><stop offset=".55" stop-color="#c2d8ef" stop-opacity=".25"/><stop offset="1" stop-color="#ffffff" stop-opacity=".64"/></linearGradient>
+    <linearGradient id="edge"><stop stop-color="#aabccd" stop-opacity=".1"/><stop offset=".5" stop-color="#5c7d9e" stop-opacity=".56"/><stop offset="1" stop-color="#aabccd" stop-opacity=".13"/></linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="190%"><feDropShadow dx="0" dy="20" stdDeviation="13" flood-color="#345a81" flood-opacity=".1"/></filter>
   </defs>
   <path d="M42 355h548M70 375h464M106 395h354" stroke="url(#edge)"/>
   <g filter="url(#shadow)">
-    <path d="m86 157 158-34 2 203-159 31Z" fill="url(#paper)" stroke="#fff" stroke-width="1.5"/>
-    <path d="m244 123 161 45-5 203-154-45Z" fill="url(#glass)" stroke="#fff" stroke-width="1.5"/>
-    <path d="m405 168 157-53 1 203-163 53Z" fill="url(#paper)" stroke="#fff" stroke-width="1.5"/>
+    <path d="m86 157 158-34 2 203-159 31Z" fill="url(#paper)" stroke="#ffffff" stroke-width="1.5"/>
+    <path d="m244 123 161 45-5 203-154-45Z" fill="url(#glass)" stroke="#ffffff" stroke-width="1.5"/>
+    <path d="m405 168 157-53 1 203-163 53Z" fill="url(#paper)" stroke="#ffffff" stroke-width="1.5"/>
   </g>
-  <path d="m244 123 2 203m159-158-5 203" stroke="#b9a477" stroke-opacity=".35"/>
-  <g stroke="#c6b998" stroke-opacity=".5">
+  <path d="m244 123 2 203m159-158-5 203" stroke="#7d98b3" stroke-opacity=".35"/>
+  <g stroke="#9aafc4" stroke-opacity=".5">
     <path d="m107 186 112-24m-112 47 112-24m-112 47 112-24m-112 47 112-24m-112 47 112-24"/>
     <path d="m267 183 113 30m-113-7 113 30m-113-7 113 30m-113-7 113 30m-113-7 113 30"/>
     <path d="m426 202 115-38m-115 62 115-39m-115 63 115-39m-115 63 115-39m-115 63 115-39"/>
   </g>
-  <path d="m102 135 95-20m223 30 118-40" stroke="#b59459" stroke-width="2"/>
-  <path d="m69 154-17 3v20m185-72v-18l17-3m333 23 17-6v21m-189 259v18l-16-4m-326-16-19 4v-20" stroke="#b5a887" stroke-opacity=".65"/>
-  <g font-family="system-ui,sans-serif" font-size="12" fill="#8a7954" letter-spacing="2">
+  <path d="m102 135 95-20m223 30 118-40" stroke="#6887a6" stroke-width="2"/>
+  <path d="m69 154-17 3v20m185-72v-18l17-3m333 23 17-6v21m-189 259v18l-16-4m-326-16-19 4v-20" stroke="#859eb7" stroke-opacity=".65"/>
+  <g font-family="system-ui,sans-serif" font-size="12" fill="#526f8c" letter-spacing="2">
     <text x="97" y="116" transform="rotate(-12 97 116)">材料</text>
     <text x="278" y="148" transform="rotate(15 278 148)">对照</text>
     <text x="429" y="130" transform="rotate(-18 429 130)">判断</text>
   </g>
-  <rect x="289" y="73" width="43" height="43" rx="10" fill="url(#glass)" stroke="#fff" transform="rotate(-12 289 73)"/>
-  <path d="m300 80 7 32m-19-12 32-7" stroke="#ae9159" stroke-width="1.5"/>
-  <path d="m94 324 472-105" stroke="#b79555" stroke-opacity=".48" stroke-width="1.5"/>
-  <path d="m555 216 11 3-7 9" stroke="#b79555" stroke-opacity=".58" stroke-width="1.5"/>
+  <rect x="289" y="73" width="43" height="43" rx="10" fill="url(#glass)" stroke="#ffffff" transform="rotate(-12 289 73)"/>
+  <path d="m300 80 7 32m-19-12 32-7" stroke="#6383a4" stroke-width="1.5"/>
+  <path d="m94 324 472-105" stroke="#6786a5" stroke-opacity=".48" stroke-width="1.5"/>
+  <path d="m555 216 11 3-7 9" stroke="#6786a5" stroke-opacity=".58" stroke-width="1.5"/>
 </svg>

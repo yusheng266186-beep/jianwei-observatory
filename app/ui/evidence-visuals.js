@@ -1,16 +1,17 @@
-import {esc,number,integer,percent,button} from './html.js?v=study-v7';
-import {valid} from '../engine/metrics.js?v=study-v7';
-import {rateColor} from './plots.js?v=study-v7';
+import {esc,number,integer,percent,button} from './html.js?v=crest-v8';
+import {valid} from '../engine/metrics.js?v=crest-v8';
+import {plotPalette as palette} from './palette.js?v=crest-v8';
+import {rateColor} from './plots.js?v=crest-v8';
 
 export function thresholdProfile(id,summary) {
   const prefix='profile-'+[...String(id)].map(c=>c.codePointAt(0).toString(16)).join('-');
-  const tiers=[['under','本科',0,'#b38d50','#e6d3ac'],['top','特控',118,'#72888d','#c6d3d5']];
+  const tiers=[['under','本科',0,palette.profileUnder,palette.profileUnderLight],['top','特控',118,palette.profileTop,palette.profileTopLight]];
   const rate=tier=>valid(summary[tier])?summary[tier+'Rate']:null;
   const defs=tiers.map(([tier,,,color,light])=>'<linearGradient id="'+prefix+'-'+tier+'"><stop stop-color="'+light+'"/><stop offset="1" stop-color="'+color+'"/></linearGradient>').join('');
   const rows=tiers.map(([tier,label,offset,color])=>{
     const value=rate(tier),known=valid(value),width=known?Math.max(0,Math.min(1,value))*308:0,x=26+width,y=offset+54;
-    const ticks=Array.from({length:5},(_,i)=>'<line x1="'+(26+i*77)+'" x2="'+(26+i*77)+'" y1="'+(y+19)+'" y2="'+(y+24)+'" stroke="#b5ab964f"/>').join('');
-    return '<g><title>'+label+'达线率 '+percent(value)+'，'+integer(summary[tier])+' / '+integer(summary[tier+'Base'])+'人</title><text class="profile-label" x="26" y="'+(offset+31)+'" fill="#756952" font-size="18">'+label+'</text><text class="profile-value" x="334" y="'+(offset+32)+'" text-anchor="end" fill="'+color+'" font-size="30" font-family="system-ui,sans-serif">'+percent(value)+'</text><rect x="26" y="'+y+'" width="308" height="15" rx="3" fill="#b7ab891b" stroke="#fff"'+(!known?' stroke-dasharray="3 5"':'')+'/>'+(known?'<rect class="threshold-progress" x="26" y="'+y+'" width="'+width+'" height="15" rx="3" fill="url(#'+prefix+'-'+tier+')"/>':'')+(known?'<path class="profile-marker" d="M'+x+' '+(y-6)+'l4 4-4 4-4-4Z" fill="'+color+'"/>':'')+ticks+'<text class="profile-caption" x="26" y="'+(offset+99)+'" fill="#7a7569" font-size="13">达线 '+integer(summary[tier])+' / 可判定 '+integer(summary[tier+'Base'])+' 人</text><text class="profile-axis" x="334" y="'+(offset+99)+'" text-anchor="end" fill="#9c9380" font-size="11">0 — 100%</text></g>';
+    const ticks=Array.from({length:5},(_,i)=>'<line x1="'+(26+i*77)+'" x2="'+(26+i*77)+'" y1="'+(y+19)+'" y2="'+(y+24)+'" stroke="'+palette.tick+'"/>').join('');
+    return '<g><title>'+label+'达线率 '+percent(value)+'，'+integer(summary[tier])+' / '+integer(summary[tier+'Base'])+'人</title><text class="profile-label" x="26" y="'+(offset+31)+'" fill="'+palette.label+'" font-size="18">'+label+'</text><text class="profile-value" x="334" y="'+(offset+32)+'" text-anchor="end" fill="'+color+'" font-size="30" font-family="system-ui,sans-serif">'+percent(value)+'</text><rect x="26" y="'+y+'" width="308" height="15" rx="3" fill="'+palette.well+'" stroke="#fff"'+(!known?' stroke-dasharray="3 5"':'')+'/>'+(known?'<rect class="threshold-progress" x="26" y="'+y+'" width="'+width+'" height="15" rx="3" fill="url(#'+prefix+'-'+tier+')"/>':'')+(known?'<path class="profile-marker" d="M'+x+' '+(y-6)+'l4 4-4 4-4-4Z" fill="'+color+'"/>':'')+ticks+'<text class="profile-caption" x="26" y="'+(offset+99)+'" fill="'+palette.caption+'" font-size="13">达线 '+integer(summary[tier])+' / 可判定 '+integer(summary[tier+'Base'])+' 人</text><text class="profile-axis" x="334" y="'+(offset+99)+'" text-anchor="end" fill="'+palette.caption+'" font-size="11">0 — 100%</text></g>';
   }).join('');
   return '<figure class="threshold-figure"><svg id="'+esc(id)+'" class="threshold-profile" viewBox="0 0 360 230" role="img" aria-label="本科达线率'+percent(rate('under'))+'，特控达线率'+percent(rate('top'))+'，分别按各自可判定人数计算"><defs>'+defs+'</defs>'+rows+'</svg><figcaption>两条标尺分别按各自可判定人数计算</figcaption></figure>';
 }
@@ -45,7 +46,7 @@ export function routePreview(atlas,target,exam,groups,papers) {
   return '<div class="route-preview route-distributions"><span class="route-caption">两科类分别预览总分分布 · 横轴各取本组范围</span>'+groups.map(g=>{
     const values=g.rows.map(r=>r.total).filter(valid);if(!values.length)return '<div><span>'+g.title+'</span><small>暂无可绘制总分</small></div>';
     const min=Math.min(...values),max=Math.max(...values),bins=Array.from({length:12},()=>0);for(const v of values)bins[Math.min(11,Math.floor((v-min)/(max-min||1)*12))]++;
-    const high=Math.max(...bins),plot=bins.map((count,i)=>'<rect x="'+i*16+'" y="'+(44-count/high*38)+'" width="12" height="'+count/high*38+'" rx="3" fill="#c7a669"><title>'+count+'人</title></rect>').join('');
+    const high=Math.max(...bins),plot=bins.map((count,i)=>'<rect x="'+i*16+'" y="'+(44-count/high*38)+'" width="12" height="'+count/high*38+'" rx="3" fill="'+palette.distribution+'"><title>'+count+'人</title></rect>').join('');
     return '<div><span>'+g.title+'<small>'+number(min,0)+'–'+number(max,0)+' 分</small></span><svg viewBox="0 0 192 48" role="img" aria-label="'+g.title+'总分分布，'+values.length+'份有效总分，范围'+number(min)+'至'+number(max)+'分">'+plot+'</svg></div>';
   }).join('')+'</div>';
 }
