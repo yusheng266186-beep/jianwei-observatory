@@ -1,6 +1,7 @@
-import {esc,number,percent,attrs} from './html.js?v=squares-v21';
-import {valid} from '../engine/metrics.js?v=squares-v21';
-import {plotPalette as palette} from './palette.js?v=squares-v21';
+import {esc,number,percent,attrs} from './html.js?v=cohesion-v22';
+import {valid} from '../engine/metrics.js?v=cohesion-v22';
+import {plotPalette as palette} from './palette.js?v=cohesion-v22';
+import {scoreTone,scoreLegend} from './score-tones.js?v=cohesion-v22';
 export const seriesColors=palette.series;
 const colors=seriesColors;
 const action=item=>item?.cmd?' data-plot-action="true" data-cmd="'+esc(item.cmd)+'"'+attrs(item.data||{})+' role="button" tabindex="0"':'';
@@ -78,8 +79,9 @@ export function mini(values) {
   values.forEach((v,i)=>{if(!valid(v)){previous=false;return;}path+=(previous?'L':'M')+i*105/Math.max(1,values.length-1)+','+(25-(v-low)/(high-low||1)*22)+' ';previous=true;});
   return '<svg viewBox="0 0 110 28" class="mini" aria-hidden="true"><path d="'+path+'" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
 }
-export const rateColor=rate=>!valid(rate)?palette.rates.missing:rate<.5?palette.rates.low:rate<.75?palette.rates.medium:palette.rates.high;
+export const rateColor=rate=>scoreTone(rate).fill;
+export const rateStyle=rate=>'background:'+scoreTone(rate).fill+';color:'+scoreTone(rate).ink+';';
 export function rateLegend() {
-  return '<div class="rate-legend" aria-label="得分率颜色说明"><span>得分率</span>'+[[.25,'低于50%'],[.6,'50%至75%以下'],[.9,'75%及以上'],[null,'无法计算']].map(([rate,label])=>'<span><i style="background:'+rateColor(rate)+'"></i>'+label+'</span>').join('')+'</div>';
+  return scoreLegend();
 }
 export function chartButtons(id){return '<div class="chart-buttons"><button data-cmd="svg" data-id="'+id+'">SVG ↗</button><button data-cmd="png" data-id="'+id+'">PNG ↗</button></div>';}

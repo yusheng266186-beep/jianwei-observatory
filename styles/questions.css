@@ -106,7 +106,7 @@
 .paper-score-atlas text{font-family:var(--chart-font);font-weight:400;font-variant-numeric:tabular-nums;letter-spacing:0}
 .profile-question{cursor:pointer;outline:none}
 .profile-tile{transition:fill .2s,stroke .2s,fill-opacity .2s}
-.profile-question:is(:hover,:focus-visible) .profile-tile{fill:#f5fbff;fill-opacity:1;stroke:#537e9d;stroke-width:1.5}
+.profile-question:is(:hover,:focus-visible) .profile-tile{fill-opacity:1;stroke:#537e9d;stroke-width:1.5}
 .profile-question.is-current .profile-tile{stroke:#6b91ad;stroke-width:1.4;fill-opacity:1}
 .paper-combined-note{display:flex;align-items:flex-start;gap:9px;margin:1px 0 14px;color:#627e93;font:400 10px/1.8 var(--sans)}
 .paper-combined-note>span{padding:2px 6px;border-radius:5px;white-space:nowrap;background:#dceaf46b;color:#416581}

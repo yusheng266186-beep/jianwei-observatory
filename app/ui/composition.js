@@ -1,4 +1,4 @@
-import {button,esc} from './html.js?v=squares-v21';
+import {button,esc} from './html.js?v=cohesion-v22';
 
 export function composeScene(html,{back=''}={}) {
   const template=document.createElement('template');template.innerHTML=html;

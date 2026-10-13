@@ -1,8 +1,9 @@
-import {button,block,table,ribbon,number,integer,percent,delta,esc,empty} from './html.js?v=squares-v21';
-import {trajectory,bars,rateColor,chartButtons} from './plots.js?v=squares-v21';
-import {subjectLens,skillLens} from '../engine/lenses.js?v=squares-v21';
-import {valid} from '../engine/metrics.js?v=squares-v21';
-import {evidence,scoreRows} from '../io/exports.js?v=squares-v21';
+import {button,block,table,ribbon,number,integer,percent,delta,esc,empty} from './html.js?v=cohesion-v22';
+import {trajectory,bars,chartButtons} from './plots.js?v=cohesion-v22';
+import {subjectLens,skillLens} from '../engine/lenses.js?v=cohesion-v22';
+import {scoreTone,scoreStyle} from './score-tones.js?v=cohesion-v22';
+import {valid} from '../engine/metrics.js?v=cohesion-v22';
+import {evidence,scoreRows} from '../io/exports.js?v=cohesion-v22';
 
 const tabs=(options,value)=>'<nav class="drawer-tabs lens-tabs" aria-label="观察视角">'+options.map(([id,label])=>button(label,'drawer-tab',{value:id},id===value?'chip selected':'chip','aria-pressed="'+(id===value)+'"')).join('')+'</nav>';
 const filters=(items,value)=>'<div class="lens-filters" role="group" aria-label="当前观察窗的名单条件">'+items.map(item=>button('<span>'+esc(item.label)+'</span><b>'+integer(item.count)+'</b>','lens-filter',{value:item.id},item.id===value?'lens-filter selected':'lens-filter','aria-pressed="'+(item.id===value)+'"')).join('')+'</div>';
@@ -45,7 +46,7 @@ export function knowledgeView(atlas,state) {
     const classes=[...new Set(entries.map(e=>e.answer.classNo))].sort((a,b)=>a-b),rows=classes.map(no=>{const part=entries.filter(e=>e.answer.classNo===no),known=part.filter(e=>e.rate!==null);return {no,count:part.length,known:known.length,rate:known.length?known.reduce((total,e)=>total+e.total,0)/(known.length*max):null};});
     body=block('同一组题，各班的完整作答',bars('lens-knowledge-classes',rows.map(r=>({label:r.no+'班',value:r.rate,cmd:'knowledge-class',data:{no:r.no}})),{percentages:true}),'只使用关联题得分与满分齐全的学生。点击班级，在当前观察窗展开该班名单。',chartButtons('lens-knowledge-classes'))+block('班级材料明细',table(['班级','作答份数','完整可比份数','得分率','材料不全'],rows.map(r=>[button(r.no+'班','knowledge-class',{no:r.no},'person-link'),integer(r.count),integer(r.known),percent(r.rate),integer(r.count-r.known)]),{label:'知识点班级差异'}));
   } else {
-    body='<div class="lens-question-grid">'+questions.map(q=>'<button class="lens-question" data-cmd="question" data-key="'+esc(state.key)+'" data-index="'+q.index+'" data-classes="'+esc((state.classes||[]).join(','))+'" style="--rate-color:'+rateColor(q.rate)+'"><header><b>'+esc(q.label)+'题</b><span>'+q.count+' 份有效得分</span></header><strong>'+percent(q.rate)+'</strong><p>均分 '+number(q.mean)+' / '+number(q.max)+'</p><footer><span>平均失分 '+number(q.loss)+'</span><i aria-hidden="true">↗</i></footer></button>').join('')+'</div><p class="lens-caption">点击一道题，继续看该题的班级与全体作答。题目可能关联多个知识点，不把这些视角的分数再次相加。</p>'+button('从具体学生继续 ↗','drawer-tab',{value:'students'},'outline');
+    body='<div class="lens-question-grid">'+questions.map(q=>'<button class="lens-question" data-cmd="question" data-key="'+esc(state.key)+'" data-index="'+q.index+'" data-classes="'+esc((state.classes||[]).join(','))+'" data-score-tone="'+scoreTone(q.rate).key+'" style="'+scoreStyle(q.rate)+'"><header><b>'+esc(q.label)+'题</b><span>'+q.count+' 份有效得分</span></header><strong>'+percent(q.rate)+'</strong><p>均分 '+number(q.mean)+' / '+number(q.max)+'</p><footer><span>平均失分 '+number(q.loss)+'</span><i aria-hidden="true">↗</i></footer></button>').join('')+'</div><p class="lens-caption">点击一道题，继续看该题的班级与全体作答。题目可能关联多个知识点，不把这些视角的分数再次相加。</p>'+button('从具体学生继续 ↗','drawer-tab',{value:'students'},'outline');
   }
   return head+'<div class="drawer-panel" data-render-key="knowledge-panel-'+tab+'">'+body+'</div>';
 }

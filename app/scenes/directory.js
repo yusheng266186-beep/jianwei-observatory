@@ -1,8 +1,8 @@
-import {head,button,chips,examChips,badge,block,table,number,integer,delta,esc,search,empty,footnote} from '../ui/html.js?v=squares-v21';
-import {mini,spread,chartButtons,seriesColors} from '../ui/plots.js?v=squares-v21';
-import {valid} from '../engine/metrics.js?v=squares-v21';
-import {queryDirectory,directoryLenses,standingLabels,directoryViewName} from '../engine/directory.js?v=squares-v21';
-import {scoreRows,evidence} from '../io/exports.js?v=squares-v21';
+import {head,button,chips,examChips,badge,block,table,number,integer,delta,esc,search,empty,footnote} from '../ui/html.js?v=cohesion-v22';
+import {mini,spread,chartButtons,seriesColors} from '../ui/plots.js?v=cohesion-v22';
+import {valid} from '../engine/metrics.js?v=cohesion-v22';
+import {queryDirectory,directoryLenses,standingLabels,directoryViewName} from '../engine/directory.js?v=cohesion-v22';
+import {scoreRows,evidence} from '../io/exports.js?v=cohesion-v22';
 const filter=(label,body)=>'<section class="filter-section"><h3>'+label+'</h3>'+body+'</section>';
 const peek=e=>button(esc(e.person.name),'peek',{sid:e.person.id,exam:e.row.exam},'person-link');
 const subjectOptions=atlas=>[['all','全部学科'],...atlas.comparisonSubjects(atlas.data.scores).map(s=>[s,s])];

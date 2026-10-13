@@ -1,11 +1,12 @@
-import {head,button,chips,examChips,badge,block,ribbon,table,number,integer,percent,esc,personButton,search,footnote,empty} from '../ui/html.js?v=squares-v21';
-import {bars,rateColor,rateLegend,chartButtons} from '../ui/plots.js?v=squares-v21';
-import {average,sum,valid} from '../engine/metrics.js?v=squares-v21';
-import {answerRows,evidence} from '../io/exports.js?v=squares-v21';
-import {queryQuestionMap} from '../engine/question-map.js?v=squares-v21';
-import {questionCard} from '../ui/question-cards.js?v=squares-v21';
-import {paperProfile} from '../ui/paper-profile.js?v=squares-v21';
-import {paperCountLabel} from '../engine/paper-structure.js?v=squares-v21';
+import {head,button,chips,examChips,badge,block,ribbon,table,number,integer,percent,esc,personButton,search,footnote,empty} from '../ui/html.js?v=cohesion-v22';
+import {bars,rateStyle,rateLegend,chartButtons} from '../ui/plots.js?v=cohesion-v22';
+import {average,sum,valid} from '../engine/metrics.js?v=cohesion-v22';
+import {answerRows,evidence} from '../io/exports.js?v=cohesion-v22';
+import {queryQuestionMap} from '../engine/question-map.js?v=cohesion-v22';
+import {questionCard} from '../ui/question-cards.js?v=cohesion-v22';
+import {paperProfile} from '../ui/paper-profile.js?v=cohesion-v22';
+import {scoreTone,scoreStyle} from '../ui/score-tones.js?v=cohesion-v22';
+import {paperCountLabel} from '../engine/paper-structure.js?v=cohesion-v22';
 export function render(atlas,state) {
   const papers=atlas.papers(),paper=papers.find(p=>p.key===state.key);
   if(!paper) {
@@ -23,7 +24,7 @@ export function render(atlas,state) {
     const answers=lens.answers.filter(a=>atlas.name(a.sid).includes(state.search||'')),page=Math.min(state.page||1,Math.max(1,Math.ceil(answers.length/40))),shown=answers.slice((page-1)*40,page*40);
     body=block('每一份作答','<div class="roster-bar">'+search('search',state.search)+'<span>'+answers.length+' 人 · 空白保留 —</span></div>'+table(['姓名','班级','已填小题合计',...lens.questions.map(q=>q.label)],shown.map(a=>[personButton(atlas,a.sid),esc(a.classNo+'班'),number(a.values.some(valid)?sum(a.values):null),...lens.questions.map(q=>{
       const value=a.values[q.index],rate=q.max&&valid(value)?value/q.max:null;
-      return '<button class="heat-cell heat-button answer-cell" data-cmd="answer-question" data-key="'+esc(paper.key)+'" data-index="'+q.index+'" data-sid="'+esc(a.sid)+'" data-classes="'+esc(scope.join(','))+'" style="background:'+rateColor(rate)+'" title="'+esc(atlas.name(a.sid))+' · 第'+esc(q.label)+'题 · '+esc(q.knowledge||'知识点未标注')+'" aria-label="'+esc(atlas.name(a.sid))+'，第'+esc(q.label)+'题，得分'+(valid(value)?number(value):'未填写')+'，展开题目观察">'+number(value)+'</button>';
+      return '<button class="heat-cell heat-button answer-cell" data-cmd="answer-question" data-key="'+esc(paper.key)+'" data-index="'+q.index+'" data-sid="'+esc(a.sid)+'" data-classes="'+esc(scope.join(','))+'" style="'+rateStyle(rate)+'" title="'+esc(atlas.name(a.sid))+' · 第'+esc(q.label)+'题 · '+esc(q.knowledge||'知识点未标注')+'" aria-label="'+esc(atlas.name(a.sid))+'，第'+esc(q.label)+'题，得分'+(valid(value)?number(value):'未填写')+'，展开题目观察">'+number(value)+'</button>';
     })]),{className:'heatmap',label:'个人学科小题得分'})+'<div class="pagination">'+button('←','page',{step:-1},'outline',page<=1?'disabled':'')+'<span>'+page+' / '+Math.max(1,Math.ceil(answers.length/40))+'</span>'+button('→','page',{step:1},'outline',page>=Math.max(1,Math.ceil(answers.length/40))?'disabled':'')+'</div>','点击姓名看学生，点击得分格子看这份作答与同题参照；保留原范围和位置。');
   } else if(state.tab==='knowledge') {
     body=block('知识点的得分结构',bars('knowledge-rates',lens.skills.map(skill=>({label:skill.name,value:skill.rate,cmd:'knowledge-open',data:{key:paper.key,knowledge:skill.name,classes:scope.join(',')}})),{percentages:true}),'同一知识点按实际作答样本和题目满分加权；点击条形追到关联题目与学生。',chartButtons('knowledge-rates'))+'<div class="knowledge-road">'+lens.skills.map((skill,i)=>'<article class="knowledge-card"><div class="knowledge-order">'+String(i+1).padStart(2,'0')+'</div><div><div class="overline">'+esc(skill.advice)+'</div><h2>'+button(esc(skill.name)+' ↗','knowledge-open',{key:paper.key,knowledge:skill.name,classes:scope.join(',')},'knowledge-title')+'</h2><p>得分率 '+percent(skill.rate)+' · 平均失分 '+number(skill.loss)+'</p><div class="question-links">'+skill.questions.map(q=>button(esc(q.label)+'题','question',{index:q.index},'outline')).join('')+'</div></div><strong>'+percent(skill.rate)+'</strong></article>').join('')+'</div>';
@@ -31,7 +32,7 @@ export function render(atlas,state) {
     body=block('每道题的完整指标',table(['题号','知识点','有效样本','均分','满分','得分率','平均失分','区分度','零分人数','满分人数'],lens.questions.map(q=>[button(esc(q.label),'question',{index:q.index},'person-link'),esc(q.knowledge||'未标注'),integer(q.count),number(q.mean),number(q.max),percent(q.rate),number(q.loss),number(q.discrimination,2),integer(q.zero),integer(q.full)])),'全部 '+lens.questions.length+' 个得分项，点击题号展开观察窗。');
   } else if(state.tab==='classes') {
     const classes=paper.classes.filter(no=>!scope.length||scope.includes(no));
-    body=block('班级 × 小题',table(['班级','作答人数',...lens.questions.map(q=>q.label)],classes.map(no=>{const answers=lens.answers.filter(a=>a.classNo===no);return [button(no+'班','class',{no},'person-link'),integer(answers.length),...lens.questions.map(q=>{const values=answers.map(a=>a.values[q.index]).filter(valid),mean=average(values),rate=q.max&&mean!==null?mean/q.max:null;return '<button class="heat-cell heat-button" data-cmd="question" data-index="'+q.index+'" data-no="'+no+'" style="background:'+rateColor(rate)+'" title="'+esc(q.knowledge||'未标注')+' · 有效样本 '+values.length+' · 均分 '+number(mean)+'">'+(rate===null?number(mean):percent(rate))+'</button>';})];}),{className:'heatmap',label:'班级小题得分率热力矩阵'}),'明确满分时显示得分率，满分缺失时保留原始均分。点击格子展开题目。');
+    body=block('班级 × 小题',table(['班级','作答人数',...lens.questions.map(q=>q.label)],classes.map(no=>{const answers=lens.answers.filter(a=>a.classNo===no);return [button(no+'班','class',{no},'person-link'),integer(answers.length),...lens.questions.map(q=>{const values=answers.map(a=>a.values[q.index]).filter(valid),mean=average(values),rate=q.max&&mean!==null?mean/q.max:null;return '<button class="heat-cell heat-button" data-cmd="question" data-index="'+q.index+'" data-no="'+no+'" style="'+rateStyle(rate)+'" title="'+esc(q.knowledge||'未标注')+' · 有效样本 '+values.length+' · 均分 '+number(mean)+'">'+(rate===null?number(mean):percent(rate))+'</button>';})];}),{className:'heatmap',label:'班级小题得分率热力矩阵'}),'明确满分时显示得分率，满分缺失时保留原始均分。点击格子展开题目。');
   } else if(state.tab==='responses'&&selected) {
     const answers=lens.answers.filter(a=>atlas.name(a.sid).includes(state.search||'')).sort((a,b)=>state.answerOrder==='high'?(b.values[selected.index]??-Infinity)-(a.values[selected.index]??-Infinity):(a.values[selected.index]??Infinity)-(b.values[selected.index]??Infinity)),page=Math.min(state.page||1,Math.max(1,Math.ceil(answers.length/40))),shown=answers.slice((page-1)*40,page*40);
     body=block('第 '+selected.label+' 题 · 全体作答',chips('question',lens.questions.map(q=>[q.index,q.label+'题']),selected.index)+'<div class="roster-bar">'+search('search',state.search)+chips('answerOrder',[['low','得分从低到高'],['high','得分从高到低']],state.answerOrder||'low')+'<span>'+answers.length+' 人 · 含未填写得分</span></div>'+table(['学生','班级','得分','满分','失分','得分率'],shown.map(a=>{const score=a.values[selected.index],rate=selected.max&&valid(score)?score/selected.max:null;return [personButton(atlas,a.sid),a.classNo+'班',number(score),number(selected.max),number(valid(score)&&valid(selected.max)?Math.max(0,selected.max-score):null),percent(rate)];}))+'<div class="pagination">'+button('←','page',{step:-1},'outline',page<=1?'disabled':'')+'<span>'+page+' / '+Math.max(1,Math.ceil(answers.length/40))+'</span>'+button('→','page',{step:1},'outline',page*40>=answers.length?'disabled':'')+'</div>','空缺得分保持为空。点击学生展开阶段、学科与小题档案。');
@@ -59,7 +60,7 @@ function paperCover(atlas,paper) {
     const rate=valid(q.max)&&q.max>0&&valid(mean)?mean/q.max:null;
     const detail='第'+q.label+'题 · 有效作答 '+values.length+' 份 · 均分 '+number(mean)+' / 满分 '+number(q.max);
     const measured=valid(rate)&&rate>=0&&rate<=1;
-    return '<i class="cover-score-square" data-known="'+measured+'" title="'+esc(detail)+'"><small>'+esc(q.label).replace(/题$/,'')+'</small><b>'+(valid(rate)?percent(rate):number(mean)+(valid(mean)?'分':''))+'</b></i>';
+    return '<i class="cover-score-square" data-score-tone="'+scoreTone(rate).key+'" style="'+scoreStyle(rate)+'" data-known="'+measured+'" title="'+esc(detail)+'"><small>'+esc(q.label).replace(/题$/,'')+'</small><b>'+(valid(rate)?percent(rate):number(mean)+(valid(mean)?'分':''))+'</b></i>';
   }).join('');
   const caption='全卷预览 · '+paperCountLabel(paper.questions);
   return '<button class="paper-cover" data-motion-key="paper-'+esc(paper.key)+'" data-cmd="paper" data-key="'+esc(paper.key)+'"><header><span>'+esc(paper.subject)+'</span><small>'+esc(paper.exam)+(paper.exam===atlas.latest?' · 最新':'')+'</small></header><h3>'+esc(atlas.exam(paper.exam).label)+'</h3><div class="cover-preview"><span>'+caption+'</span>'+(preview?'<div class="cover-diagram">'+preview+'</div>':'<p class="cover-no-questions">题号材料待补充</p>')+'</div><dl><dt>得分项 / 作答记录</dt><dd>'+paper.questions.length+' 项 / '+paper.answers.length+' 份</dd><dt>明确满分</dt><dd>'+known+' / '+paper.questions.length+' 项</dd></dl><footer><span>'+paper.classes.length+' 个班</span><b>研究这张卷 ↗</b></footer></button>';

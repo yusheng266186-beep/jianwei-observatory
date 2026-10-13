@@ -1,5 +1,5 @@
-import {valid} from './metrics.js?v=squares-v21';
-import {questionNumbers} from './paper-structure.js?v=squares-v21';
+import {valid} from './metrics.js?v=cohesion-v22';
+import {questionNumbers} from './paper-structure.js?v=cohesion-v22';
 
 const normalize=value=>String(value??'').normalize('NFKC').trim().toLocaleLowerCase('zh-CN');
 export function queryQuestionMap(lens,state={},rules={}) {

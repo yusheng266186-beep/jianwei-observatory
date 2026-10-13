@@ -1,6 +1,7 @@
-import {esc,number,integer,percent} from './html.js?v=squares-v21';
-import {valid} from '../engine/metrics.js?v=squares-v21';
-import {questionNumbers} from '../engine/paper-structure.js?v=squares-v21';
+import {esc,number,integer,percent} from './html.js?v=cohesion-v22';
+import {valid} from '../engine/metrics.js?v=cohesion-v22';
+import {questionNumbers} from '../engine/paper-structure.js?v=cohesion-v22';
+import {scoreTone,scoreStyle} from './score-tones.js?v=cohesion-v22';
 
 export function questionCard(q,{records,threshold,selected=false}) {
   const measured=valid(q.rate),normal=measured&&q.rate>=0&&q.rate<=1;
@@ -8,7 +9,7 @@ export function questionCard(q,{records,threshold,selected=false}) {
   const value=measured?number(q.rate*100)+'<small>%</small>':'—';
   const label='第'+q.label+'题，'+(q.knowledge||'知识点未标注')+'，得分率'+percent(q.rate)+'，有效作答'+q.count+'份，打开题目观察';
   const combined=questionNumbers(q.label).length>1;
-  return '<button type="button" class="question-tile question-square'+(selected?' selected':'')+(combined?' is-combined':'')+'" data-known="'+normal+'" data-tone="'+(normal&&q.rate<threshold?'low':'normal')+'" data-motion-key="question-'+q.index+'" data-cmd="question" data-index="'+q.index+'" aria-haspopup="dialog" aria-label="'+esc(label)+'">'
+  return '<button type="button" class="question-tile question-square'+(selected?' selected':'')+(combined?' is-combined':'')+'" data-known="'+normal+'" data-score-tone="'+scoreTone(q.rate).key+'" style="'+scoreStyle(q.rate)+'" data-motion-key="question-'+q.index+'" data-cmd="question" data-index="'+q.index+'" aria-haspopup="dialog" aria-label="'+esc(label)+'">'
     +'<div class="question-identity"><b>'+esc(q.label).replace(/题$/,'')+'<small>'+(combined?'合并计分':'题')+'</small></b>'+(status?'<span class="question-status">'+esc(status)+'</span>':'<span class="question-status quiet-status">逐题观察</span>')+'</div>'
     +'<div class="question-reading"><strong>'+value+'</strong><span>得分率</span></div>'
     +'<span class="question-topic">'+esc(q.knowledge||'知识点未标注')+'</span>'

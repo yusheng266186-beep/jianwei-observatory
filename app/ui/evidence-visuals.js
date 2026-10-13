@@ -1,7 +1,7 @@
-import {esc,number,integer,percent,button} from './html.js?v=squares-v21';
-import {valid} from '../engine/metrics.js?v=squares-v21';
-import {plotPalette as palette} from './palette.js?v=squares-v21';
-import {rateColor} from './plots.js?v=squares-v21';
+import {esc,number,integer,percent,button} from './html.js?v=cohesion-v22';
+import {valid} from '../engine/metrics.js?v=cohesion-v22';
+import {plotPalette as palette} from './palette.js?v=cohesion-v22';
+import {scoreTone,scoreStyle} from './score-tones.js?v=cohesion-v22';
 
 export function thresholdProfile(id,summary) {
   const prefix='profile-'+[...String(id)].map(c=>c.codePointAt(0).toString(16)).join('-');
@@ -40,7 +40,7 @@ export function routePreview(atlas,target,exam,groups,papers) {
     const paper=papers[0];if(!paper)return '<div class="route-preview route-no-material">导入小题材料，逐题展开观察</div>';
     const questions=atlas.paper(paper.key).questions.slice(0,6);
     if(!questions.length)return '<div class="route-preview route-no-material">补充题号与分值，再展开题目地图</div>';
-    return '<div class="route-preview route-questions"><span class="route-caption">'+esc(paper.subject)+' · '+paper.questions.length+' 题中的前 '+questions.length+' 题预览</span><div style="--preview-columns:'+questions.length+'">'+questions.map(q=>'<span style="--preview-color:'+rateColor(q.rate)+'"><small>第'+esc(q.label)+'题</small><b>'+percent(q.rate)+'</b></span>').join('')+'</div></div>';
+    return '<div class="route-preview route-questions"><span class="route-caption">'+esc(paper.subject)+' · '+paper.questions.length+' 题中的前 '+questions.length+' 题预览</span><div style="--preview-columns:'+questions.length+'">'+questions.map(q=>'<span data-score-tone="'+scoreTone(q.rate).key+'" style="'+scoreStyle(q.rate)+'"><small>第'+esc(q.label)+'题</small><b>'+percent(q.rate)+'</b></span>').join('')+'</div></div>';
   }
   if(target==='history')return '<div class="route-preview route-exams"><span class="route-caption">最近 '+Math.min(3,atlas.exams.length)+' 次材料 · 完整记录继续保留</span><div>'+atlas.exams.slice(-3).map(e=>'<span><i aria-hidden="true"></i><b>'+esc(e.id)+'</b><small>'+esc(e.label)+'</small></span>').join('')+'</div></div>';
   return '<div class="route-preview route-distributions"><span class="route-caption">两科类分别预览总分分布 · 横轴各取本组范围</span>'+groups.map(g=>{
