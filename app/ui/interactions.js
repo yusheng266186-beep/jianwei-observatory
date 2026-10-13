@@ -1,6 +1,6 @@
-import {motion} from './motion.js?v=reports-v24';
-import {positionSpreadLabels} from './plots.js?v=reports-v24';
-import {paperMapLayout} from '../engine/paper-structure.js?v=reports-v24';
+import {motion} from './motion.js?v=controls-v25';
+import {positionSpreadLabels} from './plots.js?v=controls-v25';
+import {paperMapLayout} from '../engine/paper-structure.js?v=controls-v25';
 let motionPreference=()=>false,resizeObserver,plotObserver,railObserver,drawerHeaderObserver,revealObserver,tooltipTarget=null,tooltipOriginal=null,tooltipFrame=0,outlineFrame=0,drawerOutlineFrame=0,pointerFrame=0,outline=null,outlineEntries=[];
 const observedTables=new Set(),observedPlots=new Set(),observedReveals=new Set(),revealed=new WeakSet(),disclosures=new WeakMap();
 const selectionRails=new Set(),railStates=new WeakMap();
@@ -153,7 +153,7 @@ function refreshOutline() {
   const edge=Math.max(110,outline.getBoundingClientRect().bottom+26);let selected=outlineEntries[0];
   for(const entry of outlineEntries)if(entry.section.getBoundingClientRect().top<=edge)selected=entry;
   const before=outline.querySelector('[aria-current="location"]');
-  for(const entry of outlineEntries)if(entry===selected)entry.button.setAttribute('aria-current','location');else entry.button.removeAttribute('aria-current');
+  if(before!==selected.button)for(const entry of outlineEntries)if(entry===selected)entry.button.setAttribute('aria-current','location');else entry.button.removeAttribute('aria-current');
   if(before!==selected.button){const rail=outline.querySelector('.outline-links');rail.scrollTo({left:selected.button.offsetLeft-rail.offsetLeft-(rail.clientWidth-selected.button.offsetWidth)/2,behavior:motionPreference()?'instant':'smooth'});}
   const extent=document.documentElement.scrollHeight-innerHeight;outline.style.setProperty('--reading-progress',extent>0?Math.max(0,Math.min(1,scrollY/extent)):0);
 }
@@ -161,7 +161,7 @@ export function shiftTable(button) {
   const frame=button.closest('.table-frame'),scroll=frame?.querySelector('.table-scroll');scroll?.scrollBy({left:Number(button.dataset.direction)*scroll.clientWidth*.8,behavior:motionPreference()?'instant':'smooth'});
 }
 function hideTooltip() {
-  cancelAnimationFrame(tooltipFrame);const tooltip=document.getElementById('chart-tooltip');if(tooltip){if(tooltip.hidePopover&&tooltip.matches(':popover-open'))tooltip.hidePopover();tooltip.hidden=true;}
+  cancelAnimationFrame(tooltipFrame);const tooltip=document.getElementById('chart-tooltip');if(tooltip){if(tooltip.hidePopover&&tooltip.matches(':popover-open'))tooltip.hidePopover();if(!tooltip.hidden)tooltip.hidden=true;}
   if(tooltipTarget&&tooltipOriginal){if(tooltipOriginal.title!==null)tooltipTarget.setAttribute('title',tooltipOriginal.title);if(tooltipOriginal.svgTitle)tooltipOriginal.svgTitle.textContent=tooltipOriginal.svgText;if(tooltipOriginal.description===null)tooltipTarget.removeAttribute('aria-describedby');else tooltipTarget.setAttribute('aria-describedby',tooltipOriginal.description);}
   tooltipTarget=null;tooltipOriginal=null;
 }
@@ -196,8 +196,8 @@ export function installInteractions({reducedMotion}) {
   if('ResizeObserver' in window)plotObserver=new ResizeObserver(entries=>{for(const entry of entries)refreshPlot(entry.target);});
   if('ResizeObserver' in window)railObserver=new ResizeObserver(entries=>{for(const entry of entries)if(entry.target.isConnected)selectionRail(entry.target);});
   if('ResizeObserver' in window){drawerHeaderObserver=new ResizeObserver(refreshDrawerSections);const header=document.querySelector('#research-drawer .drawer-top');if(header)drawerHeaderObserver.observe(header);}
-  if('IntersectionObserver' in window)revealObserver=new IntersectionObserver(entries=>{let order=0;for(const entry of entries)if(entry.isIntersecting){revealObserver.unobserve(entry.target);observedReveals.delete(entry.target);if(!motionPreference())entry.target.animate([{opacity:.55,translate:'0px 12px'},{opacity:1,translate:'0px 0px'}],{...motion.arrive,delay:Math.min(order++,3)*22,fill:'backwards'});}},{rootMargin:'0px 0px -25px 0px',threshold:.06});
-  document.addEventListener('scroll',event=>{if(event.target?.matches?.('.goal-cards[data-scroll-key]')){galleryOffsets.set(event.target.dataset.scrollKey,event.target.scrollLeft);hideTooltip();}else if(event.target?.matches?.('.paper-profile-scroll')){refreshPaperProfiles();hideTooltip();}else if(event.target?.matches?.('.table-scroll'))refreshTable(event.target.closest('.table-frame'));else {hideTooltip();if(event.target?.id==='research-drawer'){cancelAnimationFrame(drawerOutlineFrame);drawerOutlineFrame=requestAnimationFrame(refreshDrawerSections);}else if(event.target===document||event.target===document.documentElement){document.body.dataset.scrolled=String(window.scrollY>18);cancelAnimationFrame(outlineFrame);outlineFrame=requestAnimationFrame(refreshOutline);}}},true);
+  if('IntersectionObserver' in window)revealObserver=new IntersectionObserver(entries=>{let order=0;for(const entry of entries)if(entry.isIntersecting){revealObserver.unobserve(entry.target);observedReveals.delete(entry.target);if(!motionPreference())entry.target.animate([{opacity:entry.target.matches('.block,.follow-workbench')?1:.9,translate:'0px 8px'},{opacity:1,translate:'0px 0px'}],{...motion.arrive,delay:Math.min(order++,3)*22,fill:'backwards'});}},{rootMargin:'0px 0px -25px 0px',threshold:.06});
+  document.addEventListener('scroll',event=>{if(event.target?.matches?.('.goal-cards[data-scroll-key]')){galleryOffsets.set(event.target.dataset.scrollKey,event.target.scrollLeft);hideTooltip();}else if(event.target?.matches?.('.paper-profile-scroll')){refreshPaperProfiles();hideTooltip();}else if(event.target?.matches?.('.table-scroll'))refreshTable(event.target.closest('.table-frame'));else {hideTooltip();if(event.target?.id==='research-drawer'){cancelAnimationFrame(drawerOutlineFrame);drawerOutlineFrame=requestAnimationFrame(refreshDrawerSections);}else if(event.target===document||event.target===document.documentElement){cancelAnimationFrame(outlineFrame);outlineFrame=requestAnimationFrame(()=>{const scrolled=String(window.scrollY>18);if(document.body.dataset.scrolled!==scrolled)document.body.dataset.scrolled=scrolled;refreshOutline();});}}},{capture:true,passive:true});
   document.addEventListener('click',event=>{const summary=event.target.closest('summary');if(!summary||event.target.closest('button,a,input'))return;const details=summary.parentElement;if(details.matches('.card-scores,.card-meta,.record-accordion,.method-note,.class-profile')){event.preventDefault();toggleDetails(details);}});
   document.addEventListener('pointerover',event=>{if(event.pointerType==='touch')return;const target=event.target.closest('[data-plot-action],.plot-item,.plot-point,.student-dot,.heat-cell[title],[data-tip]');if(target)showTooltip(target,event.clientX,event.clientY);});
   document.addEventListener('pointermove',event=>{if(!tooltipTarget)return;cancelAnimationFrame(tooltipFrame);tooltipFrame=requestAnimationFrame(()=>placeTooltip(event.clientX,event.clientY));});

@@ -1,4 +1,4 @@
-import {valid} from './metrics.js?v=reports-v24';
+import {valid} from './metrics.js?v=controls-v25';
 
 export const trainingTasks=[['concept','概念梳理'],['worked','例题讲解'],['same','同类练习'],['variation','变式迁移'],['correction','错题订正'],['retest','再测验']];
 export const trainingMethods=[['individual','个别指导'],['group','小组互助'],['independent','独立训练'],['lesson','课堂专题']];
@@ -22,12 +22,14 @@ export function questionOptions(atlas,{sid,exam,key}){
  return atlas.questionsFor(row,key.split('|')[0]).map(q=>{const rate=valid(q.max)&&q.max>0&&valid(q.score)?q.score/q.max:null,normal=valid(rate)&&rate>=0&&rate<=1;return {...q,rate,normal,weak:normal&&rate<(atlas.data.rules?.focusRate??.75),knowledge:q.knowledge||'知识点未标注'};});
 }
 export function draftForPlan(atlas,context={},existing=null){
+ const legacy=!!existing&&!existing.training?.questions?.length&&!existing.training?.goal&&(!existing.training?.key||existing.training?.count===undefined||existing.training?.targetRate===undefined);
  const plan=existing?normalizePlan(structuredClone(existing)):normalizePlan({sid:context.sid||'',exam:context.exam||atlas.latest,tier:context.tier||'under',status:'new',note:'',subject:context.subject||'',training:{tasks:['same','correction'],method:'individual',count:5,targetRate:80},schedule:{duration:10}});
+ plan.training={count:5,targetRate:80,method:'individual',...plan.training,tasks:existing&&!Array.isArray(existing.training?.tasks)?['same','correction']:plan.training.tasks};plan.schedule={duration:10,...plan.schedule};
  const row=atlas.materialAt(plan.sid,plan.exam),answers=row?(atlas.personAnswers.get(row.sid+'|'+row.exam)||[]).filter(a=>a.classNo===row.classNo):[],available=answers.map(a=>a.subject+'|'+a.exam);
  plan.classNo=row?.classNo||context.no||atlas.classes[0]||null;
  const key=existing&&plan.training.key&&plan.training.key.split('|')[1]===plan.exam&&!available.includes(plan.training.key)?plan.training.key:available.includes(context.key)?context.key:available.includes(plan.training.key)?plan.training.key:available.find(k=>k.split('|')[0]===plan.subject)||available[0]||'';
  plan.training.key=key;plan.subject=key?key.split('|')[0]:plan.subject;
- if(!existing){const qs=questionOptions(atlas,{...plan,key});plan.training.questions=qs.filter(q=>context.question!==undefined?q.index===Number(context.question):q.weak).sort((a,b)=>a.rate-b.rate).slice(0,context.question!==undefined?1:3).map(snapshotQuestion);}
+ if(!existing||legacy){if(legacy&&!plan.training.tasks.length)plan.training.tasks=['same','correction'];const qs=questionOptions(atlas,{...plan,key});plan.training.questions=qs.filter(q=>context.question!==undefined?q.index===Number(context.question):q.weak).sort((a,b)=>a.rate-b.rate).slice(0,context.question!==undefined?1:3).map(snapshotQuestion);}
  plan.teacher=plan.teacher||atlas.teacher(plan.classNo,plan.subject)||atlas.profile(plan.classNo).lead||'';
  return plan;
 }

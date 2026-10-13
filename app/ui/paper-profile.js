@@ -1,8 +1,8 @@
-import {button,esc,integer,number,percent} from './html.js?v=reports-v24';
-import {chartButtons} from './plots.js?v=reports-v24';
-import {scoreTone,scoreTones,scoreLegend} from './score-tones.js?v=reports-v24';
-import {valid} from '../engine/metrics.js?v=reports-v24';
-import {paperStructure,paperCountLabel,paperMapLayout,questionNumbers} from '../engine/paper-structure.js?v=reports-v24';
+import {button,esc,integer,number,percent} from './html.js?v=controls-v25';
+import {chartButtons} from './plots.js?v=controls-v25';
+import {scoreTone,scoreTones,scoreLegend} from './score-tones.js?v=controls-v25';
+import {valid} from '../engine/metrics.js?v=controls-v25';
+import {paperStructure,paperCountLabel,paperMapLayout,questionNumbers} from '../engine/paper-structure.js?v=controls-v25';
 
 export function paperProfile(lens,{threshold,selected,metrics,examLabel=lens.exam,scopeLabel='全部参考班'}) {
   const questions=lens.questions,structure=paperStructure(questions),layout=paperMapLayout(questions.length,760);

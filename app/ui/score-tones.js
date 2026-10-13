@@ -1,4 +1,4 @@
-import {valid} from '../engine/metrics.js?v=reports-v24';
+import {valid} from '../engine/metrics.js?v=controls-v25';
 
 // Higher measured rates use deeper school blue. Unknown and abnormal rates
 // have a neutral treatment; neither is colored as a real zero or a full score.
@@ -11,5 +11,5 @@ export const scoreTones=Object.freeze([
 ].map(Object.freeze));
 const unknown=Object.freeze({key:'unknown',fill:'#edf2f6',ink:'#536e83',muted:'#536e83',edge:'#c8d6e1',label:'未知或异常'});
 export function scoreTone(rate){return !valid(rate)||rate<0||rate>1?unknown:scoreTones.findLast(tone=>rate>=tone.min);}
-export function scoreStyle(rate){const tone=scoreTone(rate);return '--score-base:'+tone.fill+';--score-fill:'+tone.fill+'eb;--score-ink:'+tone.ink+';--score-muted:'+tone.muted+';--score-edge:'+tone.edge+';--score-highlight:'+(tone.key==='mastered'?'#ffffff14':'#ffffff3d')+';';}
+export function scoreStyle(rate){const tone=scoreTone(rate);return '--score-base:'+tone.fill+';--score-fill:'+tone.fill+'eb;--score-ink:'+tone.ink+';--score-muted:'+tone.muted+';--score-edge:'+tone.edge+';--score-highlight:'+(tone.key==='mastered'?'#ffffff14':'#ffffff3d')+';--score-glow:'+(tone.key==='mastered'?'#ffffff1a':'#ffffff82')+';--score-depth:'+(tone.key==='mastered'?'#122e4b30':'#658ba81c')+';';}
 export function scoreLegend(){return '<div class="score-tone-legend" aria-label="得分率颜色说明"><span>蓝色越深，得分率越高</span>'+[...scoreTones,unknown].map(tone=>'<span><i style="background:'+tone.fill+'" aria-hidden="true"></i>'+tone.label+'</span>').join('')+'</div>';}

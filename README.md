@@ -149,3 +149,5 @@ Dock统一打开板块入口，局部切换与下钻返回各有明确规则。�
 本轮从代码与真实操作复查，修复过期作答观察抢占、中文输入确认未保存、跟进证据文字滞后、PNG导出尺寸变化及Excel表名冲突，并补充图表生成与失败重试反馈。复现和检查范围见 [代码与实际使用复查](docs/CODE-USAGE-REVIEW-2026-10-13.md)，`npm run test:usage` 运行新增的8组浏览器回归。
 
 新增班级、学科、学生和教学跟进四类A4黑白报告，支持本机直接下载PDF与可编辑Word；专项训练可选择原题/知识点、任务、日期、星期、课内/课间和具体课时，支持按日期及当前筛选导出。使用与口径见 [分类打印报告与专项训练](docs/TEACHING-REPORTS.md)，`npm run test:reports`与`npm run test:report-edges`运行导出和操作验证。
+
+跟进日期/时间/数字控件改为统一自定义面板，强化卡片主操作；调整滚动状态写入与背景绘制，小题共用渐变玻璃色阶。报告可选章节、字段、记录和顺序，实时预览后导出，保存或合并均保留选择。实现与检查见 [控件与报告组合](docs/CONTROLS-AND-REPORT-COMPOSITION.md)，运行`test:plan-controls`与`test:report-composer`检查本轮功能。

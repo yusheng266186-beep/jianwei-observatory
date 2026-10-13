@@ -34,3 +34,6 @@ test('手动补充训练重点会出现在跟进报告，原题库暂缺时仍�
 test('个人原分与明确满分保留小数精度，统计均分仍用便于阅读的格式',()=>{
  const data=makeFixture();data.answers.find(a=>a.sid==='test-4-0'&&a.subject==='数学').values[0]=2.75;data.banks['数学|52'][0].max=5.25;const a=new Atlas(data),r=buildTeachingReport(a,{kind:'student',sid:'test-4-0',exam:'52'});const q=r.sections.find(s=>s.title==='个人全部小题得分').rows[0];assert.equal(q[2],'2.75');assert.equal(q[3],'5.25');
 });
+test('旧的简单跟进记录只在编辑草稿中补充建议，原记录不凭空产生训练数据',()=>{
+ const a=atlas(),old={id:'old',sid:'test-4-0',exam:'52',subject:'数学',status:'new',schedule:{},training:{questions:[],tasks:[]}};const draft=draftForPlan(a,{},old);assert.equal(draft.training.count,5);assert.equal(draft.training.targetRate,80);assert.equal(draft.schedule.duration,10);assert(draft.training.questions.length>0);assert.deepEqual(draft.training.tasks,['same','correction']);assert.equal(old.training.count,undefined);assert.equal(old.training.questions.length,0);
+});

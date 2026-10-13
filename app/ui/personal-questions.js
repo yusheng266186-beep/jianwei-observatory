@@ -1,6 +1,6 @@
-import {button,esc,number} from './html.js?v=reports-v24';
-import {scoreTone,scoreStyle} from './score-tones.js?v=reports-v24';
-import {valid} from '../engine/metrics.js?v=reports-v24';
+import {button,esc,number} from './html.js?v=controls-v25';
+import {scoreTone,scoreStyle} from './score-tones.js?v=controls-v25';
+import {valid} from '../engine/metrics.js?v=controls-v25';
 
 export function personalQuestionLink(q,context,label,style='person-link',extra='') {
   return button(label,'answer-question',{key:context.subject+'|'+context.exam,index:q.index,sid:context.sid,classes:context.classNo},style,

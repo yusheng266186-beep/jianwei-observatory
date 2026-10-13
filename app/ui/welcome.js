@@ -1,4 +1,4 @@
-import {button} from './html.js?v=reports-v24';
+import {button} from './html.js?v=controls-v25';
 
 export function welcomeView() {
   const template=document.getElementById('empty-workspace-template');

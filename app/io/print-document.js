@@ -1,5 +1,6 @@
-import {esc} from '../ui/html.js?v=reports-v24';
-import {SITE_NAME} from '../brand.js?v=reports-v24';
+import {selectedReport} from '../engine/report-selection.js?v=controls-v25';
+import {esc} from '../ui/html.js?v=controls-v25';
+import {SITE_NAME} from '../brand.js?v=controls-v25';
 // All three outlets share the same sections, field splits and missing-value rules.
 export function documentSections(report){
  return (report.sections||[]).flatMap(s=>{
@@ -12,10 +13,12 @@ export function documentSections(report){
 }
 export function columnWeights(headers){return headers.map(h=>/建议|安排|线索|知识点|依据|记录|结果|说明|内容|题目|方向|任务/.test(h)?2.3:/日期|时段|学生|学科/.test(h)?1.5:1);}
 export function reportHTML(report){
+ report=selectedReport(report);
  const sections=documentSections(report);
  return '<article class="print-paper"><div class="print-brand">'+esc(SITE_NAME)+'</div><h1>'+esc(report.title)+'</h1><p>'+esc(report.subtitle)+'</p><p class="print-meta">'+esc(report.created||'')+' · A4黑白打印</p>'+(report.meta?.length?'<dl>'+report.meta.map(([k,v])=>'<dt>'+esc(k)+'</dt><dd>'+esc(v)+'</dd>').join('')+'</dl>':'')+sections.map((s,i)=>'<section><h2>'+String(i+1).padStart(2,'0')+' '+esc(s.title)+'</h2>'+(s.caption?'<p class="print-caption">'+esc(s.caption)+'</p>':'')+s.paragraphs.map(p=>'<p>'+esc(p)+'</p>').join('')+(s.headers.length?(s.rows.length?'<table><colgroup>'+columnWeights(s.headers).map(w=>'<col style="width:'+w/columnWeights(s.headers).reduce((a,b)=>a+b,0)*100+'%">').join('')+'</colgroup><thead><tr>'+s.headers.map(h=>'<th>'+esc(h)+'</th>').join('')+'</tr></thead><tbody>'+s.rows.map(r=>'<tr>'+s.headers.map((_,j)=>'<td>'+esc(r[j]??'—')+'</td>').join('')+'</tr>').join('')+'</tbody></table>':'<p>本范围暂无符合条件的记录。</p>'):'')+'</section>').join('')+(report.note?'<section><h2>教师判断与后续行动</h2><p class="written-note">'+esc(report.note)+'</p></section>':'')+'<footer>缺失值保留为—；判断以已导入材料为依据。</footer></article>';
 }
 export function pdfDefinition(report){
+ report=selectedReport(report);
  const content=[{text:SITE_NAME,style:'brand'},{text:report.title,style:'title'},{text:report.subtitle||'',style:'subtitle'},{text:'生成时间：'+(report.created||''),style:'caption'}];
  if(report.meta?.length)content.push({table:{widths:[62,'*'],body:report.meta.map(([k,v])=>[{text:k,bold:true},String(v??'—')])},layout:'noBorders',margin:[0,7,0,8]});
  documentSections(report).forEach((s,i)=>{
@@ -40,6 +43,7 @@ export function pdfDefinition(report){
 }
 const xml=text=>esc(String(text??'')).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g,'');
 export function wordFiles(report){
+ report=selectedReport(report);
  const ns='http://schemas.openxmlformats.org/wordprocessingml/2006/main';
  const p=(text,style='Normal')=>'<w:p><w:pPr><w:pStyle w:val="'+style+'"/></w:pPr><w:r><w:t xml:space="preserve">'+xml(text).replace(/\n/g,'</w:t><w:br/><w:t xml:space="preserve">')+'</w:t></w:r></w:p>';
  const tbl=s=>{const weights=columnWeights(s.headers),sum=weights.reduce((a,b)=>a+b,0),widths=weights.map(w=>Math.round(10000*w/sum));return '<w:tbl><w:tblPr><w:tblW w:w="10000" w:type="dxa"/><w:tblLayout w:type="fixed"/><w:tblBorders>'+['top','left','bottom','right','insideH','insideV'].map(side=>'<w:'+side+' w:val="single" w:sz="4" w:color="555555"/>').join('')+'</w:tblBorders><w:tblCellMar><w:top w:w="90" w:type="dxa"/><w:left w:w="90" w:type="dxa"/><w:bottom w:w="90" w:type="dxa"/><w:right w:w="90" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>'+widths.map(w=>'<w:gridCol w:w="'+w+'"/>').join('')+'</w:tblGrid>'+[s.headers,...s.rows].map((row,i)=>'<w:tr><w:trPr><w:cantSplit/>'+(i===0?'<w:tblHeader/>':'')+'</w:trPr>'+s.headers.map((_,j)=>'<w:tc><w:tcPr><w:tcW w:w="'+widths[j]+'" w:type="dxa"/>'+(i===0?'<w:shd w:fill="EEEEEE"/>':'')+'</w:tcPr>'+p(row[j]??'—',i===0?'TableHead':'TableText')+'</w:tc>').join('')+'</w:tr>').join('')+'</w:tbl>';};

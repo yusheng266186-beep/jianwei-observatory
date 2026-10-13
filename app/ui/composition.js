@@ -1,4 +1,4 @@
-import {button,esc} from './html.js?v=reports-v24';
+import {button,esc} from './html.js?v=controls-v25';
 
 export function composeScene(html,{back=''}={}) {
   const template=document.createElement('template');template.innerHTML=html;
