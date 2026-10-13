@@ -1,7 +1,7 @@
-import {esc,number,integer,percent} from './html.js?v=optics-v28';
-import {valid} from '../engine/metrics.js?v=optics-v28';
-import {questionNumbers} from '../engine/paper-structure.js?v=optics-v28';
-import {scoreTone,scoreStyle} from './score-tones.js?v=optics-v28';
+import {esc,number,integer,percent} from './html.js?v=flow-v29';
+import {valid} from '../engine/metrics.js?v=flow-v29';
+import {questionNumbers} from '../engine/paper-structure.js?v=flow-v29';
+import {scoreTone,scoreStyle} from './score-tones.js?v=flow-v29';
 
 export function questionCard(q,{records,threshold,selected=false}) {
   const measured=valid(q.rate),normal=measured&&q.rate>=0&&q.rate<=1;

@@ -1,6 +1,6 @@
-import {selectedReport} from '../engine/report-selection.js?v=optics-v28';
-import {esc} from '../ui/html.js?v=optics-v28';
-import {SITE_NAME} from '../brand.js?v=optics-v28';
+import {selectedReport} from '../engine/report-selection.js?v=flow-v29';
+import {esc} from '../ui/html.js?v=flow-v29';
+import {SITE_NAME} from '../brand.js?v=flow-v29';
 // All three outlets share the same sections, field splits and missing-value rules.
 export function documentSections(report){
  return (report.sections||[]).flatMap(s=>{

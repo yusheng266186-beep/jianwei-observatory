@@ -1,12 +1,12 @@
-import {head,button,chips,examChips,badge,block,ribbon,table,number,integer,percent,esc,personButton,search,footnote,empty} from '../ui/html.js?v=optics-v28';
-import {bars,rateStyle,rateLegend,chartButtons} from '../ui/plots.js?v=optics-v28';
-import {average,sum,valid} from '../engine/metrics.js?v=optics-v28';
-import {answerRows,evidence} from '../io/exports.js?v=optics-v28';
-import {queryQuestionMap} from '../engine/question-map.js?v=optics-v28';
-import {questionCard} from '../ui/question-cards.js?v=optics-v28';
-import {paperProfile} from '../ui/paper-profile.js?v=optics-v28';
-import {scoreTone,scoreStyle} from '../ui/score-tones.js?v=optics-v28';
-import {paperCountLabel} from '../engine/paper-structure.js?v=optics-v28';
+import {head,button,chips,examChips,badge,block,ribbon,table,number,integer,percent,esc,personButton,search,footnote,empty} from '../ui/html.js?v=flow-v29';
+import {bars,rateStyle,rateLegend,chartButtons} from '../ui/plots.js?v=flow-v29';
+import {average,sum,valid} from '../engine/metrics.js?v=flow-v29';
+import {answerRows,evidence} from '../io/exports.js?v=flow-v29';
+import {queryQuestionMap} from '../engine/question-map.js?v=flow-v29';
+import {questionCard} from '../ui/question-cards.js?v=flow-v29';
+import {paperProfile} from '../ui/paper-profile.js?v=flow-v29';
+import {scoreTone,scoreStyle} from '../ui/score-tones.js?v=flow-v29';
+import {paperCountLabel} from '../engine/paper-structure.js?v=flow-v29';
 export function render(atlas,state) {
   const papers=atlas.papers(),paper=papers.find(p=>p.key===state.key);
   if(!paper) {

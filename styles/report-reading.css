@@ -88,3 +88,26 @@
 @media print{.report-paper-tools,.report-paper-rail{display:none}}
 
 @media(min-width:901px) and (max-height:700px){.report-dialog .report-heading{margin-bottom:8px}.report-dialog .report-heading h2{font-size:21px}.report-dialog .report-heading>span{display:none}.report-origin{padding:5px 9px;margin-bottom:8px}.report-dialog .inbox-top{margin-bottom:4px}.report-dialog .report-outlets{margin-top:7px;padding-top:8px}.report-composer-grid .report-preview>.block-head p{display:none}}
+
+/* Separate chapter inclusion from editing without expanding the preview header. */
+.report-context{margin:0 0 16px;padding:11px 13px;border-radius:13px;background:linear-gradient(145deg,#fff9,#dcebf455);box-shadow:0 8px 20px -18px #25496335}
+.report-context>summary{font-size:12px;font-weight:600;cursor:pointer;line-height:1.7;color:var(--school-blue)}
+.report-context>p{font-size:10px;line-height:1.7;color:var(--muted);margin:9px 0}
+.report-context .report-context-label{margin:12px 0 6px;color:var(--ink);font-weight:550}
+.report-context .chips{gap:5px;margin:0;flex-wrap:wrap}
+.report-context .chip{white-space:normal;text-align:left;line-height:1.5;font-size:10px;min-height:28px;padding:5px 8px}
+.report-scope-people{max-height:190px;overflow:auto;overscroll-behavior:contain}
+.report-part.is-editing{background:linear-gradient(145deg,#edf5fa,#deebf466);box-shadow:inset 3px 0 #467294}
+.report-part-tools{display:flex;align-items:center;justify-content:space-between;gap:3px;padding:0 6px 6px 30px}
+.report-part-tools>.button{font-size:10px;padding:3px 8px;min-height:24px;color:var(--school-blue);background:#ffffff8a}
+.report-part-tools>.button[aria-pressed=true]{font-weight:600;background:#d0e3ef90}
+.report-part-order{display:flex;flex-direction:row;gap:3px}
+.report-part-order .button{min-height:24px;width:24px;padding:3px}
+.report-part-choice{width:100%;flex:1}
+.report-part{flex-wrap:wrap;align-content:start}
+.report-preview>.block-head p{font-variant-numeric:tabular-nums}
+@media(prefers-reduced-motion:no-preference){.report-part-choice .report-check{transition:background .22s var(--ease),color .22s var(--ease)}.report-part,.report-context .chip{transition:background .24s var(--ease),box-shadow .24s var(--ease)}}
+
+.report-context-body>p{font-size:10px;line-height:1.7;color:var(--muted);margin:9px 0}
+.report-context .report-current-person{font-size:11px;padding:8px 10px;background:#e5eff77a;border-radius:8px;color:var(--school-blue)}
+.report-context .report-current-person strong{font-weight:600}

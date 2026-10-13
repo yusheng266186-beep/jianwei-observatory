@@ -59,7 +59,7 @@ body[data-motion=calm] :is(.profile-tile,.profile-current-dot){transition:none!i
 
 /* Compact samples have the same milky diagonal lighting as the evidence tiles. */
 .cover-diagram .cover-score-square[data-score-tone]{position:relative;isolation:isolate;overflow:hidden;border-radius:10px;box-shadow:0 3px 8px -5px #244b6b16,0 9px 17px -12px #244b6b29}
-.cover-diagram .cover-score-square[data-score-tone]::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:url('../assets/frost-grain.svg?v=optics-v28') repeat;opacity:.26;border-radius:inherit}
+.cover-diagram .cover-score-square[data-score-tone]::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:url('../assets/frost-grain.svg?v=flow-v29') repeat;opacity:.26;border-radius:inherit}
 .cover-diagram .cover-score-square[data-score-tone] b{font-weight:500;letter-spacing:-.02em}
 .profile-question .profile-tile{filter:drop-shadow(0 3px 4px #244b6b0d)}
 body[data-surface=paper] .cover-score-square::before{display:none}

@@ -1,6 +1,6 @@
-import {motion} from './motion.js?v=optics-v28';
-import {positionSpreadLabels} from './plots.js?v=optics-v28';
-import {paperMapLayout} from '../engine/paper-structure.js?v=optics-v28';
+import {motion,finishAnimation} from './motion.js?v=flow-v29';
+import {positionSpreadLabels} from './plots.js?v=flow-v29';
+import {paperMapLayout} from '../engine/paper-structure.js?v=flow-v29';
 let motionPreference=()=>false,resizeObserver,plotObserver,railObserver,drawerHeaderObserver,revealObserver,tooltipTarget=null,tooltipOriginal=null,tooltipFrame=0,outlineFrame=0,drawerOutlineFrame=0,pointerFrame=0,outline=null,outlineEntries=[];
 const observedTables=new Set(),observedPlots=new Set(),observedReveals=new Set(),revealed=new WeakSet(),disclosures=new WeakMap();
 const selectionRails=new Set(),railStates=new WeakMap();
@@ -101,12 +101,12 @@ function refreshTable(frame) {
   const track=frame.querySelector('.table-overflow-note i');if(track){track.style.setProperty('--scroll-progress',overflow?Math.max(0,Math.min(100,scroll.scrollLeft/extent*100))+'%':'0%');track.style.setProperty('--scroll-thumb',Math.max(12,Math.min(100,scroll.clientWidth/Math.max(1,scroll.scrollWidth)*100))+'%');}
 }
 function revealSelectedClasses(root=document){for(const rail of root.querySelectorAll('.class-picker section>div,.audience-strip>.chips')){const active=document.activeElement?.closest('.selected'),selected=active&&rail.contains(active)?active:rail.querySelector('.class-key.selected,.chip.selected');if(!selected||rail.scrollWidth<=rail.clientWidth+1)continue;const target=selected.getBoundingClientRect(),host=rail.getBoundingClientRect();if(target.left<host.left||target.right>host.right)rail.scrollLeft+=target.left-host.left-(host.width-target.width)/2;}}
-export function prepareUpdate(){hideTooltip();sampleRails();samplePlots();for(const rail of document.querySelectorAll('.goal-cards[data-scroll-key]'))if(!rail.closest('.scene-leaving-viewport'))galleryOffsets.set(rail.dataset.scrollKey,rail.scrollLeft);}
+export function prepareUpdate({replacing=false}={}){hideTooltip();if(!replacing){sampleRails();samplePlots();}for(const rail of document.querySelectorAll('.goal-cards[data-scroll-key]'))if(!rail.closest('.scene-leaving-viewport'))galleryOffsets.set(rail.dataset.scrollKey,rail.scrollLeft);}
 export function pruneInteractions() {
-  for(const frame of observedTables)if(!frame.isConnected){resizeObserver?.unobserve(frame);observedTables.delete(frame);}
-  for(const svg of observedPlots)if(!svg.isConnected){plotObserver?.unobserve(svg);observedPlots.delete(svg);}
-  for(const rail of selectionRails)if(!rail.isConnected){railObserver?.unobserve(rail);selectionRails.delete(rail);}
-  for(const node of observedReveals)if(!node.isConnected){revealObserver?.unobserve(node);observedReveals.delete(node);}
+  for(const frame of observedTables)if(!frame.isConnected||frame.closest('.scene-leaving-viewport')){resizeObserver?.unobserve(frame);observedTables.delete(frame);}
+  for(const svg of observedPlots)if(!svg.isConnected||svg.closest('.scene-leaving-viewport')){plotObserver?.unobserve(svg);observedPlots.delete(svg);}
+  for(const rail of selectionRails)if(!rail.isConnected||rail.closest('.scene-leaving-viewport')){railObserver?.unobserve(rail);selectionRails.delete(rail);}
+  for(const node of observedReveals)if(!node.isConnected||node.closest('.scene-leaving-viewport')){revealObserver?.unobserve(node);observedReveals.delete(node);}
 }
 function refreshPaperProfiles(root=document){
   for(const svg of root.querySelectorAll('.paper-score-atlas')){
@@ -176,13 +176,14 @@ function showTooltip(target,x,y) {
   tooltipTarget=target;tooltipOriginal={title:target.getAttribute('title'),svgTitle,svgText:svgTitle?.textContent,description:target.getAttribute('aria-describedby')};
   target.removeAttribute('title');if(svgTitle)svgTitle.textContent='';target.setAttribute('aria-describedby','chart-tooltip');tip.textContent=text;tip.hidden=false;if(tip.showPopover&&!tip.matches(':popover-open'))tip.showPopover();placeTooltip(x,y);
 }
+export function openDisclosure(details){if(!details)return;const previous=disclosures.get(details);disclosures.delete(details);previous?.animation.cancel();details.open=true;}
 async function toggleDetails(details) {
   const previous=disclosures.get(details),wanted=!(previous?.wanted??details.open),body=[...details.children].find(el=>el.tagName!=='SUMMARY');
   const from=body?.getBoundingClientRect().height||0;previous?.animation.cancel();
   if(!body||motionPreference()){details.open=wanted;disclosures.delete(details);return;}
-  details.open=true;const to=wanted?body.scrollHeight:0,animation=body.animate([{height:(previous?from:wanted?0:from)+'px',opacity:wanted ? .25 : 1},{height:to+'px',opacity:wanted?1:0}],{duration:280,easing:'cubic-bezier(.22,.8,.22,1)',fill:'both'}),record={wanted,animation};
+  details.open=true;const to=wanted?body.scrollHeight:0,animation=body.animate([{height:(previous?from:wanted?0:from)+'px',opacity:wanted ? .25 : 1,overflow:'clip'},{height:to+'px',opacity:wanted?1:0,overflow:'clip'}],{duration:280,easing:'cubic-bezier(.22,.8,.22,1)',fill:'both'}),record={wanted,animation};
   disclosures.set(details,record);
-  try{await animation.finished;}catch{return;}
+  await finishAnimation(animation,280);
   if(disclosures.get(details)!==record)return;
   if(!wanted&&body.contains(document.activeElement))details.querySelector('summary')?.focus({preventScroll:true});
   details.open=wanted;animation.cancel();disclosures.delete(details);for(const frame of details.querySelectorAll('.table-frame'))refreshTable(frame);
@@ -198,7 +199,7 @@ export function installInteractions({reducedMotion}) {
   if('ResizeObserver' in window){drawerHeaderObserver=new ResizeObserver(refreshDrawerSections);const header=document.querySelector('#research-drawer .drawer-top');if(header)drawerHeaderObserver.observe(header);}
   if('IntersectionObserver' in window)revealObserver=new IntersectionObserver(entries=>{let order=0;for(const entry of entries)if(entry.isIntersecting){revealObserver.unobserve(entry.target);observedReveals.delete(entry.target);if(!motionPreference())entry.target.animate([{opacity:entry.target.matches('.block,.follow-workbench')?1:.9,translate:'0px 8px'},{opacity:1,translate:'0px 0px'}],{...motion.arrive,delay:Math.min(order++,3)*22,fill:'backwards'});}},{rootMargin:'0px 0px -25px 0px',threshold:.06});
   document.addEventListener('scroll',event=>{if(event.target?.matches?.('.goal-cards[data-scroll-key]')){galleryOffsets.set(event.target.dataset.scrollKey,event.target.scrollLeft);hideTooltip();}else if(event.target?.matches?.('.paper-profile-scroll')){refreshPaperProfiles();hideTooltip();}else if(event.target?.matches?.('.table-scroll'))refreshTable(event.target.closest('.table-frame'));else {hideTooltip();if(event.target?.id==='research-drawer'){cancelAnimationFrame(drawerOutlineFrame);drawerOutlineFrame=requestAnimationFrame(refreshDrawerSections);}else if(event.target===document||event.target===document.documentElement){cancelAnimationFrame(outlineFrame);outlineFrame=requestAnimationFrame(()=>{const scrolled=String(window.scrollY>18);if(document.body.dataset.scrolled!==scrolled)document.body.dataset.scrolled=scrolled;refreshOutline();});}}},{capture:true,passive:true});
-  document.addEventListener('click',event=>{const summary=event.target.closest('summary');if(!summary||event.target.closest('button,a,input'))return;const details=summary.parentElement;if(details.matches('.card-scores,.card-meta,.record-accordion,.method-note,.class-profile')){event.preventDefault();toggleDetails(details);}});
+  document.addEventListener('click',event=>{const summary=event.target.closest('summary');if(!summary||event.target.closest('button,a,input'))return;const details=summary.parentElement;if(details.matches('.card-scores,.card-meta,.record-accordion,.method-note,.class-profile,.report-context,.report-part-options,.report-field-options,.report-note-details')){event.preventDefault();toggleDetails(details);}});
   document.addEventListener('pointerover',event=>{if(event.pointerType==='touch')return;const target=event.target.closest('[data-plot-action],.plot-item,.plot-point,.student-dot,.heat-cell[title],[data-tip]');if(target)showTooltip(target,event.clientX,event.clientY);});
   document.addEventListener('pointermove',event=>{if(!tooltipTarget)return;cancelAnimationFrame(tooltipFrame);tooltipFrame=requestAnimationFrame(()=>placeTooltip(event.clientX,event.clientY));});
   document.addEventListener('pointermove',event=>{

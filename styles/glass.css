@@ -70,7 +70,7 @@ input::placeholder,textarea::placeholder{color:#6786a6}
 .navigation-dock button:hover{color:#345a81}
 .navigation-dock .dock-symbol svg{width:24px;height:24px;stroke-width:1.6}
 .navigation-dock button:hover .dock-symbol{transform:translateY(-1px) scale(1.055)}
-.dock-indicator{top:8px;bottom:8px;border-radius:12px;background:linear-gradient(150deg,#ffffffed,#e4eef8a8);border:1px solid #ffffff;box-shadow:inset 0 1px 0 #ffffff,0 4px 13px -5px #516e8b40;transition:transform .42s var(--spring),width .42s var(--ease)}
+.dock-indicator{top:8px;bottom:8px;border-radius:12px;background:linear-gradient(150deg,#ffffffed,#e4eef8a8);border:1px solid #ffffff;box-shadow:inset 0 1px 0 #ffffff,0 4px 13px -5px #516e8b40;transition:transform .46s cubic-bezier(.2,.85,.25,1),width .46s var(--ease)}
 .dock-indicator::after{content:'';position:absolute;left:calc(50% - 9px);bottom:4px;width:18px;height:2px;background:var(--school-blue)}
 .study-outline{background:linear-gradient(135deg,#ffffffb5,#ffffff75);border-color:#ffffffdf;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.2);-webkit-backdrop-filter:blur(18px) saturate(1.2);border-radius:17px}
 .outline-caption{color:#5b7b9c;border-color:#6786a523}
@@ -633,7 +633,7 @@ button:disabled{cursor:not-allowed}
 .scene-viewport{overflow-x:clip;overflow-y:visible}
 .scene-leaving-viewport{position:fixed;inset:0;z-index:2;overflow:hidden;pointer-events:none;overscroll-behavior:none;scrollbar-width:none}
 .scene-leaving-viewport::-webkit-scrollbar{display:none}
-.scene-leaving-canvas{pointer-events:none;will-change:transform}
+.scene-leaving-canvas{pointer-events:none;will-change:transform,opacity}
 @media print{.scene-leaving-viewport{display:none}}
 .directory-exams>.exam-choices{flex-wrap:wrap;overflow:visible;min-width:0}
 .chips>.exam-choice{display:inline-flex;align-items:center;gap:9px;max-width:100%;min-width:0;white-space:normal;text-align:left;line-height:1.5;padding:8px 11px}
@@ -644,3 +644,12 @@ button:disabled{cursor:not-allowed}
 .exam-stop small{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;line-height:1.5}
 .exam-stop.selected .exam-latest,.exam-choice.selected .exam-choice-meta small{background:#ffffff18}
 @media(max-width:760px){.paper-browser .directory-exams,.directory-exams:has(>.exam-choices){align-items:flex-start}.directory-exams>span{padding-top:7px}.chips>.exam-choice{padding:7px 9px;gap:7px}.exam-choices>.exam-choice{flex:0 1 auto}}
+
+/* Travelling scenes share a composited plane; hover lifts do not fight navigation. */
+:is(#stage[data-sliding],.scene-leaving-canvas) .study-outline{scroll-behavior:auto}
+#stage[data-sliding] :is(.student-card,.paper-cover,.question-tile):hover{transform:none}
+@supports(animation-timing-function:linear(0,1)){.dock-indicator{transition-timing-function:linear(0,.035 2%,.14 5%,.36 12%,.63 24%,.82 40%,.94 62%,.985 82%,1),var(--ease)}}
+/* Keep the glass gradients while the two full-page layers move. Sampling a live
+   backdrop per card on both planes forces repeated blur rasterization. The real
+   backdrop returns as soon as the layer settles, including on interruption. */
+:is(#stage[data-sliding],.scene-leaving-canvas) *{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}

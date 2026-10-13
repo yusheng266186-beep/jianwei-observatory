@@ -19,3 +19,18 @@ export function selectedReport(report){
  const result={...report,title:selection.title.trim()||report.title,sections,note:selection.includeNote?report.note:'',meta:selection.includeMeta?report.meta:[],studyTitle:selection.includeMeta?report.studyTitle:'',sheets:Object.fromEntries(sections.map((s,i)=>[(i+1)+'-'+s.title,s.headers.length?[s.headers,...s.rows]:[['说明'],...(s.paragraphs||[]).map(text=>[text])]]))};delete result.outputSelection;return result;
 }
 export function availablePresets(report){return [['all','完整材料'],['overview','概况与对照'],['weak','分层补弱'],['paper','试卷与知识点'],['follow','训练与跟进']].filter(([key])=>presetSections(report,key).length);}
+// Chapter indices and field positions can change when the exam or person changes.
+// Carry choices by their meaning, never by an index from the previous report.
+export function transferSelection(previous,next){
+ const old=selectionFor(previous),defaults=selectionFor(next),byTitle=new Map((next.sections||[]).map((s,i)=>[s.title,i])),mapped=new Map();
+ (previous.sections||[]).forEach((s,i)=>{if(byTitle.has(s.title))mapped.set(i,byTitle.get(s.title));});
+ const matched=new Set(mapped.values()),selected=old.selected.filter(i=>mapped.has(i)).map(i=>mapped.get(i));
+ selected.push(...defaults.selected.filter(i=>!matched.has(i)));
+ const order=old.order.filter(i=>mapped.has(i)).map(i=>mapped.get(i));order.push(...defaults.order.filter(i=>!order.includes(i)));
+ const fields={},filters={};
+ for(const [before,after] of mapped){
+  if(Object.hasOwn(old.fields,before)){const labels=fieldsFor(previous,before,old).map(i=>previous.sections[before].headers[i]);const chosen=next.sections[after].headers.flatMap((h,i)=>labels.includes(h)?[i]:[]);if(chosen.length)fields[after]=chosen;}
+  if(Object.hasOwn(old.filters,before))filters[after]=old.filters[before];
+ }
+ return {...defaults,selected,order,fields,filters,includeMeta:old.includeMeta,includeNote:old.includeNote,title:old.title};
+}

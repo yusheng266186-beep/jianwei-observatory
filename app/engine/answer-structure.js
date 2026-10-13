@@ -1,4 +1,4 @@
-import {valid} from './metrics.js?v=optics-v28';
+import {valid} from './metrics.js?v=flow-v29';
 
 export function answerStructure(answers,question,rules={}) {
   const score=answer=>answer.values[question.index],knownMax=valid(question.max)&&question.max>0;
