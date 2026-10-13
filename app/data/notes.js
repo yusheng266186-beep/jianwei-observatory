@@ -1,4 +1,4 @@
-import {preference,remember} from './workspace.js?v=surfaces-v27';
+import {preference,remember} from './workspace.js?v=optics-v28';
 
 // A synchronous draft survives refresh before an IndexedDB write can finish.
 export class NoteJournal {

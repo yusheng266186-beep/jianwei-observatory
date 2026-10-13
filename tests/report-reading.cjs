@@ -1,5 +1,5 @@
 const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),{makeFixture}=require('./fixtures.cjs');
-const out=path.join(__dirname,'../.audit-output/surfaces-v27');fs.mkdirSync(out,{recursive:true});
+const out=path.join(__dirname,'../.audit-output/optics-v28');fs.mkdirSync(out,{recursive:true});
 const url=process.env.AUDIT_URL||'http://127.0.0.1:4173',data=makeFixture();
 const labels=[...Array.from({length:11},(_,i)=>String(i+1)),'12–14','15','16','17','18','19'];
 data.banks['数学|52']=labels.map((label,i)=>({label,max:10,knowledge:['函数与图像','几何与推理','数列与归纳','数据与概率','综合应用'][i%5]}));

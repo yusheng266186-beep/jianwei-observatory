@@ -1,5 +1,5 @@
 const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
-const {makeWideFixture}=require('./fixtures.cjs'),out=path.join(__dirname,'../.audit-output/surfaces-v27');fs.mkdirSync(out,{recursive:true});
+const {makeWideFixture}=require('./fixtures.cjs'),out=path.join(__dirname,'../.audit-output/optics-v28');fs.mkdirSync(out,{recursive:true});
 const data=makeWideFixture();data.banks['数学|52']=Array.from({length:17},(_,i)=>({label:i<11?String(i+1):i===11?'12–14':String(i+3),max:i<11?5:15,knowledge:i<5?'函数':i<11?'几何':'综合推理'}));data.answers.filter(a=>a.subject==='数学').forEach(a=>a.values=Array.from({length:17},(_,i)=>i===16?10:a.sid==='test-4-0'?0:i%4));
 (async()=>{const b=await chromium.launch({executablePath:'/usr/bin/chromium',args:['--no-sandbox']});const c=await b.newContext({viewport:{width:1440,height:1000},reducedMotion:'reduce'}),p=await c.newPage(),errors=[];p.on('pageerror',e=>errors.push(e.message));p.setDefaultTimeout(12000);
 const nav=async scene=>{await p.locator('#navigation [data-scene='+scene+']').click();await p.waitForFunction(s=>document.querySelector('#stage').dataset.scene===s&&document.querySelector('#stage').getAttribute('aria-busy')==='false',scene);};

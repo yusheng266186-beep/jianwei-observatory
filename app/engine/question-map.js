@@ -1,5 +1,5 @@
-import {valid} from './metrics.js?v=surfaces-v27';
-import {questionNumbers} from './paper-structure.js?v=surfaces-v27';
+import {valid} from './metrics.js?v=optics-v28';
+import {questionNumbers} from './paper-structure.js?v=optics-v28';
 
 const normalize=value=>String(value??'').normalize('NFKC').trim().toLocaleLowerCase('zh-CN');
 export function queryQuestionMap(lens,state={},rules={}) {

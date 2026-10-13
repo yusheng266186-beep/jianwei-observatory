@@ -1,6 +1,6 @@
-import {motion} from './motion.js?v=surfaces-v27';
-import {positionSpreadLabels} from './plots.js?v=surfaces-v27';
-import {paperMapLayout} from '../engine/paper-structure.js?v=surfaces-v27';
+import {motion} from './motion.js?v=optics-v28';
+import {positionSpreadLabels} from './plots.js?v=optics-v28';
+import {paperMapLayout} from '../engine/paper-structure.js?v=optics-v28';
 let motionPreference=()=>false,resizeObserver,plotObserver,railObserver,drawerHeaderObserver,revealObserver,tooltipTarget=null,tooltipOriginal=null,tooltipFrame=0,outlineFrame=0,drawerOutlineFrame=0,pointerFrame=0,outline=null,outlineEntries=[];
 const observedTables=new Set(),observedPlots=new Set(),observedReveals=new Set(),revealed=new WeakSet(),disclosures=new WeakMap();
 const selectionRails=new Set(),railStates=new WeakMap();

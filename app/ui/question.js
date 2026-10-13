@@ -1,11 +1,11 @@
-import {button,badge,block,ribbon,table,number,integer,percent,esc,empty} from './html.js?v=surfaces-v27';
-import {bars,chartButtons} from './plots.js?v=surfaces-v27';
-import {average,valid} from '../engine/metrics.js?v=surfaces-v27';
-import {evidence} from '../io/exports.js?v=surfaces-v27';
-import {questionLens} from '../engine/lenses.js?v=surfaces-v27';
-import {questionSequence} from '../engine/question-map.js?v=surfaces-v27';
-import {questionNumbers} from '../engine/paper-structure.js?v=surfaces-v27';
-import {plotPalette} from './palette.js?v=surfaces-v27';
+import {button,badge,block,ribbon,table,number,integer,percent,esc,empty} from './html.js?v=optics-v28';
+import {bars,chartButtons} from './plots.js?v=optics-v28';
+import {average,valid} from '../engine/metrics.js?v=optics-v28';
+import {evidence} from '../io/exports.js?v=optics-v28';
+import {questionLens} from '../engine/lenses.js?v=optics-v28';
+import {questionSequence} from '../engine/question-map.js?v=optics-v28';
+import {questionNumbers} from '../engine/paper-structure.js?v=optics-v28';
+import {plotPalette} from './palette.js?v=optics-v28';
 
 function structureView(model) {
   const {structure:s,selectedId}=model;

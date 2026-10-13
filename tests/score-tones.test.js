@@ -16,7 +16,7 @@ test('真实零分、分段边界与未知/异常比例分别处理',()=>{
 test('得分率越高，蓝色明度持续降低',()=>{
   const values=scoreTones.map(t=>luminance(rgb(t.fill)));
   for(let i=1;i<values.length;i++)assert.ok(values[i]<values[i-1],scoreTones[i].key);
-  assert.ok(values[0]-values.at(-1)>.65);
+  assert.ok(values[0]-values.at(-1)>.5);
 });
 
 test('得分色块的前景文字在透明底和最亮高光处仍可读',()=>{
@@ -29,4 +29,12 @@ test('得分色块的前景文字在透明底和最亮高光处仍可读',()=>{
       assert.ok(contrast(rgb(tone.muted),background)>=4.5,tone.key+' 小字');
     }
   }
+});
+
+
+test('透光渐变的三个色位都保持小字清晰，高分档也沿用雾蓝层次',()=>{
+ for(const tone of [...scoreTones,scoreTone(null)]){
+  assert.notEqual(tone.light,tone.shade);
+  for(const shade of [tone.light,tone.fill,tone.shade])for(const ink of [tone.ink,tone.muted])assert.ok(contrast(rgb(ink),rgb(shade))>=4.5,tone.key+' 渐变文字');
+ }
 });

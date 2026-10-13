@@ -1,7 +1,7 @@
-import {esc,number,percent,attrs} from './html.js?v=surfaces-v27';
-import {valid} from '../engine/metrics.js?v=surfaces-v27';
-import {plotPalette as palette} from './palette.js?v=surfaces-v27';
-import {scoreTone,scoreLegend} from './score-tones.js?v=surfaces-v27';
+import {esc,number,percent,attrs} from './html.js?v=optics-v28';
+import {valid} from '../engine/metrics.js?v=optics-v28';
+import {plotPalette as palette} from './palette.js?v=optics-v28';
+import {scoreTone,scoreLegend} from './score-tones.js?v=optics-v28';
 export const seriesColors=palette.series;
 const colors=seriesColors;
 const action=item=>item?.cmd?' data-plot-action="true" data-cmd="'+esc(item.cmd)+'"'+attrs(item.data||{})+' role="button" tabindex="0"':'';

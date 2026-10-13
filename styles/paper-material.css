@@ -48,7 +48,7 @@ body[data-motion=calm] :is(.profile-tile,.profile-current-dot){transition:none!i
 @media(forced-colors:active){:is(#stage,.scene-leaving-canvas)[data-scene=papers] :is(.paper-cover,.paper-profile,.paper-study-start,.paper-control-deck,.knowledge-card,.question-square){border:1px solid CanvasText;background:Canvas;box-shadow:none}:is(#stage,.scene-leaving-canvas)[data-scene=papers] .paper-score-atlas .profile-question .profile-tile{stroke:CanvasText;stroke-width:1}.profile-current-dot{fill:CanvasText}}
 @media print{:is(#stage,.scene-leaving-canvas)[data-scene=papers] :is(.paper-cover,.paper-profile,.paper-study-start,.paper-control-deck,.knowledge-card){background:#fff;box-shadow:none}}
 
-.profile-question[data-score-tone=mastered] .profile-light{opacity:.3}
+.profile-question[data-score-tone=mastered] .profile-light{opacity:1}
 #research-drawer:is([data-kind=question],[data-kind=knowledge]) .lens-question footer>i{border:0;box-shadow:none;background:#ffffff29}
 :is(#stage,.scene-leaving-canvas)[data-scene=papers] :is(.table-frame,.table-scroll){border:0;box-shadow:0 8px 22px -18px #244b6b20}
 :is(#stage,.scene-leaving-canvas)[data-scene=papers] :is(.head-action,.study-save,.paper-cover header>small){border:0;box-shadow:0 4px 12px -9px #244b6b35}
@@ -56,3 +56,13 @@ body[data-motion=calm] :is(.profile-tile,.profile-current-dot){transition:none!i
 #research-drawer:is([data-kind=question],[data-kind=knowledge]) :is(button,.table-frame,.table-scroll){border:0}
 .personal-question-card[data-score-tone] footer,.lens-question[data-score-tone] footer{border:0}
 #research-drawer:is([data-kind=question],[data-kind=knowledge]) :is(.drawer-tabs,.selection-indicator){border:0;box-shadow:0 6px 14px -10px #244b6b30}
+
+/* Compact samples have the same milky diagonal lighting as the evidence tiles. */
+.cover-diagram .cover-score-square[data-score-tone]{position:relative;isolation:isolate;overflow:hidden;border-radius:10px;box-shadow:0 3px 8px -5px #244b6b16,0 9px 17px -12px #244b6b29}
+.cover-diagram .cover-score-square[data-score-tone]::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:url('../assets/frost-grain.svg?v=optics-v28') repeat;opacity:.26;border-radius:inherit}
+.cover-diagram .cover-score-square[data-score-tone] b{font-weight:500;letter-spacing:-.02em}
+.profile-question .profile-tile{filter:drop-shadow(0 3px 4px #244b6b0d)}
+body[data-surface=paper] .cover-score-square::before{display:none}
+@media(prefers-reduced-transparency:reduce){.cover-score-square::before{display:none}}
+@media(forced-colors:active){.cover-score-square::before{display:none}.profile-question .profile-tile{filter:none}}
+@media print{.cover-score-square::before{display:none}.profile-question .profile-tile{filter:none}}
