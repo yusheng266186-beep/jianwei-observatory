@@ -1,3 +1,4 @@
+const {settings:openReportSettings}=require('./paper-preview-helpers.cjs');
 const {chromium}=require('playwright');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
@@ -97,7 +98,7 @@ const url=process.env.AUDIT_URL||'http://127.0.0.1:4173';
  });
  await test('新预览尚未完成保存时刷新可恢复完整摘录和判断',async({page,click})=>{
   await click('[data-cmd="nav"][data-scene="people"]');await click('#stage [data-cmd="export"]');
-  await page.waitForSelector('#report-note');
+  await openReportSettings(page);await page.waitForSelector('#report-note');
   await page.evaluate(()=>{const put=IDBObjectStore.prototype.put;IDBObjectStore.prototype.put=function(value,key){if(key==='notebook')throw new DOMException('模拟摘录保存失败','QuotaExceededError');return put.call(this,value,key);};const input=document.getElementById('report-note');input.value='新预览刷新前的匿名判断';input.dispatchEvent(new Event('input',{bubbles:true}));location.reload();});
   await page.waitForSelector('body[data-workspace="ready"]');
   await click('[data-cmd="nav"][data-scene="library"]');await click('[data-key="tab"][data-value="notebook"]');

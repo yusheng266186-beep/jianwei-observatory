@@ -1,0 +1,5 @@
+const ready=async p=>{await p.waitForSelector('.report-paper-scroll[data-pdf-state=ready]',{timeout:90000});await p.waitForFunction(()=>{const el=document.querySelector('.report-paper-scroll');return el.pdfDocument&&el.pdfBlob},undefined,{timeout:90000});};
+const text=async p=>{await ready(p);return p.evaluate(async()=>{const doc=document.querySelector('.report-paper-scroll').pdfDocument,parts=[];for(let n=1;n<=doc.numPages;n++){const t=await (await doc.getPage(n)).getTextContent();parts.push(t.items.map(i=>i.str).join(''));}return parts.join('\n');});};
+const settings=async p=>{if(!await p.locator('#report-dialog').evaluate(e=>e.classList.contains('is-configuring')))await p.locator('.report-head-actions [data-cmd=report-settings]').click();};
+const closeSettings=async p=>{if(await p.locator('#report-dialog').evaluate(e=>e.classList.contains('is-configuring')))await p.locator('.report-head-actions [data-cmd=report-settings]').click();};
+module.exports={ready,text,settings,closeSettings};

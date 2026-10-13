@@ -1,11 +1,11 @@
-import {button,badge,block,ribbon,table,number,integer,percent,esc,empty} from './html.js?v=flow-v29';
-import {bars,chartButtons} from './plots.js?v=flow-v29';
-import {average,valid} from '../engine/metrics.js?v=flow-v29';
-import {evidence} from '../io/exports.js?v=flow-v29';
-import {questionLens} from '../engine/lenses.js?v=flow-v29';
-import {questionSequence} from '../engine/question-map.js?v=flow-v29';
-import {questionNumbers} from '../engine/paper-structure.js?v=flow-v29';
-import {plotPalette} from './palette.js?v=flow-v29';
+import {button,badge,block,ribbon,table,number,integer,percent,esc,empty} from './html.js?v=paper-v30';
+import {bars,chartButtons} from './plots.js?v=paper-v30';
+import {average,valid} from '../engine/metrics.js?v=paper-v30';
+import {evidence} from '../io/exports.js?v=paper-v30';
+import {questionLens} from '../engine/lenses.js?v=paper-v30';
+import {questionSequence} from '../engine/question-map.js?v=paper-v30';
+import {questionNumbers} from '../engine/paper-structure.js?v=paper-v30';
+import {plotPalette} from './palette.js?v=paper-v30';
 
 function structureView(model) {
   const {structure:s,selectedId}=model;

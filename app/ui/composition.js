@@ -1,4 +1,4 @@
-import {button,esc} from './html.js?v=flow-v29';
+import {button,esc} from './html.js?v=paper-v30';
 
 export function composeScene(html,{back=''}={}) {
   const template=document.createElement('template');template.innerHTML=html;

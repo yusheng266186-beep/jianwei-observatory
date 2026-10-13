@@ -1,6 +1,6 @@
-import {materialPeople} from '../engine/training.js?v=flow-v29';
-import {button,chips,examRail,esc,field,empty} from './html.js?v=flow-v29';
-import {reportTypes} from '../engine/reports.js?v=flow-v29';
+import {materialPeople} from '../engine/training.js?v=paper-v30';
+import {button,chips,examRail,esc,field,empty} from './html.js?v=paper-v30';
+import {reportTypes} from '../engine/reports.js?v=paper-v30';
 export function reportSpec(atlas,state={}){
  const kind=reportTypes.some(t=>t[0]===state.reportKind)?state.reportKind:'class',exam=atlas.exams.some(e=>e.id===state.reportExam)?state.reportExam:atlas.latest,no=atlas.classes.includes(Number(state.reportNo))?Number(state.reportNo):atlas.classes[0];
  state={...state};if(state.reportStudentClass!=='all'&&!atlas.classes.includes(Number(state.reportStudentClass)))state.reportStudentClass='all';

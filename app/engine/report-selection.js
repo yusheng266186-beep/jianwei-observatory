@@ -1,8 +1,9 @@
+import {paperSettings} from './paper-settings.js?v=paper-v30';
 export function selectionFor(report){
  const source=report.outputSelection||{},sections=report.sections||[],indices=sections.map((_,i)=>i),valid=i=>Number.isInteger(i)&&i>=0&&i<sections.length;
  const order=[...new Set((source.order||indices).filter(valid))];for(const i of indices)if(!order.includes(i))order.push(i);
  const selected=Array.isArray(source.selected)?[...new Set(source.selected.filter(valid))]:indices;
- return {selected,order,fields:{...source.fields},filters:{...source.filters},includeMeta:source.includeMeta!==false,includeNote:source.includeNote!==false,title:source.title||''};
+ return {selected,order,fields:{...source.fields},filters:{...source.filters},includeMeta:source.includeMeta!==false,includeNote:source.includeNote!==false,title:source.title||'',paper:paperSettings(report)};
 }
 export function fieldsFor(report,index,selection=selectionFor(report)){const headers=report.sections[index]?.headers||[],fields=selection.fields[index];return Array.isArray(fields)?[...new Set(fields.filter(i=>Number.isInteger(i)&&i>=0&&i<headers.length))]:headers.map((_,i)=>i);}
 export function presetSections(report,preset){
@@ -14,9 +15,9 @@ export function selectedReport(report){
  if(!report.outputSelection)return report;
  const selection=selectionFor(report),chosen=selection.order.filter(i=>selection.selected.includes(i)),sections=chosen.map(index=>{
   const source=report.sections[index],fields=fieldsFor(report,index,selection),query=String(selection.filters[index]||'').trim(),rows=(source.rows||[]).filter(row=>!query||row.some(value=>String(value??'').includes(query)));
-  return {...source,sourceIndex:index,headers:fields.map(i=>source.headers[i]),rows:rows.map(row=>fields.map(i=>row[i])),caption:[source.caption,fields.length<(source.headers||[]).length?'本章节仅保留所选'+fields.length+' / '+source.headers.length+'个字段。':'',query?'本章节仅包含匹配“'+query+'”的 '+rows.length+' 条记录。':''].filter(Boolean).join(' ')};
+  return {...source,sourceIndex:index,headers:fields.map(i=>source.headers[i]),rows:rows.map(row=>fields.map(i=>row[i])),caption:[selection.paper.includeCaptions?source.caption:'',fields.length<(source.headers||[]).length?'本章节仅保留所选'+fields.length+' / '+source.headers.length+'个字段。':'',query?'本章节仅包含匹配“'+query+'”的 '+rows.length+' 条记录。':''].filter(Boolean).join(' ')};
  });
- const result={...report,title:selection.title.trim()||report.title,sections,note:selection.includeNote?report.note:'',meta:selection.includeMeta?report.meta:[],studyTitle:selection.includeMeta?report.studyTitle:'',sheets:Object.fromEntries(sections.map((s,i)=>[(i+1)+'-'+s.title,s.headers.length?[s.headers,...s.rows]:[['说明'],...(s.paragraphs||[]).map(text=>[text])]]))};delete result.outputSelection;return result;
+ const result={...report,title:selection.title.trim()||report.title,paper:selection.paper,sections:selection.paper.skipEmpty?sections.filter(s=>s.rows.length||(s.paragraphs||[]).length):sections,note:selection.includeNote?report.note:'',meta:selection.includeMeta?report.meta:[],studyTitle:selection.includeMeta?report.studyTitle:'',sheets:Object.fromEntries(sections.map((s,i)=>[(i+1)+'-'+s.title,s.headers.length?[s.headers,...s.rows]:[['说明'],...(s.paragraphs||[]).map(text=>[text])]]))};result.sheets=Object.fromEntries(result.sections.map((s,i)=>[(i+1)+'-'+s.title,s.headers.length?[s.headers,...s.rows]:[['说明'],...(s.paragraphs||[]).map(text=>[text])]]));delete result.outputSelection;return result;
 }
 export function availablePresets(report){return [['all','完整材料'],['overview','概况与对照'],['weak','分层补弱'],['paper','试卷与知识点'],['follow','训练与跟进']].filter(([key])=>presetSections(report,key).length);}
 // Chapter indices and field positions can change when the exam or person changes.
@@ -32,5 +33,5 @@ export function transferSelection(previous,next){
   if(Object.hasOwn(old.fields,before)){const labels=fieldsFor(previous,before,old).map(i=>previous.sections[before].headers[i]);const chosen=next.sections[after].headers.flatMap((h,i)=>labels.includes(h)?[i]:[]);if(chosen.length)fields[after]=chosen;}
   if(Object.hasOwn(old.filters,before))filters[after]=old.filters[before];
  }
- return {...defaults,selected,order,fields,filters,includeMeta:old.includeMeta,includeNote:old.includeNote,title:old.title};
+ return {...defaults,selected,order,fields,filters,includeMeta:old.includeMeta,includeNote:old.includeNote,title:old.title,paper:old.paper};
 }

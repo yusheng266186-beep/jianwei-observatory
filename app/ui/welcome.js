@@ -1,4 +1,4 @@
-import {button} from './html.js?v=flow-v29';
+import {button} from './html.js?v=paper-v30';
 
 export function welcomeView() {
   const template=document.getElementById('empty-workspace-template');

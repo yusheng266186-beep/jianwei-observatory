@@ -1,6 +1,6 @@
-import {button,esc} from './html.js?v=flow-v29';
-import {materialPeople} from '../engine/training.js?v=flow-v29';
-import {reportSpec} from './report-studio.js?v=flow-v29';
+import {button,esc} from './html.js?v=paper-v30';
+import {materialPeople} from '../engine/training.js?v=paper-v30';
+import {reportSpec} from './report-studio.js?v=paper-v30';
 export function normalizeReportScope(atlas,spec,change){
  const next={...spec,...change};
  return reportSpec(atlas,{reportKind:next.kind,reportExam:next.exam,reportNo:next.no,reportSubjectClass:next.no,reportPlanClass:next.no,reportSubject:next.subject,reportBand:next.band,reportSid:next.sid,reportRaw:next.includeRaw});

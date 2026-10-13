@@ -31,7 +31,8 @@
     "test:report-composer": "node tests/report-composer.cjs",
     "test:report-reading": "node tests/report-reading.cjs",
     "test:paper-surfaces": "node tests/paper-surfaces.cjs",
-    "test:report-live-output": "node tests/report-live-output.cjs"
+    "test:report-live-output": "node tests/report-live-output.cjs",
+    "test:paper-workspace": "node tests/paper-workspace.cjs"
   },
   "devDependencies": {
     "playwright": "1.62.1"

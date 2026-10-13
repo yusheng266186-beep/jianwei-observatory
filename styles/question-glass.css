@@ -8,7 +8,7 @@
  backdrop-filter:none;-webkit-backdrop-filter:none;
 }
 :is(#stage,.scene-leaving-canvas) .question-map .question-square[data-score-tone]{padding:18px 19px 12px;border-radius:19px;isolation:isolate;transition:transform .24s var(--ease),box-shadow .24s var(--ease),border-color .24s}
-:is(#stage,.scene-leaving-canvas) .question-map .question-square[data-score-tone]::before{content:'';display:block;position:absolute;inset:0;background:url('../assets/frost-grain.svg?v=flow-v29') repeat,linear-gradient(125deg,transparent 26%,#ffffff13 32%,#ffffff05 44%,transparent 48%);border-radius:inherit;pointer-events:none;z-index:-1;opacity:.26}
+:is(#stage,.scene-leaving-canvas) .question-map .question-square[data-score-tone]::before{content:'';display:block;position:absolute;inset:0;background:url('../assets/frost-grain.svg?v=paper-v30') repeat,linear-gradient(125deg,transparent 26%,#ffffff13 32%,#ffffff05 44%,transparent 48%);border-radius:inherit;pointer-events:none;z-index:-1;opacity:.26}
 :is(#stage,.scene-leaving-canvas) .question-map .question-square[data-score-tone]::after{display:none}
 :is(#stage,.scene-leaving-canvas) .question-map .question-square[data-score-tone]:is(:hover,.selected){background:linear-gradient(145deg,var(--score-light) 0%,var(--score-base) 62%,var(--score-shade) 100%),var(--score-fill);border:0;box-shadow:0 5px 12px #1c3e5b0a,0 20px 35px -21px #244b6b65}
 :is(#stage,.scene-leaving-canvas) .question-map .question-square[data-score-tone].selected{outline:none}

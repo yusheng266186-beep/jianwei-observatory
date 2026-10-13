@@ -1,7 +1,7 @@
-import {esc,number,integer,percent,button} from './html.js?v=flow-v29';
-import {valid} from '../engine/metrics.js?v=flow-v29';
-import {plotPalette as palette} from './palette.js?v=flow-v29';
-import {scoreTone,scoreStyle} from './score-tones.js?v=flow-v29';
+import {esc,number,integer,percent,button} from './html.js?v=paper-v30';
+import {valid} from '../engine/metrics.js?v=paper-v30';
+import {plotPalette as palette} from './palette.js?v=paper-v30';
+import {scoreTone,scoreStyle} from './score-tones.js?v=paper-v30';
 
 export function thresholdProfile(id,summary) {
   const prefix='profile-'+[...String(id)].map(c=>c.codePointAt(0).toString(16)).join('-');

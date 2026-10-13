@@ -88,12 +88,12 @@ async function group(name,fn,{empty=false}={}){
  }catch(e){results.push({name,ok:false,error:e.message});console.log('FAIL '+name+' '+e.message.slice(0,500));await page.screenshot({path:output+'/failure-'+results.length+'.png'});}finally{flush();await context.close();}
 }
 async function report(cmd='export',root='#stage'){
- await click(root+` [data-cmd="${cmd}"]`);assert.equal(await page.locator('#report-dialog').getAttribute('open'),'');await inspect(activeGroup+':报告',{charts:false});
+ await click(root+` [data-cmd="${cmd}"]`);assert.equal(await page.locator('#report-dialog').getAttribute('open'),'');await page.locator('[data-cmd=report-preview-mode][data-value=details]').click();await page.locator('.report-head-actions [data-cmd=report-settings]').click();await inspect(activeGroup+':报告',{charts:false});
  for(const index of unique(await page.locator('[data-cmd="report-section"]').evaluateAll(es=>es.map(e=>e.dataset.index)))){await click(`[data-cmd="report-section"][data-index="${index}"]`);await layout(activeGroup+':报告内容'+index);const next=page.locator('#report-dialog [data-cmd="report-page"][data-step="1"]');if(!await next.isDisabled()){await click(next);await click('#report-dialog [data-cmd="report-page"][data-step="-1"]');}}
  await page.locator('[data-report-search]').fill('没有这条匿名记录');await page.waitForTimeout(350);assert.equal(await page.locator('#report-content tbody tr').count(),0);await page.locator('[data-report-search]').fill('');await page.waitForTimeout(350);
  await page.locator('#report-note').fill('全界面检查的匿名判断');await click('[data-cmd="report-keep"]');
  for(const kind of ['excel','word']){const pending=page.waitForEvent('download');await click(`[data-cmd="report-${kind}"]`);const d=await pending;assert.equal(await d.failure(),null);}
- await click('[data-cmd="report-print"]');assert.ok(await page.locator('#print-area tbody tr').count()>0);assert.equal(await page.evaluate(()=>window.__printCalled),1);
+ await click('[data-cmd="report-print"]');assert.ok(await page.locator('#print-area .printed-pdf-page').count()>0);assert.equal(await page.evaluate(()=>window.__printCalled),1);
  await click('[data-cmd="close-report"]');
 }
 async function drawerViews(name){

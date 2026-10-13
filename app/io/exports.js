@@ -1,10 +1,11 @@
-import {selectedReport} from '../engine/report-selection.js?v=flow-v29';
-import {reportHTML,wordFiles,pdfDefinition} from './print-document.js?v=flow-v29';
-export {reportHTML} from './print-document.js?v=flow-v29';
-import {esc,number,percent,signed} from '../ui/html.js?v=flow-v29';
-import {SITE_NAME,CREST_URL} from '../brand.js?v=flow-v29';
-import {chartFontRules} from '../ui/font-export.js?v=flow-v29';
-import {worksheetNames} from './sheet-names.js?v=flow-v29';
+import {paperSettings} from '../engine/paper-settings.js?v=paper-v30';
+import {selectedReport} from '../engine/report-selection.js?v=paper-v30';
+import {reportHTML,wordFiles,pdfDefinition,documentSections} from './print-document.js?v=paper-v30';
+export {reportHTML} from './print-document.js?v=paper-v30';
+import {esc,number,percent,signed} from '../ui/html.js?v=paper-v30';
+import {SITE_NAME,CREST_URL} from '../brand.js?v=paper-v30';
+import {chartFontRules} from '../ui/font-export.js?v=paper-v30';
+import {worksheetNames} from './sheet-names.js?v=paper-v30';
 export function download(content,name,type='application/octet-stream') {
   const blob=content instanceof Blob?content:new Blob([content],{type}),url=URL.createObjectURL(blob),anchor=document.createElement('a');
   anchor.href=url;anchor.download=name;anchor.click();setTimeout(()=>URL.revokeObjectURL(url),5000);
@@ -55,7 +56,7 @@ export function answerRows(atlas,answers,paperKey='') {
   return [['考试','姓名','班级','学科',...Array.from({length:max},(_,i)=>'第'+(bank[i]?.label??i+1)+'题')],...answers.map(a=>[atlas.exam(a.exam).label,atlas.name(a.sid),a.classNo,a.subject,...a.values])];
 }
 export function evidence(title,subtitle,sections,sheets={}) {return {title,subtitle,sections,sheets,created:new Date().toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'}),note:''};}
-export function print(report) {document.getElementById('print-area').innerHTML=reportHTML(report);window.print();}
+export async function print(report,previewBlob=null) {const {printPDF}=await import('./paper-print.js?v=paper-v30');await printPDF(previewBlob||await pdfBlob(report));}
 export async function word(report) {
  report=selectedReport(report);
  const {JSZip}=await vendors(),zip=new JSZip();for(const [name,content] of Object.entries(wordFiles(report)))zip.file(name,content);
@@ -70,7 +71,17 @@ async function pdfEngine(){
  })();pdfReady=attempt;attempt.catch(()=>{if(pdfReady===attempt)pdfReady=null;});}
  return pdfReady;
 }
-export async function pdf(report){report=selectedReport(report);const engine=await pdfEngine();const blob=await new Promise((resolve,reject)=>{let done=false;const finish=(error,result)=>{if(done)return;done=true;clearTimeout(timer);error?reject(error):resolve(result);},timer=setTimeout(()=>finish(new Error('PDF生成超时，可缩小报告范围或先下载Word')),120000);try{const definition=pdfDefinition(report),doc=engine.createPdf(definition);const stream=doc.getStream({});stream.on('error',error=>finish(error));const chunks=[];stream.on('data',chunk=>chunks.push(chunk));stream.on('end',()=>finish(null,new Blob(chunks,{type:'application/pdf'})));stream.end();}catch(e){finish(e);}});download(blob,report.title+'.pdf');}
+// Preview and download share the exact same immutable PDF bytes. Bound the cache
+// to two documents; failed attempts are evicted so a direct retry can recover.
+const pdfDocuments=new Map();
+export function pdfKey(report){report=selectedReport(report);return JSON.stringify([report.title,report.subtitle||'',report.created||'',documentSections(report).map(s=>[s.title,s.headers,s.rows.map(row=>s.headers.map((_,i)=>String(row[i]??'—'))),s.caption||'',s.paragraphs]),report.meta||[],report.note||'',paperSettings(report)]);}
+export function pdfBlob(report){
+ report=structuredClone(selectedReport(report));const key=pdfKey(report);if(pdfDocuments.has(key))return pdfDocuments.get(key);
+ const task=(async()=>{const engine=await pdfEngine();return new Promise((resolve,reject)=>{let done=false;const finish=(error,result)=>{if(done)return;done=true;clearTimeout(timer);error?reject(error):resolve(result);},timer=setTimeout(()=>finish(new Error('PDF生成超时，可缩小报告范围或先下载Word')),120000);try{const definition=pdfDefinition(report),doc=engine.createPdf(definition);const stream=doc.getStream({});stream.on('error',error=>finish(error));const chunks=[];stream.on('data',chunk=>chunks.push(chunk));stream.on('end',()=>finish(null,new Blob(chunks,{type:'application/pdf'})));stream.end();}catch(e){finish(e);}});})();
+ pdfDocuments.set(key,task);if(pdfDocuments.size>2)pdfDocuments.delete(pdfDocuments.keys().next().value);
+ task.catch(()=>{if(pdfDocuments.get(key)===task)pdfDocuments.delete(key);});return task;
+}
+export async function pdf(report,previewBlob=null){report=selectedReport(report);download(previewBlob||await pdfBlob(report),report.title+'.pdf');}
 export async function chart(id,png=false) {
   const svg=document.getElementById(id);if(!svg)throw new Error('当前没有可导出的图表，请先补充可绘制的数据。');
   const copy=svg.cloneNode(true),{width,height}=svg.viewBox.baseVal;copy.setAttribute('xmlns','http://www.w3.org/2000/svg');copy.setAttribute('width',width);copy.setAttribute('height',height);

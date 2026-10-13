@@ -1,3 +1,4 @@
+const {settings:openReportSettings}=require('./paper-preview-helpers.cjs');
 const {chromium}=require('playwright');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
@@ -113,19 +114,19 @@ fs.writeFileSync(longerMaterial,JSON.stringify(longFixture));
   await test('空白预览不新增摘录，写判断后关闭、Esc、快捷查找和刷新均保留且不重复',async({page,click,nav,backup})=>{
     await nav('people');await click('#stage [data-cmd="export"]');await click('[data-cmd="close-report"]');
     assert.equal((await backup()).notebook.length,0);
-    await nav('people');await click('#stage [data-cmd="export"]');await page.locator('#report-note').fill('第一段匿名判断');
+    await nav('people');await click('#stage [data-cmd="export"]');await openReportSettings(page);await page.locator('#report-note').fill('第一段匿名判断');
     await click('[data-cmd="close-report"]');await click('#stage [data-cmd="export"]');
     assert.equal(await page.locator('#report-note').inputValue(),'第一段匿名判断');
-    await page.locator('#report-note').fill('第二段匿名判断');await page.keyboard.press('Escape');await page.waitForTimeout(250);
+    await openReportSettings(page);await page.locator('#report-note').fill('第二段匿名判断');await page.keyboard.press('Escape');await page.waitForTimeout(250);
     assert.equal(await page.locator('#report-dialog').getAttribute('open'),null);
     await click('#stage [data-cmd="export"]');assert.equal(await page.locator('#report-note').inputValue(),'第二段匿名判断');
-    await page.locator('#report-note').fill('第三段匿名判断');await page.keyboard.press('Control+k');await page.waitForTimeout(400);
+    await openReportSettings(page);await page.locator('#report-note').fill('第三段匿名判断');await page.keyboard.press('Control+k');await page.waitForTimeout(400);
     assert.equal(await page.locator('#report-dialog').getAttribute('open'),null);
     await page.reload();await page.waitForSelector('body[data-workspace="ready"]');await nav('people');await click('#stage [data-cmd="export"]');
     assert.equal(await page.locator('#report-note').inputValue(),'第三段匿名判断');await click('[data-cmd="close-report"]');
     const b=await backup();assert.equal(b.notebook.length,1);assert.equal(b.notebook[0].note,'第三段匿名判断');
     await click('#stage [data-key="tab"][data-value="notebook"]');await click('[data-cmd="notebook-open"]');
-    await page.locator('#report-note').fill('从摘录重新研究后更新判断');await click('[data-cmd="close-report"]');
+    await openReportSettings(page);await page.locator('#report-note').fill('从摘录重新研究后更新判断');await click('[data-cmd="close-report"]');
     assert.equal(await page.locator('[data-evidence-note]').inputValue(),'从摘录重新研究后更新判断');
   });
 
@@ -156,10 +157,10 @@ fs.writeFileSync(longerMaterial,JSON.stringify(longFixture));
   });
 
   await test('导出材料翻页自动回到材料检索，完整呈现后续50行',async({page,click,nav})=>{
-    await nav('people');await click('#stage [data-cmd="export"]');await click('[data-cmd="report-section"][data-index="1"]');
+    await nav('people');await click('#stage [data-cmd="export"]');await page.locator('[data-cmd=report-preview-mode][data-value=details]').click();await click('[data-cmd="report-section"][data-index="1"]');
     await click('#report-dialog [data-cmd="report-page"][data-step="1"]');
     const query=await page.locator('.report-query').boundingBox(),dialog=await page.locator('#report-dialog').boundingBox();
-    assert.ok(query.y>=dialog.y&&query.y<dialog.y+100,'下一页应显示材料检索入口');
+    assert.ok(query.y>=dialog.y&&query.y<dialog.y+220,'下一页应显示材料检索入口');
     assert.equal(await page.locator('#report-dialog tbody tr').count(),50);
   },longerMaterial);
 
