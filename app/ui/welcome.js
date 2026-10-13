@@ -1,4 +1,4 @@
-import {button} from './html.js?v=workbench-v19';
+import {button} from './html.js?v=paper-v20';
 
 export function welcomeView() {
   const template=document.getElementById('empty-workspace-template');

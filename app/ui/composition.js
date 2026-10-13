@@ -1,4 +1,4 @@
-import {button,esc} from './html.js?v=workbench-v19';
+import {button,esc} from './html.js?v=paper-v20';
 
 export function composeScene(html,{back=''}={}) {
   const template=document.createElement('template');template.innerHTML=html;

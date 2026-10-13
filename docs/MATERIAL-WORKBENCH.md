@@ -1,5 +1,7 @@
 # 2026-10-13：全站材质与试卷研究工作台
 
+本页记录 v19；当前全卷展示和 Dock 已由 [全卷题序与透明玻璃 Dock](PAPER-ATLAS-AND-GLASS-DOCK.md) 替代。
+
 固定网址：https://yusheng266186-beep.github.io/jianwei-observatory/ 。
 
 ## 材质层级

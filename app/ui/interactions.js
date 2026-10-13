@@ -1,5 +1,6 @@
-import {motion} from './motion.js?v=workbench-v19';
-import {positionSpreadLabels} from './plots.js?v=workbench-v19';
+import {motion} from './motion.js?v=paper-v20';
+import {positionSpreadLabels} from './plots.js?v=paper-v20';
+import {paperMapLayout} from '../engine/paper-structure.js?v=paper-v20';
 let motionPreference=()=>false,resizeObserver,plotObserver,railObserver,drawerHeaderObserver,revealObserver,tooltipTarget=null,tooltipOriginal=null,tooltipFrame=0,outlineFrame=0,drawerOutlineFrame=0,pointerFrame=0,outline=null,outlineEntries=[];
 const observedTables=new Set(),observedPlots=new Set(),observedReveals=new Set(),revealed=new WeakSet(),disclosures=new WeakMap();
 const selectionRails=new Set(),railStates=new WeakMap();
@@ -108,12 +109,17 @@ export function pruneInteractions() {
   for(const node of observedReveals)if(!node.isConnected){revealObserver?.unobserve(node);observedReveals.delete(node);}
 }
 function refreshPaperProfiles(root=document){
-  for(const profile of root.querySelectorAll('.paper-profile')){
-    const rail=profile.querySelector('.paper-profile-scroll'),controls=profile.querySelector('.profile-scroll-controls');
-    if(!controls)continue;
-    const extent=rail?Math.max(0,rail.scrollWidth-rail.clientWidth):0;
-    controls.hidden=extent<=1;
-    for(const button of controls.querySelectorAll('button'))button.disabled=Number(button.dataset.direction)<0?!rail||rail.scrollLeft<=1:!rail||rail.scrollLeft>=extent-1;
+  for(const svg of root.querySelectorAll('.paper-score-atlas')){
+    const width=svg.getBoundingClientRect().width;if(!width)continue;
+    const items=[...svg.querySelectorAll('.profile-question')],layout=paperMapLayout(items.length,width);
+    svg.setAttribute('viewBox','0 0 '+width+' '+layout.height);
+    const background=svg.querySelector('.profile-background');background.setAttribute('width',width);background.setAttribute('height',layout.height);
+    items.forEach((item,index)=>{
+      const p=layout.position(index);item.setAttribute('transform','translate('+p.x+','+p.y+')');
+      item.querySelector('.profile-tile').setAttribute('width',layout.cellWidth-1);
+      item.querySelector('.profile-meter-track').setAttribute('width',layout.cellWidth-22);
+      item.querySelector('.profile-meter-fill')?.setAttribute('width',(layout.cellWidth-22)*Number(item.dataset.rate));
+    });
   }
 }
 export function enhance(root=document,{reveal=true}={}) {
@@ -184,7 +190,7 @@ async function toggleDetails(details) {
 }
 export function installInteractions({reducedMotion}) {
   motionPreference=reducedMotion;
-  const fontsReady=()=>{pruneInteractions();for(const svg of observedPlots)refreshPlot(svg);for(const rail of selectionRails)selectionRail(rail);refreshOutline();refreshDrawerSections();};
+  const fontsReady=()=>{pruneInteractions();refreshPaperProfiles();for(const svg of observedPlots)refreshPlot(svg);for(const rail of selectionRails)selectionRail(rail);refreshOutline();refreshDrawerSections();};
   document.fonts?.addEventListener('loadingdone',fontsReady);
   document.fonts?.ready.then(fontsReady);
   if('ResizeObserver' in window)resizeObserver=new ResizeObserver(entries=>{for(const entry of entries)refreshTable(entry.target);});

@@ -1,5 +1,5 @@
-import { SUBJECTS, EXAM_ORDER, EXAM_NAMES, classDefaults, finite, normalizeDataset } from './compat.js?v=workbench-v19';
-import {mergeContext} from './context.js?v=workbench-v19';
+import { SUBJECTS, EXAM_ORDER, EXAM_NAMES, classDefaults, finite, normalizeDataset } from './compat.js?v=paper-v20';
+import {mergeContext} from './context.js?v=paper-v20';
 const txt=v=>String(v??'').trim();
 const num=v=>v==null||txt(v)===''?null:Number.isFinite(Number(v))?Number(v):null;
 const code=v=>txt(v).replace(/[物历]$/,'');
@@ -105,7 +105,8 @@ function parseItems(data,workbook,XLSX,idFor,progress){
    const maxima=rows[i+1]||[],knowledge=rows[i+2]||[],bank=[],cols=[];
    for(let c=3;c<r.length;c++){
     if(!txt(r[c])||/^(总分|客观分|主观分|原分|赋分|合计)$/.test(txt(r[c])))continue;
-    if(maxima[c]==null&&!txt(knowledge[c]))continue;
+    // Keep real question columns even when their metadata is blank, so scores
+    // and original positions cannot silently disappear or become misaligned.
     cols.push(c);bank.push({label:txt(r[c]),max:num(maxima[c]),knowledge:txt(knowledge[c]),maxNote:txt(maxima[c]).includes('*')?'原表满分未明确':'',sourceMax:txt(maxima[c])});
    }
    if(bank.length){data.banks[subject+'|'+e]=bank;columns[e]=cols;}

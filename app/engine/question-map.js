@@ -1,11 +1,12 @@
-import {valid} from './metrics.js?v=workbench-v19';
+import {valid} from './metrics.js?v=paper-v20';
+import {questionNumbers} from './paper-structure.js?v=paper-v20';
 
 const normalize=value=>String(value??'').normalize('NFKC').trim().toLocaleLowerCase('zh-CN');
 export function queryQuestionMap(lens,state={},rules={}) {
   const threshold=valid(rules.lowRate)&&rules.lowRate>=0&&rules.lowRate<=1?rules.lowRate:.5;
   const query=normalize(state.questionSearch),terms=query.split(/\s+/).filter(Boolean);
   const searched=lens.questions.filter(q=>{
-    const text=normalize('第'+q.label+'题 '+(q.knowledge||'知识点未标注'));
+    const text=normalize('第'+q.label+'题 '+questionNumbers(q.label).map(n=>'第'+n+'题').join(' ')+' '+(q.knowledge||'知识点未标注'));
     return terms.every(term=>text.includes(term));
   });
   const conditions=[

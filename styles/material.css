@@ -33,13 +33,14 @@ input:not([type=radio]):not([type=checkbox]):not([type=file]):focus,textarea:foc
 input::placeholder,textarea::placeholder{color:#7990a2}
 
 /* The Dock reads as one floating object, independent of the scrolling document. */
-.navigation-dock{background:#24465de0;border-color:#bfd5e645;border-radius:21px;box-shadow:inset 0 1px 0 #ffffff24,0 4px 9px #132e4110,0 18px 40px -17px #15334861;backdrop-filter:blur(28px) saturate(1.14);-webkit-backdrop-filter:blur(28px) saturate(1.14)}
-.navigation-dock button{border-radius:13px;color:#c0d3df;font-weight:400}
-.navigation-dock button:hover,.navigation-dock button[aria-current=page]{color:#f5fbff}
+.navigation-dock{background-color:#edf6fc66;background-image:linear-gradient(135deg,#ffffff55,#dcecf726 55%,#ffffff42);border-color:#ffffffb8;border-radius:23px;box-shadow:inset 0 1px 0 #ffffffed,inset 0 -1px 0 #d0e1ee87,inset 1px 0 0 #ffffff66,0 3px 7px #25445b08,0 20px 40px -17px #25445b4f;backdrop-filter:blur(26px) saturate(1.5);-webkit-backdrop-filter:blur(26px) saturate(1.5)}
+.navigation-dock::before{content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(160deg,#ffffff30,transparent 42%,#e4f3ff1a)}
+.navigation-dock button{border-radius:14px;color:#3b5e79;font-weight:400}
+.navigation-dock button:hover,.navigation-dock button[aria-current=page]{color:#214e70}
 .navigation-dock .dock-symbol svg{stroke-width:1.5}
 .navigation-dock button[aria-current=page] .dock-symbol{color:inherit}
-.dock-indicator{background:#d3e9f420;border:1px solid #d1e6f342;border-radius:13px;box-shadow:inset 0 1px 0 #ffffff20,0 2px 8px #142e410d}
-.dock-indicator::after{background:#d5eaf7;width:15px;height:1.5px;left:calc(50% - 7.5px);bottom:4px}
+.dock-indicator{background:linear-gradient(155deg,#ffffffb3,#f6fbff61);border:1px solid #ffffffd9;border-radius:14px;box-shadow:inset 0 1px 0 #fff,0 1px 3px #315a760c,0 6px 14px -8px #315a7633}
+.dock-indicator::after{background:#4a7592a3;width:12px;height:1.5px;left:calc(50% - 6px);bottom:5px;border-radius:2px}
 .study-outline,.compare-tray{background:#f9fcffd1;border-color:#ffffffa1;border-radius:12px;box-shadow:var(--material-window-shadow);backdrop-filter:blur(22px) saturate(1.08);-webkit-backdrop-filter:blur(22px) saturate(1.08)}
 .scene-tabs{background:#dbe5ed42;border:1px solid #ffffff6b;border-radius:10px;box-shadow:inset 0 1px 0 #ffffff3d}
 .scene-tabs .chip,.scene-tabs .chip.selected{border-radius:7px;box-shadow:none;background:transparent;font-weight:400}
@@ -101,17 +102,17 @@ body[data-surface=paper] .dock-indicator{background:#e2ecf4;border-color:#93acbd
 body[data-surface=paper] .dock-indicator::after{background:#214e70}
 body[data-surface=paper] :is(.block,.student-card,.paper-cover,.paper-control-deck,.paper-study-start,.sheet-dialog,.research-drawer,.table-reader,.welcome-workspace){background:#fff}
 body[data-surface=paper] :is(#stage,.scene-leaving-canvas) .question-map .question-tile{background:#fff}
-@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.masthead,body[data-scrolled=true] .masthead{background:#f8fbfdf2}.navigation-dock{background:#24465df2}}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.masthead,body[data-scrolled=true] .masthead{background:#f8fbfdf2}.navigation-dock{background:#edf5fcf7}}
 @media(max-width:760px){
  .masthead,body[data-scrolled=true] .masthead{border-radius:16px;backdrop-filter:blur(22px) saturate(1.08);-webkit-backdrop-filter:blur(22px) saturate(1.08)}
- .navigation-dock{border-radius:17px;backdrop-filter:blur(22px) saturate(1.08);-webkit-backdrop-filter:blur(22px) saturate(1.08)}
+ .navigation-dock{border-radius:18px;backdrop-filter:blur(22px) saturate(1.4);-webkit-backdrop-filter:blur(22px) saturate(1.4)}
  .dock-indicator{border-radius:10px}
  :is(.block,.student-card,.workspace-card,.student-scope,.paper-browser){border-radius:12px}
  .research-drawer{border-radius:12px 0 0 12px}
  .sheet-dialog,.research-dialog,.table-reader{border-radius:14px}
  .welcome-workspace{border-radius:17px}
 }
-@media(prefers-reduced-transparency:reduce){:root{--material-panel:#fdfefe;--material-chrome:#f7fafc;--material-window:#f6f9fc}.navigation-dock{background:#24465d}.masthead,.navigation-dock,.study-outline,.compare-tray{backdrop-filter:none;-webkit-backdrop-filter:none}}
+@media(prefers-reduced-transparency:reduce){:root{--material-panel:#fdfefe;--material-chrome:#f7fafc;--material-window:#f6f9fc}.navigation-dock{background:#edf5fc}.masthead,.navigation-dock,.study-outline,.compare-tray{backdrop-filter:none;-webkit-backdrop-filter:none}}
 @media(forced-colors:active){
  :is(.masthead,.navigation-dock,.study-outline,.sheet-dialog,.research-drawer,.block,.student-card,.paper-cover,.paper-study-start){background:Canvas;color:CanvasText;border:1px solid CanvasText;box-shadow:none;backdrop-filter:none}
  .navigation-dock button,.navigation-dock button[aria-current=page]{color:ButtonText}

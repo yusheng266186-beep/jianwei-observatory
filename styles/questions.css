@@ -89,38 +89,35 @@
 #research-drawer[data-kind=question] .drawer-section-nav{background:#ecf3f9e8;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-radius:10px}
 
 
-/* A single ink-blue canvas anchors the research; the evidence stays on light paper. */
-.paper-overview{display:grid;grid-template-columns:minmax(0,1fr) 305px;gap:17px;align-items:start;margin:0 0 26px;min-width:0}
-.paper-profile{min-width:0;border:1px solid #496782;border-radius:19px;background:#1d3e5e;color:#f0f6fb;padding:23px 25px 18px;box-shadow:inset 0 1px 0 #ffffff12,0 19px 37px -28px #15395e73}
-.paper-profile>header{display:flex;align-items:center;justify-content:space-between;gap:16px}
-.profile-kicker{font:400 10px/1.5 var(--sans);letter-spacing:.08em;color:#b0c7d9}
-.paper-profile h2{font:600 27px/1.45 var(--editorial);margin:5px 0 5px;letter-spacing:-.03em;color:#f6fbff}
-.paper-profile>header p{font:400 10.5px/1.6 var(--sans);margin:0;color:#acc6d9}
-.paper-profile .chart-buttons{align-self:flex-start;margin-top:6px}
-.paper-profile .chart-buttons>button{border-color:#b7d3e32c;color:#d0e4f1;background:#afcbde10;font-size:9px;min-height:26px;padding:4px 6px}
-.paper-profile .chart-buttons>button:hover{background:#b7d3e322;color:#fff}
-.paper-profile-scroll{margin:16px 0 8px;overflow-x:auto;max-width:100%;min-width:0;scrollbar-color:#90b4cf77 #b4d7ef0a;scrollbar-width:thin;border-radius:5px}
-.paper-profile-scroll:focus-visible{outline:1px solid #b3d9ee;outline-offset:4px}
-.paper-profile-scroll::-webkit-scrollbar{height:8px;background:#b4d7ef0a}
-.paper-profile-scroll::-webkit-scrollbar-thumb{background:#90b4cf77;border:2px solid #1d3e5e;border-radius:7px}
-.paper-profile-plot{display:block;width:100%;min-width:var(--profile-width);height:auto;background:#1d3e5e;overflow:hidden}
-.paper-profile-plot text{font:400 11px/1.5 var(--chart-font);fill:#acc7db;letter-spacing:0;font-variant-numeric:tabular-nums}
-.profile-grid{stroke:#a7cde024;stroke-dasharray:2 7;pointer-events:none}
-.profile-threshold{stroke:#91b9d5a8;stroke-width:1.1;stroke-dasharray:6 7;pointer-events:none}
-.profile-line{fill:none;stroke:#d3edf9;stroke-width:2;stroke-linejoin:round;stroke-linecap:round;pointer-events:none}
-.profile-area{pointer-events:none}
+/* Every score item stays in sight. The glass paper surface wraps the full map. */
+.paper-overview{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:18px;align-items:start;margin:0 0 26px;min-width:0}
+.paper-profile{min-width:0;border:1px solid #ffffffdd;border-radius:20px;background:linear-gradient(135deg,#fdfefecc,#eaf3f9b8);color:#254f70;padding:23px 25px 18px;box-shadow:inset 0 1px 0 #fff,0 16px 38px -28px #25496636}
+.paper-profile>header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}
+.profile-kicker{font:400 10px/1.5 var(--sans);letter-spacing:.07em;color:#718a9c}
+.paper-profile h2{font:600 27px/1.45 var(--editorial);margin:5px 0 5px;letter-spacing:-.03em;color:#254f70}
+.paper-profile>header p{font:400 10.5px/1.8 var(--sans);margin:0;color:#647c90}
+.paper-profile-actions{display:flex;align-items:flex-end;flex-direction:column;gap:11px;flex-shrink:0}
+.paper-profile .chart-buttons{margin:0;gap:4px}
+.paper-profile .chart-buttons>button{color:#55778f;font-size:9px;min-height:25px;padding:4px 6px}
+.paper-number-count{display:flex;gap:8px;align-items:center}
+.paper-number-count>strong{font:400 38px/1 var(--numbers);letter-spacing:-.06em;color:#355f7d}
+.paper-number-count>span{font:400 10px/1.7 var(--sans);color:#53748c}
+.paper-number-count small{display:block;font-size:9px;color:#71899a}
+.paper-score-atlas{display:block;width:100%;min-width:0;max-height:none;height:auto;overflow:visible;background:transparent}
+.paper-score-atlas .profile-background{fill-opacity:0}
+.paper-score-atlas text{font-family:var(--chart-font);font-weight:400;font-variant-numeric:tabular-nums;letter-spacing:0}
 .profile-question{cursor:pointer;outline:none}
-.profile-dot{fill:#cde7f5;stroke:#1d3e5e;stroke-width:2;transition:r .2s,fill .2s}
-.profile-unknown{stroke:#91b0c8;stroke-width:1.3;stroke-linecap:round;fill:none}
-.profile-guide{stroke:#aacce0;stroke-dasharray:3 5;opacity:0;pointer-events:none;transition:opacity .18s}
-.profile-question.is-current .profile-guide{opacity:.26}
-.profile-question:is(:hover,:focus-visible) .profile-guide{opacity:.6}
-.profile-question:is(:hover,:focus-visible) .profile-dot{r:6;fill:#fff}
-.profile-question:is(:hover,:focus-visible) text{fill:#fff}
-.paper-profile>footer{display:flex;align-items:flex-start;justify-content:space-between;gap:8px 20px;flex-wrap:wrap;font:400 10px/1.7 var(--sans);color:#afc9db;padding-top:10px;border-top:1px solid #bedaea19}
-.paper-profile>footer>span:first-child{display:flex;gap:7px;align-items:center;flex-shrink:0}
-.paper-profile>footer i{width:16px;border-top:1px dashed #91b9d5a8}
-.paper-profile-empty{padding:26px 0;font-size:12px;color:#c9dfed;line-height:1.8}
+.profile-tile{transition:fill .2s,stroke .2s,fill-opacity .2s}
+.profile-question:is(:hover,:focus-visible) .profile-tile{fill:#f5fbff;fill-opacity:1;stroke:#537e9d;stroke-width:1.5}
+.profile-question.is-current .profile-tile{stroke:#6b91ad;stroke-width:1.4;fill-opacity:1}
+.paper-combined-note{display:flex;align-items:flex-start;gap:9px;margin:1px 0 14px;color:#627e93;font:400 10px/1.8 var(--sans)}
+.paper-combined-note>span{padding:2px 6px;border-radius:5px;white-space:nowrap;background:#dceaf46b;color:#416581}
+.paper-combined-note p{margin:2px 0}
+.paper-profile>footer{display:flex;align-items:center;gap:8px 18px;flex-wrap:wrap;font:400 10px/1.7 var(--sans);color:#668095;padding-top:12px;border-top:1px solid #7095ae28}
+.paper-profile>footer>span:first-child{display:flex;gap:7px;align-items:center}
+.paper-profile>footer i{width:9px;height:9px;border:1px solid #a3becf;border-radius:2px;background:#e6f0f7}
+.profile-last.button{margin-left:auto;min-height:29px;color:#315e7d;font-size:10px;padding:4px 8px;background:#ffffffa3;border:1px solid #bbcfde4f;border-radius:6px}
+.paper-profile-empty{padding:26px 0;font-size:12px;color:#627e93;line-height:1.8}
 .paper-study-start{min-width:0;padding:0 15px 13px;border:1px solid #ffffffd9;border-radius:16px;background:#ffffffe0;box-shadow:inset 0 1px 0 #fff,0 12px 27px -24px #214a7330}
 :is(#stage,.scene-leaving-canvas)[data-scene=papers] .paper-study-start .number-ribbon{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));margin:0;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none}
 :is(#stage,.scene-leaving-canvas)[data-scene=papers] .paper-study-start .number-ribbon>div{padding:14px 8px 12px;border-radius:0;border-right:0}
@@ -197,7 +194,7 @@
 .question-gallery .question-map-caption{font:400 10px/1.8 var(--sans);color:#7b92a3;margin:15px 0 0}
 
 @media(max-width:1100px){
- .paper-overview{grid-template-columns:minmax(0,1fr) 265px;gap:13px}
+ .paper-overview{grid-template-columns:minmax(0,1fr) 255px;gap:13px}
  .paper-profile{padding:20px 21px 17px}
  .paper-profile h2{font-size:25px}
  .paper-map-workspace{grid-template-columns:180px minmax(0,1fr);gap:18px}
@@ -221,7 +218,7 @@
  .paper-overview{grid-template-columns:minmax(0,1fr)}
  .paper-study-start{display:grid;grid-template-columns:1fr .85fr;gap:18px;padding:0 17px 12px}
  .paper-clues{border-top:0;border-left:1px solid #7b9bb127;padding:14px 0 0 16px;margin:0}
- .paper-profile-plot{min-width:max(680px,var(--profile-width));max-height:300px}
+ .paper-score-atlas{min-width:0;max-height:none}
 }
 @media(max-width:760px){
  .paper-studio-head .scene-head{margin-bottom:13px;align-items:flex-start}
@@ -253,7 +250,6 @@
  .paper-profile .chart-buttons{gap:4px}
  .paper-profile .chart-buttons>button{padding:4px 5px;font-size:8px}
  .paper-profile>footer{font-size:9px;gap:5px}
- .paper-profile-scroll{margin-top:12px}
  .paper-study-start{display:block;padding:0 13px 11px;border-radius:12px}
  .paper-clues{border-left:0;border-top:1px solid #7b9bb127;padding:11px 0 0;margin-top:3px}
  .paper-clues>h3{font-size:10px}
@@ -315,8 +311,8 @@
 @media(hover:none){:is(#stage,.scene-leaving-canvas) .question-map .question-tile:hover,.paper-catalog .paper-cover:hover{transform:none}.question-map .question-tile:hover .question-open>i{translate:0}}
 body[data-surface=paper] :is(.paper-control-deck,.paper-catalog .paper-cover,.question-map .question-tile,.paper-study-start){background:#fff}
 body[data-surface=paper] #research-drawer[data-kind=question] :is(.drawer-title,.number-ribbon,.block){background:#fff}
-body[data-motion=calm] :is(.profile-dot,.profile-guide,.question-meter>i){transition:none}
-@media(prefers-reduced-motion:reduce){:is(.profile-dot,.profile-guide,.question-meter>i){transition:none}}
+body[data-motion=calm] :is(.profile-tile,.question-meter>i){transition:none}
+@media(prefers-reduced-motion:reduce){:is(.profile-tile,.question-meter>i){transition:none}}
 @media(forced-colors:active){
  :is(#stage,.scene-leaving-canvas) .question-map .question-tile,.paper-catalog .paper-cover,.paper-control-deck,.paper-study-start{border:1px solid ButtonText;box-shadow:none;background:Canvas;color:CanvasText}
  :is(#stage,.scene-leaving-canvas) .question-map .question-tile.selected{border:2px solid Highlight}
@@ -324,12 +320,54 @@ body[data-motion=calm] :is(.profile-dot,.profile-guide,.question-meter>i){transi
  .paper-control-deck .paper-switch-row .chip.selected{background:Highlight;color:HighlightText}
 }
 
-.paper-profile-compact{padding:15px 0 9px;min-width:0}
-.paper-profile-compact .bars{background:#1d3e5e}
-.paper-profile-compact .bars text{fill:#c3d8e6}
-.paper-profile-compact .plot-track{fill:#bddaea15}
-.is-short-paper .paper-profile>footer i{display:none}
-.profile-scroll-controls{display:flex;gap:5px;margin-left:auto}
-.profile-scroll-controls[hidden]{display:none}
-.profile-scroll-controls .profile-shift{min-height:25px;min-width:28px;padding:3px 7px;border:1px solid #b7d3e32c;border-radius:5px;background:#afcbde10;color:#d0e4f1;font-size:12px}
-.profile-scroll-controls .profile-shift:hover{background:#b7d3e322;color:#fff}
+/* Detail cards expose score, sample and response structure without another table. */
+.question-map .question-score-line{display:flex;justify-content:flex-start;align-items:baseline;gap:6px;margin:12px 0 0;font:400 9px/1.5 var(--sans);color:#71899a}
+.question-score-line>b{font:400 24px/1.15 var(--numbers);color:#315a76;letter-spacing:-.035em}
+.question-score-line>b>small{font-size:12px;color:#7d97aa;letter-spacing:0}
+.question-map .question-meter{margin:6px 0 12px;height:5px;background:#dbe7ef;border-radius:3px}
+.question-map .question-meter>i{background:linear-gradient(90deg,#9dbbd0,#527f9f)}
+.question-map .question-answer-strip{display:flex;width:100%;height:3px;margin:9px 0 0;padding:0;gap:2px;border:0;border-radius:2px;overflow:hidden;background:#edf3f6}
+.question-answer-strip>i{flex:var(--answer-share) 1 0%;min-width:0;display:block;height:100%}
+.answer-strip-zero{background:#6d8c9f}.answer-strip-other{background:#b3cbdc}.answer-strip-full{background:#315f80}.answer-strip-missing{background:repeating-linear-gradient(90deg,#afbec8 0 2px,#e9eff3 2px 4px)}
+.question-map .question-tile>footer{margin-top:8px;padding-top:5px;border-top:0}
+.question-map .question-mean{display:none}
+.question-map .question-card-top{grid-template-columns:54px minmax(0,1fr) auto;align-items:start}
+.question-map .question-identity>b{font-size:29px;color:#6588a2}
+.question-map .question-identity>b>small{font-size:8px;line-height:1.7;margin-top:4px}
+.question-map .question-topic{font-size:17px;line-height:1.65}
+.question-map .question-reading{padding:4px 6px;border:1px solid #c6dbe847;background:#e8f2f959;border-radius:7px}
+.question-map .question-reading>strong{font-size:24px}
+.question-map .question-reading>span{font-size:8px;margin-top:1px}
+.paper-catalog .cover-diagram{grid-template-columns:repeat(auto-fit,minmax(30px,1fr));gap:5px}
+.paper-catalog .cover-diagram>i{min-width:0}
+@media(max-width:760px){
+ .paper-profile{padding:19px 16px 14px;border-radius:14px}
+ .paper-profile>header{gap:10px;margin-bottom:15px}
+ .paper-profile h2{font-size:24px}
+ .paper-profile>header p{font-size:9.5px;max-width:180px}
+ .paper-number-count>strong{font-size:31px}
+ .paper-profile-actions{gap:10px}
+ .paper-profile>footer{font-size:9px;gap:7px 10px}
+ .paper-combined-note{font-size:9.5px}
+ .question-map .question-card-top{grid-template-columns:47px minmax(0,1fr) auto;gap:9px}
+ .question-map .question-topic{font-size:15px;line-height:1.65}
+ .question-map .question-reading>strong{font-size:22px}
+ .question-map .question-identity>b{font-size:25px}
+ .question-map .question-score-line{margin-top:9px}
+}
+@media(max-width:380px){
+ .paper-profile{padding-inline:13px}
+ .question-map .question-card-top{grid-template-columns:41px minmax(0,1fr) auto;gap:8px}
+ .question-map .question-reading{padding:3px 4px}
+ .question-map .question-reading>strong{font-size:20px}
+ .question-map .question-topic{font-size:14px}
+}
+
+/* A joint score uses a single horizontal label, including on a phone. */
+.question-map .is-combined .question-card-top{grid-template-columns:minmax(0,1fr) auto;gap:5px 10px}
+.question-map .is-combined .question-identity{grid-column:1;grid-row:1;align-self:center}
+.question-map .is-combined .question-identity>b{font-size:21px;white-space:nowrap;overflow-wrap:normal}
+.question-map .is-combined .question-identity>b>small{display:inline;font-size:9px;margin:0 0 0 7px;letter-spacing:0}
+.question-map .is-combined .question-reading{grid-column:2;grid-row:1}
+.question-map .is-combined .question-topic{grid-column:1 / -1;grid-row:2;font-size:15px}
+.question-combined-explanation{padding:8px 10px;background:#dceaf46b;color:#4b6e88!important;border-radius:6px;font-size:11px!important;line-height:1.8!important;margin-top:8px!important}

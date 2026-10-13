@@ -1,6 +1,6 @@
-import {esc,number,percent,attrs} from './html.js?v=workbench-v19';
-import {valid} from '../engine/metrics.js?v=workbench-v19';
-import {plotPalette as palette} from './palette.js?v=workbench-v19';
+import {esc,number,percent,attrs} from './html.js?v=paper-v20';
+import {valid} from '../engine/metrics.js?v=paper-v20';
+import {plotPalette as palette} from './palette.js?v=paper-v20';
 export const seriesColors=palette.series;
 const colors=seriesColors;
 const action=item=>item?.cmd?' data-plot-action="true" data-cmd="'+esc(item.cmd)+'"'+attrs(item.data||{})+' role="button" tabindex="0"':'';
