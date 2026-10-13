@@ -1,6 +1,6 @@
-import {motion} from './motion.js?v=paper-v20';
-import {positionSpreadLabels} from './plots.js?v=paper-v20';
-import {paperMapLayout} from '../engine/paper-structure.js?v=paper-v20';
+import {motion} from './motion.js?v=squares-v21';
+import {positionSpreadLabels} from './plots.js?v=squares-v21';
+import {paperMapLayout} from '../engine/paper-structure.js?v=squares-v21';
 let motionPreference=()=>false,resizeObserver,plotObserver,railObserver,drawerHeaderObserver,revealObserver,tooltipTarget=null,tooltipOriginal=null,tooltipFrame=0,outlineFrame=0,drawerOutlineFrame=0,pointerFrame=0,outline=null,outlineEntries=[];
 const observedTables=new Set(),observedPlots=new Set(),observedReveals=new Set(),revealed=new WeakSet(),disclosures=new WeakMap();
 const selectionRails=new Set(),railStates=new WeakMap();
@@ -117,8 +117,7 @@ function refreshPaperProfiles(root=document){
     items.forEach((item,index)=>{
       const p=layout.position(index);item.setAttribute('transform','translate('+p.x+','+p.y+')');
       item.querySelector('.profile-tile').setAttribute('width',layout.cellWidth-1);
-      item.querySelector('.profile-meter-track').setAttribute('width',layout.cellWidth-22);
-      item.querySelector('.profile-meter-fill')?.setAttribute('width',(layout.cellWidth-22)*Number(item.dataset.rate));
+      item.querySelector('.profile-edge').setAttribute('d','M10,2 H'+(layout.cellWidth-10));
     });
   }
 }

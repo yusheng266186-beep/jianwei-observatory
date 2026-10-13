@@ -1,11 +1,11 @@
-import {head,button,chips,examChips,badge,block,ribbon,table,number,integer,percent,esc,personButton,search,footnote,empty} from '../ui/html.js?v=paper-v20';
-import {bars,rateColor,rateLegend,chartButtons} from '../ui/plots.js?v=paper-v20';
-import {average,sum,valid} from '../engine/metrics.js?v=paper-v20';
-import {answerRows,evidence} from '../io/exports.js?v=paper-v20';
-import {queryQuestionMap} from '../engine/question-map.js?v=paper-v20';
-import {questionCard} from '../ui/question-cards.js?v=paper-v20';
-import {paperProfile} from '../ui/paper-profile.js?v=paper-v20';
-import {paperCountLabel} from '../engine/paper-structure.js?v=paper-v20';
+import {head,button,chips,examChips,badge,block,ribbon,table,number,integer,percent,esc,personButton,search,footnote,empty} from '../ui/html.js?v=squares-v21';
+import {bars,rateColor,rateLegend,chartButtons} from '../ui/plots.js?v=squares-v21';
+import {average,sum,valid} from '../engine/metrics.js?v=squares-v21';
+import {answerRows,evidence} from '../io/exports.js?v=squares-v21';
+import {queryQuestionMap} from '../engine/question-map.js?v=squares-v21';
+import {questionCard} from '../ui/question-cards.js?v=squares-v21';
+import {paperProfile} from '../ui/paper-profile.js?v=squares-v21';
+import {paperCountLabel} from '../engine/paper-structure.js?v=squares-v21';
 export function render(atlas,state) {
   const papers=atlas.papers(),paper=papers.find(p=>p.key===state.key);
   if(!paper) {
@@ -39,7 +39,7 @@ export function render(atlas,state) {
     const map='<div class="question-map">'+mapModel.matches.map(q=>questionCard(q,{records:lens.answers.length,threshold:mapModel.threshold,selected:q.index===selected?.index})).join('')+'</div>';
     const filtered=mapModel.query||mapModel.selected!=='all';
     const controls='<section class="question-map-controls" aria-label="本卷题目筛选"><div class="question-map-query"><label><span>定位一道题</span>'+search('questionSearch',state.questionSearch,'题号或知识点，例如：第1题、函数')+'</label><div class="question-map-summary" role="status" aria-live="polite"><strong>'+mapModel.matches.length+'</strong><span> / '+lens.questions.length+' 个得分项</span></div></div><div class="question-map-focus" role="group" aria-label="题目观察条件">'+mapModel.filters.map(f=>button('<span>'+f.label+'</span><b>'+f.count+'</b>','set',{key:'questionFocus',value:f.id},'question-focus'+(mapModel.selected===f.id?' selected':''),'aria-pressed="'+(mapModel.selected===f.id)+'"')).join('')+'</div><div class="question-map-tools">'+chips('order',[['paper','按题目顺序'],['loss','按平均失分']],state.order||'paper')+'<span>低得分率 &lt; '+percent(mapModel.threshold)+' · 作答未齐指已有记录中的空白</span>'+(filtered?button('清空题目筛选','question-map-reset',{},'quiet'):'')+'</div></section>';
-    body=paperProfile(lens,{threshold:mapModel.threshold,selected,metrics:overviewMetrics,examLabel:atlas.exam(paper.exam).label,scopeLabel:scope.length?scope.map(n=>n+'班').join('、'):'全部参考班'})+'<div class="paper-map-workspace'+(lens.questions.length>4?' has-many-questions':'')+'">'+controls+'<section class="question-gallery" id="paper-question-evidence" aria-label="逐题证据"><header class="question-gallery-head"><div><span>读懂每个得分项</span><h2>题目观察</h2></div><p>'+esc(mapModel.orderLabel)+' · '+mapModel.matches.length+' / '+lens.questions.length+' 个得分项</p></header>'+(mapModel.matches.length?map:'<div class="question-map-empty">'+empty('这个条件下没有题目','换个题号或知识点，也可以清空筛选查看全卷。')+button('查看全部题目','question-map-reset',{},'outline')+'</div>')+'<p class="question-map-caption">细线显示零分、其余有效作答、达满分与未填的人数占比。点击卡片观察本题；上一题 / 下一题沿当前地图顺序浏览，完整明细和导出保留全卷。</p></section></div>';
+    body=paperProfile(lens,{threshold:mapModel.threshold,selected,metrics:overviewMetrics,examLabel:atlas.exam(paper.exam).label,scopeLabel:scope.length?scope.map(n=>n+'班').join('、'):'全部参考班'})+'<div class="paper-map-workspace'+(lens.questions.length>4?' has-many-questions':'')+'">'+controls+'<section class="question-gallery" id="paper-question-evidence" aria-label="逐题证据"><header class="question-gallery-head"><div><span>读懂每个得分项</span><h2>题目观察</h2></div><p>'+esc(mapModel.orderLabel)+' · '+mapModel.matches.length+' / '+lens.questions.length+' 个得分项</p></header>'+(mapModel.matches.length?map:'<div class="question-map-empty">'+empty('这个条件下没有题目','换个题号或知识点，也可以清空筛选查看全卷。')+button('查看全部题目','question-map-reset',{},'outline')+'</div>')+'<p class="question-map-caption">方块直接显示题号、知识点与得分率。点击卡片观察本题；上一题 / 下一题沿当前地图顺序浏览，完整明细和导出保留全卷。</p></section></div>';
 
   }
   const peers=papers.filter(p=>p.exam===paper.exam),exams=atlas.exams.filter(e=>papers.some(p=>p.exam===e.id));
@@ -59,8 +59,8 @@ function paperCover(atlas,paper) {
     const rate=valid(q.max)&&q.max>0&&valid(mean)?mean/q.max:null;
     const detail='第'+q.label+'题 · 有效作答 '+values.length+' 份 · 均分 '+number(mean)+' / 满分 '+number(q.max);
     const measured=valid(rate)&&rate>=0&&rate<=1;
-    return '<i data-known="'+measured+'" style="--cover-rate:'+(measured?rate:0)+'" title="'+esc(detail)+'"><span class="cover-stem" aria-hidden="true"><span></span></span><small>'+esc(q.label)+'题</small><b>'+(valid(rate)?percent(rate):number(mean)+(valid(mean)?'分':''))+'</b></i>';
+    return '<i class="cover-score-square" data-known="'+measured+'" title="'+esc(detail)+'"><small>'+esc(q.label).replace(/题$/,'')+'</small><b>'+(valid(rate)?percent(rate):number(mean)+(valid(mean)?'分':''))+'</b></i>';
   }).join('');
   const caption='全卷预览 · '+paperCountLabel(paper.questions);
-  return '<button class="paper-cover" data-motion-key="paper-'+esc(paper.key)+'" data-cmd="paper" data-key="'+esc(paper.key)+'"><header><span>'+esc(paper.subject)+'</span><small>'+esc(paper.exam)+(paper.exam===atlas.latest?' · 最新':'')+'</small></header><h3>'+esc(atlas.exam(paper.exam).label)+'</h3><div class="cover-preview"><span>'+caption+'</span>'+(preview?'<div class="cover-diagram">'+preview+'</div>':'<p class="cover-no-questions">题号材料待补充</p>')+'</div><dl><dt>得分项 / 作答记录</dt><dd>'+paper.questions.length+' 项 / '+paper.answers.length+' 份</dd><dt>明确满分</dt><dd>'+known+' / '+paper.questions.length+' 题</dd></dl><footer><span>'+paper.classes.length+' 个班</span><b>研究这张卷 ↗</b></footer></button>';
+  return '<button class="paper-cover" data-motion-key="paper-'+esc(paper.key)+'" data-cmd="paper" data-key="'+esc(paper.key)+'"><header><span>'+esc(paper.subject)+'</span><small>'+esc(paper.exam)+(paper.exam===atlas.latest?' · 最新':'')+'</small></header><h3>'+esc(atlas.exam(paper.exam).label)+'</h3><div class="cover-preview"><span>'+caption+'</span>'+(preview?'<div class="cover-diagram">'+preview+'</div>':'<p class="cover-no-questions">题号材料待补充</p>')+'</div><dl><dt>得分项 / 作答记录</dt><dd>'+paper.questions.length+' 项 / '+paper.answers.length+' 份</dd><dt>明确满分</dt><dd>'+known+' / '+paper.questions.length+' 项</dd></dl><footer><span>'+paper.classes.length+' 个班</span><b>研究这张卷 ↗</b></footer></button>';
 }

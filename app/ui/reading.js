@@ -1,4 +1,4 @@
-import {button,esc} from './html.js?v=paper-v20';
+import {button,esc} from './html.js?v=squares-v21';
 export const readingDefaults={density:'comfortable',surface:'glass',motion:'system'};
 export function applyReading(reading) {for(const key of Object.keys(readingDefaults))document.body.dataset[key]=reading[key]||readingDefaults[key];}
 export function readingView(reading) {

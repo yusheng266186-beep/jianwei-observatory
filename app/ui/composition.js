@@ -1,4 +1,4 @@
-import {button,esc} from './html.js?v=paper-v20';
+import {button,esc} from './html.js?v=squares-v21';
 
 export function composeScene(html,{back=''}={}) {
   const template=document.createElement('template');template.innerHTML=html;

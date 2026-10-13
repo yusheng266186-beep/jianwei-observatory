@@ -1,5 +1,7 @@
 # 全卷题序与透明玻璃 Dock
 
+本页记录 v20；当前小题卡片、概况与预览改用 [方块与得分率](SCORE-SQUARES.md)，移除了比例条及作答细线。题号和原始数据口径继续沿用本页说明。
+
 本轮资源版本为 paper-v20，发布入口仍是 https://yusheng266186-beep.github.io/jianwei-observatory/ 。本轮替代 v19 的横向折线、少题条形概况和深色 Dock；字体资源继续采用 type-v16。
 
 ## 数学题号与实际得分项

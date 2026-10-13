@@ -1,11 +1,11 @@
-import {button,badge,block,ribbon,table,number,integer,percent,esc,empty} from './html.js?v=paper-v20';
-import {bars,chartButtons} from './plots.js?v=paper-v20';
-import {average,valid} from '../engine/metrics.js?v=paper-v20';
-import {evidence} from '../io/exports.js?v=paper-v20';
-import {questionLens} from '../engine/lenses.js?v=paper-v20';
-import {questionSequence} from '../engine/question-map.js?v=paper-v20';
-import {questionNumbers} from '../engine/paper-structure.js?v=paper-v20';
-import {plotPalette} from './palette.js?v=paper-v20';
+import {button,badge,block,ribbon,table,number,integer,percent,esc,empty} from './html.js?v=squares-v21';
+import {bars,chartButtons} from './plots.js?v=squares-v21';
+import {average,valid} from '../engine/metrics.js?v=squares-v21';
+import {evidence} from '../io/exports.js?v=squares-v21';
+import {questionLens} from '../engine/lenses.js?v=squares-v21';
+import {questionSequence} from '../engine/question-map.js?v=squares-v21';
+import {questionNumbers} from '../engine/paper-structure.js?v=squares-v21';
+import {plotPalette} from './palette.js?v=squares-v21';
 
 function structureView(model) {
   const {structure:s,selectedId}=model;
