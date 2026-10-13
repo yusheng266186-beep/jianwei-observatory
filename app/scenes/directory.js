@@ -1,8 +1,8 @@
-import {head,button,chips,examChips,badge,block,table,number,integer,delta,esc,search,empty,footnote} from '../ui/html.js?v=paper-v30';
-import {mini,spread,chartButtons,seriesColors} from '../ui/plots.js?v=paper-v30';
-import {valid} from '../engine/metrics.js?v=paper-v30';
-import {queryDirectory,directoryLenses,standingLabels,directoryViewName} from '../engine/directory.js?v=paper-v30';
-import {scoreRows,evidence} from '../io/exports.js?v=paper-v30';
+import {head,button,chips,examChips,badge,block,table,number,integer,delta,esc,search,empty,footnote} from '../ui/html.js?v=runtime-v31';
+import {mini,spread,chartButtons,seriesColors} from '../ui/plots.js?v=runtime-v31';
+import {valid} from '../engine/metrics.js?v=runtime-v31';
+import {queryDirectory,directoryLenses,standingLabels,directoryViewName} from '../engine/directory.js?v=runtime-v31';
+import {scoreRows,evidence} from '../io/exports.js?v=runtime-v31';
 const filter=(label,body)=>'<section class="filter-section"><h3>'+label+'</h3>'+body+'</section>';
 const peek=e=>button(esc(e.person.name),'peek',{sid:e.person.id,exam:e.row.exam},'person-link');
 const subjectOptions=atlas=>[['all','全部学科'],...atlas.comparisonSubjects(atlas.data.scores).map(s=>[s,s])];
@@ -28,8 +28,11 @@ export function renderDirectory(atlas,state,session) {
   const pagesHTML=matches.length?'<div class="directory-pagination"><span>'+((page-1)*size+1)+'–'+Math.min(page*size,matches.length)+' / '+matches.length+' 人</span>'+chips('pageSize',[[24,'24 / 页'],[48,'48 / 页'],[96,'96 / 页']],size)+'<div class="pagination">'+button('←','page',{step:-1},'outline',page<=1?'disabled':'')+'<span>'+page+' / '+pages+'</span>'+button('→','page',{step:1},'outline',page>=pages?'disabled':'')+'</div></div>':'';
   const tray=compare.length?'<aside class="compare-tray"><span>并排比较 '+compare.length+' / 4</span><div>'+compare.map(sid=>button(esc(atlas.name(sid))+' ×','compare-toggle',{sid},'chip')).join('')+'</div>'+button('打开对比 ↗','compare-open',{},'accent',compare.length<2?'disabled':'')+button('清空','compare-clear',{},'quiet')+'</aside>':'';
   const html=head('04 / 学生研究','学生目录','从班级、阶段变化和学科表现中找人，点姓名展开观察。')+exams+savedViews(session,true)+'<div class="directory-workspace">'+side+'<div class="directory-results">'+query+classRail+focus+activeConditions(state)+controls+'<p class="percentile-note">年级排名采用表内校排名；辅助相对位置按已导入的同科类有效总分换算为0–100，100为首位、0为末位，同分共享位置，导入范围变化会影响它。</p>'+body+pagesHTML+'</div></div>'+'<div class="directory-secondary-actions">'+button('保留这组筛选','directory-save',{},'outline')+button('摘录完整名单','capture',{},'outline')+'</div>'+tray+footnote('英语、日语统一按表内折合外语成绩比较。17、18班正常纳入对应科类。相对位置变化只比较相邻同科类记录；缺成绩与缺有效线保留为空。');
+  let preparedReport;
+  return {html:html.replace('class="scene-head"','class="scene-head directory-head"'),get report(){if(preparedReport)return preparedReport;
   const scores=scoreRows(atlas,matches.map(e=>e.row)),changes=[['姓名','考试','前一同科类考试','年级排名（表内校排）','同科类相对位置','相对位置变化','档案阶段数','本场小题学科'],...matches.map(e=>[e.person.name,e.row.exam,e.previous?.exam||'',e.rank,e.percentile,e.change,e.story.length,e.answers.map(a=>a.subject).join('、')])],conditions=conditionRows(state,examName);
-  return {html:html.replace('class="scene-head"','class="scene-head directory-head"'),report:evidence('学生研究 · '+matches.length+' 人',examName,[{title:'筛选条件',headers:['条件','范围'],rows:conditions},{title:'完整筛选成绩',headers:scores[0],rows:scores.slice(1)},{title:'阶段线索',headers:changes[0],rows:changes.slice(1)}],{'筛选条件':[['条件','范围'],...conditions],'学生成绩':scores,'阶段线索':changes})};
+    return preparedReport=evidence('学生研究 · '+matches.length+' 人',examName,[{title:'筛选条件',headers:['条件','范围'],rows:conditions},{title:'完整筛选成绩',headers:scores[0],rows:scores.slice(1)},{title:'阶段线索',headers:changes[0],rows:changes.slice(1)}],{'筛选条件':[['条件','范围'],...conditions],'学生成绩':scores,'阶段线索':changes});
+  }};
 }
 function directoryTable(atlas,shown,state,saved,compare) {
   const subjects=atlas.comparisonSubjects(atlas.data.scores),mode=state.columns||'summary';let headers,rows;

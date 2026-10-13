@@ -1,10 +1,10 @@
-import {classDefaults,SUBJECTS,normalizeDataset} from '../data/compat.js?v=paper-v30';
-import {valid,average,sum,distribution,groupKey,GROUPS} from './metrics.js?v=paper-v30';
+import {classDefaults,SUBJECTS,normalizeDataset} from '../data/compat.js?v=runtime-v31';
+import {valid,average,sum,distribution,groupKey,GROUPS} from './metrics.js?v=runtime-v31';
 const append=(map,key,value)=>{if(!map.has(key))map.set(key,[]);map.get(key).push(value);};
 export class Atlas {
   constructor(dataset) {
     this.data=normalizeDataset(dataset);this.exams=this.data.exams;this.latest=this.exams.at(-1)?.id||'';
-    this.people=new Map(this.data.students.map(p=>[p.id,p]));this.examRows=new Map();this.classRows=new Map();this.stories=new Map();this.paperRows=new Map();this.personAnswers=new Map();this.answerStories=new Map();this.materialStories=new Map();this.percentiles=new Map();
+    this.people=new Map(this.data.students.map(p=>[p.id,p]));this.examRows=new Map();this.classRows=new Map();this.stories=new Map();this.paperRows=new Map();this.personAnswers=new Map();this.answerStories=new Map();this.materialStories=new Map();this.percentiles=new Map();this.invalidateCaches();
     this.lines=new Map(this.data.lines.map(l=>[l.exam+'|'+l.track,l]));
     for(const row of this.data.scores){append(this.examRows,row.exam,row);append(this.classRows,row.classNo+'|'+row.exam,row);append(this.stories,row.sid,row);}
     for(const row of this.data.answers){append(this.paperRows,row.subject+'|'+row.exam,row);append(this.personAnswers,row.sid+'|'+row.exam,row);append(this.answerStories,row.sid,row);}
@@ -12,6 +12,9 @@ export class Atlas {
     const order=new Map(this.exams.map((e,i)=>[e.id,i]));
     for(const records of this.stories.values()) records.sort((a,b)=>(order.get(a.exam)??99)-(order.get(b.exam)??99));
   }
+  // An Atlas is a dataset snapshot. Material/line/profile edits create a new
+  // Atlas; bounded caches never survive an import, undo or workspace restore.
+  invalidateCaches(){this.summaryCache=new WeakMap();this.groupCache=new Map();this.snapshotCache=new Map();this.paperCache=new Map();this.paperPreviews=new Map();this.paperList=null;}
   profile(no){return {...classDefaults(Number(no)),...this.data.profiles[no]};}
   name(sid){return this.people.get(sid)?.name||'未命名学生';}
   exam(id){return this.exams.find(e=>e.id===id)||{id,label:id};}
@@ -25,6 +28,7 @@ export class Atlas {
   line(row,tier='under',subject=null){const line=this.lines.get(row.exam+'|'+row.track);if(subject==='外语')return line?.subjects&&Object.hasOwn(line.subjects,'外语')?line.subjects['外语']?.[tier]??null:line?.subjects?.['英语']?.[tier]??line?.subjects?.['日语']?.[tier]??null;return subject?line?.subjects?.[subject]?.[tier]??null:line?.[tier]??null;}
   gap(row,tier='under',subject=null){const score=subject?this.subject(row,subject)?.score:row.total,line=this.line(row,tier,subject);return valid(score)&&valid(line)?score-line:null;}
   summary(rows,subject=null) {
+    let cached=this.summaryCache.get(rows);if(cached?.has(subject))return cached.get(subject);
     const value=r=>subject?this.subject(r,subject)?.score:r.total;
     const measured=rows.filter(r=>valid(value(r))),result=distribution(measured.map(value));
     result.records=rows.length;result.missing=rows.length-measured.length;
@@ -40,16 +44,20 @@ export class Atlas {
       result[tier+'Near20']=eligible.filter(r=>this.gap(r,tier,subject)<0&&this.gap(r,tier,subject)>=-20).length;
       result[tier+'Safe10']=eligible.filter(r=>this.gap(r,tier,subject)>=0&&this.gap(r,tier,subject)<=10).length;
     }
-    return result;
+    if(!cached){cached=new Map();this.summaryCache.set(rows,cached);}cached.set(subject,result);return result;
   }
   groups(exam) {
+    if(this.groupCache.has(exam))return this.groupCache.get(exam);
     const rows=this.rows(exam);
-    return GROUPS.map(group=>({...group,rows:rows.filter(r=>groupKey(this.profile(r.classNo))===group.key),classes:this.classes.filter(n=>groupKey(this.profile(n))===group.key)})).map(group=>({...group,summary:this.summary(group.rows)}));
+    const result=GROUPS.map(group=>({...group,rows:rows.filter(r=>groupKey(this.profile(r.classNo))===group.key),classes:this.classes.filter(n=>groupKey(this.profile(n))===group.key)})).map(group=>({...group,summary:this.summary(group.rows)}));
+    this.groupCache.set(exam,result);return result;
   }
   snapshot(no,exam) {
+    const key=Number(no)+'|'+exam;if(this.snapshotCache.has(key))return this.snapshotCache.get(key);
     const rows=this.classAt(no,exam),profile=this.profile(no);
     const peers=this.rows(exam).filter(r=>groupKey(this.profile(r.classNo))===groupKey(profile));
-    return {no:Number(no),exam,profile,rows,peers,summary:this.summary(rows),baseline:this.summary(peers),subjects:this.comparisonSubjects(rows).map(subject=>({subject,own:this.summary(rows,subject),peers:this.summary(peers,subject)}))};
+    const result={no:Number(no),exam,profile,rows,peers,summary:this.summary(rows),baseline:this.summary(peers),subjects:this.comparisonSubjects(rows).map(subject=>({subject,own:this.summary(rows,subject),peers:this.summary(peers,subject)}))};
+    this.snapshotCache.set(key,result);return result;
   }
   classExams(no){return this.exams.filter(e=>this.classAt(no,e.id).length);}
   timeline(no,ids=[],matched=false) {
@@ -91,16 +99,31 @@ export class Atlas {
     return this.subject(row,metric)?.score??null;
   }
   papers() {
+    if(this.paperList)return this.paperList;
     const order=new Map(this.exams.map((e,i)=>[e.id,i]));
-    return Object.entries(this.data.banks).map(([key,questions])=>{
+    return this.paperList=Object.entries(this.data.banks).map(([key,questions])=>{
       const [subject,exam]=key.split('|'),answers=this.paperRows.get(key)||[];
       return {key,subject,exam,questions,answers,classes:[...new Set(answers.map(a=>a.classNo))].sort((a,b)=>a-b)};
     }).sort((a,b)=>(order.get(b.exam)??0)-(order.get(a.exam)??0)||SUBJECTS.indexOf(a.subject)-SUBJECTS.indexOf(b.subject));
   }
+  paperPreview(key){
+    if(this.paperPreviews.has(key))return this.paperPreviews.get(key);
+    const answers=this.paperRows.get(key)||[];
+    const result=(this.data.banks[key]||[]).map((question,index)=>{
+      const values=answers.map(a=>a.values[index]).filter(valid),mean=average(values);
+      return {mean,count:values.length,rate:valid(question.max)&&question.max>0&&valid(mean)?mean/question.max:null};
+    });
+    this.paperPreviews.set(key,result);if(this.paperPreviews.size>48)this.paperPreviews.delete(this.paperPreviews.keys().next().value);return result;
+  }
   paper(key,classes=[]) {
+    const scope=[...new Set(classes)].sort((a,b)=>a-b),cacheKey=key+'|'+scope.join(',');
+    if(this.paperCache.has(cacheKey)){const result=this.paperCache.get(cacheKey);this.paperCache.delete(cacheKey);this.paperCache.set(cacheKey,result);return result;}
     const [subject,exam]=key.split('|'),bank=this.data.banks[key]||[];
     const answers=(this.paperRows.get(key)||[]).filter(a=>!classes.length||classes.includes(a.classNo));
-    const measuredAnswers=answers.filter(a=>a.values.some(valid)),ordered=answers.filter(a=>bank.length&&bank.every((_,i)=>valid(a.values[i]))).sort((a,b)=>sum(b.values)-sum(a.values));
+    // Rank complete answers using one total per answer, rather than summing
+    // every question again for every comparison in the sort.
+    const totals=new Map(answers.map(answer=>[answer,sum(answer.values)]));
+    const measuredAnswers=answers.filter(a=>a.values.some(valid)),ordered=answers.filter(a=>bank.length&&bank.every((_,i)=>valid(a.values[i]))).sort((a,b)=>totals.get(b)-totals.get(a));
     const size=Math.max(1,Math.floor(ordered.length*(this.data.rules?.topFraction??.27))),high=ordered.slice(0,size),low=ordered.slice(-size);
     const questions=bank.map((question,index)=>{
       const values=answers.map(a=>a.values[index]).filter(valid),mean=average(values),max=valid(question.max)&&question.max>0?question.max:null;
@@ -114,7 +137,8 @@ export class Atlas {
       return {name,questions:qs,rate,loss:known.length?sum(known.map(q=>q.loss)):null,advice:rate===null?'补充满分':rate<(this.data.rules?.lowRate??.5)?'优先修复':rate<(this.data.rules?.focusRate??.75)?'巩固迁移':'保持优势'};
     }).sort((a,b)=>(b.loss??-1)-(a.loss??-1));
     const eligible=new Set([...this.rows(exam).filter(r=>(!classes.length||classes.includes(r.classNo))&&valid(r.subjects?.[subject]?.score)).map(r=>r.sid+'|'+r.classNo),...answers.map(r=>r.sid+'|'+r.classNo)]);
-    return {key,subject,exam,answers,questions,skills,coverage:eligible.size?answers.length/eligible.size:0,mean:average(measuredAnswers.map(a=>sum(a.values)))};
+    const result={key,subject,exam,answers,questions,skills,coverage:eligible.size?answers.length/eligible.size:0,mean:average(measuredAnswers.map(a=>totals.get(a)))};
+    this.paperCache.set(cacheKey,result);if(this.paperCache.size>48)this.paperCache.delete(this.paperCache.keys().next().value);return result;
   }
   questionsFor(row,subject) {
     const answer=(this.personAnswers.get(row.sid+'|'+row.exam)||[]).find(a=>a.subject===subject&&a.classNo===row.classNo);

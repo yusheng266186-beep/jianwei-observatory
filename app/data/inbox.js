@@ -1,5 +1,6 @@
-import {mergeDatasets,FLAT_FIELDS} from './parser.js?v=paper-v30';
-import {esc,button,badge} from '../ui/html.js?v=paper-v30';
+import {openSurface,closeSurface} from '../ui/surface-motion.js?v=runtime-v31';
+import {mergeDatasets,FLAT_FIELDS} from './parser.js?v=runtime-v31';
+import {esc,button,badge} from '../ui/html.js?v=runtime-v31';
 export class Inbox {
   constructor(commit,notify,current) {
     this.commit=commit;this.notify=notify;this.current=current;this.epoch=0;this.committing=false;
@@ -12,7 +13,7 @@ export class Inbox {
       if(target.dataset.inbox==='commit') {
         if(this.committing||this.busy||!this.incoming)return;
         this.committing=true;for(const button of this.content.querySelectorAll('[data-inbox]'))button.disabled=true;
-        try{await this.commit(this.incoming,target.dataset.mode);this.dialog.close();this.incoming=null;}catch(error){this.error(error.message);}
+        try{await this.commit(this.incoming,target.dataset.mode);await closeSurface(this.dialog);this.incoming=null;}catch(error){this.error(error.message);}
         finally{this.committing=false;}
       }
     });
@@ -32,9 +33,9 @@ export class Inbox {
     document.addEventListener('dragleave',event=>event.target.closest('#drop-zone')?.classList.remove('dragover'));
     document.addEventListener('drop',event=>{if(event.target.closest('#drop-zone')){event.preventDefault();event.target.closest('#drop-zone').classList.remove('dragover');this.read([...event.dataTransfer.files]);}});
   }
-  choose(){if(this.busy||this.committing){if(!this.dialog.open)this.dialog.showModal();return;}this.input.click();}
-  cancel(){if(this.committing){this.notify('材料正在加入，完成后即可关闭');return;}this.cancelled=true;this.epoch++;this.pending?.worker.terminate();this.pending?.reject(new Error('已取消导入'));this.pending=null;this.busy=false;this.incoming=null;this.dialog.close();this.input.value='';}
-  shell(body){if(!this.dialog.open)this.dialog.showModal();this.content.innerHTML='<div class="inbox-top"><span class="overline">材料入口 / 本机读取</span><button class="button icon-only" data-inbox="close" aria-label="关闭导入">×</button></div>'+body;}
+  choose(){if(this.busy||this.committing){if(!this.dialog.open)openSurface(this.dialog);return;}this.input.click();}
+  cancel(){if(this.committing){this.notify('材料正在加入，完成后即可关闭');return;}this.cancelled=true;this.epoch++;this.pending?.worker.terminate();this.pending?.reject(new Error('已取消导入'));this.pending=null;this.busy=false;this.incoming=null;closeSurface(this.dialog);this.input.value='';}
+  shell(body){if(!this.dialog.open)openSurface(this.dialog);this.content.innerHTML='<div class="inbox-top"><span class="overline">材料入口 / 本机读取</span><button class="button icon-only" data-inbox="close" aria-label="关闭导入">×</button></div>'+body;}
   progress(name,message,percent){this.shell('<h2>正在展开教学材料</h2><p>'+esc(name)+'</p><div class="import-meter"><i style="width:'+percent+'%"></i></div><p>'+esc(message)+'</p>');}
   error(message){this.shell('<h2>材料尚未加入工作区</h2><p>'+esc(message)+'</p><button class="button outline" data-inbox="close">回到工作区</button>');}
   mapping(meta,pending) {
@@ -50,7 +51,7 @@ export class Inbox {
     const buffer=await file.arrayBuffer();
     if(epoch!==this.epoch)throw new Error('已取消导入');
     return new Promise((resolve,reject)=>{
-      const worker=new Worker(new URL('./worker.js?v=paper-v30',import.meta.url)),timer=setTimeout(()=>finish(new Error('文件读取超时，请分开导入材料后重试。')),180000);
+      const worker=new Worker(new URL('./worker.js?v=runtime-v31',import.meta.url)),timer=setTimeout(()=>finish(new Error('文件读取超时，请分开导入材料后重试。')),180000);
       let finished=false;
       const finish=(error,result)=>{if(finished)return;finished=true;clearTimeout(timer);worker.terminate();if(this.pending?.worker===worker)this.pending=null;error?reject(error):resolve(result);};
       this.pending={file,buffer,worker,reject:error=>finish(error)};

@@ -12,8 +12,9 @@ const compatible=(a,b)=>a.nodeType===b.nodeType&&(a.nodeType!==1||(a.tagName===b
 function synchronize(current,next) {
   if(current.nodeType===3||current.nodeType===8){if(current.nodeValue!==next.nodeValue)current.nodeValue=next.nodeValue;return;}
   const managed=current.hasAttribute('data-managed')&&next.hasAttribute('data-managed');
+  const surfaceOwned=current.dataset.surfaceMotion==='managed'&&current.dataset.surfacePhase!=='closed';
   const keepOpen=current.tagName==='DETAILS'&&!next.hasAttribute('data-controlled'),wasOpen=current.open;
-  for(const attr of [...current.attributes])if(!next.hasAttribute(attr.name)&&!(managed&&(attr.name==='style'||attr.name.startsWith('data-pdf')||attr.name==='data-current-page')))current.removeAttribute(attr.name);
+  for(const attr of [...current.attributes])if(!next.hasAttribute(attr.name)&&!(managed&&(attr.name==='style'||attr.name.startsWith('data-pdf')||attr.name==='data-current-page'))&&!(surfaceOwned&&(attr.name==='style'||attr.name==='inert'||attr.name.startsWith('data-surface-'))))current.removeAttribute(attr.name);
   for(const attr of next.attributes)if(current.getAttribute(attr.name)!==attr.value)current.setAttribute(attr.name,attr.value);
   if(keepOpen)current.open=wasOpen;
   if(current.matches('input,textarea')) {
@@ -23,13 +24,21 @@ function synchronize(current,next) {
   }
   // A PDF renderer owns this island; outer form updates must retain its canvases.
   if(current.hasAttribute('data-managed')&&next.hasAttribute('data-managed'))return;
+  // A retiring teacher picker keeps its populated calendar until fadeout.
+  // Updating its form must not turn the outgoing glass panel into an empty box.
+  if(current.matches('.plan-picker-panel:popover-open')&&current.dataset.surfacePhase==='leaving')return;
   reconcile(current,next);
 }
 function reconcile(parent,next) {
-  const previous=[...parent.childNodes],keyed=new Map(),used=new Set();let cursor=parent.firstChild;
-  for(const node of previous){const key=identity(node);if(key){if(!keyed.has(key))keyed.set(key,[]);keyed.get(key).push(node);}}
+  const previous=[...parent.childNodes],buckets=new Map(),used=new Set();let cursor=parent.firstChild;
+  const bucketKey=node=>(identity(node)||'plain')+':'+node.nodeType+':'+(node.namespaceURI||'')+':'+(node.tagName||'');
+  for(const node of previous){const key=bucketKey(node);if(!buckets.has(key))buckets.set(key,{nodes:[],index:0});buckets.get(key).nodes.push(node);}
   for(const desired of [...next.childNodes]) {
-    const key=identity(desired);let node=key?keyed.get(key)?.find(n=>!used.has(n)&&compatible(n,desired)):previous.find(n=>!used.has(n)&&!identity(n)&&compatible(n,desired));
+    // Consume each sibling once, including unkeyed cells in wide tables.
+    // Per-type queues retain the previous matching semantics without repeated
+    // scans of every earlier sibling (quadratic for large tables).
+    const bucket=buckets.get(bucketKey(desired));let node=null;
+    if(bucket)for(let i=bucket.index;i<bucket.nodes.length;i++){const candidate=bucket.nodes[i];if(!used.has(candidate)&&compatible(candidate,desired)){node=candidate;bucket.index=i+1;break;}}
     if(node&&!compatible(node,desired))node=null;
     if(!node)node=desired.cloneNode(true);else synchronize(node,desired);
     used.add(node);if(node!==cursor)parent.insertBefore(node,cursor);cursor=node.nextSibling;

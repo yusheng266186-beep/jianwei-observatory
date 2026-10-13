@@ -1,7 +1,7 @@
-import {paperMetrics,paperSettings} from '../engine/paper-settings.js?v=paper-v30';
-import {selectedReport} from '../engine/report-selection.js?v=paper-v30';
-import {esc} from '../ui/html.js?v=paper-v30';
-import {SITE_NAME} from '../brand.js?v=paper-v30';
+import {paperMetrics,paperSettings} from '../engine/paper-settings.js?v=runtime-v31';
+import {selectedReport} from '../engine/report-selection.js?v=runtime-v31';
+import {esc} from '../ui/html.js?v=runtime-v31';
+import {SITE_NAME} from '../brand.js?v=runtime-v31';
 // All three outlets share the same sections, field splits and missing-value rules.
 export function documentSections(report){
  return (report.sections||[]).flatMap(s=>{

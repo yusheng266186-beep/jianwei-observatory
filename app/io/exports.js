@@ -1,11 +1,13 @@
-import {paperSettings} from '../engine/paper-settings.js?v=paper-v30';
-import {selectedReport} from '../engine/report-selection.js?v=paper-v30';
-import {reportHTML,wordFiles,pdfDefinition,documentSections} from './print-document.js?v=paper-v30';
-export {reportHTML} from './print-document.js?v=paper-v30';
-import {esc,number,percent,signed} from '../ui/html.js?v=paper-v30';
-import {SITE_NAME,CREST_URL} from '../brand.js?v=paper-v30';
-import {chartFontRules} from '../ui/font-export.js?v=paper-v30';
-import {worksheetNames} from './sheet-names.js?v=paper-v30';
+import {createPDFJob,idlePDFWorker} from './pdf-runtime.js?v=runtime-v31';
+export {idlePDFWorker};
+import {paperSettings} from '../engine/paper-settings.js?v=runtime-v31';
+import {selectedReport} from '../engine/report-selection.js?v=runtime-v31';
+import {reportHTML,wordFiles,documentSections} from './print-document.js?v=runtime-v31';
+export {reportHTML} from './print-document.js?v=runtime-v31';
+import {esc,number,percent,signed} from '../ui/html.js?v=runtime-v31';
+import {SITE_NAME,CREST_URL} from '../brand.js?v=runtime-v31';
+import {chartFontRules} from '../ui/font-export.js?v=runtime-v31';
+import {worksheetNames} from './sheet-names.js?v=runtime-v31';
 export function download(content,name,type='application/octet-stream') {
   const blob=content instanceof Blob?content:new Blob([content],{type}),url=URL.createObjectURL(blob),anchor=document.createElement('a');
   anchor.href=url;anchor.download=name;anchor.click();setTimeout(()=>URL.revokeObjectURL(url),5000);
@@ -56,30 +58,21 @@ export function answerRows(atlas,answers,paperKey='') {
   return [['考试','姓名','班级','学科',...Array.from({length:max},(_,i)=>'第'+(bank[i]?.label??i+1)+'题')],...answers.map(a=>[atlas.exam(a.exam).label,atlas.name(a.sid),a.classNo,a.subject,...a.values])];
 }
 export function evidence(title,subtitle,sections,sheets={}) {return {title,subtitle,sections,sheets,created:new Date().toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'}),note:''};}
-export async function print(report,previewBlob=null) {const {printPDF}=await import('./paper-print.js?v=paper-v30');await printPDF(previewBlob||await pdfBlob(report));}
+export async function print(report,previewBlob=null) {const {printPDF}=await import('./paper-print.js?v=runtime-v31');await printPDF(previewBlob||await pdfBlob(report));}
 export async function word(report) {
  report=selectedReport(report);
  const {JSZip}=await vendors(),zip=new JSZip();for(const [name,content] of Object.entries(wordFiles(report)))zip.file(name,content);
  download(await zip.generateAsync({type:'blob'}),report.title+'.docx');
 }
-let pdfReady;
-async function pdfEngine(){
- if(!pdfReady){const attempt=(async()=>{
-  if(!window.pdfMake)await new Promise((resolve,reject)=>{const script=document.createElement('script');let done=false;const finish=e=>{if(done)return;done=true;clearTimeout(timer);script.onload=script.onerror=null;if(e){script.remove();reject(e);}else resolve();},timer=setTimeout(()=>finish(new Error('PDF组件加载超时，请重试')),30000);script.src=new URL('../../vendor/pdfmake.min.js',import.meta.url);script.onload=()=>finish(window.pdfMake?null:new Error('PDF组件初始化失败'));script.onerror=()=>finish(new Error('PDF组件加载失败，请重试'));document.head.append(script);});
-  const entries=await Promise.all(['regular','medium'].map(async weight=>{const response=await fetch(new URL('../../assets/report-fonts/report-'+weight+'.otf',import.meta.url),{signal:AbortSignal.timeout(60000)});if(!response.ok)throw new Error('打印中文字体加载失败，请重试');const data=new Uint8Array(await response.arrayBuffer());let binary='';for(let i=0;i<data.length;i+=32768)binary+=String.fromCharCode(...data.subarray(i,i+32768));return ['report-'+weight+'.otf',btoa(binary)];}));
-  window.pdfMake.addVirtualFileSystem(Object.fromEntries(entries));window.pdfMake.fonts={Report:{normal:'report-regular.otf',bold:'report-medium.otf',italics:'report-regular.otf',bolditalics:'report-medium.otf'}};return window.pdfMake;
- })();pdfReady=attempt;attempt.catch(()=>{if(pdfReady===attempt)pdfReady=null;});}
- return pdfReady;
-}
 // Preview and download share the exact same immutable PDF bytes. Bound the cache
 // to two documents; failed attempts are evicted so a direct retry can recover.
 const pdfDocuments=new Map();
 export function pdfKey(report){report=selectedReport(report);return JSON.stringify([report.title,report.subtitle||'',report.created||'',documentSections(report).map(s=>[s.title,s.headers,s.rows.map(row=>s.headers.map((_,i)=>String(row[i]??'—'))),s.caption||'',s.paragraphs]),report.meta||[],report.note||'',paperSettings(report)]);}
-export function pdfBlob(report){
- report=structuredClone(selectedReport(report));const key=pdfKey(report);if(pdfDocuments.has(key))return pdfDocuments.get(key);
- const task=(async()=>{const engine=await pdfEngine();return new Promise((resolve,reject)=>{let done=false;const finish=(error,result)=>{if(done)return;done=true;clearTimeout(timer);error?reject(error):resolve(result);},timer=setTimeout(()=>finish(new Error('PDF生成超时，可缩小报告范围或先下载Word')),120000);try{const definition=pdfDefinition(report),doc=engine.createPdf(definition);const stream=doc.getStream({});stream.on('error',error=>finish(error));const chunks=[];stream.on('data',chunk=>chunks.push(chunk));stream.on('end',()=>finish(null,new Blob(chunks,{type:'application/pdf'})));stream.end();}catch(e){finish(e);}});})();
- pdfDocuments.set(key,task);if(pdfDocuments.size>2)pdfDocuments.delete(pdfDocuments.keys().next().value);
- task.catch(()=>{if(pdfDocuments.get(key)===task)pdfDocuments.delete(key);});return task;
+export function pdfBlob(report,{signal}={}){
+ if(signal?.aborted)return Promise.reject(new DOMException('纸面预览已取消','AbortError'));
+ report=selectedReport(report);const key=pdfKey(report),cached=pdfDocuments.get(key);if(cached&&!cached.failed)return cached.claim(signal);
+ const job=createPDFJob(structuredClone(report));pdfDocuments.set(key,job);if(pdfDocuments.size>2)pdfDocuments.delete(pdfDocuments.keys().next().value);
+ job.promise.catch(()=>{if(pdfDocuments.get(key)===job)pdfDocuments.delete(key);});return job.claim(signal);
 }
 export async function pdf(report,previewBlob=null){report=selectedReport(report);download(previewBlob||await pdfBlob(report),report.title+'.pdf');}
 export async function chart(id,png=false) {

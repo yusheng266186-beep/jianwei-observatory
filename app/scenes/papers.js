@@ -1,12 +1,12 @@
-import {head,button,chips,examChips,badge,block,ribbon,table,number,integer,percent,esc,personButton,search,footnote,empty} from '../ui/html.js?v=paper-v30';
-import {bars,rateStyle,rateLegend,chartButtons} from '../ui/plots.js?v=paper-v30';
-import {average,sum,valid} from '../engine/metrics.js?v=paper-v30';
-import {answerRows,evidence} from '../io/exports.js?v=paper-v30';
-import {queryQuestionMap} from '../engine/question-map.js?v=paper-v30';
-import {questionCard} from '../ui/question-cards.js?v=paper-v30';
-import {paperProfile} from '../ui/paper-profile.js?v=paper-v30';
-import {scoreTone,scoreStyle} from '../ui/score-tones.js?v=paper-v30';
-import {paperCountLabel} from '../engine/paper-structure.js?v=paper-v30';
+import {head,button,chips,examChips,badge,block,ribbon,table,number,integer,percent,esc,personButton,search,footnote,empty} from '../ui/html.js?v=runtime-v31';
+import {bars,rateStyle,rateLegend,chartButtons} from '../ui/plots.js?v=runtime-v31';
+import {average,sum,valid} from '../engine/metrics.js?v=runtime-v31';
+import {answerRows,evidence} from '../io/exports.js?v=runtime-v31';
+import {queryQuestionMap} from '../engine/question-map.js?v=runtime-v31';
+import {questionCard} from '../ui/question-cards.js?v=runtime-v31';
+import {paperProfile} from '../ui/paper-profile.js?v=runtime-v31';
+import {scoreTone,scoreStyle} from '../ui/score-tones.js?v=runtime-v31';
+import {paperCountLabel} from '../engine/paper-structure.js?v=runtime-v31';
 export function render(atlas,state) {
   const papers=atlas.papers(),paper=papers.find(p=>p.key===state.key);
   if(!paper) {
@@ -46,19 +46,21 @@ export function render(atlas,state) {
   const peers=papers.filter(p=>p.exam===paper.exam),exams=atlas.exams.filter(e=>papers.some(p=>p.exam===e.id));
   const switcher='<section class="paper-switcher" aria-label="切换试卷"><header><div><span>研究材料</span><strong>'+esc(paper.subject)+'</strong><small>已导入 '+peers.length+' 科小题</small></div>'+button('全部试卷','paper-back',{},'outline')+'</header>'+(exams.length>1?'<div class="paper-switch-row"><span>考次</span><div class="chips" role="group" aria-label="切换试卷考次">'+exams.map(e=>button(esc(e.label),'paper-exam',{exam:e.id},'chip'+(paper.exam===e.id?' selected':''),'aria-pressed="'+(paper.exam===e.id)+'"')).join('')+'</div></div>':'')+'<div class="paper-switch-row"><span>学科</span><div class="chips" role="group" aria-label="切换试卷学科">'+peers.map(p=>button(esc(p.subject)+' <small>'+esc(paperCountLabel(p.questions))+'</small>','paper-switch',{key:p.key},'chip'+(paper.key===p.key?' selected':''),'aria-pressed="'+(paper.key===p.key)+'"')).join('')+'</div></div>'+(peers.length===1?'<footer><span>本考次当前只有'+esc(paper.subject)+'小题材料，其他学科需补充对应作答表。</span>'+button('补充其他学科','import',{},'quiet')+'</footer>':'')+'</section>';
   const html='<div class="paper-studio-head">'+head('03 / 试卷研究',paper.subject+'试卷',atlas.exam(paper.exam).label+(paper.exam===atlas.latest?' · 最新考试':''),button('摘录','capture',{},'outline')+button('学科报告','teaching-report-entry',{kind:'subject',...{subject:paper.subject,exam:paper.exam}},'accent')+button('导出','export',{},'outline'))+'</div><div class="paper-control-deck">'+switcher+'<div class="audience-strip"><span>观察范围</span>'+button('全部参考班','set',{key:'classes',value:'all'},!scope.length?'chip selected':'chip')+chips('classes',paper.classes.map(no=>[no,no+'班'+(atlas.profile(no).cohort==='repeat'?' · 补习':'')]),scope,true)+'</div>'+((!state.tab||state.tab==='map')?'':overviewMetrics)+'</div><div class="scene-tabs paper-view-tabs">'+chips('tab',[['map','逐题地图'],['knowledge','知识点路径'],['classes','班级热力'],['details','逐题明细'],['students','学生作答'],['responses','单题作答']],state.tab||'map')+'</div>'+(['classes','students'].includes(state.tab||'map')?rateLegend():'')+'<div class="paper-evidence-view">'+body+'</div>'+footnote('区分度仅用全卷得分已填齐的作答，按小题合计高低分组计算，默认各27%；完整作答少于6份时留空。没有明确满分的题保留得分，得分率留空。');
+  let preparedReport;
+  return {html,get report(){if(preparedReport)return preparedReport;
   const questionRows=[['题号','知识点','样本','均分','满分','得分率','平均失分','区分度','零分人数','满分人数'],...lens.questions.map(q=>[q.label,q.knowledge,q.count,q.mean,q.max,q.rate,q.loss,q.discrimination,q.zero,q.full])];
   const skills=[['知识点','得分率','平均失分','建议'],...lens.skills.map(k=>[k.name,k.rate,k.loss,k.advice])];
   const mapView=!state.tab||state.tab==='map',conditions=[['考次',atlas.exam(paper.exam).label],['学科',paper.subject],['班级',scope.length?scope.map(n=>n+'班').join('、'):'全部参考班'],['当前视图',({map:'逐题地图',knowledge:'知识点路径',classes:'班级热力',details:'逐题明细',students:'学生作答',responses:'单题作答'})[state.tab||'map']]];
   if(mapView)conditions.push(['题目检索',state.questionSearch?.trim()||'不限'],['题目条件',mapModel.label],['低得分率口径','低于 '+percent(mapModel.threshold)],['排列顺序',mapModel.orderLabel],['匹配题目',mapModel.matches.length+' / '+lens.questions.length+' 个得分项']);
   const matchedRows=[questionRows[0],...mapModel.matches.map(q=>questionRows[q.index+1])],diagnosis=rows=>rows.map(row=>row.map((v,i)=>i===5?percent(v):v));
-  return {html,report:evidence(paper.subject+' · '+atlas.exam(paper.exam).label+'试卷研究',conditions[2][1]+(mapView?' · '+mapModel.label+' · '+mapModel.matches.length+' 个得分项':''),[{title:'观察条件',headers:['项目','范围'],rows:conditions},...(mapView?[{title:'当前题目地图',headers:questionRows[0],rows:diagnosis(matchedRows.slice(1))}]:[]),{title:'逐题诊断',headers:questionRows[0],rows:diagnosis(questionRows.slice(1))},{title:'知识点路径',headers:skills[0],rows:skills.slice(1).map(row=>row.map((v,i)=>i===1?percent(v):v))}],{'观察条件':[['项目','范围'],...conditions],...(mapView?{'当前题目地图':matchedRows}:{}),'个人学科小题得分':answerRows(atlas,lens.answers,paper.key),'逐题诊断':questionRows,'知识点':skills})};
+    return preparedReport=evidence(paper.subject+' · '+atlas.exam(paper.exam).label+'试卷研究',conditions[2][1]+(mapView?' · '+mapModel.label+' · '+mapModel.matches.length+' 个得分项':''),[{title:'观察条件',headers:['项目','范围'],rows:conditions},...(mapView?[{title:'当前题目地图',headers:questionRows[0],rows:diagnosis(matchedRows.slice(1))}]:[]),{title:'逐题诊断',headers:questionRows[0],rows:diagnosis(questionRows.slice(1))},{title:'知识点路径',headers:skills[0],rows:skills.slice(1).map(row=>row.map((v,i)=>i===1?percent(v):v))}],{'观察条件':[['项目','范围'],...conditions],...(mapView?{'当前题目地图':matchedRows}:{}),'个人学科小题得分':answerRows(atlas,lens.answers,paper.key),'逐题诊断':questionRows,'知识点':skills});
+  }};
 }
 function paperCover(atlas,paper) {
-  const known=paper.questions.filter(q=>valid(q.max)&&q.max>0).length;
+  const known=paper.questions.filter(q=>valid(q.max)&&q.max>0).length,statistics=atlas.paperPreview(paper.key);
   const preview=paper.questions.map((q,index)=>{
-    const values=paper.answers.map(a=>a.values[index]).filter(valid),mean=average(values);
-    const rate=valid(q.max)&&q.max>0&&valid(mean)?mean/q.max:null;
-    const detail='第'+q.label+'题 · 有效作答 '+values.length+' 份 · 均分 '+number(mean)+' / 满分 '+number(q.max);
+    const {mean,count,rate}=statistics[index];
+    const detail='第'+q.label+'题 · 有效作答 '+count+' 份 · 均分 '+number(mean)+' / 满分 '+number(q.max);
     const measured=valid(rate)&&rate>=0&&rate<=1;
     return '<i class="cover-score-square" data-score-tone="'+scoreTone(rate).key+'" style="'+scoreStyle(rate)+'" data-known="'+measured+'" title="'+esc(detail)+'"><small>'+esc(q.label).replace(/题$/,'')+'</small><b>'+(valid(rate)?percent(rate):number(mean)+(valid(mean)?'分':''))+'</b></i>';
   }).join('');
