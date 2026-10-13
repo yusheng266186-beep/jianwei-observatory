@@ -1,4 +1,4 @@
-import {validDate,todayLocal} from './training.js?v=texture-v26';
+import {validDate,todayLocal} from './training.js?v=surfaces-v27';
 export const pad=value=>String(value).padStart(2,'0');
 export const dateString=d=>String(d.getUTCFullYear()).padStart(4,'0')+'-'+pad(d.getUTCMonth()+1)+'-'+pad(d.getUTCDate());
 export function addDays(value,days){const date=new Date(value+'T12:00:00Z');date.setUTCDate(date.getUTCDate()+days);return dateString(date);}

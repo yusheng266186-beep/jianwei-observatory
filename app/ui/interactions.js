@@ -1,6 +1,6 @@
-import {motion} from './motion.js?v=texture-v26';
-import {positionSpreadLabels} from './plots.js?v=texture-v26';
-import {paperMapLayout} from '../engine/paper-structure.js?v=texture-v26';
+import {motion} from './motion.js?v=surfaces-v27';
+import {positionSpreadLabels} from './plots.js?v=surfaces-v27';
+import {paperMapLayout} from '../engine/paper-structure.js?v=surfaces-v27';
 let motionPreference=()=>false,resizeObserver,plotObserver,railObserver,drawerHeaderObserver,revealObserver,tooltipTarget=null,tooltipOriginal=null,tooltipFrame=0,outlineFrame=0,drawerOutlineFrame=0,pointerFrame=0,outline=null,outlineEntries=[];
 const observedTables=new Set(),observedPlots=new Set(),observedReveals=new Set(),revealed=new WeakSet(),disclosures=new WeakMap();
 const selectionRails=new Set(),railStates=new WeakMap();
@@ -116,8 +116,8 @@ function refreshPaperProfiles(root=document){
     const background=svg.querySelector('.profile-background');background.setAttribute('width',width);background.setAttribute('height',layout.height);
     items.forEach((item,index)=>{
       const p=layout.position(index);item.setAttribute('transform','translate('+p.x+','+p.y+')');
-      item.querySelector('.profile-tile').setAttribute('width',layout.cellWidth-1);
-      item.querySelector('.profile-edge').setAttribute('d','M10,2 H'+(layout.cellWidth-10));
+      for(const surface of item.querySelectorAll('.profile-tile,.profile-light'))surface.setAttribute('width',layout.cellWidth-1);
+      item.querySelector('.profile-current-dot').setAttribute('cx',layout.cellWidth-12);
     });
   }
 }

@@ -1,9 +1,9 @@
-import {button,block,table,ribbon,number,integer,percent,delta,esc,empty} from './html.js?v=texture-v26';
-import {trajectory,bars,chartButtons} from './plots.js?v=texture-v26';
-import {subjectLens,skillLens} from '../engine/lenses.js?v=texture-v26';
-import {scoreTone,scoreStyle} from './score-tones.js?v=texture-v26';
-import {valid} from '../engine/metrics.js?v=texture-v26';
-import {evidence,scoreRows} from '../io/exports.js?v=texture-v26';
+import {button,block,table,ribbon,number,integer,percent,delta,esc,empty} from './html.js?v=surfaces-v27';
+import {trajectory,bars,chartButtons} from './plots.js?v=surfaces-v27';
+import {subjectLens,skillLens} from '../engine/lenses.js?v=surfaces-v27';
+import {scoreTone,scoreStyle} from './score-tones.js?v=surfaces-v27';
+import {valid} from '../engine/metrics.js?v=surfaces-v27';
+import {evidence,scoreRows} from '../io/exports.js?v=surfaces-v27';
 
 const tabs=(options,value)=>'<nav class="drawer-tabs lens-tabs" aria-label="观察视角">'+options.map(([id,label])=>button(label,'drawer-tab',{value:id},id===value?'chip selected':'chip','aria-pressed="'+(id===value)+'"')).join('')+'</nav>';
 const filters=(items,value)=>'<div class="lens-filters" role="group" aria-label="当前观察窗的名单条件">'+items.map(item=>button('<span>'+esc(item.label)+'</span><b>'+integer(item.count)+'</b>','lens-filter',{value:item.id},item.id===value?'lens-filter selected':'lens-filter','aria-pressed="'+(item.id===value)+'"')).join('')+'</div>';

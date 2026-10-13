@@ -1,7 +1,7 @@
-import {button,table,esc,empty} from './html.js?v=texture-v26';
-import {reportOptions} from './report-options.js?v=texture-v26';
-import {selectionFor,fieldsFor,selectedReport} from '../engine/report-selection.js?v=texture-v26';
-import {reportHTML} from '../io/print-document.js?v=texture-v26';
+import {button,table,esc,empty} from './html.js?v=surfaces-v27';
+import {reportOptions} from './report-options.js?v=surfaces-v27';
+import {selectionFor,fieldsFor,selectedReport} from '../engine/report-selection.js?v=surfaces-v27';
+import {reportHTML} from '../io/print-document.js?v=surfaces-v27';
 export function reportView(report,state,{noteState='preview',canReturn=false}={}) {
  const sections=report.sections||[],index=Math.min(state.section||0,Math.max(0,sections.length-1)),selection=selectionFor(report),output=selectedReport({...report,outputSelection:selection}),source=sections[index],fields=fieldsFor(report,index,selection),query=(state.search||'').trim(),filter=String(selection.filters[index]||'').trim(),rows=(source?.rows||[]).filter(r=>(!filter||r.some(v=>String(v??'').includes(filter)))&&(!query||r.some(v=>String(v??'').includes(query)))).map(r=>fields.map(i=>r[i])),pages=Math.max(1,Math.ceil(rows.length/50)),page=Math.min(state.page||1,pages),shown=rows.slice((page-1)*50,page*50),paper=state.preview==='paper',hasOutput=selection.selected.length>0||selection.includeNote&&!!report.note?.trim();
  const navigation='<div class="report-sections" role="group" aria-label="查看章节明细与设置字段">'+sections.map((s,i)=>button(esc(s.title)+' <small>'+s.rows.length+'</small>','report-section',{index:i},i===index?'chip selected':'chip','aria-pressed="'+(i===index)+'"')).join('')+'</div>';

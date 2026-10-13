@@ -1,6 +1,6 @@
-import {valid,difference} from './metrics.js?v=texture-v26';
-import {number,integer,percent,signed} from '../ui/html.js?v=texture-v26';
-import {normalizePlan,selectedPlans,scheduleLabel,trainingSummary,trainingTasks,trainingMethods,planStatuses} from './training.js?v=texture-v26';
+import {valid,difference} from './metrics.js?v=surfaces-v27';
+import {number,integer,percent,signed} from '../ui/html.js?v=surfaces-v27';
+import {normalizePlan,selectedPlans,scheduleLabel,trainingSummary,trainingTasks,trainingMethods,planStatuses} from './training.js?v=surfaces-v27';
 
 export const reportTypes=[['class','班级诊断报告','临界对象、各科评估与小题证据'],['subject','学科教学报告','薄弱学生、题目与知识点'],['student','学生学习报告','阶段变化、个人短板与训练安排'],['follow','教学跟进计划','训练内容、具体课时与复核目标']];
 const section=(title,headers=[],rows=[],caption='',paragraphs=[])=>({title,headers,rows,caption,paragraphs});

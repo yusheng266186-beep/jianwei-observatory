@@ -1,7 +1,7 @@
-import {esc,number,integer,percent} from './html.js?v=texture-v26';
-import {valid} from '../engine/metrics.js?v=texture-v26';
-import {questionNumbers} from '../engine/paper-structure.js?v=texture-v26';
-import {scoreTone,scoreStyle} from './score-tones.js?v=texture-v26';
+import {esc,number,integer,percent} from './html.js?v=surfaces-v27';
+import {valid} from '../engine/metrics.js?v=surfaces-v27';
+import {questionNumbers} from '../engine/paper-structure.js?v=surfaces-v27';
+import {scoreTone,scoreStyle} from './score-tones.js?v=surfaces-v27';
 
 export function questionCard(q,{records,threshold,selected=false}) {
   const measured=valid(q.rate),normal=measured&&q.rate>=0&&q.rate<=1;

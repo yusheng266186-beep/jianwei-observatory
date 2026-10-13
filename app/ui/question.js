@@ -1,11 +1,11 @@
-import {button,badge,block,ribbon,table,number,integer,percent,esc,empty} from './html.js?v=texture-v26';
-import {bars,chartButtons} from './plots.js?v=texture-v26';
-import {average,valid} from '../engine/metrics.js?v=texture-v26';
-import {evidence} from '../io/exports.js?v=texture-v26';
-import {questionLens} from '../engine/lenses.js?v=texture-v26';
-import {questionSequence} from '../engine/question-map.js?v=texture-v26';
-import {questionNumbers} from '../engine/paper-structure.js?v=texture-v26';
-import {plotPalette} from './palette.js?v=texture-v26';
+import {button,badge,block,ribbon,table,number,integer,percent,esc,empty} from './html.js?v=surfaces-v27';
+import {bars,chartButtons} from './plots.js?v=surfaces-v27';
+import {average,valid} from '../engine/metrics.js?v=surfaces-v27';
+import {evidence} from '../io/exports.js?v=surfaces-v27';
+import {questionLens} from '../engine/lenses.js?v=surfaces-v27';
+import {questionSequence} from '../engine/question-map.js?v=surfaces-v27';
+import {questionNumbers} from '../engine/paper-structure.js?v=surfaces-v27';
+import {plotPalette} from './palette.js?v=surfaces-v27';
 
 function structureView(model) {
   const {structure:s,selectedId}=model;

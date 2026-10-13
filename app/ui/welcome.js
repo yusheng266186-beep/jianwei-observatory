@@ -1,4 +1,4 @@
-import {button} from './html.js?v=texture-v26';
+import {button} from './html.js?v=surfaces-v27';
 
 export function welcomeView() {
   const template=document.getElementById('empty-workspace-template');

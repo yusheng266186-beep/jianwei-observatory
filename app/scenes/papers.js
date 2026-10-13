@@ -1,12 +1,12 @@
-import {head,button,chips,examChips,badge,block,ribbon,table,number,integer,percent,esc,personButton,search,footnote,empty} from '../ui/html.js?v=texture-v26';
-import {bars,rateStyle,rateLegend,chartButtons} from '../ui/plots.js?v=texture-v26';
-import {average,sum,valid} from '../engine/metrics.js?v=texture-v26';
-import {answerRows,evidence} from '../io/exports.js?v=texture-v26';
-import {queryQuestionMap} from '../engine/question-map.js?v=texture-v26';
-import {questionCard} from '../ui/question-cards.js?v=texture-v26';
-import {paperProfile} from '../ui/paper-profile.js?v=texture-v26';
-import {scoreTone,scoreStyle} from '../ui/score-tones.js?v=texture-v26';
-import {paperCountLabel} from '../engine/paper-structure.js?v=texture-v26';
+import {head,button,chips,examChips,badge,block,ribbon,table,number,integer,percent,esc,personButton,search,footnote,empty} from '../ui/html.js?v=surfaces-v27';
+import {bars,rateStyle,rateLegend,chartButtons} from '../ui/plots.js?v=surfaces-v27';
+import {average,sum,valid} from '../engine/metrics.js?v=surfaces-v27';
+import {answerRows,evidence} from '../io/exports.js?v=surfaces-v27';
+import {queryQuestionMap} from '../engine/question-map.js?v=surfaces-v27';
+import {questionCard} from '../ui/question-cards.js?v=surfaces-v27';
+import {paperProfile} from '../ui/paper-profile.js?v=surfaces-v27';
+import {scoreTone,scoreStyle} from '../ui/score-tones.js?v=surfaces-v27';
+import {paperCountLabel} from '../engine/paper-structure.js?v=surfaces-v27';
 export function render(atlas,state) {
   const papers=atlas.papers(),paper=papers.find(p=>p.key===state.key);
   if(!paper) {
