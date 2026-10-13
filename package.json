@@ -24,7 +24,9 @@
     "test:close": "node tests/close-controls.cjs",
     "test:workbench": "node tests/paper-workbench.cjs",
     "test:material": "node tests/material-cohesion.cjs",
-    "test:usage": "node tests/usage-review.cjs"
+    "test:usage": "node tests/usage-review.cjs",
+    "test:reports": "node tests/reports-browser.cjs",
+    "test:report-edges": "node tests/reports-boundaries.cjs"
   },
   "devDependencies": {
     "playwright": "1.62.1"

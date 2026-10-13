@@ -1,4 +1,4 @@
-import {valid} from '../engine/metrics.js?v=review-v23';
+import {valid} from '../engine/metrics.js?v=reports-v24';
 
 // Higher measured rates use deeper school blue. Unknown and abnormal rates
 // have a neutral treatment; neither is colored as a real zero or a full score.

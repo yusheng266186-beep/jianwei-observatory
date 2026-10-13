@@ -1,7 +1,9 @@
-import {esc,number,percent,signed} from '../ui/html.js?v=review-v23';
-import {SITE_NAME,CREST_URL} from '../brand.js?v=review-v23';
-import {chartFontRules} from '../ui/font-export.js?v=review-v23';
-import {worksheetNames} from './sheet-names.js?v=review-v23';
+import {reportHTML,wordFiles,pdfDefinition} from './print-document.js?v=reports-v24';
+export {reportHTML} from './print-document.js?v=reports-v24';
+import {esc,number,percent,signed} from '../ui/html.js?v=reports-v24';
+import {SITE_NAME,CREST_URL} from '../brand.js?v=reports-v24';
+import {chartFontRules} from '../ui/font-export.js?v=reports-v24';
+import {worksheetNames} from './sheet-names.js?v=reports-v24';
 export function download(content,name,type='application/octet-stream') {
   const blob=content instanceof Blob?content:new Blob([content],{type}),url=URL.createObjectURL(blob),anchor=document.createElement('a');
   anchor.href=url;anchor.download=name;anchor.click();setTimeout(()=>URL.revokeObjectURL(url),5000);
@@ -52,31 +54,21 @@ export function answerRows(atlas,answers,paperKey='') {
   return [['考试','姓名','班级','学科',...Array.from({length:max},(_,i)=>'第'+(bank[i]?.label??i+1)+'题')],...answers.map(a=>[atlas.exam(a.exam).label,atlas.name(a.sid),a.classNo,a.subject,...a.values])];
 }
 export function evidence(title,subtitle,sections,sheets={}) {return {title,subtitle,sections,sheets,created:new Date().toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'}),note:''};}
-function documentSections(report) {
-  return report.sections.flatMap(section=>{
-    if(section.headers.length<=10)return [section];
-    const keys=section.headers.flatMap((header,index)=>index<4&&['考试','姓名','学生','班级','学科'].includes(header)?[index]:[]);
-    if(!keys.length)keys.push(0);
-    const values=section.headers.map((_,index)=>index).filter(index=>!keys.includes(index)),size=10-keys.length,parts=Math.ceil(values.length/size);
-    return Array.from({length:parts},(_,part)=>{
-      const indices=[...keys,...values.slice(part*size,(part+1)*size)];
-      return {...section,title:section.title+' · 字段 '+(part+1)+' / '+parts,headers:indices.map(index=>section.headers[index]),rows:section.rows.map(row=>indices.map(index=>row[index]))};
-    });
-  });
-}
-export function reportHTML(report) {
-  return '<article class="print-paper"><div class="print-brand"><img src="'+esc(CREST_URL)+'" width="38" height="38" alt="荣县第一中学校徽">'+esc(SITE_NAME)+'</div><h1>'+esc(report.title)+'</h1><p>'+esc(report.subtitle)+'</p>'+(report.studyTitle?'<p>研究来源：'+esc(report.studyTitle)+'</p>':'')+documentSections(report).map(section=>'<section><h2>'+esc(section.title)+'</h2><table><thead><tr>'+section.headers.map(h=>'<th>'+esc(h)+'</th>').join('')+'</tr></thead><tbody>'+section.rows.map(row=>'<tr>'+row.map(value=>'<td>'+esc(value??'—')+'</td>').join('')+'</tr>').join('')+'</tbody></table></section>').join('')+(report.note?'<section><h2>教师判断与后续行动</h2><p class="written-note">'+esc(report.note)+'</p></section>':'')+'<footer>'+esc(report.created)+' · 缺失值保留为空，原排名保留原统计范围。</footer></article>';
-}
 export function print(report) {document.getElementById('print-area').innerHTML=reportHTML(report);window.print();}
 export async function word(report) {
-  const {JSZip}=await vendors(),zip=new JSZip();
-  const paragraph=(text,bold=false)=>'<w:p><w:r>'+(bold?'<w:rPr><w:b/></w:rPr>':'')+'<w:t xml:space="preserve">'+esc(text??'')+'</w:t></w:r></w:p>';
-  const sections=documentSections(report).map(section=>paragraph(section.title,true)+'<w:tbl><w:tblPr><w:tblBorders>'+['top','left','bottom','right','insideH','insideV'].map(side=>'<w:'+side+' w:val="single" w:sz="4" w:color="C8CDD8"/>').join('')+'</w:tblBorders></w:tblPr>'+[section.headers,...section.rows].map((row,i)=>'<w:tr>'+(i===0?'<w:trPr><w:tblHeader/></w:trPr>':'')+row.map(value=>'<w:tc>'+paragraph(String(value??'—'),i===0)+'</w:tc>').join('')+'</w:tr>').join('')+'</w:tbl>').join('');
-  zip.file('[Content_Types].xml','<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>');
-  zip.file('_rels/.rels','<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>');
-  zip.file('word/document.xml','<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>'+paragraph(SITE_NAME,true)+paragraph(report.title,true)+paragraph(report.subtitle)+(report.studyTitle?paragraph('研究来源：'+report.studyTitle):'')+sections+paragraph('教师判断与后续行动',true)+paragraph(report.note||'')+paragraph(report.created)+'<w:sectPr><w:pgSz w:w="16838" w:h="11906" w:orient="landscape"/><w:pgMar w:top="900" w:right="800" w:bottom="900" w:left="800"/></w:sectPr></w:body></w:document>');
-  download(await zip.generateAsync({type:'blob'}),report.title+'.docx');
+ const {JSZip}=await vendors(),zip=new JSZip();for(const [name,content] of Object.entries(wordFiles(report)))zip.file(name,content);
+ download(await zip.generateAsync({type:'blob'}),report.title+'.docx');
 }
+let pdfReady;
+async function pdfEngine(){
+ if(!pdfReady){const attempt=(async()=>{
+  if(!window.pdfMake)await new Promise((resolve,reject)=>{const script=document.createElement('script');let done=false;const finish=e=>{if(done)return;done=true;clearTimeout(timer);script.onload=script.onerror=null;if(e){script.remove();reject(e);}else resolve();},timer=setTimeout(()=>finish(new Error('PDF组件加载超时，请重试')),30000);script.src=new URL('../../vendor/pdfmake.min.js',import.meta.url);script.onload=()=>finish(window.pdfMake?null:new Error('PDF组件初始化失败'));script.onerror=()=>finish(new Error('PDF组件加载失败，请重试'));document.head.append(script);});
+  const entries=await Promise.all(['regular','medium'].map(async weight=>{const response=await fetch(new URL('../../assets/report-fonts/report-'+weight+'.otf',import.meta.url),{signal:AbortSignal.timeout(60000)});if(!response.ok)throw new Error('打印中文字体加载失败，请重试');const data=new Uint8Array(await response.arrayBuffer());let binary='';for(let i=0;i<data.length;i+=32768)binary+=String.fromCharCode(...data.subarray(i,i+32768));return ['report-'+weight+'.otf',btoa(binary)];}));
+  window.pdfMake.addVirtualFileSystem(Object.fromEntries(entries));window.pdfMake.fonts={Report:{normal:'report-regular.otf',bold:'report-medium.otf',italics:'report-regular.otf',bolditalics:'report-medium.otf'}};return window.pdfMake;
+ })();pdfReady=attempt;attempt.catch(()=>{if(pdfReady===attempt)pdfReady=null;});}
+ return pdfReady;
+}
+export async function pdf(report){const engine=await pdfEngine();const blob=await new Promise((resolve,reject)=>{let done=false;const finish=(error,result)=>{if(done)return;done=true;clearTimeout(timer);error?reject(error):resolve(result);},timer=setTimeout(()=>finish(new Error('PDF生成超时，可缩小报告范围或先下载Word')),120000);try{const definition=pdfDefinition(report),doc=engine.createPdf(definition);const stream=doc.getStream({});stream.on('error',error=>finish(error));const chunks=[];stream.on('data',chunk=>chunks.push(chunk));stream.on('end',()=>finish(null,new Blob(chunks,{type:'application/pdf'})));stream.end();}catch(e){finish(e);}});download(blob,report.title+'.pdf');}
 export async function chart(id,png=false) {
   const svg=document.getElementById(id);if(!svg)throw new Error('当前没有可导出的图表，请先补充可绘制的数据。');
   const copy=svg.cloneNode(true),{width,height}=svg.viewBox.baseVal;copy.setAttribute('xmlns','http://www.w3.org/2000/svg');copy.setAttribute('width',width);copy.setAttribute('height',height);

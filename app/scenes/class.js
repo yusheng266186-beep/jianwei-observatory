@@ -1,8 +1,8 @@
-import {goalCards} from '../ui/evidence-visuals.js?v=review-v23';
-import {head,button,chips,badge,block,examRail,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote,classPicker} from '../ui/html.js?v=review-v23';
-import {trajectory,bars,spread,chartButtons} from '../ui/plots.js?v=review-v23';
-import {difference,average,valid,maxScore} from '../engine/metrics.js?v=review-v23';
-import {scoreRows,evidence} from '../io/exports.js?v=review-v23';
+import {goalCards} from '../ui/evidence-visuals.js?v=reports-v24';
+import {head,button,chips,badge,block,examRail,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote,classPicker} from '../ui/html.js?v=reports-v24';
+import {trajectory,bars,spread,chartButtons} from '../ui/plots.js?v=reports-v24';
+import {difference,average,valid,maxScore} from '../engine/metrics.js?v=reports-v24';
+import {scoreRows,evidence} from '../io/exports.js?v=reports-v24';
 const rowsSection=(title,headers,rows)=>({title,headers,rows});
 export function render(atlas,state) {
   const no=state.no||atlas.classes[0],available=atlas.classExams(no),exam=available.some(e=>e.id===state.exam)?state.exam:available.at(-1)?.id||atlas.latest;
@@ -64,7 +64,7 @@ export function render(atlas,state) {
     sections=[rowsSection('班级单次成绩',sheets['班级成绩分析单次'][0],sheets['班级成绩分析单次'].slice(1)),rowsSection('学科结构',sheets['学科结构'][0],subRows)];
   }
   const sidebar='<aside class="class-atlas"><div class="overline">选择研究对象</div>'+classPicker(atlas,no,true)+'<details class="class-profile" data-render-key="class-profile-'+no+'"><summary>班级资料 <span>'+esc(profile.lead||'班主任待填写')+'</span></summary><div class="class-passport">'+badge(profile.cohort==='repeat'?'补习班':'应届班')+badge(profile.track==='physics'?'物理类':'历史类')+'<dl><dt>班型</dt><dd>'+esc(profile.type)+'</dd><dt>班主任</dt><dd>'+esc(profile.lead||'未填写')+'</dd><dt>选科</dt><dd>'+esc(profile.combination)+'</dd></dl></div></details></aside>';
-  const html=head('02 / 班级研究',no+'班 · 成绩研究',(state.tab==='history'?'历次成绩对照':atlas.exam(exam).label)+' · '+(profile.track==='physics'?'物理类':'历史类'),button('摘录这页','capture',{},'outline')+button('导出','export',{},'accent'))+'<div class="class-workspace">'+sidebar+'<div class="class-canvas"><div class="scene-toolbar class-toolbar"><div class="scene-tabs">'+chips('tab',[['snapshot','本场成绩'],['history','历次对照'],['targets','有效与任务']],state.tab||'snapshot')+'</div>'+calendar+'</div>'+content+footnote('原排名保留原统计范围，市级与校级排名分别使用。补习班按每名学生的实际学科展开。')+'</div></div>';
+  const html=head('02 / 班级研究',no+'班 · 成绩研究',(state.tab==='history'?'历次成绩对照':atlas.exam(exam).label)+' · '+(profile.track==='physics'?'物理类':'历史类'),button('摘录这页','capture',{},'outline')+button('班级报告','teaching-report-entry',{kind:'class',...{no,exam}},'accent')+button('导出','export',{},'outline'))+'<div class="class-workspace">'+sidebar+'<div class="class-canvas"><div class="scene-toolbar class-toolbar"><div class="scene-tabs">'+chips('tab',[['snapshot','本场成绩'],['history','历次对照'],['targets','有效与任务']],state.tab||'snapshot')+'</div>'+calendar+'</div>'+content+footnote('原排名保留原统计范围，市级与校级排名分别使用。补习班按每名学生的实际学科展开。')+'</div></div>';
   return {html,report:evidence(no+'班 · '+({history:'历次对照',targets:'有效达成'}[state.tab]||atlas.exam(exam).label),atlas.data.school||'',sections,sheets)};
 }
 function pagination(page,count){return '<div class="pagination">'+button('←','page',{step:-1},'outline',page<=1?'disabled':'')+'<span>'+page+' / '+Math.max(1,Math.ceil(count/40))+'</span>'+button('→','page',{step:1},'outline',page*40>=count?'disabled':'')+'</div>';}
