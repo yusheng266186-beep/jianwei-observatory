@@ -1,7 +1,7 @@
-import {esc,number,percent,attrs} from './html.js?v=controls-v25';
-import {valid} from '../engine/metrics.js?v=controls-v25';
-import {plotPalette as palette} from './palette.js?v=controls-v25';
-import {scoreTone,scoreLegend} from './score-tones.js?v=controls-v25';
+import {esc,number,percent,attrs} from './html.js?v=texture-v26';
+import {valid} from '../engine/metrics.js?v=texture-v26';
+import {plotPalette as palette} from './palette.js?v=texture-v26';
+import {scoreTone,scoreLegend} from './score-tones.js?v=texture-v26';
 export const seriesColors=palette.series;
 const colors=seriesColors;
 const action=item=>item?.cmd?' data-plot-action="true" data-cmd="'+esc(item.cmd)+'"'+attrs(item.data||{})+' role="button" tabindex="0"':'';

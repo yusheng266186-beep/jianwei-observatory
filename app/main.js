@@ -1,34 +1,35 @@
-import {selectionFor,fieldsFor,presetSections,selectedReport} from './engine/report-selection.js?v=controls-v25';
-import {installPlanControls} from './ui/plan-controls.js?v=controls-v25';
-import {buildTeachingReport} from './engine/reports.js?v=controls-v25';
-import {reportSpec} from './ui/report-studio.js?v=controls-v25';
-import {followEditor} from './ui/follow-editor.js?v=controls-v25';
-import {normalizePlan,draftForPlan,questionOptions,snapshotQuestion,materialPeople,validDate} from './engine/training.js?v=controls-v25';
-import {questionView,questionEvidence} from './ui/question.js?v=controls-v25';
-import {queryQuestionMap,questionSequence} from './engine/question-map.js?v=controls-v25';
-import {SITE_NAME} from './brand.js?v=controls-v25';
-import {subjectView,knowledgeView,lensEvidence} from './ui/lenses.js?v=controls-v25';
-import {subjectLens,skillLens,questionLens} from './engine/lenses.js?v=controls-v25';
-import {directoryFilterView} from './scenes/directory.js?v=controls-v25';
-import {renderInto} from './ui/render.js?v=controls-v25';
-import {installInteractions,enhance,prepareUpdate,pruneInteractions,shiftTable} from './ui/interactions.js?v=controls-v25';
-import {readingDefaults,readingView,applyReading} from './ui/reading.js?v=controls-v25';
-import {reportView} from './ui/report.js?v=controls-v25';
-import {welcomeView} from './ui/welcome.js?v=controls-v25';
-import {composeScene} from './ui/composition.js?v=controls-v25';
-import {researchView,studyDescription,studyAvailable,studyKey} from './ui/research.js?v=controls-v25';
-import {Atlas} from './engine/atlas.js?v=controls-v25';
-import {normalizeDataset,SUBJECTS} from './data/compat.js?v=controls-v25';
-import {hydrate,save,saveWorkspace,restoreDataset,hasMaterials,preference,remember,previous,emptyDataset,loadNotebook,saveNotebook} from './data/workspace.js?v=controls-v25';
-import {mergeDatasets} from './data/parser.js?v=controls-v25';
-import {Inbox} from './data/inbox.js?v=controls-v25';
-import {NoteJournal} from './data/notes.js?v=controls-v25';
-import {motion,settle,visualFrame,cancelOwnMotion,finishAnimation,enterCanvas,arrangeRows,prepareCanvasSlide,finishCanvasSlide} from './ui/motion.js?v=controls-v25';
-import {esc,button,empty,table} from './ui/html.js?v=controls-v25';
-import {excel,word,pdf,print,download,chart,scoreRows,effectiveRows,subjectRows,answerRows,evidence} from './io/exports.js?v=controls-v25';
-import {directoryDefaults,lensValues,queryDirectory,directoryViewValues,directoryViewName} from './engine/directory.js?v=controls-v25';
-import {peekView,compareView,drawerEvidence} from './ui/explorer.js?v=controls-v25';
-import {dockIcon} from './ui/icons.js?v=controls-v25';
+import {installReportReading} from './ui/report-reading.js?v=texture-v26';
+import {selectionFor,fieldsFor,presetSections,selectedReport} from './engine/report-selection.js?v=texture-v26';
+import {installPlanControls} from './ui/plan-controls.js?v=texture-v26';
+import {buildTeachingReport} from './engine/reports.js?v=texture-v26';
+import {reportSpec} from './ui/report-studio.js?v=texture-v26';
+import {followEditor} from './ui/follow-editor.js?v=texture-v26';
+import {normalizePlan,draftForPlan,questionOptions,snapshotQuestion,materialPeople,validDate} from './engine/training.js?v=texture-v26';
+import {questionView,questionEvidence} from './ui/question.js?v=texture-v26';
+import {queryQuestionMap,questionSequence} from './engine/question-map.js?v=texture-v26';
+import {SITE_NAME} from './brand.js?v=texture-v26';
+import {subjectView,knowledgeView,lensEvidence} from './ui/lenses.js?v=texture-v26';
+import {subjectLens,skillLens,questionLens} from './engine/lenses.js?v=texture-v26';
+import {directoryFilterView} from './scenes/directory.js?v=texture-v26';
+import {renderInto} from './ui/render.js?v=texture-v26';
+import {installInteractions,enhance,prepareUpdate,pruneInteractions,shiftTable} from './ui/interactions.js?v=texture-v26';
+import {readingDefaults,readingView,applyReading} from './ui/reading.js?v=texture-v26';
+import {reportView} from './ui/report.js?v=texture-v26';
+import {welcomeView} from './ui/welcome.js?v=texture-v26';
+import {composeScene} from './ui/composition.js?v=texture-v26';
+import {researchView,studyDescription,studyAvailable,studyKey} from './ui/research.js?v=texture-v26';
+import {Atlas} from './engine/atlas.js?v=texture-v26';
+import {normalizeDataset,SUBJECTS} from './data/compat.js?v=texture-v26';
+import {hydrate,save,saveWorkspace,restoreDataset,hasMaterials,preference,remember,previous,emptyDataset,loadNotebook,saveNotebook} from './data/workspace.js?v=texture-v26';
+import {mergeDatasets} from './data/parser.js?v=texture-v26';
+import {Inbox} from './data/inbox.js?v=texture-v26';
+import {NoteJournal} from './data/notes.js?v=texture-v26';
+import {motion,settle,visualFrame,cancelOwnMotion,finishAnimation,enterCanvas,arrangeRows,prepareCanvasSlide,finishCanvasSlide} from './ui/motion.js?v=texture-v26';
+import {esc,button,empty,table} from './ui/html.js?v=texture-v26';
+import {excel,word,pdf,print,download,chart,scoreRows,effectiveRows,subjectRows,answerRows,evidence} from './io/exports.js?v=texture-v26';
+import {directoryDefaults,lensValues,queryDirectory,directoryViewValues,directoryViewName} from './engine/directory.js?v=texture-v26';
+import {peekView,compareView,drawerEvidence} from './ui/explorer.js?v=texture-v26';
+import {dockIcon} from './ui/icons.js?v=texture-v26';
 
 const routes=[['board','年级总览','▦'],['class','班级研究','▥'],['papers','试卷研究','▧'],['people','学生研究','◎'],['follow','教学跟进','↗'],['library','资料与报告','⊞']];
 const defaults={board:{mode:'overview',metric:'underRate',historyMetric:'mean',search:'',page:1},class:{tab:'snapshot',value:'score',trendMetric:'mean',matrix:'total',search:'',page:1,matched:false},papers:{key:'',tab:'map',classes:[],question:0,order:'paper',questionSearch:'',questionFocus:'all',search:'',page:1},people:{sid:'',storyMetric:'total',...directoryDefaults,filtersOpen:innerWidth>760},follow:{tier:'under',band:20,side:'below',classes:[],search:'',page:1},library:{tab:'materials'}};
@@ -211,7 +212,7 @@ async function paint(transition=false,focus=null) {
     const available=hasMaterials(atlas.data);let view;
     if(!available)view=welcomeView();
     else {
-      if(!loaded.has(scene))loaded.set(scene,import('./scenes/'+scene+'.js?v=controls-v25'));
+      if(!loaded.has(scene))loaded.set(scene,import('./scenes/'+scene+'.js?v=texture-v26'));
       const module=await loaded.get(scene);if(serial!==paintId)return;
       view=scene==='class'&&!atlas.classes.length?{html:empty('先带入一个班的材料','从导入原表开始建立班级画布。')+button('导入材料','import',{},'accent'),report:null}:module.render(atlas,books[scene],session);
     }
@@ -315,10 +316,10 @@ function openReport(report,{fresh=false}={}) {
   if(exportReport?.id)persistNotebook().catch(()=>{});reportNoteRevision++;
   clearTimeout(noteTimer);exportReport=structuredClone(report);reportOrigin=report.id?(report.study||null):studyNow();
   if(reportOrigin&&!exportReport.study){exportReport.study=structuredClone(reportOrigin);exportReport.studyTitle=studyDescription(atlas,reportOrigin).title;}
-  reportNoteState=report.id?'saved':'preview';reportScope={section:0,page:1,search:'',preview:report.kind?'paper':'details'};drawReport();
-  const dialog=document.getElementById('report-dialog');showDialog(dialog);dialog.scrollTop=0;enhance(dialog);
+  reportNoteState=report.id?'saved':'preview';reportScope={section:0,page:1,search:'',preview:report.kind?'paper':'details',reading:false,paperWidth:'fit'};drawReport({reset:true});
+  const dialog=document.getElementById('report-dialog');showDialog(dialog);dialog.scrollTop=0;reportReader?.sync(reportScope,{top:0,left:0,end:false});enhance(dialog);
 }
-function drawReport(){prepareUpdate();const content=document.getElementById('report-content');renderInto(content,reportView(exportReport,reportScope,{noteState:reportNoteState,canReturn:Boolean(reportOrigin&&studyAvailable(atlas,reportOrigin))}));enhance(content);}
+function drawReport({reset=false}={}){const snapshot=reset?{top:0,left:0,end:false}:reportReader?.snapshot();prepareUpdate();const content=document.getElementById('report-content');renderInto(content,reportView(exportReport,reportScope,{noteState:reportNoteState,canReturn:Boolean(reportOrigin&&studyAvailable(atlas,reportOrigin))}));reportReader?.sync(reportScope,snapshot);enhance(content);}
 function updateReportSelection(change,{render=true}={}){
  if(!exportReport)return;const selection=selectionFor(exportReport);change(selection);exportReport.outputSelection=selection;
  if(exportReport.id){const note=session.notebook.find(n=>n.id===exportReport.id);if(note){note.outputSelection=structuredClone(selection);recordNoteDraft(note);showNoteState('saving');clearTimeout(noteTimer);noteTimer=setTimeout(persistReportNote,400);}}
@@ -433,7 +434,7 @@ function addFollow(sid,exam,tier) {
   const nearest=atlas.critical(exam,{tier,band:10000,side:'both'}).find(item=>item.row.sid===sid)?.nearest;
   session.plans.unshift({id,sid,exam,tier,classNo:row.classNo,subject:nearest?.subject||'',status:'new',note:'',created:new Date().toISOString()});remember('plans',session.plans);notify('已加入跟进看板',{label:'查看跟进',cmd:'follow-open'});if(current==='follow')paint();
 }
-let planDraft=null,planUI={},planSearchTimer,planControls;
+let planDraft=null,planUI={},planSearchTimer,planControls,reportReader;
 const planPaths=new Set(['sid','exam','teacher','note','reviewDate','result','training.key','training.tasks','training.method','training.count','training.targetRate','training.goal','schedule.date','schedule.slot','schedule.period','schedule.time','schedule.duration','ui.no','ui.search','ui.questionFilter','ui.knowledge']);
 function rememberPlanDraft(){if(!remember('followDraft',planDraft?{plan:planDraft,ui:planUI}:null))notify('训练草稿本机保存未完成，当前页面仍保留，请保存计划或下载备份');}
 function drawPlan(){planControls?.close();const root=document.getElementById('plan-content');renderInto(root,followEditor(atlas,planDraft,planUI));enhance(root);}
@@ -506,7 +507,10 @@ async function commands(event) {
     if(d.cmd==='report-part-move'){updateReportSelection(s=>{const from=s.order.indexOf(Number(d.index)),to=from+Number(d.step);if(from>=0&&to>=0&&to<s.order.length)[s.order[from],s.order[to]]=[s.order[to],s.order[from]];});return;}
     if(d.cmd==='report-field-toggle'){const index=Number(d.index),fields=fieldsFor(exportReport,index),column=Number(d.column);if(fields.includes(column)&&fields.length===1){notify('表格至少保留一个字段');return;}updateReportSelection(s=>{s.fields[index]=fields.includes(column)?fields.filter(i=>i!==column):[...fields,column].sort((a,b)=>a-b);});return;}
     if(d.cmd==='report-extra-toggle'){if(['includeNote','includeMeta'].includes(d.key))updateReportSelection(s=>{s[d.key]=!s[d.key];});return;}
-    if(d.cmd==='report-preview-mode'){reportScope.preview=d.value;drawReport();return;}
+    if(d.cmd==='report-preview-mode'){reportScope.preview=d.value;reportScope.reading=false;drawReport();return;}
+    if(d.cmd==='report-reading'){reportScope.reading=!reportScope.reading;drawReport();document.querySelector('[data-cmd=report-reading]')?.focus({preventScroll:true});return;}
+    if(d.cmd==='report-paper-width'){reportScope.paperWidth=d.value==='actual'?'actual':'fit';drawReport();return;}
+    if(d.cmd==='report-paper-edge'){reportReader.edge(d.value);return;}
     if(d.cmd==='follow-report'){await flushSearch();openReport(buildTeachingReport(atlas,{kind:'follow',exam:'all',no:'all',planState:structuredClone(books.follow)},session.plans),{fresh:true});return;}
     if(['capture','export','research','research-pin'].includes(d.cmd)){
       const scene=current,epoch=navigationEpoch;await flushSearch();if(scene!==current||epoch!==navigationEpoch)return;
@@ -731,6 +735,7 @@ export async function mount() {
   inbox=new Inbox(commitMaterial,notify,()=>atlas.data);
   installInteractions({reducedMotion});
   planControls=installPlanControls({reducedMotion});
+  reportReader=installReportReading(document.getElementById('report-dialog'));
   window.addEventListener('resize',finishCanvasSlide,{passive:true});
   matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change',event=>{if(event.matches)finishCanvasSlide();});
   document.addEventListener('click',commands);document.addEventListener('submit',forms);
@@ -743,7 +748,7 @@ export async function mount() {
   window.addEventListener('resize',positionDock);
   document.addEventListener('scroll',()=>{if(hasMaterials(atlas.data))scheduleResearch();},{passive:true,capture:true});
   window.addEventListener('pagehide',()=>{archiveStudy();if(session.notebook.length)persistNotebook().catch(()=>{});});
-  document.getElementById('report-dialog').addEventListener('cancel',async event=>{event.preventDefault();await closeReport();});
+  document.getElementById('report-dialog').addEventListener('cancel',async event=>{event.preventDefault();if(reportScope.reading){reportScope.reading=false;drawReport();document.querySelector('[data-cmd=report-reading]')?.focus({preventScroll:true});}else await closeReport();});
   document.addEventListener('keydown',event=>{if(event.target.matches?.('.student-dot,[data-plot-action]')&&['Enter',' '].includes(event.key)){event.preventDefault();event.target.dispatchEvent(new MouseEvent('click',{bubbles:true}));}});
   document.addEventListener('keydown',event=>{if(event.defaultPrevented||event.target.closest('dialog')!==drawer||!drawer.open||event.altKey||event.ctrlKey||event.metaKey||!['ArrowLeft','ArrowRight'].includes(event.key)||event.target.closest('input,textarea,select,.table-scroll,.drawer-stages,.drawer-tabs,.drawer-section-nav'))return;const cmd=drawerState?.type==='person'?'drawer-person-step':drawerState?.type==='question'?'drawer-question-step':null,button=cmd&&drawer.querySelector('[data-cmd="'+cmd+'"][data-step="'+(event.key==='ArrowLeft'?-1:1)+'"]');if(button&&!button.disabled){event.preventDefault();button.click();}});
   document.addEventListener('compositionend',event=>{if(event.target.matches?.('[data-field],[data-drawer-field],[data-report-search],[data-report-output-filter],[data-report-output-title],[data-research-search],[data-plan-note],[data-plan-field],[data-evidence-note],#report-note'))event.target.dispatchEvent(new Event('input',{bubbles:true}));});

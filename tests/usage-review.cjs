@@ -1,6 +1,6 @@
 const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const {makeWideFixture}=require('./fixtures.cjs');
-const url=process.env.AUDIT_URL||'http://127.0.0.1:4173',out=path.join(__dirname,'../.audit-output/controls-v25/usage');fs.mkdirSync(out,{recursive:true});
+const url=process.env.AUDIT_URL||'http://127.0.0.1:4173',out=path.join(__dirname,'../.audit-output/texture-v26/usage');fs.mkdirSync(out,{recursive:true});
 const fixture=()=>{const data=makeWideFixture();data.plans=[{id:'review-plan',sid:'test-4-4',classNo:4,exam:'52',tier:'under',subject:'数学',status:'new',note:'旧的教学记录'}];data.banks['数学|52'].push(...Array.from({length:14},(_,i)=>({label:String(i+4),max:10,knowledge:'综合推理'})));data.answers.forEach(a=>{if(a.subject==='数学')a.values.push(...Array(14).fill(6));});return data;};
 (async()=>{
  const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',headless:true,args:['--no-sandbox']}),results=[];

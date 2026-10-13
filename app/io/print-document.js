@@ -1,6 +1,6 @@
-import {selectedReport} from '../engine/report-selection.js?v=controls-v25';
-import {esc} from '../ui/html.js?v=controls-v25';
-import {SITE_NAME} from '../brand.js?v=controls-v25';
+import {selectedReport} from '../engine/report-selection.js?v=texture-v26';
+import {esc} from '../ui/html.js?v=texture-v26';
+import {SITE_NAME} from '../brand.js?v=texture-v26';
 // All three outlets share the same sections, field splits and missing-value rules.
 export function documentSections(report){
  return (report.sections||[]).flatMap(s=>{

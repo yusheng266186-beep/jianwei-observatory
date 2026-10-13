@@ -1,8 +1,8 @@
-import {goalCards} from '../ui/evidence-visuals.js?v=controls-v25';
-import {head,button,chips,badge,block,examRail,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote,classPicker} from '../ui/html.js?v=controls-v25';
-import {trajectory,bars,spread,chartButtons} from '../ui/plots.js?v=controls-v25';
-import {difference,average,valid,maxScore} from '../engine/metrics.js?v=controls-v25';
-import {scoreRows,evidence} from '../io/exports.js?v=controls-v25';
+import {goalCards} from '../ui/evidence-visuals.js?v=texture-v26';
+import {head,button,chips,badge,block,examRail,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote,classPicker} from '../ui/html.js?v=texture-v26';
+import {trajectory,bars,spread,chartButtons} from '../ui/plots.js?v=texture-v26';
+import {difference,average,valid,maxScore} from '../engine/metrics.js?v=texture-v26';
+import {scoreRows,evidence} from '../io/exports.js?v=texture-v26';
 const rowsSection=(title,headers,rows)=>({title,headers,rows});
 export function render(atlas,state) {
   const no=state.no||atlas.classes[0],available=atlas.classExams(no),exam=available.some(e=>e.id===state.exam)?state.exam:available.at(-1)?.id||atlas.latest;

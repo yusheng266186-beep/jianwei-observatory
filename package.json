@@ -28,7 +28,8 @@
     "test:reports": "node tests/reports-browser.cjs",
     "test:report-edges": "node tests/reports-boundaries.cjs",
     "test:plan-controls": "node tests/plan-controls.cjs",
-    "test:report-composer": "node tests/report-composer.cjs"
+    "test:report-composer": "node tests/report-composer.cjs",
+    "test:report-reading": "node tests/report-reading.cjs"
   },
   "devDependencies": {
     "playwright": "1.62.1"
