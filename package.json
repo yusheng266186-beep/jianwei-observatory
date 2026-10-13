@@ -23,7 +23,8 @@
     "test:typography": "node tests/typography.cjs",
     "test:close": "node tests/close-controls.cjs",
     "test:workbench": "node tests/paper-workbench.cjs",
-    "test:material": "node tests/material-cohesion.cjs"
+    "test:material": "node tests/material-cohesion.cjs",
+    "test:usage": "node tests/usage-review.cjs"
   },
   "devDependencies": {
     "playwright": "1.62.1"

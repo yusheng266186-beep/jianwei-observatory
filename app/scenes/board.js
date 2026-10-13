@@ -1,9 +1,9 @@
-import {goalCards} from '../ui/evidence-visuals.js?v=cohesion-v22';
-import {overview} from './overview.js?v=cohesion-v22';
-import {head,button,chips,examChips,badge,block,examRail,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote} from '../ui/html.js?v=cohesion-v22';
-import {mini,bars,trajectory,spread,chartButtons} from '../ui/plots.js?v=cohesion-v22';
-import {difference,average} from '../engine/metrics.js?v=cohesion-v22';
-import {scoreRows,effectiveRows,subjectRows,evidence} from '../io/exports.js?v=cohesion-v22';
+import {goalCards} from '../ui/evidence-visuals.js?v=review-v23';
+import {overview} from './overview.js?v=review-v23';
+import {head,button,chips,examChips,badge,block,examRail,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote} from '../ui/html.js?v=review-v23';
+import {mini,bars,trajectory,spread,chartButtons} from '../ui/plots.js?v=review-v23';
+import {difference,average} from '../engine/metrics.js?v=review-v23';
+import {scoreRows,effectiveRows,subjectRows,evidence} from '../io/exports.js?v=review-v23';
 const tools=()=>button('摘录这页','capture',{},'outline')+button('导出','export',{},'accent');
 export function render(atlas,state) {
   const exam=state.exam||atlas.latest,groups=atlas.groups(exam),rows=atlas.rows(exam),s=atlas.summary(rows);

@@ -1,4 +1,4 @@
-import {button} from './html.js?v=cohesion-v22';
+import {button} from './html.js?v=review-v23';
 
 export function welcomeView() {
   const template=document.getElementById('empty-workspace-template');

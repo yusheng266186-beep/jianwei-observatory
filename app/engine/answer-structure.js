@@ -1,4 +1,4 @@
-import {valid} from './metrics.js?v=cohesion-v22';
+import {valid} from './metrics.js?v=review-v23';
 
 export function answerStructure(answers,question,rules={}) {
   const score=answer=>answer.values[question.index],knownMax=valid(question.max)&&question.max>0;

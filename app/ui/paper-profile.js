@@ -1,8 +1,8 @@
-import {button,esc,integer,number,percent} from './html.js?v=cohesion-v22';
-import {chartButtons} from './plots.js?v=cohesion-v22';
-import {scoreTone,scoreTones,scoreLegend} from './score-tones.js?v=cohesion-v22';
-import {valid} from '../engine/metrics.js?v=cohesion-v22';
-import {paperStructure,paperCountLabel,paperMapLayout,questionNumbers} from '../engine/paper-structure.js?v=cohesion-v22';
+import {button,esc,integer,number,percent} from './html.js?v=review-v23';
+import {chartButtons} from './plots.js?v=review-v23';
+import {scoreTone,scoreTones,scoreLegend} from './score-tones.js?v=review-v23';
+import {valid} from '../engine/metrics.js?v=review-v23';
+import {paperStructure,paperCountLabel,paperMapLayout,questionNumbers} from '../engine/paper-structure.js?v=review-v23';
 
 export function paperProfile(lens,{threshold,selected,metrics,examLabel=lens.exam,scopeLabel='全部参考班'}) {
   const questions=lens.questions,structure=paperStructure(questions),layout=paperMapLayout(questions.length,760);

@@ -1,11 +1,11 @@
-import {button,badge,block,ribbon,table,number,integer,percent,esc,empty} from './html.js?v=cohesion-v22';
-import {bars,chartButtons} from './plots.js?v=cohesion-v22';
-import {average,valid} from '../engine/metrics.js?v=cohesion-v22';
-import {evidence} from '../io/exports.js?v=cohesion-v22';
-import {questionLens} from '../engine/lenses.js?v=cohesion-v22';
-import {questionSequence} from '../engine/question-map.js?v=cohesion-v22';
-import {questionNumbers} from '../engine/paper-structure.js?v=cohesion-v22';
-import {plotPalette} from './palette.js?v=cohesion-v22';
+import {button,badge,block,ribbon,table,number,integer,percent,esc,empty} from './html.js?v=review-v23';
+import {bars,chartButtons} from './plots.js?v=review-v23';
+import {average,valid} from '../engine/metrics.js?v=review-v23';
+import {evidence} from '../io/exports.js?v=review-v23';
+import {questionLens} from '../engine/lenses.js?v=review-v23';
+import {questionSequence} from '../engine/question-map.js?v=review-v23';
+import {questionNumbers} from '../engine/paper-structure.js?v=review-v23';
+import {plotPalette} from './palette.js?v=review-v23';
 
 function structureView(model) {
   const {structure:s,selectedId}=model;

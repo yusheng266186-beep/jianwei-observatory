@@ -1,6 +1,6 @@
-import {button,esc,number} from './html.js?v=cohesion-v22';
-import {scoreTone,scoreStyle} from './score-tones.js?v=cohesion-v22';
-import {valid} from '../engine/metrics.js?v=cohesion-v22';
+import {button,esc,number} from './html.js?v=review-v23';
+import {scoreTone,scoreStyle} from './score-tones.js?v=review-v23';
+import {valid} from '../engine/metrics.js?v=review-v23';
 
 export function personalQuestionLink(q,context,label,style='person-link',extra='') {
   return button(label,'answer-question',{key:context.subject+'|'+context.exam,index:q.index,sid:context.sid,classes:context.classNo},style,

@@ -1,9 +1,9 @@
-import {button,block,table,ribbon,number,integer,percent,delta,esc,empty} from './html.js?v=cohesion-v22';
-import {trajectory,bars,chartButtons} from './plots.js?v=cohesion-v22';
-import {subjectLens,skillLens} from '../engine/lenses.js?v=cohesion-v22';
-import {scoreTone,scoreStyle} from './score-tones.js?v=cohesion-v22';
-import {valid} from '../engine/metrics.js?v=cohesion-v22';
-import {evidence,scoreRows} from '../io/exports.js?v=cohesion-v22';
+import {button,block,table,ribbon,number,integer,percent,delta,esc,empty} from './html.js?v=review-v23';
+import {trajectory,bars,chartButtons} from './plots.js?v=review-v23';
+import {subjectLens,skillLens} from '../engine/lenses.js?v=review-v23';
+import {scoreTone,scoreStyle} from './score-tones.js?v=review-v23';
+import {valid} from '../engine/metrics.js?v=review-v23';
+import {evidence,scoreRows} from '../io/exports.js?v=review-v23';
 
 const tabs=(options,value)=>'<nav class="drawer-tabs lens-tabs" aria-label="观察视角">'+options.map(([id,label])=>button(label,'drawer-tab',{value:id},id===value?'chip selected':'chip','aria-pressed="'+(id===value)+'"')).join('')+'</nav>';
 const filters=(items,value)=>'<div class="lens-filters" role="group" aria-label="当前观察窗的名单条件">'+items.map(item=>button('<span>'+esc(item.label)+'</span><b>'+integer(item.count)+'</b>','lens-filter',{value:item.id},item.id===value?'lens-filter selected':'lens-filter','aria-pressed="'+(item.id===value)+'"')).join('')+'</div>';

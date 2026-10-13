@@ -1,7 +1,7 @@
-import {esc,number,integer,percent} from './html.js?v=cohesion-v22';
-import {valid} from '../engine/metrics.js?v=cohesion-v22';
-import {questionNumbers} from '../engine/paper-structure.js?v=cohesion-v22';
-import {scoreTone,scoreStyle} from './score-tones.js?v=cohesion-v22';
+import {esc,number,integer,percent} from './html.js?v=review-v23';
+import {valid} from '../engine/metrics.js?v=review-v23';
+import {questionNumbers} from '../engine/paper-structure.js?v=review-v23';
+import {scoreTone,scoreStyle} from './score-tones.js?v=review-v23';
 
 export function questionCard(q,{records,threshold,selected=false}) {
   const measured=valid(q.rate),normal=measured&&q.rate>=0&&q.rate<=1;

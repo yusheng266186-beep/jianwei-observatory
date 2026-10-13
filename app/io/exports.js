@@ -1,6 +1,7 @@
-import {esc,number,percent,signed} from '../ui/html.js?v=cohesion-v22';
-import {SITE_NAME,CREST_URL} from '../brand.js?v=cohesion-v22';
-import {chartFontRules} from '../ui/font-export.js?v=cohesion-v22';
+import {esc,number,percent,signed} from '../ui/html.js?v=review-v23';
+import {SITE_NAME,CREST_URL} from '../brand.js?v=review-v23';
+import {chartFontRules} from '../ui/font-export.js?v=review-v23';
+import {worksheetNames} from './sheet-names.js?v=review-v23';
 export function download(content,name,type='application/octet-stream') {
   const blob=content instanceof Blob?content:new Blob([content],{type}),url=URL.createObjectURL(blob),anchor=document.createElement('a');
   anchor.href=url;anchor.download=name;anchor.click();setTimeout(()=>URL.revokeObjectURL(url),5000);
@@ -20,9 +21,10 @@ export async function vendors() {
 }
 export async function excel(sheets,name=SITE_NAME+'-分析材料') {
   const {XLSX}=await vendors(),book=XLSX.utils.book_new();
-  for(const [label,rows] of Object.entries(sheets)) {
+  const entries=Object.entries(sheets),names=worksheetNames(entries.map(([label])=>label));
+  for(const [index,[,rows]] of entries.entries()) {
     const sheet=XLSX.utils.aoa_to_sheet(rows);sheet['!cols']=(rows[0]||[]).map((_,i)=>({wch:i===0?24:16}));
-    XLSX.utils.book_append_sheet(book,sheet,label.replace(/[\\/*?:\[\]]/g,'').slice(0,31));
+    XLSX.utils.book_append_sheet(book,sheet,names[index]);
   }
   XLSX.writeFile(book,name+'.xlsx');
 }
@@ -77,7 +79,7 @@ export async function word(report) {
 }
 export async function chart(id,png=false) {
   const svg=document.getElementById(id);if(!svg)throw new Error('当前没有可导出的图表，请先补充可绘制的数据。');
-  const copy=svg.cloneNode(true),dimensions=svg.viewBox.baseVal;copy.setAttribute('xmlns','http://www.w3.org/2000/svg');copy.setAttribute('width',dimensions.width);copy.setAttribute('height',dimensions.height);
+  const copy=svg.cloneNode(true),{width,height}=svg.viewBox.baseVal;copy.setAttribute('xmlns','http://www.w3.org/2000/svg');copy.setAttribute('width',width);copy.setAttribute('height',height);
   const labels=[...svg.querySelectorAll('text')];copy.querySelectorAll('text').forEach((text,index)=>{const style=getComputedStyle(labels[index]);for(const key of ['fontFamily','fontSize','fontWeight','fontStyle','fontStretch','fontVariantNumeric','letterSpacing','fill'])text.style[key]=style[key];});
   const fonts=await chartFontRules(labels);if(fonts){const style=document.createElementNS('http://www.w3.org/2000/svg','style');style.textContent=fonts;copy.prepend(style);}
   const blob=new Blob([new XMLSerializer().serializeToString(copy)],{type:'image/svg+xml'});
@@ -85,7 +87,7 @@ export async function chart(id,png=false) {
   const url=URL.createObjectURL(blob),image=new Image();
   try {
     await new Promise((resolve,reject)=>{
-      image.onload=()=>{try{const canvas=document.createElement('canvas');canvas.width=dimensions.width*2;canvas.height=dimensions.height*2;const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(image,0,0,canvas.width,canvas.height);canvas.toBlob(bytes=>{if(!bytes){reject(new Error('PNG暂时未能生成，请重试或下载SVG。'));return;}download(bytes,SITE_NAME+'-'+id+'.png');resolve();});}catch(error){reject(error);}};
+      image.onload=()=>{try{const canvas=document.createElement('canvas');canvas.width=width*2;canvas.height=height*2;const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(image,0,0,canvas.width,canvas.height);canvas.toBlob(bytes=>{if(!bytes){reject(new Error('PNG暂时未能生成，请重试或下载SVG。'));return;}download(bytes,SITE_NAME+'-'+id+'.png');resolve();});}catch(error){reject(error);}};
       image.onerror=()=>reject(new Error('图表图片未能打开，请重试或下载SVG。'));image.src=url;
     });
   }finally{URL.revokeObjectURL(url);}

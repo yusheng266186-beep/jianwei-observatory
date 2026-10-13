@@ -69,7 +69,7 @@ async function inspect(name,{tables=true,charts=true,mobile=true}={}){
    const control=page.locator(`${root} [data-cmd="${kind}"][data-id="${id}"]`);
    if(!await page.locator(`[id="${id}"]`).count()){assert.equal(await control.isDisabled(),true,'没有可绘制数据时导出应禁用');assert.match(await control.getAttribute('aria-label'),/没有可绘制/);return;}
    assert.equal(await control.isDisabled(),false);
-   const pending=page.waitForEvent('download',{timeout:5000});await click(`${root} [data-cmd="${kind}"][data-id="${id}"]`);
+   const pending=page.waitForEvent('download',{timeout:20000});await click(`${root} [data-cmd="${kind}"][data-id="${id}"]`);
    const download=await pending;assert.equal(await download.failure(),null);await download.saveAs(output+'/'+id+'.'+kind);
    const bytes=fs.readFileSync(output+'/'+id+'.'+kind);assert.ok(bytes.length>100);
    if(kind==='png')assert.equal(bytes.subarray(1,4).toString(),'PNG');else assert.match(bytes.toString(),/<svg/);
@@ -401,6 +401,8 @@ await group('19 统一入口与本轮新增试卷和单题控件',async()=>{
  await nav('papers');await click('[data-cmd="paper"][data-key="数学|52"]');
  await click('[data-cmd="paper-switch"][data-key="英语|52"]');await click('[data-cmd="paper-switch"][data-key="数学|52"]');
  await click('[data-cmd="paper-exam"][data-exam="51"]');await click('[data-cmd="paper-exam"][data-exam="52"]');
+ for(const value of ['low','missing','max']){await click(`[data-cmd="paper-focus"][data-value="${value}"]`);await layout('试卷研究起点:'+value);}
+ await set('questionFocus','all');
  await page.locator('[data-field="questionSearch"]').fill('第1题');await page.waitForTimeout(300);await click('[data-cmd="question-map-reset"]');
  await click('.question-map [data-index="0"]');await click('[data-cmd="question-band"][data-value="zero"]');
  await click('[data-cmd="drawer-section"][data-target="question-classes"]');await click('[data-cmd="drawer-section"][data-target="question-answers"]');

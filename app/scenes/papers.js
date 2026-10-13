@@ -1,12 +1,12 @@
-import {head,button,chips,examChips,badge,block,ribbon,table,number,integer,percent,esc,personButton,search,footnote,empty} from '../ui/html.js?v=cohesion-v22';
-import {bars,rateStyle,rateLegend,chartButtons} from '../ui/plots.js?v=cohesion-v22';
-import {average,sum,valid} from '../engine/metrics.js?v=cohesion-v22';
-import {answerRows,evidence} from '../io/exports.js?v=cohesion-v22';
-import {queryQuestionMap} from '../engine/question-map.js?v=cohesion-v22';
-import {questionCard} from '../ui/question-cards.js?v=cohesion-v22';
-import {paperProfile} from '../ui/paper-profile.js?v=cohesion-v22';
-import {scoreTone,scoreStyle} from '../ui/score-tones.js?v=cohesion-v22';
-import {paperCountLabel} from '../engine/paper-structure.js?v=cohesion-v22';
+import {head,button,chips,examChips,badge,block,ribbon,table,number,integer,percent,esc,personButton,search,footnote,empty} from '../ui/html.js?v=review-v23';
+import {bars,rateStyle,rateLegend,chartButtons} from '../ui/plots.js?v=review-v23';
+import {average,sum,valid} from '../engine/metrics.js?v=review-v23';
+import {answerRows,evidence} from '../io/exports.js?v=review-v23';
+import {queryQuestionMap} from '../engine/question-map.js?v=review-v23';
+import {questionCard} from '../ui/question-cards.js?v=review-v23';
+import {paperProfile} from '../ui/paper-profile.js?v=review-v23';
+import {scoreTone,scoreStyle} from '../ui/score-tones.js?v=review-v23';
+import {paperCountLabel} from '../engine/paper-structure.js?v=review-v23';
 export function render(atlas,state) {
   const papers=atlas.papers(),paper=papers.find(p=>p.key===state.key);
   if(!paper) {
