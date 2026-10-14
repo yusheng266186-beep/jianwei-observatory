@@ -147,7 +147,7 @@ export function enhance(root=document,{reveal=true}={}) {
   }
   for(const frame of root.querySelectorAll('.table-frame'))prioritizeLayout(frame,'table');
   for(const svg of root.querySelectorAll('.bars,.trajectory,.spread,.landscape'))prioritizeLayout(svg,'plot');
-  for(const rail of root.querySelectorAll('.scene-tabs > .chips,.drawer-tabs'))selectionRail(rail);
+  for(const rail of root.querySelectorAll('.scene-tabs > .chips,.drawer-tabs,.exercise-target > .chips'))selectionRail(rail);
   revealSelectedClasses(root);
   for(const rail of root.querySelectorAll('.goal-cards[data-scroll-key]'))rail.scrollLeft=galleryOffsets.get(rail.dataset.scrollKey)||0;
   if(reveal&&revealObserver&&!motionPreference())for(const node of root.querySelectorAll('.block,.student-scope,.follow-workbench,.knowledge-card,.personal-skills article,.source-launchpad>button,.student-card,.paper-cover,.question-tile'))if(!revealed.has(node)){revealed.add(node);if(node.getBoundingClientRect().top>innerHeight-25){observedReveals.add(node);revealObserver.observe(node);}}

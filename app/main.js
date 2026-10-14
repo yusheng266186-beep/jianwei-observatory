@@ -29,6 +29,7 @@ import {researchView,studyDescription,studyAvailable,studyKey} from './ui/resear
 import {Atlas} from './engine/atlas.js?v=runtime-v45';
 import {loadScene} from './scenes/load.js?v=runtime-v45';
 import {SUBJECTS} from './data/compat.js?v=runtime-v45';
+import {access,write} from './data/storage.js';
 import {hydrate,save,saveWorkspace,restoreDataset,hasMaterials,preference,remember,previous,emptyDataset,loadNotebook,saveNotebook} from './data/workspace.js?v=runtime-v45';
 import {prepareDataset,prepareMaterial} from './data/preparation.js?v=runtime-v45';
 import {remapScopedContext} from './data/identity.js?v=runtime-v45';
@@ -343,6 +344,7 @@ async function restoreContext(incoming) {
   for(const key of ['savedPeople','comparePeople','directoryViews'])if(Array.isArray(incoming[key])){session[key]=structuredClone(incoming[key]);remember(key,session[key]);}
   if(incoming.research){research.saved=structuredClone(Array.isArray(incoming.research.saved)?incoming.research.saved:[]);research.recent=structuredClone(Array.isArray(incoming.research.recent)?incoming.research.recent.slice(0,24):[]);persistResearch();}
   if(Array.isArray(incoming.notebook))session.notebook=structuredClone(incoming.notebook);
+  if(Array.isArray(incoming.exercises)){const previous=await access('exercises')||[],byId=new Map(previous.map(r=>[r.id,r]));for(const record of incoming.exercises)if(record?.id&&record.sid)byId.set(record.id,structuredClone(record));if(exerciseStudioTask)await(await exerciseStudioTask).reset();await write([['exercises',[...byId.values()]]]);}
 }
 async function changeMaterials(operation) {
   if(materialBusy)throw new Error('当前材料仍在更新，请完成后再操作');
@@ -475,7 +477,7 @@ function drawDrawer() {
   renderInto(content,(navigation?.outerHTML||'')+'<div class="drawer-body" data-render-key="drawer-body">'+template.innerHTML+'</div>');
   if(['person','subject','question'].includes(drawerState.type)){
     const tools=document.createElement('div');tools.className='drawer-actions teaching-outlets';
-    if(drawerState.type==='person')tools.innerHTML=button('学生打印报告','teaching-report-entry',{kind:'student',sid:drawerState.sid,exam:drawerState.exam},'outline')+button('新建训练计划','plan-open',{sid:drawerState.sid,exam:drawerState.exam},'outline');
+    if(drawerState.type==='person')tools.innerHTML=button('学生打印报告','teaching-report-entry',{kind:'student',sid:drawerState.sid,exam:drawerState.exam},'outline')+button('新建训练计划','plan-open',{sid:drawerState.sid,exam:drawerState.exam},'outline')+button('生成专项练习','exercise-open',{sid:drawerState.sid,exam:drawerState.exam},'outline');
     else if(drawerState.type==='subject')tools.innerHTML=button('学科打印报告','teaching-report-entry',{kind:'subject',no:drawerState.no,subject:drawerState.subject,exam:drawerState.exam},'outline');
     else if(drawerState.focusSid)tools.innerHTML=button('按这道题安排训练','plan-open',{sid:drawerState.focusSid,exam:drawerState.key.split('|')[1],key:drawerState.key,question:drawerState.question},'outline');
     content.querySelector('header')?.append(tools);
@@ -552,6 +554,15 @@ function addFollow(sid,exam,tier) {
   session.plans.unshift({id,sid,exam,tier,classNo:row.classNo,subject:nearest?.subject||'',status:'new',note:'',created:new Date().toISOString()});remember('plans',session.plans);notify('已加入跟进看板',{label:'查看跟进',cmd:'follow-open'});if(current==='follow')paint();
 }
 let planDraft=null,planUI={},planSearchTimer,planControls,reportReader;
+let exerciseStudioTask;
+async function openExercises(context={}){
+ if(!exerciseStudioTask){const task=import('./ui/exercise-studio.js').then(({createExerciseStudio})=>createExerciseStudio({notify,show:showDialog,close:dialog=>dismissDialog(dialog.id),getAtlas:()=>atlas,onAttach(record,source){
+  if(!atlas.materialAt(source.sid,source.exam)){notify('该学生材料已更换，练习仍保存在本机。');return;}
+  if(!planDraft||planDraft.sid!==source.sid||planDraft.exam!==source.exam)openPlan({sid:source.sid,exam:source.exam,id:source.plan?.id,key:'数学|'+source.exam});
+  planDraft.subject='数学';planDraft.training.key='数学|'+source.exam;planDraft.training.exercise=record;planDraft.training.goal=record.request.focus;planDraft.training.count=record.sheet.questions.length;planDraft.schedule.duration=record.request.minutes;rememberPlanDraft();drawPlan();showDialog(document.getElementById('plan-dialog'));notify('已加入训练草稿，请确认日期与复核安排后保存。');
+ }}));exerciseStudioTask=task;task.catch(()=>{if(exerciseStudioTask===task)exerciseStudioTask=null;});}
+ const studio=await exerciseStudioTask,sid=context.sid||planDraft?.sid,exam=context.exam||planDraft?.exam||atlas.latest;await studio.open({sid,exam,plan:planDraft?.sid===sid&&planDraft.exam===exam?planDraft:null});
+}
 const planPaths=new Set(['sid','exam','teacher','note','reviewDate','result','review.correct','review.total','training.key','training.tasks','training.method','training.count','training.targetRate','training.goal','schedule.date','schedule.slot','schedule.period','schedule.time','schedule.duration','ui.no','ui.search','ui.questionFilter','ui.knowledge']);
 function rememberPlanDraft(){if(!remember('followDraft',planDraft?{plan:planDraft,ui:planUI}:null))notify('训练草稿本机保存未完成，当前页面仍保留，请保存计划或下载备份');}
 function drawPlan(){planControls?.close();const root=document.getElementById('plan-content');renderInto(root,followEditor(atlas,planDraft,planUI));enhance(root);notificationLayout.refresh();}
@@ -564,9 +575,11 @@ function openPlan(context={}){
 }
 function setPlanValue(path,value){
  if(!planDraft||!planPaths.has(path))return;const [group,key]=path.split('.'),root=group==='ui'?planUI:planDraft;
+ const previous=key?root[group]?.[key]:root[group];
  if(planDraft.id&&['sid','exam'].includes(path)&&String(planDraft[path])!==String(value)){notify('这条计划已关联学生与考试，其他对象请新建训练计划。');return;}
  if(group==='ui')root[key]=value;else if(key)root[group][key]=value;else root[group]=value;
- if(['sid','exam','training.key'].includes(path)){
+ if(['sid','exam','training.key'].includes(path)&&String(previous)!==String(value)){
+  delete planDraft.training.exercise;
   planDraft.training.questions=[];planDraft.teacher='';planDraft=draftForPlan(atlas,{key:planDraft.training.key},planDraft);
   const qs=questionOptions(atlas,{...planDraft,key:planDraft.training.key});planDraft.training.questions=qs.filter(q=>q.weak).sort((a,b)=>a.rate-b.rate).slice(0,3).map(snapshotQuestion);planUI.knowledge='all';
  }
@@ -608,6 +621,7 @@ async function commands(event) {
   const d=b.dataset,state=books[current];
   if(/^(plan-|follow-|notebook-|reading-)|^(clear|undo|undo-action|capture)$/.test(d.cmd))invalidateViews();
   try {
+    if(d.cmd==='exercise-open'){await openExercises(d);return;}
     if(d.cmd.startsWith('plan-')){
       if(d.cmd==='plan-open')openPlan(d);
       else if(d.cmd==='plan-discard'){planDraft=null;rememberPlanDraft();await dismissDialog('plan-dialog');notify('未保存草稿已清除');}
@@ -811,7 +825,7 @@ async function commands(event) {
       try{await chart(d.id,d.cmd==='png');}
       finally{if(b.isConnected&&b.getAttribute('aria-busy')==='true'){b.disabled=false;b.removeAttribute('aria-busy');b.textContent=label;if(description===null)b.removeAttribute('aria-label');else b.setAttribute('aria-label',description);}}
     }
-    else if(d.cmd==='backup'){archiveStudy();download(JSON.stringify({...atlas.data,plans:session.plans,notebook:session.notebook,savedPeople:session.savedPeople,comparePeople:session.comparePeople,directoryViews:session.directoryViews,research}),SITE_NAME+'-完整工作区-'+new Date().toLocaleDateString('sv-SE',{timeZone:'Asia/Shanghai'})+'.json','application/json');}
+    else if(d.cmd==='backup'){archiveStudy();download(JSON.stringify({...atlas.data,plans:session.plans,notebook:session.notebook,savedPeople:session.savedPeople,comparePeople:session.comparePeople,directoryViews:session.directoryViews,research,exercises:await access('exercises')||[]}),SITE_NAME+'-完整工作区-'+new Date().toLocaleDateString('sv-SE',{timeZone:'Asia/Shanghai'})+'.json','application/json');}
     else if(d.cmd==='template')await template();
     else if(d.cmd==='four-sheets')await excel(fourSheets(),SITE_NAME+'-四表分析包');
     else if(d.cmd==='undo')await changeMaterials(async()=>{const dataset=inMemoryUndo||await previous();if(!dataset){notify('没有可撤回的材料替换');return;}await applyMaterials(dataset,workspaceSnapshot(),hasMaterials(dataset)?'已恢复上一次材料':'已恢复空白工作区',{undo:false});});

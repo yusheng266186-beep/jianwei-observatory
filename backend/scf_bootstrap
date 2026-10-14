@@ -1,0 +1,11 @@
+#!/bin/bash
+set -e
+cd -- "$(dirname -- "${BASH_SOURCE[0]}")"
+export PORT="${PORT:-9000}"
+for task_node in /var/lang/node20/bin/node /var/lang/node18/bin/node; do
+  if [ -x "$task_node" ] && "$task_node" -e 'process.exit(0)' 2>/dev/null; then
+    exec "$task_node" server.cjs
+  fi
+done
+echo "training service: Node.js 18 or 20 is required" >&2
+exit 1

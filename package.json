@@ -4,6 +4,8 @@
   "type": "module",
   "scripts": {
     "build": "node tools/build-runtime.cjs",
+    "package:training": "node tools/package-training.cjs",
+    "test:exercises": "node tests/exercise-studio.cjs",
     "test:speed": "node tests/runtime-speed.cjs",
     "test:mobile-attention": "node tests/mobile-attention.cjs",
     "profile:runtime": "node tests/profile-runtime.cjs",
