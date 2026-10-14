@@ -249,6 +249,11 @@ async function paint(transition=false,focus=null) {
       const module=await loadScene(scene);if(serial!==paintId)return;
       if(sceneObject(scene)!==paintedObject&&!stage().dataset.sliding&&!reducedMotion())await foregroundFrame();if(serial!==paintId)return;
       key=viewKey(scene);
+      if(key===paintedViewKey&&sceneObject(scene)===paintedObject&&!focus){
+        sceneReady(serial);const object=sceneObject(scene);
+        if(scrollResets.has(object)){window.scrollTo({top:0,behavior:'instant'});scrollResets.delete(object);}
+        return;
+      }
       view=sceneViews.get(key)?.view||retainView(key,scene==='class'&&!atlas.classes.length?{html:empty('先带入一个班的材料','从导入原表开始建立班级画布。')+button('导入材料','import',{},'accent'),report:null}:module.render(atlas,structuredClone(books[scene]),session));
     }
     const entry=sceneViews.get(key),html=available?(entry.html||=composeScene(view.html,{back:researchTrail.at(-1)?studyDescription(atlas,researchTrail.at(-1)).title:''})):view.html;
