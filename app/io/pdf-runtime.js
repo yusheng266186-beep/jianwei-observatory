@@ -7,7 +7,7 @@ function releaseWorker(){clearTimeout(idleTimer);worker?.terminate();worker=null
 function next(){
  if(active||!queue.length)return;clearTimeout(idleTimer);const job=queue.shift();active=job;
  try{
-  if(!worker){worker=new Worker(new URL('./pdf-worker.js?v=runtime-v33',import.meta.url),{type:'module'});const host=worker;host.onmessage=({data})=>{if(worker!==host||!active||data.id!==active.id)return;finish(data.error?new Error(data.error):null,data.blob);};host.onerror=event=>{event.preventDefault();if(worker!==host)return;releaseWorker();finish(new Error('PDF后台组件未能载入，请重试'));};}
+  if(!worker){worker=new Worker(new URL('./pdf-worker.js?v=runtime-v34',import.meta.url),{type:'module'});const host=worker;host.onmessage=({data})=>{if(worker!==host||!active||data.id!==active.id)return;finish(data.error?new Error(data.error):null,data.blob);};host.onerror=event=>{event.preventDefault();if(worker!==host)return;releaseWorker();finish(new Error('PDF后台组件未能载入，请重试'));};}
   job.timer=setTimeout(()=>{releaseWorker();finish(new Error('PDF生成超时，可缩小报告范围或先下载Word'));},120000);
   worker.postMessage({id:job.id,report:job.report});
  }catch(error){releaseWorker();finish(error);}

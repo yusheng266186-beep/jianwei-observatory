@@ -1,7 +1,7 @@
-import {esc,number,integer,percent,button} from './html.js?v=runtime-v33';
-import {valid} from '../engine/metrics.js?v=runtime-v33';
-import {plotPalette as palette} from './palette.js?v=runtime-v33';
-import {scoreTone,scoreStyle} from './score-tones.js?v=runtime-v33';
+import {esc,number,integer,percent,button} from './html.js?v=runtime-v34';
+import {valid} from '../engine/metrics.js?v=runtime-v34';
+import {plotPalette as palette} from './palette.js?v=runtime-v34';
+import {scoreTone,scoreStyle} from './score-tones.js?v=runtime-v34';
 
 export function thresholdProfile(id,summary) {
   const prefix='profile-'+[...String(id)].map(c=>c.codePointAt(0).toString(16)).join('-');

@@ -1,9 +1,9 @@
-import {personalQuestionCard,personalQuestionLink} from '../ui/personal-questions.js?v=runtime-v33';
-import {renderDirectory} from './directory.js?v=runtime-v33';
-import {head,button,chips,badge,block,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote,empty} from '../ui/html.js?v=runtime-v33';
-import {trajectory,chartButtons,rateColor,rateLegend} from '../ui/plots.js?v=runtime-v33';
-import {difference,valid,sum} from '../engine/metrics.js?v=runtime-v33';
-import {scoreRows,answerRows,evidence} from '../io/exports.js?v=runtime-v33';
+import {personalQuestionCard,personalQuestionLink} from '../ui/personal-questions.js?v=runtime-v34';
+import {renderDirectory} from './directory.js?v=runtime-v34';
+import {head,button,chips,badge,block,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote,empty} from '../ui/html.js?v=runtime-v34';
+import {trajectory,chartButtons,rateColor,rateLegend} from '../ui/plots.js?v=runtime-v34';
+import {difference,valid,sum} from '../engine/metrics.js?v=runtime-v34';
+import {scoreRows,answerRows,evidence} from '../io/exports.js?v=runtime-v34';
 export function render(atlas,state,session) {
   const story=state.sid?atlas.story(state.sid):[];
   const materials=state.sid?atlas.materialStory(state.sid):[],row=atlas.materialAt(state.sid,state.exam)||materials.at(-1);

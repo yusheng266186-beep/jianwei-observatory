@@ -1,12 +1,12 @@
-import {head,button,chips,examChips,badge,block,ribbon,table,number,integer,percent,esc,personButton,search,footnote,empty} from '../ui/html.js?v=runtime-v33';
-import {bars,rateStyle,rateLegend,chartButtons} from '../ui/plots.js?v=runtime-v33';
-import {average,sum,valid} from '../engine/metrics.js?v=runtime-v33';
-import {answerRows,evidence} from '../io/exports.js?v=runtime-v33';
-import {queryQuestionMap} from '../engine/question-map.js?v=runtime-v33';
-import {questionCard} from '../ui/question-cards.js?v=runtime-v33';
-import {paperProfile} from '../ui/paper-profile.js?v=runtime-v33';
-import {scoreTone,scoreStyle} from '../ui/score-tones.js?v=runtime-v33';
-import {paperCountLabel} from '../engine/paper-structure.js?v=runtime-v33';
+import {head,button,chips,examChips,badge,block,ribbon,table,number,integer,percent,esc,personButton,search,footnote,empty} from '../ui/html.js?v=runtime-v34';
+import {bars,rateStyle,rateLegend,chartButtons} from '../ui/plots.js?v=runtime-v34';
+import {average,sum,valid} from '../engine/metrics.js?v=runtime-v34';
+import {answerRows,evidence} from '../io/exports.js?v=runtime-v34';
+import {queryQuestionMap} from '../engine/question-map.js?v=runtime-v34';
+import {questionCard} from '../ui/question-cards.js?v=runtime-v34';
+import {paperProfile} from '../ui/paper-profile.js?v=runtime-v34';
+import {scoreTone,scoreStyle} from '../ui/score-tones.js?v=runtime-v34';
+import {paperCountLabel} from '../engine/paper-structure.js?v=runtime-v34';
 export function render(atlas,state) {
   const papers=atlas.papers(),paper=papers.find(p=>p.key===state.key);
   if(!paper) {
