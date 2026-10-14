@@ -1,6 +1,6 @@
-import {openSurface,closeSurface} from '../ui/surface-motion.js?v=runtime-v43';
-import {mergeDatasets,FLAT_FIELDS} from './parser.js?v=runtime-v43';
-import {esc,button,badge} from '../ui/html.js?v=runtime-v43';
+import {openSurface,closeSurface} from '../ui/surface-motion.js?v=runtime-v44';
+import {mergeDatasets,FLAT_FIELDS} from './parser.js?v=runtime-v44';
+import {esc,button,badge} from '../ui/html.js?v=runtime-v44';
 export class Inbox {
   constructor(commit,notify,current) {
     this.commit=commit;this.notify=notify;this.current=current;this.epoch=0;this.committing=false;
@@ -43,7 +43,7 @@ export class Inbox {
     const fields=FLAT_FIELDS.map(([key,label],index)=>{
       const selected=meta.mapping[key]??'';
       const columns=[['','不使用此列'],...meta.headers.map((header,i)=>[i,(i+1)+' · '+(header||'未命名列')])];
-      return '<details class="mapping-field" '+(index<2?'open':'')+'><summary>'+esc(label)+'<span>'+esc(columns.find(([id])=>String(id)===String(selected))?.[1]||'不使用此列')+'</span></summary><div class="mapping-columns">'+columns.map(([id,text])=>'<label><input type="radio" name="'+key+'" value="'+id+'" data-map-label="'+esc(text)+'" '+(String(id)===String(selected)?'checked':'')+'><span>'+esc(text)+'</span></label>').join('')+'</div></details>';
+      return '<details class="mapping-field" '+(['name','classNo'].includes(key)?'open':'')+'><summary>'+esc(label)+'<span>'+esc(columns.find(([id])=>String(id)===String(selected))?.[1]||'不使用此列')+'</span></summary><div class="mapping-columns">'+columns.map(([id,text])=>'<label><input type="radio" name="'+key+'" value="'+id+'" data-map-label="'+esc(text)+'" '+(String(id)===String(selected)?'checked':'')+'><span>'+esc(text)+'</span></label>').join('')+'</div></details>';
     }).join('');
     this.shell('<h2>每一列，对应什么？</h2><p>点选姓名与班级列，其余字段按需展开。没有的成绩列保持空白。</p><form data-mapping>'+fields+'<button class="button accent" type="submit">按这些列继续读取</button></form>');
   }
@@ -51,7 +51,7 @@ export class Inbox {
     const buffer=await file.arrayBuffer();
     if(epoch!==this.epoch)throw new Error('已取消导入');
     return new Promise((resolve,reject)=>{
-      const worker=new Worker(new URL('./worker.js?v=runtime-v43',import.meta.url)),timer=setTimeout(()=>finish(new Error('文件读取超时，请分开导入材料后重试。')),180000);
+      const worker=new Worker(new URL('./worker.js?v=runtime-v44',import.meta.url)),timer=setTimeout(()=>finish(new Error('文件读取超时，请分开导入材料后重试。')),180000);
       let finished=false;
       const finish=(error,result)=>{if(finished)return;finished=true;clearTimeout(timer);worker.terminate();if(this.pending?.worker===worker)this.pending=null;error?reject(error):resolve(result);};
       this.pending={file,buffer,worker,reject:error=>finish(error)};
@@ -78,7 +78,7 @@ export class Inbox {
       }
       if(epoch!==this.epoch)return;
       const d=this.incoming,current=this.current(),first=!current.scores.length&&!current.answers.length&&!current.lines.length&&!Object.keys(current.banks).length,replace=current.anonymous&&!d.anonymous;
-      const detail=first?'加入工作区后，开始查看这份材料的成绩与分析。':replace?'当前材料使用匿名姓名，导入真实成绩将建立真实工作区。':'合并按姓名、考次、班级与学科补充，空白保留旧值，实际0更新；小题按题号对应。需要清除旧数据时请选择替换，可在资料仓撤回。';
+      const detail=first?'加入工作区后，开始查看这份材料的成绩与分析。':replace?'当前材料使用匿名姓名，导入真实成绩将建立真实工作区。':'合并优先匹配学生识别码，结合姓名、考次、班级与学科补充，空白保留旧值，实际0更新；小题按题号对应。需要清除旧数据时请选择替换，可在资料仓撤回。';
       const actions=first?'<button class="button accent" data-inbox="commit" data-mode="replace">加入工作区</button>':'<button class="button '+(replace?'outline':'accent')+'" data-inbox="commit" data-mode="merge">合并材料 / 补充考次</button><button class="button '+(replace?'accent':'outline')+'" data-inbox="commit" data-mode="replace">替换为这份材料</button>';
       this.shell('<h2>材料已经展开</h2><p>'+files.map(f=>esc(f.name)).join('<br>')+'</p><div class="import-summary"><div><strong>'+d.students.length+'</strong><span>学生档案</span></div><div><strong>'+d.exams.length+'</strong><span>考试</span></div><div><strong>'+d.scores.length+'</strong><span>成绩记录</span></div><div><strong>'+d.answers.length+'</strong><span>小题学科记录</span></div></div><p>'+detail+'</p><div class="import-decisions">'+actions+'</div>');
     } catch(error) {if(epoch===this.epoch)this.error(error.message);}

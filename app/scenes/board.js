@@ -1,9 +1,9 @@
-import {goalCards} from '../ui/evidence-visuals.js?v=runtime-v43';
-import {overview} from './overview.js?v=runtime-v43';
-import {head,button,chips,examChips,badge,block,examRail,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote} from '../ui/html.js?v=runtime-v43';
-import {mini,bars,trajectory,spread,chartButtons} from '../ui/plots.js?v=runtime-v43';
-import {difference,average} from '../engine/metrics.js?v=runtime-v43';
-import {scoreRows,effectiveRows,subjectRows,evidence} from '../io/exports.js?v=runtime-v43';
+import {goalCards} from '../ui/evidence-visuals.js?v=runtime-v44';
+import {overview} from './overview.js?v=runtime-v44';
+import {head,button,chips,examChips,badge,block,examRail,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote} from '../ui/html.js?v=runtime-v44';
+import {mini,bars,trajectory,spread,chartButtons} from '../ui/plots.js?v=runtime-v44';
+import {difference,average} from '../engine/metrics.js?v=runtime-v44';
+import {scoreRows,effectiveRows,subjectRows,evidence} from '../io/exports.js?v=runtime-v44';
 const tools=()=>button('摘录这页','capture',{},'outline')+button('导出','export',{},'accent');
 export function render(atlas,state) {
   const exam=state.exam||atlas.latest,groups=atlas.groups(exam),rows=atlas.rows(exam),s=atlas.summary(rows);

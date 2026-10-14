@@ -32,3 +32,16 @@ body[data-motion=calm] dialog[data-backdrop-phase]::backdrop{animation:none!impo
 @media(max-width:760px){#research-drawer[data-kind] .drawer-title{padding:20px 18px 16px}}
 /* Notifications share the glass window, without covering its action row. */
 dialog #toast{bottom:var(--toast-clearance,max(16px,env(safe-area-inset-bottom)));right:var(--toast-right,16px);max-width:min(420px,var(--toast-width,calc(100vw - 32px)))}
+/* Source-based content remains readable during cold PDF/font preparation. */
+.pdf-pending-brief{max-width:780px;margin:16px auto;padding:clamp(16px,3vw,28px);border:1px solid var(--line);border-radius:var(--radius-inner);background:var(--panel-sheen),var(--material-panel);color:var(--ink);overflow-wrap:anywhere;box-sizing:border-box}
+.pdf-pending-brief h3{font-size:clamp(20px,4vw,28px);line-height:1.35;margin:8px 0 12px}
+.pdf-pending-brief p{color:var(--muted);line-height:1.6;margin:0 0 20px}
+.pdf-pending-brief h4{margin:0 0 12px}
+.pdf-pending-brief dl{display:grid;margin:0;gap:0}
+.pdf-pending-brief dl>div{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.6fr);gap:12px;padding:10px 0;border-top:1px solid var(--line)}
+.pdf-pending-brief dt,.pdf-pending-brief dd{min-width:0;margin:0;line-height:1.65}
+.pdf-pending-brief dd{font-weight:600}
+.follow-review{margin:12px 0;padding:12px 14px;border:1px solid var(--line);border-radius:var(--radius-inner);background:var(--inset-sheen),var(--material-inset);overflow-wrap:anywhere}
+.follow-review b,.follow-review small{display:block;line-height:1.6}
+.follow-review p{margin:6px 0 0;line-height:1.6}
+@media(max-width:400px){.pdf-pending-brief dl>div{grid-template-columns:minmax(0,1fr);gap:3px}}

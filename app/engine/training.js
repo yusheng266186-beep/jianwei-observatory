@@ -1,5 +1,5 @@
-import {knowledgeLabels} from './knowledge.js?v=runtime-v43';
-import {valid} from './metrics.js?v=runtime-v43';
+import {knowledgeLabels} from './knowledge.js?v=runtime-v44';
+import {valid} from './metrics.js?v=runtime-v44';
 
 export const trainingTasks=[['concept','概念梳理'],['worked','例题讲解'],['same','同类练习'],['variation','变式迁移'],['correction','错题订正'],['retest','再测验']];
 export const trainingMethods=[['individual','个别指导'],['group','小组互助'],['independent','独立训练'],['lesson','课堂专题']];
@@ -13,9 +13,23 @@ export function scheduleLabel(schedule={}){
  const slot=scheduleSlots.find(([id])=>id===schedule.slot)?.[1]||'时段待安排',period=['lesson','break'].includes(schedule.slot)&&schedule.period?'第'+schedule.period+'节'+(schedule.slot==='break'?'课后课间':'课'):slot;
  return [dateLabel(schedule.date),period,schedule.time||'',schedule.duration?schedule.duration+'分钟':''].filter(Boolean).join(' · ');
 }
-export function normalizePlan(plan){return {...plan,status:plan.status==='doing'?'active':planStatuses.some(([id])=>id===plan.status)?plan.status:'new',schedule:{...plan.schedule},training:{...plan.training,questions:Array.isArray(plan.training?.questions)?plan.training.questions:[],tasks:Array.isArray(plan.training?.tasks)?plan.training.tasks:[]}};}
+export function normalizePlan(plan){return {...plan,status:plan.status==='doing'?'active':planStatuses.some(([id])=>id===plan.status)?plan.status:'new',schedule:{...plan.schedule},review:{...plan.review},training:{...plan.training,questions:Array.isArray(plan.training?.questions)?plan.training.questions:[],tasks:Array.isArray(plan.training?.tasks)?plan.training.tasks:[]}};}
+const measured=v=>v!==null&&v!==undefined&&String(v).trim()!==''?Number(v):null;
+export function reviewMetrics(plan){
+ const correct=measured(plan.review?.correct),total=measured(plan.review?.total);
+ if(!Number.isInteger(correct)||!Number.isInteger(total)||correct<0||total<1||correct>total)return null;
+ return {correct,total,rate:correct/total};
+}
+export function validatePlanReview(plan){
+ const correct=measured(plan.review?.correct),total=measured(plan.review?.total);
+ if(correct===null&&total===null)return;
+ if(!reviewMetrics(plan)||total>1000)throw new Error('复核请填写实际答对题数和总题数，答对题数须在0至总题数之间。');
+ if(!validDate(plan.reviewDate))throw new Error('已填写实测题数，请选择实际复核日期。');
+ plan.review={...plan.review,correct,total};
+}
+export function reviewSummary(plan){const m=reviewMetrics(plan);return m?'实测 '+m.correct+' / '+m.total+'题 · 正确率 '+(m.rate*100).toLocaleString('zh-CN',{maximumFractionDigits:1})+'%':plan.result?.trim()?'复核结论已记录':'';}
 export function planMatchesTime(plan,filter='all',today=todayLocal()){
- const date=validDate(plan.schedule?.date)?plan.schedule.date:'';if(filter==='unscheduled')return !date;if(filter==='today')return date===today;if(filter==='overdue')return !!date&&date<today&&plan.status!=='done';
+ const date=validDate(plan.schedule?.date)?plan.schedule.date:'';if(filter==='unscheduled')return !date;if(filter==='today')return date===today;if(filter==='overdue'){const due=validDate(plan.reviewDate)?plan.reviewDate:date;return !!due&&due<today&&plan.status!=='done';}
  if(filter==='week'){const d=new Date(today+'T12:00:00Z'),weekday=(d.getUTCDay()+6)%7;d.setUTCDate(d.getUTCDate()-weekday);const start=d.toISOString().slice(0,10);d.setUTCDate(d.getUTCDate()+6);return !!date&&date>=start&&date<=d.toISOString().slice(0,10);}return true;
 }
 export function questionOptions(atlas,{sid,exam,key}){

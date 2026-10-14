@@ -1,0 +1,27 @@
+const {chromium,webkit}=require('playwright'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const {makeFixture}=require('./fixtures.cjs'),{ready,text,settings,closeSettings}=require('./paper-preview-helpers.cjs');
+const output=path.join(__dirname,'../.audit-output/teaching-polish');fs.mkdirSync(output,{recursive:true});
+(async()=>{
+ const engine=process.env.AUDIT_BROWSER==='webkit'?webkit:chromium,b=await engine.launch(engine===chromium?{executablePath:process.env.CHROMIUM_PATH}:{});
+ try{for(const width of [1440,390,320]){
+  const c=await b.newContext({viewport:{width,height:width===320?640:900},reducedMotion:'reduce'}),p=await c.newPage(),errors=[];p.on('pageerror',e=>errors.push(e.message));p.setDefaultTimeout(25000);
+  const data=makeFixture(),legacy='legacy-same';data.students=data.students.filter(s=>!['test-4-0','test-7-0'].includes(s.id));data.students.push({id:legacy,name:'匿名同名'});
+  for(const row of [...data.scores,...data.answers])if(['test-4-0','test-7-0'].includes(row.sid))row.sid=legacy;
+  data.plans=[{id:'same-name-plan',sid:legacy,exam:'52',classNo:7,subject:'数学',tier:'under',status:'active',training:{key:'数学|52',questions:[{label:'1',index:0,knowledge:'函数',score:0,max:5,rate:0}],tasks:['same'],count:5,targetRate:80,method:'individual'},schedule:{duration:10}}];
+  await c.addInitScript(()=>{window.requestIdleCallback=()=>0;});
+  await p.goto(process.env.AUDIT_URL||'http://127.0.0.1:4173');await p.waitForSelector('#navigation button');await p.locator('#files').setInputFiles({name:'anonymous-identity-review.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(data))});await p.locator('[data-inbox=commit]').click();await p.waitForSelector('#inbox:not([open])',{state:'attached'});
+  await p.locator('#navigation [data-scene=follow]').click();await p.waitForSelector('.follow-card');await p.locator('.follow-card>.follow-plan-primary').click();await p.waitForSelector('#plan-dialog[open]');assert((await p.locator('.plan-selection').first().innerText()).includes('7班'));
+  await p.locator('[data-plan-picker=reviewDate]').click();await p.locator('.plan-picker-panel:popover-open [data-picker-date-input]').fill('20261014');await p.locator('.plan-picker-panel:popover-open [data-picker-action=apply-date]').click();
+  await p.locator('[data-plan-field="review.correct"]').fill('0');await p.locator('[data-plan-field="review.total"]').fill('5');await p.locator('[data-plan-field=result]').fill('已完成原题订正，继续同类练习');await p.locator('#plan-dialog [type=submit]').click();await p.waitForSelector('#plan-dialog:not([open])',{state:'attached'});
+  assert((await p.locator('.follow-review').innerText()).includes('实测 0 / 5题 · 正确率 0%'));const saved=await p.evaluate(()=>JSON.parse(localStorage.getItem('hengji:plans'))[0]);assert.notEqual(saved.sid,legacy);assert.equal(saved.classNo,7);assert.equal(saved.training.questions[0].score,0);assert.equal(saved.training.targetRate,80);
+  await p.reload();await p.waitForSelector('.follow-review');assert((await p.locator('.follow-review').innerText()).includes('0%'));await p.locator('.follow-card>.follow-plan-primary').click();assert.equal(await p.locator('[data-plan-field="review.correct"]').inputValue(),'0');await p.locator('[data-cmd=plan-close]').first().click();await p.waitForSelector('#plan-dialog:not([open])',{state:'attached'});
+  let release;const gate=new Promise(r=>release=r);await p.route('**/app/io/pdf-worker.js*',async route=>{await gate;await route.continue();});
+  const started=Date.now();await p.locator('[data-cmd=follow-report]').click();await p.waitForSelector('.pdf-pending-brief');const readableMs=Date.now()-started;assert((await p.locator('.pdf-pending-brief').innerText()).includes('1条计划'));assert.equal(await p.locator('.report-paper-scroll').getAttribute('data-pdf-state'),'pending');await p.screenshot({path:path.join(output,'pending-'+width+(engine===webkit?'-webkit':'')+'.png')});release();await ready(p);
+  const body=await text(p);assert(body.includes('实测 0 / 5题'));assert(body.includes('80%'));assert(body.includes('继续同类练习'));assert(body.includes('7班'));
+  if(width===390)for(const [cmd,extension] of [['report-pdf','pdf'],['report-word','docx']]){const waiting=p.waitForEvent('download');await p.locator('[data-cmd='+cmd+']').click();const d=await waiting;assert.equal(await d.failure(),null);await d.saveAs(path.join(output,'review-'+(engine===webkit?'webkit':'chromium')+'.'+extension));}
+  assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);assert(await p.locator('#report-dialog').evaluate(e=>e.scrollWidth<=e.clientWidth+1));
+  await p.locator('.report-kind-switch [data-value=class]').click();await ready(p);assert((await text(p)).includes('班级学生成绩与短板'));
+  await settings(p);assert(await p.locator('[data-cmd=report-preset][data-preset=teaching]').count());await p.locator('[data-cmd=report-preset][data-preset=all]').click();await closeSettings(p);await ready(p);assert((await text(p)).includes('班级阶段对照'));
+  assert.deepEqual(errors,[]);console.log(JSON.stringify({engine:engine===webkit?'webkit':'chromium',width,readableMs,checks:'scoped legacy identity; zero measured review; snapshots and target unchanged; refresh/reopen; readable pending PDF; actual PDF/Word; full evidence remains; no overflow'}));await c.close();
+ }}finally{await b.close();}
+})().catch(e=>{console.error(e);process.exitCode=1;});

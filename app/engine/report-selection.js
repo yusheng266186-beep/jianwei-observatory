@@ -1,6 +1,6 @@
-import {paperSettings} from './paper-settings.js?v=runtime-v43';
-import {qualifyHistoricalRankings} from './ranking.js?v=runtime-v43';
-import {repairKnowledgeReport} from './knowledge.js?v=runtime-v43';
+import {paperSettings} from './paper-settings.js?v=runtime-v44';
+import {qualifyHistoricalRankings} from './ranking.js?v=runtime-v44';
+import {repairKnowledgeReport} from './knowledge.js?v=runtime-v44';
 export function selectionFor(report){
  const source=report.outputSelection||{},sections=report.sections||[],indices=sections.map((_,i)=>i),valid=i=>Number.isInteger(i)&&i>=0&&i<sections.length;
  const order=[...new Set((source.order||indices).filter(valid))];for(const i of indices)if(!order.includes(i))order.push(i);
@@ -8,21 +8,27 @@ export function selectionFor(report){
  return {selected,order,fields:{...source.fields},filters:{...source.filters},includeMeta:source.includeMeta!==false,includeNote:source.includeNote!==false,title:source.title||'',paper:paperSettings(report)};
 }
 export function fieldsFor(report,index,selection=selectionFor(report)){const headers=report.sections[index]?.headers||[],fields=selection.fields[index];return Array.isArray(fields)?[...new Set(fields.filter(i=>Number.isInteger(i)&&i>=0&&i<headers.length))]:headers.map((_,i)=>i);}
+export function teachingFields(report){
+ const fields={};if(report.kind!=='class')return fields;
+ const index=report.sections.findIndex(s=>s.title==='班级学生成绩与短板');
+ if(index>=0){const keep=['学生','总分','校内排名','班级排名','本科距线','优先观察学科'];fields[index]=report.sections[index].headers.flatMap((h,i)=>keep.includes(h)?[i]:[]);}
+ return fields;
+}
 export function presetSections(report,preset){
  const titles=(report.sections||[]).map(s=>s.title||'');if(preset==='all')return titles.map((_,i)=>i);
- const patterns={overview:/概况|阶段|评估|比较|短板|统计口径|说明/,weak:/攻坚|突破|薄弱|短板|训练优先|优先训练|教学跟进|统计口径/,paper:/小题|逐题|知识点|统计口径/,follow:/跟进|训练|执行日程|复核|计划说明|材料说明/};
- return titles.flatMap((title,i)=>patterns[preset]?.test(title)?[i]:[]);
+ const patterns={teaching:/概况|攻坚对象|突破对象|各学科评估|班级学生成绩与短板|班级学科比较|优先跟进学生|优先教学题目|学科短板|优先训练题目|教学跟进安排|执行日程|训练实施|教师记录与复核|统计口径|计划说明/,overview:/概况|阶段|评估|比较|短板|统计口径|说明/,weak:/攻坚|突破|薄弱|短板|训练优先|优先训练|教学跟进|统计口径/,paper:/小题|逐题|知识点|统计口径/,follow:/跟进|训练|执行日程|复核|计划说明|材料说明/};
+ return titles.flatMap((title,i)=>patterns[preset]?.test(title)||preset==='teaching'&&report.questionOnly&&/全卷题目与知识点|个人全部小题得分|知识点训练优先级/.test(title)?[i]:[]);
 }
 export function selectedReport(report){
  report=qualifyHistoricalRankings(repairKnowledgeReport(report));
  if(!report.outputSelection)return report;
  const selection=selectionFor(report),chosen=selection.order.filter(i=>selection.selected.includes(i)),sections=chosen.map(index=>{
   const source=report.sections[index],fields=fieldsFor(report,index,selection),query=String(selection.filters[index]||'').trim(),rows=(source.rows||[]).filter(row=>!query||row.some(value=>String(value??'').includes(query)));
-  return {...source,sourceIndex:index,headers:fields.map(i=>source.headers[i]),rows:rows.map(row=>fields.map(i=>row[i])),caption:[selection.paper.includeCaptions?source.caption:'',fields.length<(source.headers||[]).length?'本章节仅保留所选'+fields.length+' / '+source.headers.length+'个字段。':'',query?'本章节仅包含匹配“'+query+'”的 '+rows.length+' 条记录。':''].filter(Boolean).join(' ')};
+  return {...source,sourceIndex:index,headers:fields.map(i=>source.headers[i]),rows:rows.map(row=>fields.map(i=>row[i])),caption:[selection.paper.includeCaptions?source.caption:'',query?'本章节仅包含匹配“'+query+'”的 '+rows.length+' 条记录。':''].filter(Boolean).join(' ')};
  });
  const result={...report,title:selection.title.trim()||report.title,paper:selection.paper,sections:selection.paper.skipEmpty?sections.filter(s=>s.rows.length||(s.paragraphs||[]).length):sections,note:selection.includeNote?report.note:'',meta:selection.includeMeta?report.meta:[],studyTitle:selection.includeMeta?report.studyTitle:'',sheets:Object.fromEntries(sections.map((s,i)=>[(i+1)+'-'+s.title,s.headers.length?[s.headers,...s.rows]:[['说明'],...(s.paragraphs||[]).map(text=>[text])]]))};result.sheets=Object.fromEntries(result.sections.map((s,i)=>[(i+1)+'-'+s.title,s.headers.length?[s.headers,...s.rows]:[['说明'],...(s.paragraphs||[]).map(text=>[text])]]));delete result.outputSelection;return result;
 }
-export function availablePresets(report){return [['all','完整材料'],['overview','概况与对照'],['weak','分层补弱'],['paper','试卷与知识点'],['follow','训练与跟进']].filter(([key])=>presetSections(report,key).length);}
+export function availablePresets(report){return [['teaching','教学摘要'],['all','完整材料'],['overview','概况与对照'],['weak','分层补弱'],['paper','试卷与知识点'],['follow','训练与跟进']].filter(([key])=>presetSections(report,key).length);}
 // Chapter indices and field positions can change when the exam or person changes.
 // Carry choices by their meaning, never by an index from the previous report.
 export function transferSelection(previous,next){

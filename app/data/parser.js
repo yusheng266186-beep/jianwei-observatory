@@ -1,9 +1,11 @@
-import { SUBJECTS, EXAM_ORDER, EXAM_NAMES, classDefaults, finite, normalizeDataset } from './compat.js?v=runtime-v43';
-import {mergeContext} from './context.js?v=runtime-v43';
-import {explicitRanks,rankColumns,ranksFrom} from '../engine/ranking.js?v=runtime-v43';
+import { SUBJECTS, EXAM_ORDER, EXAM_NAMES, classDefaults, finite, normalizeDataset } from './compat.js?v=runtime-v44';
+import {mergeContext} from './context.js?v=runtime-v44';
+import {identityHash,mergeStudentIdentities} from './identity.js?v=runtime-v44';
+import {explicitRanks,rankColumns,ranksFrom} from '../engine/ranking.js?v=runtime-v44';
 const txt=v=>String(v??'').trim();
+const identifierHeaders=['学生识别码','学生编号','学号','识别码','studentid','queryid'];
 const num=v=>v==null||txt(v)===''?null:Number.isFinite(Number(v))?Number(v):null;
-const code=v=>txt(v).replace(/[物历]$/,'');
+const code=v=>{const raw=txt(v).replace(/[物历]$/,'');return Object.keys(EXAM_NAMES).find(id=>EXAM_NAMES[id]===raw)||raw;};
 const track=(raw,n)=>/[历]$/.test(txt(raw))?'history':/[物]$/.test(txt(raw))?'physics':classDefaults(n).track;
 const cityExam=e=>['入口','1册','2册','3册','4册'].includes(e);
 // The supplied multi-exam worksheet reuses four total-rank headings even
@@ -24,11 +26,15 @@ function sourceSubjectColumns(headers,exam,raw,end,ranking,school){
  if(exam!=='43'||!/市赋名/.test(label(7))||!/校原名/.test(label(8))||!/校赋名/.test(label(9)))return columns;
  return {...(school==null?{}:{schoolRank:{column:ranking,label:'学科校内排名'}}),classRank:{column:school??ranking,label:'学科班级排名'}};
 }
-const hash=text=>{let h=2166136261;for(let i=0;i<text.length;i++)h=Math.imul(h^text.charCodeAt(i),16777619);return 's'+(h>>>0).toString(36);};
 const fresh=source=>({schemaVersion:1,school:'荣县一中',grade:'高2024级',title:'成绩研究工作区',sourceName:source,importedAt:new Date().toISOString(),anonymous:false,students:[],scores:[],profiles:{},exams:[],lines:[],banks:{},answers:[],sheets:[]});
 function people(data){
- const map=new Map(data.students.map(s=>[s.name,s]));
- return name=>{name=txt(name);if(!map.has(name)){const person={id:hash(name),name};map.set(name,person);data.students.push(person);}return map.get(name).id;};
+ const map=new Map(),occupied=new Set(data.students.map(p=>p.id));
+ return (name,sourceId='',exam='',classNo=null)=>{
+  name=txt(name);sourceId=txt(sourceId);const key=sourceId?'identifier:'+sourceId:'name:'+name;
+  if(!sourceId){const matches=data.students.filter(p=>p.name===name&&data.scores.some(r=>r.sid===p.id&&r.exam===exam&&r.classNo===classNo));if(matches.length===1)return matches[0].id;if(matches.length>1)throw new Error('同班同考次的同名学生小题记录需要学生识别码。');}
+  if(!map.has(key)){let id=identityHash(sourceId?key:name),suffix=0;while(occupied.has(id))id=identityHash(key+'|'+(++suffix));const person={id,name,...(sourceId?{sourceId}:{})};map.set(key,person);data.students.push(person);occupied.add(id);}
+  return map.get(key).id;
+ };
 }
 function examsFrom(data){
  const ids=new Set([...data.scores.map(r=>r.exam),...data.answers.map(r=>r.exam)]);
@@ -39,17 +45,20 @@ export function rowsOf(XLSX,sheet){
  const range=XLSX.utils.decode_range(sheet['!ref']||'A1');range.e.c=Math.min(range.e.c,99);
  return XLSX.utils.sheet_to_json(sheet,{header:1,defval:null,raw:true,range,blankrows:true});
 }
+export function flatWorkbookSheet(XLSX,workbook){
+ const sheets=Object.entries(workbook.Sheets).map(([name,sheet])=>({name,rows:rowsOf(XLSX,sheet)}));
+ return sheets.find(s=>{const {mapping:m}=detectFlat(s.rows);return m.name!=null&&m.classNo!=null&&m.exam!=null&&(m.total!=null||SUBJECTS.some(subject=>m[subject]!=null));})||sheets.find(s=>s.rows.slice(0,15).some(row=>row.some(c=>/^(姓名|学生姓名)$/.test(txt(c)))))||sheets[0];
+}
 export function parseWorkbook(XLSX,buffer,source,progress=()=>{},mapping=null){
  progress('读取工作表目录',8);
  const meta=XLSX.read(buffer,{type:'array',bookSheets:true});
  const chosen=meta.SheetNames.filter(n=>n==='学生基础'||n==='教师名单'||/^班级有效人/.test(n)||SUBJECTS.includes(n));
- if(!meta.SheetNames.includes('学生基础')){const generic=meta.SheetNames.filter(n=>!SUBJECTS.includes(n)&&!/(班级有效人|个人学科小题|班级多次|班级成绩|教师名单|说明)/.test(n));chosen.push(...generic);}
+ if(!meta.SheetNames.includes('学生基础')){const generic=meta.SheetNames.filter(n=>!SUBJECTS.includes(n)&&!/(班级有效人|个人学科小题|班级多次|教师名单|说明)/.test(n));chosen.push(...generic);}
  const workbook=XLSX.read(buffer,{type:'array',cellFormula:false,cellStyles:false,cellHTML:false,sheets:chosen.length?chosen:undefined});
  const data=fresh(source);data.sheets=meta.SheetNames;
  const idFor=people(data),basic=workbook.Sheets['学生基础'];
  if(!basic){
-  const sheets=Object.entries(workbook.Sheets).map(([name,s])=>({name,rows:rowsOf(XLSX,s)}));
-  const main=sheets.find(s=>s.rows.slice(0,15).some(row=>row.some(c=>/^(姓名|学生姓名)$/.test(txt(c)))))||sheets[0];
+  const main=flatWorkbookSheet(XLSX,workbook);
   const result=parseFlat(main?.rows||[],source,mapping);
   result.sheets=meta.SheetNames;
   if(!result.scores.length&&SUBJECTS.some(s=>workbook.Sheets[s])){
@@ -62,6 +71,7 @@ export function parseWorkbook(XLSX,buffer,source,progress=()=>{},mapping=null){
  const rows=rowsOf(XLSX,basic);
  const firstScore=rows.findIndex(r=>/[物历]$/.test(txt(r[0]))&&num(r[2])>0&&txt(r[3])&&txt(r[1]));
  const rankHeaders=rows.slice(Math.max(0,firstScore-5),Math.max(0,firstScore));
+ const identifierColumn=rankHeaders.reduce((found,row)=>found>=0?found:row.findIndex(v=>identifierHeaders.includes(txt(v).toLowerCase())),-1);
  for(let i=0;i<Math.min(rows.length,50);i++){
   const r=rows[i];if(!/[物历]$/.test(txt(r[1]))||!finite(num(r[2])))continue;
   const t=track(r[1],1),e=code(r[1]),ss=t==='physics'?['语文','数学','英语','物理','化学','生物']:['语文','数学','英语','历史','政治','地理'];
@@ -84,7 +94,7 @@ export function parseWorkbook(XLSX,buffer,source,progress=()=>{},mapping=null){
    subjects[subject]={score:num(r[assigned]),raw:num(r[raw]),rank:Object.values(columns).some(c=>c.column===ranking)?null:num(r[ranking]),...ranksFrom(r,columns)};
   }
   // Scope comes from the source heading, never the exam type or column order.
-  data.scores.push({exam:e,rawExam:txt(r[0]),sid:idFor(name),classNo:n,track:t,total:num(r[5]),rawTotal:num(r[4]),rank:Object.values(totalRanks).some(c=>c.column===7)?null:num(r[7]),...ranksFrom(r,totalRanks),subjects,language,sourceRow:i+1});
+  data.scores.push({exam:e,rawExam:txt(r[0]),sid:idFor(name,identifierColumn>=0?r[identifierColumn]:'',e,n),classNo:n,track:t,total:num(r[5]),rawTotal:num(r[4]),rank:Object.values(totalRanks).some(c=>c.column===7)?null:num(r[7]),...ranksFrom(r,totalRanks),subjects,language,sourceRow:i+1});
   data.profiles[n]||={...classDefaults(n),track:t};
  }
  progress('提取班级目标与任课信息',35);
@@ -149,7 +159,7 @@ function parseItems(data,workbook,XLSX,idFor,progress){
   }
   for(const r of rows){
    const n=num(r[1]),name=txt(r[2]),e=code(r[0]);if(!/[物历]$/.test(txt(r[0]))||!n||!name||!columns[e])continue;
-   const sid=idFor(name),score=scored.get(e+'|'+n+'|'+sid);
+   const sid=idFor(name,'',e,n),score=scored.get(e+'|'+n+'|'+sid);
    if(data.scores.length&&!score)continue;
    if(subject==='英语'&&score?.language==='日语')continue;
    const values=columns[e].map(c=>num(r[c]));if(!values.some(finite))continue;
@@ -158,20 +168,20 @@ function parseItems(data,workbook,XLSX,idFor,progress){
   }
  });
 }
-export const FLAT_FIELDS=[['name','姓名'],['classNo','班级'],['exam','考试'],['total','赋分总分'],['rawTotal','原始总分'],['track','类别'],['language','外语语种'],['cityRank','市排名'],['schoolRank','校排名'],['classRank','班级排名'],...SUBJECTS.map(s=>[s,s+'成绩'])];
-const ALIASES={name:['姓名','学生姓名','name'],classNo:['班级','班号','行政班','class','classno'],exam:['考试','考试名称','考次','exam'],total:['赋分总分','总赋分','总分','total'],rawTotal:['原始总分','原分总分','原始分'],track:['类别','科类','track'],language:['外语语种','语种','language'],cityRank:['市赋名','市排名','市名次','全市名次','市原名','cityrank'],schoolRank:['校赋名','校排名','校名次','校排','校内排名','年级排名','年级名次','校原名','schoolrank'],classRank:['班赋名','班级排名','班排名','班排','班内排名','班原名','classrank']};
+export const FLAT_FIELDS=[['name','姓名'],['studentId','学生识别码'],['classNo','班级'],['exam','考试'],['total','赋分总分'],['rawTotal','原始总分'],['track','类别'],['language','外语语种'],['cityRank','市排名'],['schoolRank','校排名'],['classRank','班级排名'],...SUBJECTS.map(s=>[s,s+'成绩'])];
+const ALIASES={studentId:identifierHeaders,name:['姓名','学生姓名','name'],classNo:['班级','班号','行政班','class','classno'],exam:['考次代码','考试代码','examid','考试','考试名称','考次','exam'],total:['赋分总分','总赋分','总分','total'],rawTotal:['原始总分','原分总分','原始分'],track:['类别','科类','track'],language:['外语语种','语种','language'],cityRank:['市赋名','市排名','市名次','全市名次','市原名','cityrank'],schoolRank:['校赋名','校排名','校名次','校排','校内排名','年级排名','年级名次','校原名','schoolrank'],classRank:['班赋名','班级排名','班排名','班排','班内排名','班原名','classrank']};
 export function detectFlat(rows){
  const headerRow=rows.findIndex(r=>r.some(c=>['姓名','学生姓名','name'].includes(txt(c).toLowerCase())));
  const rowIndex=headerRow<0?0:headerRow,headers=(rows[rowIndex]||[]).map(txt),mapping={};
  for(const [key] of FLAT_FIELDS){
   const aliases=ALIASES[key]||[key,key+'成绩',key+'赋分',key+'折合分',key+'折合成绩'];
-  mapping[key]=['schoolRank','classRank','cityRank'].includes(key)?aliases.map(alias=>headers.findIndex(h=>h.toLowerCase()===alias)).find(i=>i>=0)??-1:headers.findIndex(h=>aliases.includes(h.toLowerCase()));if(mapping[key]<0)mapping[key]=null;
+  mapping[key]=['schoolRank','classRank','cityRank','exam'].includes(key)?aliases.map(alias=>headers.findIndex(h=>h.toLowerCase()===alias)).find(i=>i>=0)??-1:headers.findIndex(h=>aliases.includes(h.toLowerCase()));if(mapping[key]<0)mapping[key]=null;
  }
  for(const subject of SUBJECTS){const column=headers.findIndex(header=>[subject+'原分',subject+'原始分',subject+'原始成绩'].includes(header));mapping['raw:'+subject]=column<0?null:column;}
  return {headers,mapping,headerRow:rowIndex,preview:rows.slice(rowIndex+1,rowIndex+6)};
 }
 export function parseFlat(rows,source,mapping=null){
- const data=fresh(source),idFor=people(data),auto=detectFlat(rows);mapping||=auto.mapping;
+ const data=fresh(source),idFor=people(data),auto=detectFlat(rows),positions=new Map();mapping||=auto.mapping;
  const ranks=Object.fromEntries(['schoolRank','classRank','cityRank'].filter(key=>mapping[key]!=null&&mapping[key]!==''&&Number.isInteger(Number(mapping[key]))&&Number(mapping[key])>=0).map(key=>[key,{column:Number(mapping[key]),label:auto.headers[Number(mapping[key])]||FLAT_FIELDS.find(([field])=>field===key)[1]}]));
  for(const row of rows.slice(auto.headerRow+1)){
   const val=k=>mapping[k]==null||mapping[k]===''?null:row[Number(mapping[k])];
@@ -182,7 +192,10 @@ export function parseFlat(rows,source,mapping=null){
   // An exported analysis may contain a calculated class position. On import it
   // must not become a supplied source rank that freezes after more rows arrive.
   if(basisColumn>=0&&ranks.classRank?.label==='班排名'&&txt(row[basisColumn]).includes('班排按同班同考次有效总分降序，同分并列')){rankValues.classRank=null;delete rankValues.rankSources.classRank;}
-  data.scores.push({exam:e,rawExam:txt(val('exam')),sid:idFor(name),classNo:n,track:t,total:num(val('total')),rawTotal:num(val('rawTotal')),...rankValues,subjects,language:txt(val('language'))|| (subjects['日语']?'日语':subjects['英语']?'英语':'')});
+  const record={exam:e,rawExam:txt(val('exam')),sid:idFor(name,val('studentId'),e,n),classNo:n,track:t,total:num(val('total')),rawTotal:num(val('rawTotal')),...rankValues,subjects,language:txt(val('language'))|| (subjects['日语']?'日语':subjects['英语']?'英语':'')};
+  const key=e+'|'+n+'|'+record.sid,index=positions.get(key),previous=index===undefined?null:data.scores[index];
+  if(previous&&!txt(val('studentId'))){const different=(a,b)=>finite(a)&&finite(b)&&a!==b;if(different(previous.total,record.total)||different(previous.rawTotal,record.rawTotal)||SUBJECTS.some(subject=>different(previous.subjects[subject]?.score,record.subjects[subject]?.score)))throw new Error('同班同考次的同名记录数值不一致，请提供学生识别码或整理重复行。');}
+  if(previous)data.scores[index]=mergeScore(previous,record);else{positions.set(key,data.scores.length);data.scores.push(record);}
   data.profiles[n]||={...classDefaults(n),track:t};
  }
  return examsFrom(data);
@@ -193,10 +206,10 @@ export function adaptJSON(json,source){
  if(!Array.isArray(json.scores))throw new Error('JSON 中没有可导入的成绩。请导入见微数据备份或原项目的 GradeDataset 数据。');
  const data=fresh(source),idFor=people(data);
  data.school=json.school||data.school;data.sheets=json.sheets||[];
- for(const r of json.scores){const n=Number(r.classNo),e=code(r.exam),p=classDefaults(n);data.profiles[n]={...p,type:r.classType||p.type,combination:r.combination||p.combination};data.scores.push({exam:e,rawExam:r.rawExam||r.exam,sid:idFor(r.name),classNo:n,track:r.track?.includes('历史')?'history':p.track,total:num(r.total),rawTotal:null,cityRank:num(r.cityRank),schoolRank:num(r.schoolRank),classRank:num(r.classRank),language:r.subjects?.['日语']!=null?'日语':'英语',subjects:Object.fromEntries(Object.entries(r.subjects||{}).map(([s,v])=>[s,{score:num(v),raw:null,rank:null,schoolRank:null}]))});}
+ for(const r of json.scores){const n=Number(r.classNo),e=code(r.exam),p=classDefaults(n);data.profiles[n]={...p,type:r.classType||p.type,combination:r.combination||p.combination};data.scores.push({exam:e,rawExam:r.rawExam||r.exam,sid:idFor(r.name,r.studentId??r.queryId,e,n),classNo:n,track:r.track?.includes('历史')?'history':p.track,total:num(r.total),rawTotal:null,cityRank:num(r.cityRank),schoolRank:num(r.schoolRank),classRank:num(r.classRank),language:r.subjects?.['日语']!=null?'日语':'英语',subjects:Object.fromEntries(Object.entries(r.subjects||{}).map(([s,v])=>[s,{score:num(v),raw:null,rank:null,schoolRank:null}]))});}
  for(const l of json.thresholds||[])data.lines.push({exam:code(l.exam),track:l.track?.includes('历史')?'history':'physics',top:num(l.topTotal),under:num(l.undergraduateTotal),subjects:Object.fromEntries(SUBJECTS.map(s=>[s,{top:num(l.topSubjects?.[s]),under:num(l.undergraduateSubjects?.[s])}]))});
  for(const [key,bank] of Object.entries(json.questionBanks||{})){const parts=key.split(/[|:]/).filter(Boolean),subject=SUBJECTS.find(s=>parts.includes(s));const e=parts.find(s=>s!==subject);if(subject&&e)data.banks[subject+'|'+code(e)]=bank.map(q=>({label:txt(q.question),max:q.maxScoreSource==='inferred'?null:num(q.maxScore),knowledge:txt(q.knowledge),maxNote:q.maxScoreSource==='inferred'?'原备份满分为推断值，待明确':''}));}
- for(const a of json.itemResponses||[])data.answers.push({exam:code(a.exam),sid:idFor(a.name),classNo:Number(a.classNo),track:classDefaults(Number(a.classNo)).track,subject:a.subject,values:(a.scores||[]).map(num)});
+ for(const a of json.itemResponses||[])data.answers.push({exam:code(a.exam),sid:idFor(a.name,a.studentId??a.queryId,code(a.exam),Number(a.classNo)),classNo:Number(a.classNo),track:classDefaults(Number(a.classNo)).track,subject:a.subject,values:(a.scores||[]).map(num)});
  return examsFrom(data);
 }
 // Merge means supplement: blank input does not erase existing measurements.
@@ -245,8 +258,8 @@ function mergePapers(data,incoming,usable) {
 }
 export function mergeDatasets(current,incoming){
  if(current.anonymous&&!incoming.anonymous&&incoming.scores.length)return normalizeDataset(incoming);
- const data=structuredClone(current),names=new Map(data.students.map(s=>[s.name,s.id])),occupied=new Set(data.students.map(s=>s.id)),remap=new Map();
- for(const p of incoming.students){const sid=names.get(p.name)||(occupied.has(p.id)?'s-'+crypto.randomUUID():p.id);remap.set(p.id,sid);if(!names.has(p.name)){data.students.push({...p,id:sid});names.set(p.name,sid);occupied.add(sid);}}
+ const data=normalizeDataset(structuredClone(current));incoming=normalizeDataset(structuredClone(incoming));
+ const remap=mergeStudentIdentities(data,incoming);
  const usable=p=>({...p,sid:remap.get(p.sid)||p.sid});
  const identity=r=>r.exam+'|'+r.classNo+'|'+r.sid,scores=new Map(data.scores.map(r=>[identity(r),r]));
  for(const score of incoming.scores){const row=usable(score);scores.set(identity(row),mergeScore(scores.get(identity(row)),row));}data.scores=[...scores.values()];

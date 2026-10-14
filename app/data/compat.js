@@ -1,4 +1,5 @@
-import {repairSourceRanks} from './rank-repair.js?v=runtime-v43';
+import {repairSourceRanks} from './rank-repair.js?v=runtime-v44';
+import {repairStudentIdentities} from './identity.js?v=runtime-v44';
 // Workbook exchange format only. Research queries live in engine/atlas.js.
 export const SUBJECTS = ['语文','数学','英语','日语','物理','历史','化学','生物','政治','地理'];
 export const EXAM_ORDER = ['入口','1册','21','2册','33','3册','41','4半','4月','43','4册','51','52'];
@@ -9,6 +10,7 @@ export function normalizeDataset(data) {
   data.schemaVersion=1;
   for(const key of ['students','scores','answers','lines','exams','sheets']) data[key] ||= [];
   data.profiles ||= {}; data.banks ||= {};
+  repairStudentIdentities(data);
   data.scores=[...new Map(data.scores.map(r=>[`${r.exam}|${r.classNo}|${r.sid}`,r])).values()];
   data.answers=[...new Map(data.answers.map(r=>[`${r.exam}|${r.classNo}|${r.sid}|${r.subject}`,r])).values()];
   data.exams.sort((a,b)=>(a.order??99)-(b.order??99)||String(a.id).localeCompare(String(b.id),'zh',{numeric:true}));

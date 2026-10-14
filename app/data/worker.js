@@ -1,7 +1,7 @@
-importScripts('../../vendor/xlsx.full.min.js?v=runtime-v43');
+importScripts('../../vendor/xlsx.full.min.js?v=runtime-v44');
 self.onmessage=async ({data:input})=>{
   try {
-    const parser=await import('./parser.js?v=runtime-v43');
+    const parser=await import('./parser.js?v=runtime-v44');
     const progress=(message,percent)=>self.postMessage({type:'progress',message,percent});
     let dataset;
     if(/\.json$/i.test(input.name)) dataset=parser.adaptJSON(JSON.parse(new TextDecoder().decode(input.buffer)),input.name);
@@ -15,8 +15,8 @@ self.onmessage=async ({data:input})=>{
     } else {
       const meta=XLSX.read(input.buffer,{type:'array',bookSheets:true});
       if(!input.mapping&&!meta.SheetNames.includes('学生基础')&&!meta.SheetNames.some(n=>parserSubjects.includes(n))) {
-        const book=XLSX.read(input.buffer,{type:'array',sheets:[meta.SheetNames[0]],cellHTML:false,cellStyles:false});
-        self.postMessage({type:'mapping',...parser.detectFlat(parser.rowsOf(XLSX,book.Sheets[meta.SheetNames[0]]))});return;
+        const book=XLSX.read(input.buffer,{type:'array',cellHTML:false,cellStyles:false});
+        self.postMessage({type:'mapping',...parser.detectFlat(parser.flatWorkbookSheet(XLSX,book)?.rows||[])});return;
       }
       dataset=parser.parseWorkbook(XLSX,input.buffer,input.name,progress,input.mapping);
     }

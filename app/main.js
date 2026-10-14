@@ -1,45 +1,46 @@
-import {openSurface,closeSurface,prepareBackdrop} from './ui/surface-motion.js?v=runtime-v43';
-import {warmReportFonts} from './io/report-fonts.js?v=runtime-v43';
-import {warmPDFWorker} from './io/pdf-runtime.js?v=runtime-v43';
-import {warmPDFViewer} from './io/pdf-viewer-library.js?v=runtime-v43';
-import {installReportReading} from './ui/report-reading.js?v=runtime-v43';
-import {selectionFor,fieldsFor,presetSections,selectedReport,transferSelection} from './engine/report-selection.js?v=runtime-v43';
-import {installPlanControls} from './ui/plan-controls.js?v=runtime-v43';
-import {buildTeachingReport} from './engine/reports.js?v=runtime-v43';
-import {fillSavedClassRanks} from './engine/report-ranks.js?v=runtime-v43';
-import {reportContext,normalizeReportScope} from './ui/report-context.js?v=runtime-v43';
-import {reportSpec} from './ui/report-studio.js?v=runtime-v43';
-import {followEditor} from './ui/follow-editor.js?v=runtime-v43';
-import {normalizePlan,draftForPlan,questionOptions,snapshotQuestion,materialPeople,validDate} from './engine/training.js?v=runtime-v43';
-import {questionView,questionEvidence} from './ui/question.js?v=runtime-v43';
-import {queryQuestionMap,questionSequence} from './engine/question-map.js?v=runtime-v43';
-import {SITE_NAME} from './brand.js?v=runtime-v43';
-import {subjectView,knowledgeView,lensEvidence} from './ui/lenses.js?v=runtime-v43';
-import {subjectLens,skillLens,questionLens} from './engine/lenses.js?v=runtime-v43';
-import {directoryFilterView} from './scenes/directory.js?v=runtime-v43';
-import {renderInto} from './ui/render.js?v=runtime-v43';
-import {installInteractions,enhance,prepareUpdate,pruneInteractions,shiftTable,openDisclosure} from './ui/interactions.js?v=runtime-v43';
-import {readingDefaults,readingView,applyReading} from './ui/reading.js?v=runtime-v43';
-import {reportView} from './ui/report.js?v=runtime-v43';
-import {reportExams} from './engine/report-scope.js?v=runtime-v43';
-import {installNotificationLayout} from './ui/notification-layout.js?v=runtime-v43';
-import {welcomeView} from './ui/welcome.js?v=runtime-v43';
-import {composeScene} from './ui/composition.js?v=runtime-v43';
-import {researchView,studyDescription,studyAvailable,studyKey} from './ui/research.js?v=runtime-v43';
-import {Atlas} from './engine/atlas.js?v=runtime-v43';
-import {normalizeDataset,SUBJECTS} from './data/compat.js?v=runtime-v43';
-import {hydrate,save,saveWorkspace,restoreDataset,hasMaterials,preference,remember,previous,emptyDataset,loadNotebook,saveNotebook} from './data/workspace.js?v=runtime-v43';
-import {mergeDatasets} from './data/parser.js?v=runtime-v43';
-import {Inbox} from './data/inbox.js?v=runtime-v43';
-import {NoteJournal} from './data/notes.js?v=runtime-v43';
-import {installViewportMetrics} from './ui/viewport.js?v=runtime-v43';
-import {repairKnowledgeReport} from './engine/knowledge.js?v=runtime-v43';
-import {motion,visualFrame,cancelOwnMotion,finishAnimation,enterCanvas,arrangeRows,prepareCanvasSlide,finishCanvasSlide} from './ui/motion.js?v=runtime-v43';
-import {esc,button,empty,table} from './ui/html.js?v=runtime-v43';
-import {excel,word,pdf,print,download,chart,scoreRows,effectiveRows,subjectRows,answerRows,evidence} from './io/exports.js?v=runtime-v43';
-import {directoryDefaults,lensValues,queryDirectory,directoryViewValues,directoryViewName} from './engine/directory.js?v=runtime-v43';
-import {peekView,compareView,drawerEvidence} from './ui/explorer.js?v=runtime-v43';
-import {dockIcon} from './ui/icons.js?v=runtime-v43';
+import {openSurface,closeSurface,prepareBackdrop} from './ui/surface-motion.js?v=runtime-v44';
+import {warmReportFonts} from './io/report-fonts.js?v=runtime-v44';
+import {warmPDFWorker} from './io/pdf-runtime.js?v=runtime-v44';
+import {warmPDFViewer} from './io/pdf-viewer-library.js?v=runtime-v44';
+import {installReportReading} from './ui/report-reading.js?v=runtime-v44';
+import {selectionFor,fieldsFor,presetSections,selectedReport,transferSelection,teachingFields} from './engine/report-selection.js?v=runtime-v44';
+import {installPlanControls} from './ui/plan-controls.js?v=runtime-v44';
+import {buildTeachingReport} from './engine/reports.js?v=runtime-v44';
+import {fillSavedClassRanks} from './engine/report-ranks.js?v=runtime-v44';
+import {reportContext,normalizeReportScope} from './ui/report-context.js?v=runtime-v44';
+import {reportSpec} from './ui/report-studio.js?v=runtime-v44';
+import {followEditor} from './ui/follow-editor.js?v=runtime-v44';
+import {normalizePlan,draftForPlan,questionOptions,snapshotQuestion,materialPeople,validDate,validatePlanReview} from './engine/training.js?v=runtime-v44';
+import {questionView,questionEvidence} from './ui/question.js?v=runtime-v44';
+import {queryQuestionMap,questionSequence} from './engine/question-map.js?v=runtime-v44';
+import {SITE_NAME} from './brand.js?v=runtime-v44';
+import {subjectView,knowledgeView,lensEvidence} from './ui/lenses.js?v=runtime-v44';
+import {subjectLens,skillLens,questionLens} from './engine/lenses.js?v=runtime-v44';
+import {directoryFilterView} from './scenes/directory.js?v=runtime-v44';
+import {renderInto} from './ui/render.js?v=runtime-v44';
+import {installInteractions,enhance,prepareUpdate,pruneInteractions,shiftTable,openDisclosure} from './ui/interactions.js?v=runtime-v44';
+import {readingDefaults,readingView,applyReading} from './ui/reading.js?v=runtime-v44';
+import {reportView} from './ui/report.js?v=runtime-v44';
+import {reportExams} from './engine/report-scope.js?v=runtime-v44';
+import {installNotificationLayout} from './ui/notification-layout.js?v=runtime-v44';
+import {welcomeView} from './ui/welcome.js?v=runtime-v44';
+import {composeScene} from './ui/composition.js?v=runtime-v44';
+import {researchView,studyDescription,studyAvailable,studyKey} from './ui/research.js?v=runtime-v44';
+import {Atlas} from './engine/atlas.js?v=runtime-v44';
+import {normalizeDataset,SUBJECTS} from './data/compat.js?v=runtime-v44';
+import {hydrate,save,saveWorkspace,restoreDataset,hasMaterials,preference,remember,previous,emptyDataset,loadNotebook,saveNotebook} from './data/workspace.js?v=runtime-v44';
+import {mergeDatasets} from './data/parser.js?v=runtime-v44';
+import {remapScopedContext} from './data/identity.js?v=runtime-v44';
+import {Inbox} from './data/inbox.js?v=runtime-v44';
+import {NoteJournal} from './data/notes.js?v=runtime-v44';
+import {installViewportMetrics} from './ui/viewport.js?v=runtime-v44';
+import {repairKnowledgeReport} from './engine/knowledge.js?v=runtime-v44';
+import {motion,visualFrame,cancelOwnMotion,finishAnimation,enterCanvas,arrangeRows,prepareCanvasSlide,finishCanvasSlide} from './ui/motion.js?v=runtime-v44';
+import {esc,button,empty,table} from './ui/html.js?v=runtime-v44';
+import {excel,word,pdf,print,download,chart,scoreRows,effectiveRows,subjectRows,answerRows,evidence} from './io/exports.js?v=runtime-v44';
+import {directoryDefaults,lensValues,queryDirectory,directoryViewValues,directoryViewName} from './engine/directory.js?v=runtime-v44';
+import {peekView,compareView,drawerEvidence} from './ui/explorer.js?v=runtime-v44';
+import {dockIcon} from './ui/icons.js?v=runtime-v44';
 
 const routes=[['board','年级总览','▦'],['class','班级研究','▥'],['papers','试卷研究','▧'],['people','学生研究','◎'],['follow','教学跟进','↗'],['library','资料与报告','⊞']];
 const defaults={board:{mode:'overview',metric:'underRate',historyMetric:'mean',search:'',page:1},class:{tab:'snapshot',value:'score',trendMetric:'mean',matrix:'total',search:'',page:1,matched:false},papers:{key:'',tab:'map',classes:[],question:0,order:'paper',questionSearch:'',questionFocus:'all',search:'',page:1},people:{sid:'',storyMetric:'total',...directoryDefaults,filtersOpen:innerWidth>760},follow:{tier:'under',band:20,side:'below',classes:[],search:'',page:1},library:{tab:'materials'}};
@@ -203,7 +204,7 @@ function go(scene,values={},resetScroll=false,{root=false,recordTrail=true}={}) 
   Object.assign(books[scene],values);current=scene;persistBooks();
   const next=path(scene);if(location.hash!==next)history.pushState(null,'',next);paint(true);
 }
-function warmScene(scene){if(hasMaterials(atlas.data)&&!loaded.has(scene)){const task=import('./scenes/'+scene+'.js?v=runtime-v43');loaded.set(scene,task);task.catch(()=>{if(loaded.get(scene)===task)loaded.delete(scene);});}}
+function warmScene(scene){if(hasMaterials(atlas.data)&&!loaded.has(scene)){const task=import('./scenes/'+scene+'.js?v=runtime-v44');loaded.set(scene,task);task.catch(()=>{if(loaded.get(scene)===task)loaded.delete(scene);});}}
 function openEntry(scene){
   const values={board:{mode:'overview',search:'',page:1},class:{tab:'snapshot',search:'',page:1},papers:{key:'',shelfExam:atlas.latest,shelfSubject:'all'},people:{sid:'',...directoryDefaults},library:{tab:'materials'}}[scene]||{};
   go(scene,values,true,{root:true});
@@ -228,7 +229,7 @@ async function paint(transition=false,focus=null) {
     const available=hasMaterials(atlas.data);let view;
     if(!available)view=welcomeView();
     else {
-      if(!loaded.has(scene))loaded.set(scene,import('./scenes/'+scene+'.js?v=runtime-v43'));
+      if(!loaded.has(scene))loaded.set(scene,import('./scenes/'+scene+'.js?v=runtime-v44'));
       const module=await loaded.get(scene);if(serial!==paintId)return;
       if(sceneObject(scene)!==paintedObject&&!stage().dataset.sliding&&!reducedMotion())await foregroundFrame();if(serial!==paintId)return;
       view=scene==='class'&&!atlas.classes.length?{html:empty('先带入一个班的材料','从导入原表开始建立班级画布。')+button('导入材料','import',{},'accent'),report:null}:module.render(atlas,structuredClone(books[scene]),session);
@@ -288,6 +289,14 @@ async function installDataset(dataset,{fresh=false}={}) {
   await closeDrawer();const shelf=document.getElementById('research-dialog');if(shelf.open)await dismissDialog('research-dialog');
   clearTimeout(researchTimer);paintedStudy=null;closedStudy=null;researchTrail=[];
   atlas=new Atlas(restoreDataset(dataset));const available=hasMaterials(atlas.data);
+  if(atlas.data.identityScopes){
+   session.plans=remapScopedContext(session.plans,atlas.data).map(normalizePlan);session.notebook=remapScopedContext(session.notebook,atlas.data);
+   session.directoryViews=remapScopedContext(session.directoryViews,atlas.data);
+   for(const key of ['plans','directoryViews'])remember(key,session[key]);
+   const draft=preference('followDraft',null);if(draft)remember('followDraft',remapScopedContext(draft,atlas.data));
+   Object.assign(books.people,remapScopedContext(books.people,atlas.data));
+   Object.assign(research,remapScopedContext(research,atlas.data));
+  }
   if(available)ensureBooks();
   if(fresh&&available){books.board.exam=atlas.latest;books.follow.exam=atlas.latest;books.class.exam=atlas.classExams(books.class.no).at(-1)?.id||atlas.latest;books.class.exams=atlas.classExams(books.class.no).map(e=>e.id);books.papers.key='';books.people.exam=atlas.materialAt(books.people.sid)?.exam;}
   if(!available){await closeDrawer();await closeReader();for(const id of ['report-dialog','research-dialog']){const dialog=document.getElementById(id);if(dialog.open)await dismissDialog(id);}exportReport=null;document.getElementById('report-content').replaceChildren();document.getElementById('research-content').replaceChildren();}
@@ -391,7 +400,7 @@ function changeReportScope(key,value){
  exportReport=next;reportNoteRevision++;clearTimeout(noteTimer);reportNoteState='preview';
  Object.assign(reportScope,{section:0,page:1,search:'',preview:'paper',personSearch:key==='sid'?reportScope.personSearch:''});drawReport({reset:true});
 }
-function teachingReport(spec){const raw=Boolean(spec.includeRaw),report=buildTeachingReport(atlas,{...spec,includeRaw:['class','subject'].includes(spec.kind)?true:spec.includeRaw},session.plans);report.spec.includeRaw=raw;if(!raw&&['class','subject','student'].includes(spec.kind))report.outputSelection={...selectionFor(report),selected:report.sections.flatMap((s,i)=>s.title.startsWith('附录：')||spec.kind==='student'&&s.title==='个人全部小题得分'?[]:[i])};return report;}
+function teachingReport(spec){const raw=Boolean(spec.includeRaw),report=buildTeachingReport(atlas,{...spec,includeRaw:['class','subject'].includes(spec.kind)?true:spec.includeRaw},session.plans);report.spec.includeRaw=raw;if(!raw&&['class','subject','student'].includes(spec.kind))report.outputSelection={...selectionFor(report),selected:presetSections(report,'teaching'),fields:teachingFields(report)};return report;}
 function showNoteState(state){reportNoteState=state;const el=document.getElementById('report-note-state');if(el){el.dataset.state=state;el.textContent={preview:'组合可保存到摘录；教师判断会自动留存',saving:'正在保存判断…',saved:'已保存到本机摘录',error:'本机保存未完成 · 请下载材料保留判断'}[state];}if(exportReport?.id){const label=document.querySelector('#report-content .inbox-top .overline');if(label)label.textContent=state==='saved'?'教学证据 / 已摘录':'教学证据 / 正在留存';const keep=document.querySelector('#report-content [data-cmd="report-keep"]');if(keep)keep.textContent='保存组合修改';}}
 async function persistReportNote() {
   if(!exportReport?.id){showNoteState('preview');return;}
@@ -513,17 +522,19 @@ function addFollow(sid,exam,tier) {
   session.plans.unshift({id,sid,exam,tier,classNo:row.classNo,subject:nearest?.subject||'',status:'new',note:'',created:new Date().toISOString()});remember('plans',session.plans);notify('已加入跟进看板',{label:'查看跟进',cmd:'follow-open'});if(current==='follow')paint();
 }
 let planDraft=null,planUI={},planSearchTimer,planControls,reportReader;
-const planPaths=new Set(['sid','exam','teacher','note','reviewDate','result','training.key','training.tasks','training.method','training.count','training.targetRate','training.goal','schedule.date','schedule.slot','schedule.period','schedule.time','schedule.duration','ui.no','ui.search','ui.questionFilter','ui.knowledge']);
+const planPaths=new Set(['sid','exam','teacher','note','reviewDate','result','review.correct','review.total','training.key','training.tasks','training.method','training.count','training.targetRate','training.goal','schedule.date','schedule.slot','schedule.period','schedule.time','schedule.duration','ui.no','ui.search','ui.questionFilter','ui.knowledge']);
 function rememberPlanDraft(){if(!remember('followDraft',planDraft?{plan:planDraft,ui:planUI}:null))notify('训练草稿本机保存未完成，当前页面仍保留，请保存计划或下载备份');}
 function drawPlan(){planControls?.close();const root=document.getElementById('plan-content');renderInto(root,followEditor(atlas,planDraft,planUI));enhance(root);notificationLayout.refresh();}
 function openPlan(context={}){
  clearTimeout(planSearchTimer);const existing=context.id?session.plans.find(p=>p.id===context.id):null,stored=planDraft?{plan:planDraft,ui:planUI}:preference('followDraft',null),resume=stored?.plan&&(context.id?stored.plan.id===context.id:!context.sid&&!stored.plan.id);
  if(resume&&atlas.materialAt(stored.plan.sid,stored.plan.exam)&&(!stored.plan.id||session.plans.some(p=>p.id===stored.plan.id))){planDraft=draftForPlan(atlas,{},stored.plan);planUI=stored.ui||{};}
  else {const exam=context.exam||atlas.latest,sid=context.sid||materialPeople(atlas,exam)[0]?.sid;planDraft=draftForPlan(atlas,{...context,exam,sid},existing);planUI={questionFilter:'weak',no:'all'};}
- if(!planDraft.sid){notify('请先导入学生材料');return;}drawPlan();rememberPlanDraft();showDialog(document.getElementById('plan-dialog'));document.getElementById('plan-dialog').scrollTop=0;
+ if(!planDraft.sid){notify('请先导入学生材料');return;}drawPlan();rememberPlanDraft();const dialog=document.getElementById('plan-dialog');showDialog(dialog);dialog.scrollTop=0;
+ if(existing&&existing.status!=='new')requestAnimationFrame(()=>dialog.querySelector('[data-plan-field="reviewDate"]')?.closest('.plan-editor-section')?.scrollIntoView({block:'start'}));
 }
 function setPlanValue(path,value){
  if(!planDraft||!planPaths.has(path))return;const [group,key]=path.split('.'),root=group==='ui'?planUI:planDraft;
+ if(planDraft.id&&['sid','exam'].includes(path)&&String(planDraft[path])!==String(value)){notify('这条计划已关联学生与考试，其他对象请新建训练计划。');return;}
  if(group==='ui')root[key]=value;else if(key)root[group][key]=value;else root[group]=value;
  if(['sid','exam','training.key'].includes(path)){
   planDraft.training.questions=[];planDraft.teacher='';planDraft=draftForPlan(atlas,{key:planDraft.training.key},planDraft);
@@ -540,6 +551,7 @@ async function saveTrainingPlan(){
  if(!p.training.tasks.length)throw new Error('请至少选择一项训练任务');
  if(p.schedule.date&&!validDate(p.schedule.date))throw new Error('请选择有效的训练日期');
  if(p.reviewDate&&!validDate(p.reviewDate))throw new Error('请选择有效的复核日期');
+ validatePlanReview(p);
  if(p.schedule.date&&!p.schedule.slot)throw new Error('已选日期，请再选择课内、课间等时段');
  if(['lesson','break'].includes(p.schedule.slot)&&(!Number.isInteger(Number(p.schedule.period))||Number(p.schedule.period)<1||Number(p.schedule.period)>9))throw new Error('请选择第几节课');
  if(p.schedule.slot==='custom'&&!p.schedule.time)throw new Error('自定时刻需要填写具体时间');
@@ -580,7 +592,7 @@ async function commands(event) {
       if(!await closeDrawer())return;go('library',values);return;
     }
     if(d.cmd==='teaching-report-build'){openReport(()=>teachingReport(reportSpec(atlas,books.library)),{fresh:true});return;}
-    if(d.cmd==='report-preset'){updateReportSelection(s=>{s.selected=presetSections(exportReport,d.preset);if(d.preset==='all'){s.fields={};s.filters={};}});return;}
+    if(d.cmd==='report-preset'){updateReportSelection(s=>{s.selected=presetSections(exportReport,d.preset);if(d.preset==='teaching')s.fields=teachingFields(exportReport);if(d.preset==='all'){s.fields={};s.filters={};}});return;}
     if(d.cmd==='report-scope'){changeReportScope(d.key,d.value);return;}
     if(d.cmd==='report-part-edit'){Object.assign(reportScope,{section:Number(d.index),page:1,search:'',settingsOpen:true});drawReport();openDisclosure(document.querySelector('.report-field-options'));document.querySelector('.report-field-options')?.scrollIntoView({block:'nearest',behavior:reducedMotion()?'instant':'smooth'});return;}
     if(d.cmd==='report-part-toggle'){reportScope.section=Number(d.index);updateReportSelection(s=>{const i=Number(d.index);s.selected=s.selected.includes(i)?s.selected.filter(v=>v!==i):[...s.selected,i];});return;}
@@ -867,7 +879,7 @@ export async function mount() {
     if(target.id==='report-note'&&exportReport){clearTimeout(reportTimer);reportTimer=setTimeout(drawReport,160);exportReport.note=target.value;reportReader?.invalidate(exportReport);if(!exportReport.id&&target.value.trim()){exportReport.id='e'+crypto.randomUUID();exportReport.autoSaved=true;session.notebook.unshift(structuredClone(exportReport));}if(exportReport.id){const note=session.notebook.find(n=>n.id===exportReport.id);if(note){note.note=target.value;recordNoteDraft(note);showNoteState('saving');clearTimeout(noteTimer);noteTimer=setTimeout(persistReportNote,400);}}else showNoteState('preview');}
   });
   document.addEventListener('keydown',async event=>{if((event.metaKey||event.ctrlKey)&&event.key.toLowerCase()==='k'){event.preventDefault();if(document.getElementById('inbox').open)return;if(!hasMaterials(atlas.data)){notify('导入成绩材料后即可查找学生');return;}if(document.getElementById('report-dialog').open&&!await finishReport())return;if(!await closeDrawer())return;for(const dialog of document.querySelectorAll('dialog[open]'))if(dialog.id!=='inbox')await dismissDialog(dialog.id);go('people',{sid:'',...directoryDefaults},true);setTimeout(()=>stage().querySelector('[data-field="search"]')?.focus(),100);}});
-  document.addEventListener('change',event=>{if(['schedule.date','schedule.time','reviewDate','training.count','training.targetRate','schedule.duration'].includes(event.target.dataset?.planField)&&planDraft)drawPlan();});
+  document.addEventListener('change',event=>{if(['schedule.date','schedule.time','reviewDate','training.count','training.targetRate','schedule.duration','review.correct','review.total'].includes(event.target.dataset?.planField)&&planDraft)drawPlan();});
   document.addEventListener('dragstart',event=>{const card=event.target.closest?.('[data-plan]');if(card)event.dataTransfer.setData('text/plain',card.dataset.plan);});
   document.addEventListener('dragover',event=>{if(event.target.closest?.('.follow-lane'))event.preventDefault();});
   document.addEventListener('dragenter',event=>event.target.closest?.('.follow-lane')?.classList.add('dragover'));

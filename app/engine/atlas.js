@@ -1,12 +1,13 @@
-import {classDefaults,SUBJECTS,normalizeDataset} from '../data/compat.js?v=runtime-v43';
-import {valid,average,sum,distribution,groupKey,GROUPS} from './metrics.js?v=runtime-v43';
-import {schoolRank,validRank,legacyRanks} from './ranking.js?v=runtime-v43';
-import {knowledgeLabels} from './knowledge.js?v=runtime-v43';
+import {classDefaults,SUBJECTS,normalizeDataset} from '../data/compat.js?v=runtime-v44';
+import {valid,average,sum,distribution,groupKey,GROUPS} from './metrics.js?v=runtime-v44';
+import {schoolRank,validRank,legacyRanks} from './ranking.js?v=runtime-v44';
+import {knowledgeLabels} from './knowledge.js?v=runtime-v44';
 const append=(map,key,value)=>{if(!map.has(key))map.set(key,[]);map.get(key).push(value);};
 export class Atlas {
   constructor(dataset) {
     this.data=normalizeDataset(dataset);this.exams=this.data.exams;this.latest=this.exams.at(-1)?.id||'';
     this.people=new Map(this.data.students.map(p=>[p.id,p]));this.examRows=new Map();this.classRows=new Map();this.stories=new Map();this.paperRows=new Map();this.personAnswers=new Map();this.answerStories=new Map();this.materialStories=new Map();this.percentiles=new Map();this.invalidateCaches();
+    this.nameCounts=new Map();for(const p of this.people.values())this.nameCounts.set(p.name,(this.nameCounts.get(p.name)||0)+1);
     this.lines=new Map(this.data.lines.map(l=>[l.exam+'|'+l.track,l]));
     for(const row of this.data.scores){append(this.examRows,row.exam,row);append(this.classRows,row.classNo+'|'+row.exam,row);append(this.stories,row.sid,row);}
     for(const row of this.data.answers){append(this.paperRows,row.subject+'|'+row.exam,row);append(this.personAnswers,row.sid+'|'+row.exam,row);append(this.answerStories,row.sid,row);}
@@ -19,6 +20,7 @@ export class Atlas {
   invalidateCaches(){this.summaryCache=new WeakMap();this.groupCache=new Map();this.snapshotCache=new Map();this.paperCache=new Map();this.paperPreviews=new Map();this.classRankCache=new Map();this.paperList=null;}
   profile(no){return {...classDefaults(Number(no)),...this.data.profiles[no]};}
   name(sid){return this.people.get(sid)?.name||'未命名学生';}
+  label(sid){const p=this.people.get(sid);return this.name(sid)+(p?.sourceId&&this.nameCounts.get(p.name)>1?'（'+p.sourceId+'）':'');}
   exam(id){return this.exams.find(e=>e.id===id)||{id,label:id};}
   rows(exam){return this.examRows.get(exam)||[];}
   classAt(no,exam){return this.classRows.get(Number(no)+'|'+exam)||[];}

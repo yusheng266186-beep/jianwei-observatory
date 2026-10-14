@@ -1,14 +1,15 @@
-import {pdfBlob,pdfKey,idlePDFWorker} from '../io/exports.js?v=runtime-v43';
-import {selectedReport} from '../engine/report-selection.js?v=runtime-v43';
-import {pdfLibrary} from '../io/pdf-viewer-library.js?v=runtime-v43';
+import {pdfBlob,pdfKey,idlePDFWorker} from '../io/exports.js?v=runtime-v44';
+import {selectedReport} from '../engine/report-selection.js?v=runtime-v44';
+import {pdfLibrary} from '../io/pdf-viewer-library.js?v=runtime-v44';
+import {pendingReportBrief} from './report-brief.js?v=runtime-v44';
 // A real PDF owns this managed island; form changes never reconcile its canvases.
 export function installReportReading(dialog){
- let pane=null,state=null,wanted=null,key='',doc=null,task=null,timer=0,frame=0,epoch=0,busy=false,base=null,scale=1,restore=null,suspended=false,previewAbort=null,pinnedEnd=false;
+ let pane=null,state=null,wanted=null,key='',doc=null,task=null,timer=0,frame=0,epoch=0,busy=null,base=null,scale=1,restore=null,suspended=false,previewAbort=null,pinnedEnd=false;
  const renders=new Map(),pages=new Map();let visibleObserver,loadingTask,pendingChapter='',chapterEpoch=0;
  const resize=new ResizeObserver(()=>{cancelAnimationFrame(frame);frame=requestAnimationFrame(()=>{if(doc&&pane?.clientWidth&&pane?.clientHeight)layout(snapshot());});});
  const message=(text,error=false)=>{let el=pane?.querySelector('.pdf-status');if(!pane)return;const keep=doc?snapshot():null;if(!el){el=document.createElement('div');el.className='pdf-status';el.setAttribute('role','status');pane.prepend(el);}el.replaceChildren(document.createTextNode(text));if(error){const b=document.createElement('button');b.className='button outline';b.textContent='重新生成纸面';b.dataset.cmd='report-paper-retry';el.append(b);}el.hidden=!text;if(keep){if(keep.end)pane.scrollTop=pane.scrollHeight;else if(keep.top<=3)pane.scrollTop=0;else {const anchor=pages.get(keep.page)?.node;if(anchor)pane.scrollTop=anchor.offsetTop+(keep.ratio||0)*anchor.offsetHeight;}}};
  function cancelRenders(){for(const job of renders.values())job.cancel();renders.clear();visibleObserver?.disconnect();}
- function dispose(){previewAbort?.abort();previewAbort=null;idlePDFWorker();pinnedEnd=false;epoch++;chapterEpoch++;pendingChapter='';clearTimeout(timer);cancelRenders();task?.destroy().catch(()=>{});loadingTask?.destroy().catch(()=>{});loadingTask=null;task=null;doc=null;if(pane){pane.pdfDocument=null;pane.pdfBlob=null;pane.replaceChildren();}pages.clear();key='';base=null;}
+ function dispose(){previewAbort?.abort();previewAbort=null;busy=null;idlePDFWorker();pinnedEnd=false;epoch++;chapterEpoch++;pendingChapter='';clearTimeout(timer);cancelRenders();task?.destroy().catch(()=>{});loadingTask?.destroy().catch(()=>{});loadingTask=null;task=null;doc=null;if(pane){pane.pdfDocument=null;pane.pdfBlob=null;pane.replaceChildren();}pages.clear();key='';base=null;}
  function snapshot(){
   if(!pane)return null;const maximum=Math.max(0,pane.scrollHeight-pane.clientHeight),n=Number(pane.dataset.currentPage)||1,node=pane.querySelector('[data-pdf-page="'+n+'"]');
   return {top:pane.scrollTop,left:pane.scrollLeft,end:pinnedEnd||maximum>3&&maximum-pane.scrollTop<=3,page:n,ratio:node?(pane.scrollTop-node.offsetTop)/Math.max(1,node.offsetHeight):0};
@@ -72,7 +73,7 @@ export function installReportReading(dialog){
   // Let the window settle before print fonts, layout and PDF parsing compete
   // for the foreground thread. Exit pauses work immediately, not after fadeout.
   if(dialog.dataset.surfacePhase==='entering'){timer=setTimeout(generate,60);return;}
-  const request=wanted,version=epoch,keep=restore||snapshot();busy=true;
+  const request=wanted,version=epoch,keep=restore||snapshot(),owner={};busy=owner;
   try{
    previewAbort?.abort();const controller=new AbortController();previewAbort=controller;
    const [blob,module]=await Promise.all([pdfBlob(request.report,{signal:controller.signal}),pdfLibrary()]);if(version!==epoch||wanted?.key!==request.key||!pane?.isConnected)return;
@@ -84,9 +85,9 @@ export function installReportReading(dialog){
    for(let n=1;n<=doc.numPages;n++){const node=document.createElement('section');node.className='pdf-page';node.dataset.pdfPage=String(n);node.setAttribute('aria-label','第 '+n+' 页');node.innerHTML='<canvas aria-hidden="true" width="1" height="1"></canvas><div class="textLayer"></div><span class="pdf-page-accessible sr-only">第 '+n+' 页</span>';paper.append(node);pages.set(n,{node,done:false});}
    pane.replaceChildren(paper);pane.pdfDocument=doc;pane.pdfBlob=blob;pane.dataset.pdfState='ready';pane.dataset.pdfRevision=String((Number(pane.dataset.pdfRevision)||0)+1);layout(latestKeep);message('');if(pendingChapter){const title=pendingChapter;pendingChapter='';locateChapter(title);}
   }catch(error){if(version===epoch&&wanted?.key===request.key){pane.dataset.pdfState='error';message('纸面暂未生成：'+error.message,true);}}
-  finally{busy=false;if(!suspended&&wanted&&wanted.key!==key&&pane?.dataset.pdfState==='pending'&&dialog.open)timer=setTimeout(generate,0);}
+  finally{if(busy===owner){busy=null;if(!suspended&&wanted&&wanted.key!==key&&pane?.dataset.pdfState==='pending'&&dialog.open)timer=setTimeout(generate,0);}}
  }
- function queue(delay=160){previewAbort?.abort();previewAbort=null;clearTimeout(timer);pane.dataset.pdfState='pending';message(doc?'内容已更新，正在重新分页…':'正在排版报告…');timer=setTimeout(generate,delay);}
+ function queue(delay=160){previewAbort?.abort();previewAbort=null;clearTimeout(timer);pane.dataset.pdfState='pending';if(!doc){pane.querySelector('.pdf-pending-brief')?.remove();pane.insertAdjacentHTML('beforeend',pendingReportBrief(wanted.report));}message(doc?'内容已更新，正在重新分页…':'关键内容已就绪，PDF纸面正在排版…');timer=setTimeout(generate,delay);}
  function jump(n){if(!pane||!doc)return;pinnedEnd=false;n=Math.max(1,Math.min(doc.numPages,Math.round(Number(n)||1)));const node=pages.get(n)?.node;if(node){pane.scrollTop=node.offsetTop;paintPage(n);position();pane.focus({preventScroll:true});}}
  dialog.addEventListener('scroll',event=>{if(event.target===pane){cancelAnimationFrame(frame);frame=requestAnimationFrame(position);}},{capture:true,passive:true});
  document.addEventListener('selectionchange',()=>{if(pane&&dialog.open){cancelAnimationFrame(frame);frame=requestAnimationFrame(position);}});
@@ -95,7 +96,7 @@ export function installReportReading(dialog){
  dialog.addEventListener('change',event=>{if(event.target.matches('[data-report-page-target]'))jump(event.target.value);});
  const closed=()=>{if(dialog.open)return;dispose();wanted=null;pane=null;resize.disconnect();};
  dialog.addEventListener('close',closed);dialog.addEventListener('surfaceclosed',closed);
- function suspend(){previewAbort?.abort();previewAbort=null;idlePDFWorker();suspended=true;epoch++;chapterEpoch++;clearTimeout(timer);cancelRenders();loadingTask?.destroy().catch(()=>{});loadingTask=null;}
+ function suspend(){previewAbort?.abort();previewAbort=null;busy=null;idlePDFWorker();suspended=true;epoch++;chapterEpoch++;clearTimeout(timer);cancelRenders();loadingTask?.destroy().catch(()=>{});loadingTask=null;}
  function resume(){suspended=false;if(!pane||!dialog.open)return;if(wanted&&wanted.key!==key)queue();else if(doc)layout(snapshot());}
  dialog.addEventListener('surfaceclosing',suspend);dialog.addEventListener('surfaceopening',resume);
  document.addEventListener('visibilitychange',()=>{if(document.hidden)suspend();else if(dialog.open&&dialog.dataset.surfacePhase!=='leaving')resume();});

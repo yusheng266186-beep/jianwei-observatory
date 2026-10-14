@@ -44,7 +44,9 @@
     "test:startup": "node tests/startup.cjs",
     "test:report-warm": "node tests/report-warm.cjs",
     "test:report-scope": "node tests/report-scope.cjs",
-    "test:notifications": "node tests/notification-layout.cjs"
+    "test:notifications": "node tests/notification-layout.cjs",
+    "test:identity": "node tests/identity-import.cjs",
+    "test:teaching-polish": "node tests/teaching-polish.cjs"
   },
   "devDependencies": {
     "playwright": "1.62.1"
