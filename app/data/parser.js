@@ -1,6 +1,6 @@
-import { SUBJECTS, EXAM_ORDER, EXAM_NAMES, classDefaults, finite, normalizeDataset } from './compat.js?v=runtime-v41';
-import {mergeContext} from './context.js?v=runtime-v41';
-import {explicitRanks,rankColumns,ranksFrom} from '../engine/ranking.js?v=runtime-v41';
+import { SUBJECTS, EXAM_ORDER, EXAM_NAMES, classDefaults, finite, normalizeDataset } from './compat.js?v=runtime-v42';
+import {mergeContext} from './context.js?v=runtime-v42';
+import {explicitRanks,rankColumns,ranksFrom} from '../engine/ranking.js?v=runtime-v42';
 const txt=v=>String(v??'').trim();
 const num=v=>v==null||txt(v)===''?null:Number.isFinite(Number(v))?Number(v):null;
 const code=v=>txt(v).replace(/[物历]$/,'');
@@ -178,7 +178,11 @@ export function parseFlat(rows,source,mapping=null){
   const name=txt(val('name')),n=num(txt(val('classNo')).replace(/[^\d]/g,''));if(!name||!n)continue;
   const e=code(val('exam'))||'本次',category=txt(val('track')).toLowerCase(),t=category==='history'||category.includes('历')?'history':category==='physics'||category.includes('物')?'physics':track(val('exam'),n),subjects={};
   for(const s of SUBJECTS){const v=num(val(s)),rawColumn=Object.hasOwn(mapping,'raw:'+s)?mapping['raw:'+s]:auto.mapping['raw:'+s],raw=rawColumn==null?null:num(row[Number(rawColumn)]);if(v!=null||raw!=null)subjects[s]={score:v,raw,rank:null,schoolRank:null};}
-  data.scores.push({exam:e,rawExam:txt(val('exam')),sid:idFor(name),classNo:n,track:t,total:num(val('total')),rawTotal:num(val('rawTotal')),...ranksFrom(row,ranks,{provenance:'column-headings-v2'}),subjects,language:txt(val('language'))|| (subjects['日语']?'日语':subjects['英语']?'英语':'')});
+  const rankValues=ranksFrom(row,ranks,{provenance:'column-headings-v2'}),basisColumn=auto.headers.indexOf('排名及统计口径');
+  // An exported analysis may contain a calculated class position. On import it
+  // must not become a supplied source rank that freezes after more rows arrive.
+  if(basisColumn>=0&&ranks.classRank?.label==='班排名'&&txt(row[basisColumn]).includes('班排按同班同考次有效总分降序，同分并列')){rankValues.classRank=null;delete rankValues.rankSources.classRank;}
+  data.scores.push({exam:e,rawExam:txt(val('exam')),sid:idFor(name),classNo:n,track:t,total:num(val('total')),rawTotal:num(val('rawTotal')),...rankValues,subjects,language:txt(val('language'))|| (subjects['日语']?'日语':subjects['英语']?'英语':'')});
   data.profiles[n]||={...classDefaults(n),track:t};
  }
  return examsFrom(data);

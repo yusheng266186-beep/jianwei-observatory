@@ -1,5 +1,5 @@
-import {valid} from './metrics.js?v=runtime-v41';
-import {questionNumbers} from './paper-structure.js?v=runtime-v41';
+import {valid} from './metrics.js?v=runtime-v42';
+import {questionNumbers} from './paper-structure.js?v=runtime-v42';
 
 const normalize=value=>String(value??'').normalize('NFKC').trim().toLocaleLowerCase('zh-CN');
 export function queryQuestionMap(lens,state={},rules={}) {

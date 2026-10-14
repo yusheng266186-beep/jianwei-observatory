@@ -42,7 +42,9 @@
     "test:report-render-race": "node tests/report-render-race.cjs",
     "test:report-types": "node tests/report-types.cjs",
     "test:startup": "node tests/startup.cjs",
-    "test:report-warm": "node tests/report-warm.cjs"
+    "test:report-warm": "node tests/report-warm.cjs",
+    "test:report-scope": "node tests/report-scope.cjs",
+    "test:notifications": "node tests/notification-layout.cjs"
   },
   "devDependencies": {
     "playwright": "1.62.1"

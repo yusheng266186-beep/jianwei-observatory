@@ -6,6 +6,8 @@ import {normalizeReportScope} from '../app/ui/report-context.js';
 import {fillSavedClassRanks} from '../app/engine/report-ranks.js';
 import {transferSelection,selectedReport} from '../app/engine/report-selection.js';
 import {makeFixture} from './fixtures.cjs';
+import {scoreRows} from '../app/io/exports.js';
+import {parseFlat} from '../app/data/parser.js';
 
 test('班排名使用原表名次，缺少名次时按同班当次有效总分计算，同分并列',()=>{
  const data=makeFixture(),rows=data.scores.filter(r=>r.classNo===4&&r.exam==='52');
@@ -32,4 +34,13 @@ test('个人与班级报告使用一致班排名，转班历史按当次班级�
  assert.equal(row[roster.headers.indexOf('班级排名')],3);assert.equal(report.spec.kind,'class');
  student.outputSelection={title:'某学生自定义标题',order:[...student.sections.keys()].reverse()};report.outputSelection=transferSelection(student,report);const output=selectedReport(report);assert.equal(output.sections[0].title,'班级概况');assert.equal(output.title,report.title);
  const subjectScope=normalizeReportScope(atlas,student.spec,{kind:'subject',subject:'数学'});assert.equal(subjectScope.no,7);assert.equal(buildTeachingReport(atlas,subjectScope).kind,'subject');
+});
+test('分析表导出的班排名与报告一致，筛选名单不改变同班范围，原表字段保持原样',()=>{
+ const data=makeFixture(),part=data.scores.filter(row=>row.classNo===7&&row.exam==='52');part[0].total=500;part[1].total=500;part[2].total=490;part[3].total=null;
+ const atlas=new Atlas(data),sheet=scoreRows(atlas,[part[2],part[0],part[3]]),rank=sheet[0].indexOf('班排名'),basis=sheet[0].indexOf('排名及统计口径');
+ assert.deepEqual(sheet.slice(1).map(row=>row[rank]),[3,1,null]);assert.match(sheet[1][basis],/同班同考次.*同分并列/);assert.equal(part[2].classRank,undefined);
+ const imported=parseFlat(sheet,'分析表.csv');assert.equal(imported.scores[0].classRank,null,'分析名次重新导入后不冒充原表提供的名次');assert.equal(imported.scores[0].rankSources.classRank,undefined);
+ part[2].classRank=9;const supplied=scoreRows(atlas,[part[2]])[1];assert.equal(supplied[rank],9);assert.match(supplied[basis],/班排 9/);assert.doesNotMatch(supplied[basis],/降序/);
+ assert.equal(parseFlat([sheet[0],supplied],'原表名次分析.csv').scores[0].classRank,9);
+ assert.equal(sheet[1][sheet[0].indexOf('校排名')],part[2].schoolRank);
 });

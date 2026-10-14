@@ -1,5 +1,5 @@
-import {button,esc} from './html.js?v=runtime-v41';
-import {selectionFor,fieldsFor,availablePresets,presetSections,selectedReport} from '../engine/report-selection.js?v=runtime-v41';
+import {button,esc} from './html.js?v=runtime-v42';
+import {selectionFor,fieldsFor,availablePresets,presetSections,selectedReport} from '../engine/report-selection.js?v=runtime-v42';
 export function reportOptions(report,state){
  const selection=selectionFor(report),output=selectedReport({...report,outputSelection:selection}),index=Math.min(state.section||0,Math.max(0,report.sections.length-1)),section=report.sections[index],fields=fieldsFor(report,index,selection),picked=new Set(selection.selected),totalRows=output.sections.reduce((n,s)=>n+(s.rows||[]).length,0);
  const presets=availablePresets(report).map(([key,title])=>{const match=JSON.stringify(presetSections(report,key).sort((a,b)=>a-b))===JSON.stringify(selection.selected.slice().sort((a,b)=>a-b));return button(esc(title),'report-preset',{preset:key},match?'chip selected':'chip','aria-pressed="'+match+'"');}).join('');

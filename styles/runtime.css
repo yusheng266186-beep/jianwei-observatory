@@ -30,3 +30,5 @@ body[data-motion=calm] dialog[data-backdrop-phase]::backdrop{animation:none!impo
 /* Glass title cards need their own inset inside the drawer's outer gutter. */
 #research-drawer[data-kind] .drawer-title{padding:24px 22px 20px}
 @media(max-width:760px){#research-drawer[data-kind] .drawer-title{padding:20px 18px 16px}}
+/* Notifications share the glass window, without covering its action row. */
+dialog #toast{bottom:var(--toast-clearance,max(16px,env(safe-area-inset-bottom)));right:var(--toast-right,16px);max-width:min(420px,var(--toast-width,calc(100vw - 32px)))}

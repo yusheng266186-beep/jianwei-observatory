@@ -1,6 +1,6 @@
-import {pdfBlob,pdfKey,idlePDFWorker} from '../io/exports.js?v=runtime-v41';
-import {selectedReport} from '../engine/report-selection.js?v=runtime-v41';
-import {pdfLibrary} from '../io/pdf-viewer-library.js?v=runtime-v41';
+import {pdfBlob,pdfKey,idlePDFWorker} from '../io/exports.js?v=runtime-v42';
+import {selectedReport} from '../engine/report-selection.js?v=runtime-v42';
+import {pdfLibrary} from '../io/pdf-viewer-library.js?v=runtime-v42';
 // A real PDF owns this managed island; form changes never reconcile its canvases.
 export function installReportReading(dialog){
  let pane=null,state=null,wanted=null,key='',doc=null,task=null,timer=0,frame=0,epoch=0,busy=false,base=null,scale=1,restore=null,suspended=false,previewAbort=null,pinnedEnd=false;
@@ -12,6 +12,18 @@ export function installReportReading(dialog){
  function snapshot(){
   if(!pane)return null;const maximum=Math.max(0,pane.scrollHeight-pane.clientHeight),n=Number(pane.dataset.currentPage)||1,node=pane.querySelector('[data-pdf-page="'+n+'"]');
   return {top:pane.scrollTop,left:pane.scrollLeft,end:pinnedEnd||maximum>3&&maximum-pane.scrollTop<=3,page:n,ratio:node?(pane.scrollTop-node.offsetTop)/Math.max(1,node.offsetHeight):0};
+ }
+ function releasePage(item){
+  if(!item?.done)return;
+  const layer=item.node.querySelector('.textLayer'),selection=document.getSelection();
+  // A selection may cross a page boundary while the reader scrolls. Keep those
+  // pages intact until copying finishes or the selection is collapsed.
+  if(selection&&!selection.isCollapsed)for(let i=0;i<selection.rangeCount;i++)if(selection.getRangeAt(i).intersectsNode(layer))return;
+  const canvas=item.node.querySelector('canvas');canvas.width=canvas.height=1;layer.replaceChildren();item.done=false;item.node.removeAttribute('data-rendered');
+ }
+ function trimPages(){
+  if(!pane||!doc)return;const host=pane.getBoundingClientRect();
+  for(const [number,item] of pages){const r=item.node.getBoundingClientRect();if(r.bottom<host.top-400||r.top>host.bottom+400){if(item.done&&!renders.has(number))releasePage(item);}else paintPage(number);}
  }
  function position(){
   if(!pane||!pane.clientWidth||!pane.clientHeight)return;
@@ -26,9 +38,10 @@ export function installReportReading(dialog){
   for(const b of dialog.querySelectorAll('[data-cmd="report-paper-step"]'))b.disabled=!count||(Number(b.dataset.step)<0?n<=1:n>=count);
   for(const b of dialog.querySelectorAll('[data-cmd=report-paper-open]'))b.disabled=!count||pane.dataset.pdfState!=='ready';
   const max=pane.scrollHeight-pane.clientHeight;for(const b of dialog.querySelectorAll('[data-cmd="report-paper-edge"]'))b.disabled=!count||(b.dataset.value==='start'?pane.scrollTop<=2:max-pane.scrollTop<=3);
+  trimPages();
  }
  async function paintPage(number){
-  const item=pages.get(number),version=epoch;if(suspended||globalThis.document.hidden||!item||item.done||renders.has(number)||!doc)return;
+  const item=pages.get(number),version=epoch;if(suspended||globalThis.document.hidden||!item||item.done||renders.has(number)||!doc||pane?.pdfDocument!==doc)return;
   const sourceDocument=doc,localScale=scale;let render,textLayer,cancelled=false;
   const job={cancel(){cancelled=true;render?.cancel();textLayer?.cancel();}};renders.set(number,job);
   try{
@@ -38,7 +51,7 @@ export function installReportReading(dialog){
    const text=await page.getTextContent();if(version!==epoch||localScale!==scale)return;const previousLayer=item.node.querySelector('.textLayer'),layer=document.createElement('div');layer.className='textLayer';previousLayer.replaceWith(layer);
    const module=await pdfLibrary();if(version!==epoch||localScale!==scale)return;
    textLayer=new module.TextLayer({textContentSource:text,container:layer,viewport});await textLayer.render();
-   if(version!==epoch||localScale!==scale||!item.node.isConnected)return;item.done=true;item.node.dataset.rendered='true';const r=item.node.getBoundingClientRect(),host=pane?.getBoundingClientRect();if(host&&(r.bottom<host.top-400||r.top>host.bottom+400)){canvas.width=canvas.height=1;item.done=false;item.node.removeAttribute('data-rendered');}
+   if(version!==epoch||localScale!==scale||!item.node.isConnected)return;item.done=true;item.node.dataset.rendered='true';const r=item.node.getBoundingClientRect(),host=pane?.getBoundingClientRect();if(host&&(r.bottom<host.top-400||r.top>host.bottom+400))releasePage(item);
   }catch(error){if(!['RenderingCancelledException','AbortException'].includes(error.name)&&version===epoch&&localScale===scale&&item.node.isConnected){item.node.dataset.rendered='error';const text=item.node.querySelector('.pdf-page-accessible');text.textContent='此页显示失败，可重新生成纸面。';}}
   finally{if(renders.get(number)===job)renders.delete(number);}
  }
@@ -50,7 +63,7 @@ export function installReportReading(dialog){
   if(changed){cancelRenders();for(const item of pages.values()){item.done=false;item.node.removeAttribute('data-rendered');item.node.querySelector('.textLayer').replaceChildren();}}
   pane.style.setProperty('--scale-factor',String(scale));
   pane.style.setProperty('--pdf-width',base.width*scale+'px');pane.style.setProperty('--pdf-height',base.height*scale+'px');
-  visibleObserver?.disconnect();visibleObserver=new IntersectionObserver(entries=>{for(const e of entries){const n=Number(e.target.dataset.pdfPage),item=pages.get(n);if(e.isIntersecting)paintPage(n);else if(item?.done&&!renders.has(n)){item.node.querySelector('canvas').width=1;item.node.querySelector('canvas').height=1;item.done=false;item.node.removeAttribute('data-rendered');}}},{root:pane,rootMargin:'400px 0px'});for(const item of pages.values())visibleObserver.observe(item.node);
+  visibleObserver?.disconnect();visibleObserver=new IntersectionObserver(entries=>{for(const e of entries){const n=Number(e.target.dataset.pdfPage),item=pages.get(n);if(e.isIntersecting)paintPage(n);else if(item?.done&&!renders.has(n))releasePage(item);}},{root:pane,rootMargin:'400px 0px'});for(const item of pages.values())visibleObserver.observe(item.node);
   if(keep){pinnedEnd=Boolean(keep.end);if(keep.end)pane.scrollTop=pane.scrollHeight;else {const node=pages.get(keep.page)?.node;pane.scrollTop=node?node.offsetTop+(keep.ratio||0)*node.offsetHeight:keep.top||0;}pane.scrollLeft=keep.left||0;}
   position();paintPage(Number(pane.dataset.currentPage)||1);
  }
@@ -76,6 +89,7 @@ export function installReportReading(dialog){
  function queue(delay=160){previewAbort?.abort();previewAbort=null;clearTimeout(timer);pane.dataset.pdfState='pending';message(doc?'内容已更新，正在重新分页…':'正在排版报告…');timer=setTimeout(generate,delay);}
  function jump(n){if(!pane||!doc)return;pinnedEnd=false;n=Math.max(1,Math.min(doc.numPages,Math.round(Number(n)||1)));const node=pages.get(n)?.node;if(node){pane.scrollTop=node.offsetTop;paintPage(n);position();pane.focus({preventScroll:true});}}
  dialog.addEventListener('scroll',event=>{if(event.target===pane){cancelAnimationFrame(frame);frame=requestAnimationFrame(position);}},{capture:true,passive:true});
+ document.addEventListener('selectionchange',()=>{if(pane&&dialog.open){cancelAnimationFrame(frame);frame=requestAnimationFrame(position);}});
  for(const type of ['wheel','touchstart','pointerdown'])dialog.addEventListener(type,event=>{if(pane?.contains(event.target))pinnedEnd=false;},{capture:true,passive:true});
  dialog.addEventListener('keydown',event=>{if(event.target===pane&&['Home','PageUp','PageDown','ArrowUp','ArrowDown'].includes(event.key))pinnedEnd=false;if(event.target.matches('[data-report-page-target]')&&event.key==='Enter'){event.preventDefault();jump(event.target.value);}else if(event.target===pane&&event.key==='Home'){event.preventDefault();pane.scrollTop=0;position();}else if(event.target===pane&&event.key==='End'){event.preventDefault();pinnedEnd=true;pane.scrollTop=pane.scrollHeight;position();}});
  dialog.addEventListener('change',event=>{if(event.target.matches('[data-report-page-target]'))jump(event.target.value);});
