@@ -2,7 +2,8 @@ import {openSurface,closeSurface} from '../ui/surface-motion.js?v=runtime-v45';
 import {mergeDatasets,FLAT_FIELDS} from './parser.js?v=runtime-v45';
 import {esc,button,badge} from '../ui/html.js?v=runtime-v45';
 export class Inbox {
-  constructor(commit,notify,current) {
+  constructor(commit,notify,current,prepare=()=>{}) {
+    this.prepare=prepare;
     this.commit=commit;this.notify=notify;this.current=current;this.epoch=0;this.committing=false;
     this.dialog=document.getElementById('inbox');this.content=document.getElementById('inbox-content');this.input=document.getElementById('files');
     this.input.addEventListener('change',()=>{if(this.input.files.length)this.read([...this.input.files]);});
@@ -51,7 +52,7 @@ export class Inbox {
     const buffer=await file.arrayBuffer();
     if(epoch!==this.epoch)throw new Error('已取消导入');
     return new Promise((resolve,reject)=>{
-      const worker=new Worker(new URL('./worker.js?v=runtime-v45',import.meta.url)),timer=setTimeout(()=>finish(new Error('文件读取超时，请分开导入材料后重试。')),180000);
+      const worker=new Worker(new URL('./worker.js?v=runtime-v46',import.meta.url)),timer=setTimeout(()=>finish(new Error('文件读取超时，请分开导入材料后重试。')),180000);
       let finished=false;
       const finish=(error,result)=>{if(finished)return;finished=true;clearTimeout(timer);worker.terminate();if(this.pending?.worker===worker)this.pending=null;error?reject(error):resolve(result);};
       this.pending={file,buffer,worker,reject:error=>finish(error)};
@@ -69,6 +70,7 @@ export class Inbox {
   async read(files) {
     if(this.busy||this.committing){this.notify('当前材料仍在处理');return;}
     files=files.filter(file=>/\.(xlsx|xls|csv|json)$/i.test(file.name));if(!files.length)return;
+    this.prepare();
     const epoch=++this.epoch;this.busy=true;this.cancelled=false;this.incoming=null;
     try {
       for(const file of files) {

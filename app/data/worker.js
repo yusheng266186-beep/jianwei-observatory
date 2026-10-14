@@ -1,9 +1,10 @@
-importScripts('../../vendor/xlsx.full.min.js?v=runtime-v45');
 self.onmessage=async ({data:input})=>{
   try {
     const parser=await import('./parser.js?v=runtime-v45');
     const progress=(message,percent)=>self.postMessage({type:'progress',message,percent});
     let dataset;
+    // JSON backups need no spreadsheet library download or evaluation.
+    if(!/\.json$/i.test(input.name)&&!self.XLSX)importScripts('../../vendor/xlsx.full.min.js');
     if(/\.json$/i.test(input.name)) dataset=parser.adaptJSON(JSON.parse(new TextDecoder().decode(input.buffer)),input.name);
     else if(/\.csv$/i.test(input.name)) {
       let text=new TextDecoder().decode(input.buffer);

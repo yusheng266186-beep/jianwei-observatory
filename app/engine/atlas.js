@@ -4,8 +4,9 @@ import {schoolRank,validRank,legacyRanks} from './ranking.js?v=runtime-v45';
 import {knowledgeLabels} from './knowledge.js?v=runtime-v45';
 const append=(map,key,value)=>{if(!map.has(key))map.set(key,[]);map.get(key).push(value);};
 export class Atlas {
-  constructor(dataset) {
-    this.data=normalizeDataset(dataset);this.exams=this.data.exams;this.latest=this.exams.at(-1)?.id||'';
+  constructor(dataset,{prepared=false,index=null}={}) {
+    this.data=prepared?dataset:normalizeDataset(dataset);this.exams=this.data.exams;this.latest=this.exams.at(-1)?.id||'';
+    if(index&&prepared){Object.assign(this,index);this.invalidateCaches();return;}
     this.people=new Map(this.data.students.map(p=>[p.id,p]));this.examRows=new Map();this.classRows=new Map();this.stories=new Map();this.paperRows=new Map();this.personAnswers=new Map();this.answerStories=new Map();this.materialStories=new Map();this.percentiles=new Map();this.invalidateCaches();
     this.nameCounts=new Map();for(const p of this.people.values())this.nameCounts.set(p.name,(this.nameCounts.get(p.name)||0)+1);
     this.lines=new Map(this.data.lines.map(l=>[l.exam+'|'+l.track,l]));
@@ -15,6 +16,7 @@ export class Atlas {
     const order=new Map(this.exams.map((e,i)=>[e.id,i]));
     for(const records of this.stories.values()) records.sort((a,b)=>(order.get(a.exam)??99)-(order.get(b.exam)??99));
   }
+  indexSnapshot(){return Object.fromEntries(['people','examRows','classRows','stories','paperRows','personAnswers','answerStories','materialStories','percentiles','nameCounts','lines','classes'].map(key=>[key,this[key]]));}
   // An Atlas is a dataset snapshot. Material/line/profile edits create a new
   // Atlas; bounded caches never survive an import, undo or workspace restore.
   invalidateCaches(){this.summaryCache=new WeakMap();this.groupCache=new Map();this.snapshotCache=new Map();this.paperCache=new Map();this.paperPreviews=new Map();this.classRankCache=new Map();this.paperList=null;}

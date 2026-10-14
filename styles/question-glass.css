@@ -67,3 +67,18 @@ body[data-surface=paper] .question-square::before{display:none!important}
 .question-map .question-square:is(.selected,:focus-visible) .question-open>i{background:color-mix(in srgb,var(--score-light) 70%,transparent)}
 .question-map .question-square:focus-visible .question-open{text-decoration:underline;text-underline-offset:4px}
 .question-map .question-square.selected .question-identity>b::after{content:"";width:4px;height:4px;border-radius:50%;background:var(--score-ink);opacity:.6}
+
+/* Compact evidence cells use the same measured tones as question cards,
+   with a restrained light edge. Hundreds of cells never allocate live blur. */
+.heatmap .heat-cell.heat-button[data-score-tone]{
+ position:relative;min-width:48px;padding:9px 10px;border:0;border-radius:var(--radius-control);
+ background:linear-gradient(150deg,var(--score-highlight),transparent 65%),linear-gradient(160deg,var(--score-light),var(--score-base) 68%,var(--score-shade)),var(--score-base);
+ background-color:var(--score-base);color:var(--score-ink);font-weight:550;font-variant-numeric:tabular-nums;
+ box-shadow:inset 0 1px 0 var(--score-glow),0 2px 5px #23415b06;transform:none;
+ backdrop-filter:none;-webkit-backdrop-filter:none;
+ transition:box-shadow var(--motion-feedback) var(--motion-ease),filter var(--motion-feedback) var(--motion-ease);
+}
+.heatmap .heat-cell.heat-button[data-score-tone]:hover{transform:none;filter:brightness(1.025);box-shadow:inset 0 1px 0 var(--score-glow),0 3px 8px #23415b18}
+.heatmap .heat-cell.heat-button[data-score-tone]:focus-visible{outline:2px solid var(--blue);outline-offset:2px;transform:none}
+body[data-surface=paper] .heatmap .heat-cell[data-score-tone]{background:var(--score-base);box-shadow:none}
+@media(forced-colors:active){.heatmap .heat-cell.heat-button[data-score-tone]{background:Canvas;color:ButtonText;border:1px solid ButtonText;box-shadow:none}}

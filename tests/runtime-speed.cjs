@@ -1,0 +1,23 @@
+const {chromium,webkit}=require('playwright'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const {makeWideFixture}=require('./fixtures.cjs');
+const url=process.env.AUDIT_URL||'http://127.0.0.1:4173',engine=process.env.AUDIT_BROWSER==='webkit'?webkit:chromium;
+(async()=>{const b=await engine.launch({executablePath:engine===chromium?process.env.CHROMIUM_PATH:undefined}),c=await b.newContext({viewport:{width:390,height:844},reducedMotion:'reduce'}),p=await c.newPage(),errors=[];
+ p.on('pageerror',e=>errors.push(e.message));const requests=[];p.on('request',r=>requests.push(r.url()));
+ try{
+  await p.goto(url);await p.waitForSelector('#welcome-title');await p.waitForTimeout(100);
+  const boot=requests.filter(x=>new URL(x).pathname.endsWith('.js'));assert.equal(boot.length,2);assert(!requests.some(x=>/pdfmake|pdfjs|xlsx|report-fonts/.test(x)));assert.equal(await p.locator('link[rel=stylesheet]').count(),1);
+  const data=makeWideFixture();await p.locator('#files').setInputFiles({name:'anonymous-speed.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(data))});await p.locator('[data-inbox=commit]').click();await p.waitForSelector('body[data-workspace=ready]');await p.waitForSelector('#inbox:not([open])',{state:'attached'});
+  assert(!requests.some(x=>x.includes('xlsx.full')),'JSON import needs no XLSX download');
+  const nav=async scene=>{await p.locator(`#navigation [data-scene=${scene}]`).click();await p.waitForFunction(s=>document.querySelector('#stage').dataset.scene===s&&document.querySelector('#stage').getAttribute('aria-busy')==='false',scene)};
+  await nav('class');await p.locator('#class-distribution').waitFor();await p.locator('.scene-head').evaluate(e=>e.__reuseProbe=true);await nav('library');await nav('class');assert.equal(await p.locator('.scene-head').evaluate(e=>e.__reuseProbe),true,'repeat navigation reuses the live DOM in reduced motion');
+  await nav('papers');await p.locator('.paper-cover[data-key="数学|52"]').click();await p.locator('[data-key=tab][data-value=students]').click();await p.locator('.answer-cell').first().waitFor();
+  const tones=await p.locator('.heatmap tbody tr').first().locator('.answer-cell').evaluateAll(es=>es.map(e=>({text:e.textContent,tone:e.dataset.scoreTone,background:getComputedStyle(e).backgroundImage,blur:getComputedStyle(e).backdropFilter})));assert.equal(tones[0].text,'0.0');assert.equal(tones[0].tone,'foundation');assert.equal(tones[2].text,'—');assert.equal(tones[2].tone,'unknown');assert(tones.every(x=>x.background.includes('gradient')&&x.blur==='none'));
+  const read=()=>p.evaluate(()=>new Promise((resolve,reject)=>{const r=indexedDB.open('hengji-evidence-workspace',1);r.onsuccess=()=>{const db=r.result,tx=db.transaction('materials'),store=tx.objectStore('materials'),result={};for(const k of ['dataset','prepared']){const q=store.get(k);q.onsuccess=()=>result[k]=q.result}tx.oncomplete=()=>{db.close();resolve(result)};tx.onerror=()=>reject(tx.error)}}));
+  const before=await read();assert(before.prepared.stamp);assert.equal(before.prepared.version,46);
+  await p.reload();await p.waitForFunction(()=>document.querySelector('#stage').getAttribute('aria-busy')==='false');const after=await read();assert.deepEqual(after.dataset,before.dataset);assert.equal(after.prepared.stamp,before.prepared.stamp,'reopen does not renormalize or rewrite prepared data');
+  const guard=await p.evaluate(async()=>{const s=await import(new URL(document.querySelector('script[data-storage]').dataset.storage,document.querySelector('script[data-storage]').src).href);return s.savePreparedIfCurrent({title:'obsolete worker'},'obsolete-stamp')});assert.equal(guard,false);assert.deepEqual((await read()).dataset,before.dataset,'obsolete background work cannot overwrite current materials');
+  await nav('board');for(const scene of ['class','papers','people','follow','library','board']){await nav(scene);assert(await p.locator('#stage .scene-head').count());assert.equal(await p.locator('.scene-leaving-viewport').count(),0);}
+  assert(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));assert.deepEqual(errors,[]);
+  const out=path.join(__dirname,'../.audit-output/runtime-speed');fs.mkdirSync(out,{recursive:true});await p.screenshot({path:path.join(out,engine===webkit?'webkit.png':'chromium.png')});console.log('PASS '+(engine===webkit?'WebKit':'Chromium')+': 2-script empty launch, JSON import, live-page reuse, glass cells, prepared reopening, stale-write guard, six-scene mobile flow');
+ }finally{await b.close();}
+})().catch(e=>{console.error(e);process.exitCode=1});

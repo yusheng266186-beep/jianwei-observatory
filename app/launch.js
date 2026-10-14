@@ -1,8 +1,21 @@
 (() => {
   const script=document.currentScript,base=new URL('./',script.src),stage=document.getElementById('stage'),files=document.getElementById('files');
-  // The persisted workspace is still unknown until hydration finishes. Keep
-  // the loading shell instead of briefly declaring the user's materials empty.
-  let ready=false;
+  let ready=false,application,boot,pendingFiles=null;
+  const source=import(new URL(script.dataset.storage||'./data/storage.js?v=runtime-v45',base));
+  const materials=source.then(storage=>storage.inspectWorkspace());
+  function prepare(){return new Promise((resolve,reject)=>{const worker=new Worker(new URL(script.dataset.prepare||'./data/prepare-worker.js?v=runtime-v45',base),{type:'module'}),timer=setTimeout(()=>finish(new Error('材料恢复超时，请刷新后重试')),120000);function finish(error,value){clearTimeout(timer);worker.terminate();error?reject(error):resolve(value);}worker.onmessage=({data})=>finish(data.error?new Error(data.error):null,data.result);worker.onerror=()=>finish(new Error('材料恢复组件未能打开，请刷新后重试'));worker.postMessage({operation:'hydrate'});});}
+  const reading=(()=>{try{return JSON.parse(localStorage.getItem('hengji:reading'))||{};}catch{return {};}})();
+  for(const [key,fallback] of Object.entries({density:'comfortable',surface:'glass',motion:'system'}))document.body.dataset[key]=reading[key]||fallback;
+  function start(){
+    if(!application){application=Promise.all([import(new URL(script.dataset.runtime||'./main.js?v=runtime-v45',base)),materials]).then(async([module,value])=>{boot=value;await module.mount(boot);if(pendingFiles){const list=pendingFiles;pendingFiles=null;window.dispatchEvent(new CustomEvent('hengji:import-files',{detail:list}));}});application.catch(error=>{application=null;failure('启动组件未能载入：'+error.message);});}
+    return application;
+  }
+  materials.then(value=>{
+    if(value.stored){value.preparation=prepare();value.preparation.catch(()=>{});start();return;}
+    stage.replaceChildren(document.getElementById('empty-workspace-template').content.cloneNode(true));stage.setAttribute('aria-busy','false');
+    // The full app is deliberately absent until an action needs it.
+    window.dispatchEvent(new Event('hengji:landing-ready'));
+  }).catch(()=>start());
   function failure(message) {
     if(ready)return;
     stage.replaceChildren();const box=document.createElement('div');box.className='startup';
@@ -13,23 +26,17 @@
     box.append(title,detail,action,reload);stage.append(box);
   }
   document.addEventListener('click',event=>{
-    if(!ready&&event.target.closest('[data-cmd="import"]')){event.preventDefault();event.stopImmediatePropagation();files.click();}
+    if(ready)return;const action=event.target.closest('[data-cmd]');if(!action)return;
+    event.preventDefault();event.stopImmediatePropagation();
+    if(action.dataset.cmd==='import'){files.click();start();}
+    else {const data={...action.dataset};start().then(()=>[...document.querySelectorAll('[data-cmd]')].find(node=>Object.entries(data).every(([key,value])=>node.dataset[key]===value))?.click());}
   },true);
   files.addEventListener('change',async()=>{
     if(ready||!files.files.length)return;
-    try {
-      const file=files.files[0],worker=new Worker(new URL('./data/worker.js?v=runtime-v45',base));
-      const dataset=await new Promise((resolve,reject)=>{
-        const timer=setTimeout(()=>{worker.terminate();reject(new Error('材料读取超时，请重新打开页面后再导入。'));},180000);
-        worker.onmessage=({data})=>{if(data.type==='ready'){clearTimeout(timer);worker.terminate();resolve(data.dataset);}if(data.type==='error'||data.type==='mapping'){clearTimeout(timer);worker.terminate();reject(new Error(data.message||'恢复入口支持标准成绩工作簿和 JSON 备份，请重新打开后对应其他表格的列。'));}};
-        worker.onerror=()=>{clearTimeout(timer);worker.terminate();reject(new Error('读取组件无法载入，请刷新页面。'));};
-        file.arrayBuffer().then(buffer=>worker.postMessage({name:file.name,buffer})).catch(reject);
-      });
-      dataset.userImported=true;
-      const workspace=await import(new URL('./data/workspace.js?v=runtime-v45',base));await workspace.save(dataset);location.reload();
-    }catch(error){failure(error.message);}
+    pendingFiles=[...files.files];start();
   });
-  const timer=setTimeout(()=>failure('启动等待已结束。你可以重试或先导入标准成绩工作簿。'),15000);
+  document.addEventListener('dragover',event=>{if(!ready&&event.target.closest('#drop-zone')){event.preventDefault();event.target.closest('#drop-zone').classList.add('dragover');}});
+  document.addEventListener('drop',event=>{if(!ready&&event.target.closest('#drop-zone')){event.preventDefault();event.stopImmediatePropagation();pendingFiles=[...event.dataTransfer.files];start();}},true);
+  const timer=setTimeout(()=>{if(stage.getAttribute('aria-busy')==='true')failure('研究台暂时未能打开，请重试或导入成绩材料。');},15000);
   window.addEventListener('hengji:ready',()=>{ready=true;clearTimeout(timer);},{once:true});
-  import(new URL('./main.js?v=runtime-v45',base)).then(module=>module.mount()).catch(error=>{clearTimeout(timer);failure('启动组件未能载入：'+error.message);});
 })();
