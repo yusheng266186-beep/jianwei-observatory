@@ -1,0 +1,12 @@
+const {chromium,webkit}=require('playwright'),assert=require('node:assert/strict');
+const {makeFixture}=require('./fixtures.cjs'),{ready,text}=require('./paper-preview-helpers.cjs');
+(async()=>{const engine=process.env.AUDIT_BROWSER==='webkit'?webkit:chromium,b=await engine.launch({executablePath:engine===chromium?process.env.CHROMIUM_PATH:undefined}),p=await b.newPage({viewport:{width:390,height:844},reducedMotion:'reduce'}),assets=new Set(),workers=[],errors=[];
+ p.on('worker',w=>workers.push(w.url()));p.on('pageerror',e=>errors.push(e.message));p.on('response',async response=>{const path=new URL(response.url()).pathname;if(['/vendor/pdfmake.min.js','/vendor/pdfjs/pdf.min.mjs','/vendor/pdfjs/pdf.worker.min.mjs'].some(file=>path.endsWith(file))){await response.finished();if(response.ok())assets.add(path.split('/').at(-1));}});
+ try{
+  await p.goto(process.env.AUDIT_URL||'http://127.0.0.1:4173');await p.waitForSelector('#welcome-title');await p.locator('#files').setInputFiles({name:'anonymous-warm.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(makeFixture()))});await p.locator('[data-inbox=commit]').click();await p.waitForSelector('#inbox:not([open])',{state:'attached'});
+  await p.locator('#navigation [data-scene=class]').click();await p.waitForSelector('#class-distribution');
+  const deadline=Date.now()+60000;while(assets.size<3&&Date.now()<deadline)await p.waitForTimeout(100);assert.equal(assets.size,3,'export engine and reader files finish preparing during ordinary research');assert.equal(await p.locator('.report-paper-scroll').count(),0);assert(!workers.some(url=>url.includes('/vendor/pdfjs/pdf.worker')),'idle preparation does not allocate a PDF reader worker');
+  await p.locator('#stage [data-cmd=teaching-report-entry][data-kind=class]').click();await p.waitForSelector('.report-studio');const started=Date.now();await p.locator('[data-cmd=teaching-report-build]').click();await ready(p);assert((await text(p)).includes('班级学生成绩与短板'));assert.deepEqual(errors,[]);
+  console.log(JSON.stringify({engine:engine===webkit?'webkit':'chromium',firstReportMs:Date.now()-started,checks:'PDF dependencies complete before report is opened; no idle reader allocation; first whole-class PDF renders correctly'}));
+ }finally{await b.close();}
+})().catch(error=>{console.error(error);process.exitCode=1;});

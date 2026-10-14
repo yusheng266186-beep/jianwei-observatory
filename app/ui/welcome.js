@@ -1,4 +1,4 @@
-import {button} from './html.js?v=runtime-v40';
+import {button} from './html.js?v=runtime-v41';
 
 export function welcomeView() {
   const template=document.getElementById('empty-workspace-template');

@@ -1,14 +1,14 @@
-import {rankDescription} from '../engine/ranking.js?v=runtime-v40';
-import {createPDFJob,idlePDFWorker} from './pdf-runtime.js?v=runtime-v40';
+import {rankDescription} from '../engine/ranking.js?v=runtime-v41';
+import {createPDFJob,idlePDFWorker} from './pdf-runtime.js?v=runtime-v41';
 export {idlePDFWorker};
-import {paperSettings} from '../engine/paper-settings.js?v=runtime-v40';
-import {selectedReport} from '../engine/report-selection.js?v=runtime-v40';
-import {reportHTML,wordFiles,documentSections} from './print-document.js?v=runtime-v40';
-export {reportHTML} from './print-document.js?v=runtime-v40';
-import {esc,number,percent,signed} from '../ui/html.js?v=runtime-v40';
-import {SITE_NAME,CREST_URL} from '../brand.js?v=runtime-v40';
-import {chartFontRules} from '../ui/font-export.js?v=runtime-v40';
-import {worksheetNames} from './sheet-names.js?v=runtime-v40';
+import {paperSettings} from '../engine/paper-settings.js?v=runtime-v41';
+import {selectedReport} from '../engine/report-selection.js?v=runtime-v41';
+import {reportHTML,wordFiles,documentSections} from './print-document.js?v=runtime-v41';
+export {reportHTML} from './print-document.js?v=runtime-v41';
+import {esc,number,percent,signed} from '../ui/html.js?v=runtime-v41';
+import {SITE_NAME,CREST_URL} from '../brand.js?v=runtime-v41';
+import {chartFontRules} from '../ui/font-export.js?v=runtime-v41';
+import {worksheetNames} from './sheet-names.js?v=runtime-v41';
 export function download(content,name,type='application/octet-stream') {
   const blob=content instanceof Blob?content:new Blob([content],{type}),url=URL.createObjectURL(blob),anchor=document.createElement('a');
   anchor.href=url;anchor.download=name;anchor.click();setTimeout(()=>URL.revokeObjectURL(url),5000);
@@ -59,7 +59,7 @@ export function answerRows(atlas,answers,paperKey='') {
   return [['考试','姓名','班级','学科',...Array.from({length:max},(_,i)=>'第'+(bank[i]?.label??i+1)+'题')],...answers.map(a=>[atlas.exam(a.exam).label,atlas.name(a.sid),a.classNo,a.subject,...a.values])];
 }
 export function evidence(title,subtitle,sections,sheets={}) {return {title,subtitle,sections,sheets,created:new Date().toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'}),note:''};}
-export async function print(report,previewBlob=null) {const {printPDF}=await import('./paper-print.js?v=runtime-v40');await printPDF(previewBlob||await pdfBlob(report));}
+export async function print(report,previewBlob=null) {const {printPDF}=await import('./paper-print.js?v=runtime-v41');await printPDF(previewBlob||await pdfBlob(report));}
 export async function word(report) {
  report=selectedReport(report);
  const {JSZip}=await vendors(),zip=new JSZip();for(const [name,content] of Object.entries(wordFiles(report)))zip.file(name,content);
