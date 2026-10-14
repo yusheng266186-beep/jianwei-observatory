@@ -1,11 +1,29 @@
-import { SUBJECTS, EXAM_ORDER, EXAM_NAMES, classDefaults, finite, normalizeDataset } from './compat.js?v=runtime-v35';
-import {mergeContext} from './context.js?v=runtime-v35';
-import {rankColumns,ranksFrom} from '../engine/ranking.js?v=runtime-v35';
+import { SUBJECTS, EXAM_ORDER, EXAM_NAMES, classDefaults, finite, normalizeDataset } from './compat.js?v=runtime-v36';
+import {mergeContext} from './context.js?v=runtime-v36';
+import {rankColumns,ranksFrom} from '../engine/ranking.js?v=runtime-v36';
 const txt=v=>String(v??'').trim();
 const num=v=>v==null||txt(v)===''?null:Number.isFinite(Number(v))?Number(v):null;
 const code=v=>txt(v).replace(/[物历]$/,'');
 const track=(raw,n)=>/[历]$/.test(txt(raw))?'history':/[物]$/.test(txt(raw))?'physics':classDefaults(n).track;
 const cityExam=e=>['入口','1册','2册','3册','4册'].includes(e);
+// The supplied multi-exam worksheet reuses four total-rank headings even
+// when historical blocks contain class ranks in its last column. This exact
+// template profile was checked against preserved source rows; flat files and
+// explicitly named class-rank columns continue to use their own headings.
+function sourceTotalColumns(headers,exam){
+ const columns=rankColumns(headers,6,9);
+ const label=column=>headers.map(r=>txt(r[column])).join('');
+ if(!/市赋名/.test(label(7))||!/校原名/.test(label(8))||!/校赋名/.test(label(9)))return columns;
+ if(['2册','3册','41','4半','43'].includes(exam)){
+  return {schoolRank:{column:['41','4半'].includes(exam)?7:8,label:'校内排名'},classRank:{column:9,label:'班级排名'},...(cityExam(exam)?{cityRank:{column:7,label:'市排名'}}:{})};
+ }
+ return {...columns,...(!cityExam(exam)?{cityRank:undefined}:{})};
+}
+function sourceSubjectColumns(headers,exam,raw,end,ranking,school){
+ const columns=rankColumns(headers,raw,end),label=c=>headers.map(r=>txt(r[c])).join('');
+ if(exam!=='43'||!/市赋名/.test(label(7))||!/校原名/.test(label(8))||!/校赋名/.test(label(9)))return columns;
+ return {...(school==null?{}:{schoolRank:{column:ranking,label:'学科校内排名'}}),classRank:{column:school??ranking,label:'学科班级排名'}};
+}
 const hash=text=>{let h=2166136261;for(let i=0;i<text.length;i++)h=Math.imul(h^text.charCodeAt(i),16777619);return 's'+(h>>>0).toString(36);};
 const fresh=source=>({schemaVersion:1,school:'荣县一中',grade:'高2024级',title:'成绩研究工作区',sourceName:source,importedAt:new Date().toISOString(),anonymous:false,students:[],scores:[],profiles:{},exams:[],lines:[],banks:{},answers:[],sheets:[]});
 function people(data){
@@ -44,7 +62,6 @@ export function parseWorkbook(XLSX,buffer,source,progress=()=>{},mapping=null){
  const rows=rowsOf(XLSX,basic);
  const firstScore=rows.findIndex(r=>/[物历]$/.test(txt(r[0]))&&num(r[2])>0&&txt(r[3])&&txt(r[1]));
  const rankHeaders=rows.slice(Math.max(0,firstScore-5),Math.max(0,firstScore));
- const totalRanks=rankColumns(rankHeaders,6,9);
  for(let i=0;i<Math.min(rows.length,50);i++){
   const r=rows[i];if(!/[物历]$/.test(txt(r[1]))||!finite(num(r[2])))continue;
   const t=track(r[1],1),e=code(r[1]),ss=t==='physics'?['语文','数学','英语','物理','化学','生物']:['语文','数学','英语','历史','政治','地理'];
@@ -58,11 +75,12 @@ export function parseWorkbook(XLSX,buffer,source,progress=()=>{},mapping=null){
   if(!/[物历]$/.test(txt(r[0]))||!n||!name||!txt(r[1])||!Number.isInteger(n)||n>99)continue;
   if(txt(r[1])==='荣县一中')data.school=txt(r[1]);else if(data.scores.length)continue;else data.school=txt(r[1]);
   const t=track(r[0],n),e=code(r[0]),language=txt(r[38]).includes('日语')||n===7?'日语':'英语',subjects={};
+  const totalRanks=Object.fromEntries(Object.entries(sourceTotalColumns(rankHeaders,e)).filter(([,v])=>v));
   const fields=[['语文',10,10,11,12],['数学',13,13,14,15],[language,16,16,17,18],[t==='physics'?'物理':'历史',19,19,20,21],['政治',22,23,25,null],['地理',26,27,29,null],['化学',30,31,33,null],['生物',34,35,37,null]];
   for(const [fieldIndex,[s,raw,assigned,ranking,school]] of fields.entries()){
    if(num(r[assigned])==null)continue;
    const subject=n===9&&s==='生物'?'地理':s;
-   const columns=rankColumns(rankHeaders,raw,(fields[fieldIndex+1]?.[1]??38)-1);
+   const columns=sourceSubjectColumns(rankHeaders,e,raw,(fields[fieldIndex+1]?.[1]??38)-1,ranking,school);
    subjects[subject]={score:num(r[assigned]),raw:num(r[raw]),rank:Object.values(columns).some(c=>c.column===ranking)?null:num(r[ranking]),...ranksFrom(r,columns)};
   }
   // Scope comes from the source heading, never the exam type or column order.
@@ -141,13 +159,13 @@ function parseItems(data,workbook,XLSX,idFor,progress){
  });
 }
 export const FLAT_FIELDS=[['name','姓名'],['classNo','班级'],['exam','考试'],['total','赋分总分'],['rawTotal','原始总分'],['track','类别'],['language','外语语种'],['cityRank','市排名'],['schoolRank','校排名'],['classRank','班级排名'],...SUBJECTS.map(s=>[s,s+'成绩'])];
-const ALIASES={name:['姓名','学生姓名','name'],classNo:['班级','班号','行政班','class','classno'],exam:['考试','考试名称','考次','exam'],total:['赋分总分','总赋分','总分','total'],rawTotal:['原始总分','原分总分','原始分'],track:['类别','科类','track'],language:['外语语种','语种','language'],cityRank:['市排名','全市名次','cityrank'],schoolRank:['校排名','校名次','校排','校内排名','年级排名','年级名次','schoolrank'],classRank:['班级排名','班排名','班排','班内排名','classrank']};
+const ALIASES={name:['姓名','学生姓名','name'],classNo:['班级','班号','行政班','class','classno'],exam:['考试','考试名称','考次','exam'],total:['赋分总分','总赋分','总分','total'],rawTotal:['原始总分','原分总分','原始分'],track:['类别','科类','track'],language:['外语语种','语种','language'],cityRank:['市赋名','市排名','市名次','全市名次','市原名','cityrank'],schoolRank:['校赋名','校排名','校名次','校排','校内排名','年级排名','年级名次','校原名','schoolrank'],classRank:['班赋名','班级排名','班排名','班排','班内排名','班原名','classrank']};
 export function detectFlat(rows){
  const headerRow=rows.findIndex(r=>r.some(c=>['姓名','学生姓名','name'].includes(txt(c).toLowerCase())));
  const rowIndex=headerRow<0?0:headerRow,headers=(rows[rowIndex]||[]).map(txt),mapping={};
  for(const [key] of FLAT_FIELDS){
   const aliases=ALIASES[key]||[key,key+'成绩',key+'赋分'];
-  mapping[key]=headers.findIndex(h=>aliases.includes(h.toLowerCase()));if(mapping[key]<0)mapping[key]=null;
+  mapping[key]=['schoolRank','classRank','cityRank'].includes(key)?aliases.map(alias=>headers.findIndex(h=>h.toLowerCase()===alias)).find(i=>i>=0)??-1:headers.findIndex(h=>aliases.includes(h.toLowerCase()));if(mapping[key]<0)mapping[key]=null;
  }
  return {headers,mapping,headerRow:rowIndex,preview:rows.slice(rowIndex+1,rowIndex+6)};
 }

@@ -1,5 +1,5 @@
-import {pdfDefinition} from './print-document.js?v=runtime-v35';
-import {reportFontManifest,cachedFontFile,prepareReportFonts} from './report-fonts.js?v=runtime-v35';
+import {pdfDefinition} from './print-document.js?v=runtime-v36';
+import {reportFontManifest,cachedFontFile,prepareReportFonts} from './report-fonts.js?v=runtime-v36';
 let engineReady;
 async function engine(){
  if(!engineReady){const attempt=(async()=>{
@@ -10,26 +10,30 @@ async function engine(){
 }
 const loaded=new Map(),fontFiles={};
 async function fonts(engine,parts){
- await Promise.all(parts.map(part=>{
-  if(!loaded.has(part.id)){
-   const task=Promise.all(Object.entries(part.files).map(async([weight,name])=>{
+ await Promise.all(parts.flatMap(part=>{
+  engine.fonts['Report-'+part.id]={normal:part.files.regular,bold:part.files.medium,italics:part.files.regular,bolditalics:part.files.medium};
+  return (part.weights||Object.keys(part.files)).map(weight=>{
+   const name=part.files[weight];if(!loaded.has(name)){
+   const task=(async()=>{
     const bytes=new Uint8Array(await(await cachedFontFile(name)).arrayBuffer());let binary='';
     for(let i=0;i<bytes.length;i+=32768)binary+=String.fromCharCode(...bytes.subarray(i,i+32768));
-    return [name,btoa(binary)];
-   })).then(entries=>{Object.assign(fontFiles,Object.fromEntries(entries));engine.fonts['Report-'+part.id]={normal:part.files.regular,bold:part.files.medium,italics:part.files.regular,bolditalics:part.files.medium};});
-   loaded.set(part.id,task);task.catch(()=>loaded.delete(part.id));
-  }
-  return loaded.get(part.id);
+    fontFiles[name]=btoa(binary);
+   })();
+   loaded.set(name,task);task.catch(()=>loaded.delete(name));
+   }
+   return loaded.get(name);
+  });
  }));
  engine.addVirtualFileSystem(fontFiles);
 }
-self.onmessage=async({data:{id,report}})=>{
+self.onmessage=async({data:{id,report,warm}})=>{
  try{
   const [pdfMake,manifest]=await Promise.all([engine(),reportFontManifest()]);
+  if(warm){await fonts(pdfMake,manifest.parts.filter(part=>part.id==='core'));return;}
   const prepared=prepareReportFonts(pdfDefinition(report),manifest);await fonts(pdfMake,prepared.parts);
   const blob=await new Promise((resolve,reject)=>{
    const doc=pdfMake.createPdf(prepared.definition),stream=doc.getStream({}),chunks=[];
    stream.on('error',reject);stream.on('data',chunk=>chunks.push(chunk));stream.on('end',()=>resolve(new Blob(chunks,{type:'application/pdf'})));stream.end();
   });self.postMessage({id,blob});
- }catch(error){self.postMessage({id,error:error?.message||String(error)||'PDF后台排版失败，请重试'});}
+ }catch(error){if(!warm)self.postMessage({id,error:error?.message||String(error)||'PDF后台排版失败，请重试'});}
 };

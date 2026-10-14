@@ -6,13 +6,13 @@
  --accent-fill:#2c5b7d;--accent-hover:#214d70;--accent-border:#275575;--accent-shadow:#234d7024;
  --selection-fill:#d2e5f1b8;--selection-border:transparent;
  --radius-panel:18px;--radius-inner:12px;--radius-control:9px;--radius-window:22px;
- --material-panel:#ffffff9e;--material-inset:#deebf43d;--material-edge:transparent;
- --material-chrome:#eff7fc70;--material-window:#f5faffeb;
- --panel-sheen:radial-gradient(ellipse at 8% 0%,#ffffff73,transparent 68%),linear-gradient(155deg,#ffffff26,#dceaf40d 82%);
+ --material-panel:#ffffff72;--material-inset:#deebf43d;--material-edge:transparent;
+ --material-chrome:#eaf5fc38;--material-window:#eef7fb91;
+ --panel-sheen:radial-gradient(ellipse at 8% 0%,#ffffff66,transparent 62%),linear-gradient(155deg,#ffffff24,#dceaf40d 82%);
  --inset-sheen:linear-gradient(155deg,#ffffff35,#c5dae917);
- --glass-sheen:linear-gradient(155deg,#ffffff80,#e2eff92b 70%,#ffffff24);
- --window-sheen:radial-gradient(ellipse at 8% 0%,#ffffff80,transparent 68%),linear-gradient(155deg,#ffffff36,#edf6fc14 82%);
- --material-shadow:0 2px 4px #23415b04,0 14px 28px -20px #23415b28;
+ --glass-sheen:linear-gradient(150deg,#ffffff55,transparent 42%,#c5ddec1a 74%,#ffffff29);
+ --window-sheen:radial-gradient(ellipse at 8% 0%,#ffffff44,transparent 62%),linear-gradient(155deg,#ffffff24,#d9eaf212 82%);
+ --material-shadow:inset 0 1px 0 #ffffffb0,inset 1px 0 0 #ffffff38,0 2px 4px #23415b04,0 14px 28px -20px #23415b28;
  --material-inset-shadow:inset 0 1px 2px #23455f06;
  --material-lift-shadow:0 3px 7px #244b6a07,0 19px 34px -22px #244b6a42;
  --material-glass-shadow:inset 0 1px 0 #ffffffb8,0 2px 5px #284c6605,0 16px 38px -22px #284c6642;
@@ -60,6 +60,9 @@ body{
 .dock-indicator{border:1px solid #ffffffe8;border-radius:14px;background:linear-gradient(145deg,#ffffffe0,#edf7ff91);box-shadow:inset 0 1px 0 #fff,0 1px 3px #315a7609,0 7px 16px -11px #315a763d}
 .dock-indicator::after{background:#547f9ba3;width:12px;height:1.5px;left:calc(50% - 6px);bottom:5px;border-radius:2px}
 .study-outline,.compare-tray{background-color:#f4faff9e;background-image:var(--glass-sheen);border:0;border-radius:var(--radius-inner);box-shadow:var(--material-glass-shadow);backdrop-filter:blur(20px) saturate(1.2);-webkit-backdrop-filter:blur(20px) saturate(1.2)}
+
+/* Glass shelves frame scope and navigation; repeated evidence stays crisp. */
+:is(#stage,.scene-leaving-canvas)[data-scene] :is(.student-scope,.directory-lenses,.class-atlas,.paper-control-deck){backdrop-filter:blur(12px) saturate(1.12);-webkit-backdrop-filter:blur(12px) saturate(1.12);box-shadow:var(--material-glass-shadow)}
 
 /* Controls use one selected tint and one restrained edge, whatever their shape. */
 .button{border-radius:var(--radius-control)}
@@ -126,9 +129,9 @@ input::placeholder,textarea::placeholder{color:#718ba0}
 .reading-choice span{color:#5d7b92}.reading-choice.selected i{border-color:#4f7c9d;background:#fff}
 
 /* Every window shares its light, edge and backdrop. Blur lives on the backdrop. */
-.sheet-dialog,.research-dialog,.research-drawer,.table-reader{background:var(--surface-window);border:0;border-radius:var(--radius-window);box-shadow:var(--material-window-shadow);backdrop-filter:none;-webkit-backdrop-filter:none}
+.sheet-dialog,.research-dialog,.research-drawer,.table-reader{background:var(--surface-window);border:0;border-radius:var(--radius-window);box-shadow:var(--material-window-shadow);backdrop-filter:blur(22px) saturate(1.18);-webkit-backdrop-filter:blur(22px) saturate(1.18)}
 .research-drawer{border-left-color:#d4e6f2;border-radius:20px 0 0 20px}
-.sheet-dialog::backdrop,.research-drawer::backdrop,.table-reader::backdrop{background:#23435d24;backdrop-filter:blur(6px) saturate(1.05);-webkit-backdrop-filter:blur(6px) saturate(1.05)}
+.sheet-dialog::backdrop,.research-drawer::backdrop,.table-reader::backdrop{background:#23435d1f;backdrop-filter:none;-webkit-backdrop-filter:none}
 .drawer-top,.filter-drawer-footer,.table-reader-top{background:var(--glass-sheen),#eff7fcea;border-color:#88a9c130;box-shadow:inset 0 1px 0 #ffffffba;backdrop-filter:none;-webkit-backdrop-filter:none}
 #research-drawer .drawer-top{background:var(--glass-sheen),#eff7fcea}
 #research-drawer[data-kind] .block,#research-drawer .block{background:var(--panel-sheen),#ffffffbd;border-color:#ffffffbd;border-radius:var(--radius-inner);box-shadow:var(--material-shadow)}
@@ -238,9 +241,10 @@ body[data-density=compact]{--space-panel:18px;--space-section:18px;--space-gap:1
 body[data-surface=paper]{--material-panel:#fafdff;--material-inset:#eaf2f8;--material-window:#fafdff;--material-chrome:#f4f8fc;--surface-control:linear-gradient(155deg,#fff,#f0f6fb);--panel-sheen:none;--inset-sheen:none;--glass-sheen:none;--window-sheen:none}
 body[data-surface=paper] :is(.masthead,.navigation-dock,.study-outline,.compare-tray){background:#f5f9fc;backdrop-filter:none;-webkit-backdrop-filter:none}
 body[data-surface=paper] :is(#stage,.scene-leaving-canvas) :is(.block,.student-card,.paper-cover,.paper-profile,.paper-study-start,.paper-control-deck,.materials-stage,.follow-workbench,.follow-card,.number-ribbon){background:var(--surface-panel)}
-body[data-surface=paper] :is(.sheet-dialog,.research-dialog,.research-drawer,.table-reader,.welcome-workspace){background:var(--surface-window)}
+body[data-surface=paper] :is(.sheet-dialog,.research-dialog,.research-drawer,.table-reader,.welcome-workspace){background:var(--surface-window);backdrop-filter:none;-webkit-backdrop-filter:none}
 body[data-surface=paper] :is(.question-square,.personal-question-card,.lens-question,.cover-score-square)[data-score-tone]{background:var(--score-base)}
 body[data-surface=paper] :is(#stage,.scene-leaving-canvas) .question-map .question-square[data-score-tone]{background:var(--score-base)}
+body[data-surface=paper] :is(.student-scope,.directory-lenses,.class-atlas,.paper-control-deck){backdrop-filter:none;-webkit-backdrop-filter:none}
 body[data-surface=paper] .dock-indicator{background:#e1edf6;border-color:#93afc658}
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.masthead,body[data-scrolled=true] .masthead,.navigation-dock{background:#f0f7fcf5}}
 body[data-motion=calm] :is(#stage,.scene-leaving-canvas) :is(.student-card,.paper-cover,.class-tile,.source-launchpad>button,.inquiry-grid>button,.library-route,.research-entry):hover{transform:none}
@@ -270,7 +274,8 @@ body[data-motion=calm] :is(.button,.navigation-dock button):is(:hover,:active){t
 @media(prefers-reduced-transparency:reduce){
  :root{--material-panel:#fff;--material-inset:#f3f7fb;--material-window:#fff;--material-chrome:#f5f9fc;--panel-sheen:none;--inset-sheen:none;--glass-sheen:none;--window-sheen:none}
  body{--surface-control:linear-gradient(155deg,#fff,#f0f6fb)}
- .masthead,body[data-scrolled=true] .masthead,.navigation-dock,.study-outline,.compare-tray{background:#f5f9fc;backdrop-filter:none;-webkit-backdrop-filter:none}
+ :is(.masthead,.navigation-dock,.study-outline,.compare-tray,.sheet-dialog,.research-dialog,.research-drawer,.table-reader){background:#f5f9fc;backdrop-filter:none;-webkit-backdrop-filter:none}
+ :is(.student-scope,.directory-lenses,.class-atlas,.paper-control-deck,.sheet-dialog,.research-dialog,.research-drawer,.table-reader){backdrop-filter:none;-webkit-backdrop-filter:none}
  :is(.question-square,.personal-question-card,.lens-question,.cover-score-square)[data-score-tone]{background:var(--score-base)!important}
 }
 @media(forced-colors:active){

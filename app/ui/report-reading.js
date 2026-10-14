@@ -1,6 +1,6 @@
-import {pdfBlob,pdfKey,idlePDFWorker} from '../io/exports.js?v=runtime-v35';
-import {selectedReport} from '../engine/report-selection.js?v=runtime-v35';
-import {pdfLibrary} from '../io/pdf-viewer-library.js?v=runtime-v35';
+import {pdfBlob,pdfKey,idlePDFWorker} from '../io/exports.js?v=runtime-v36';
+import {selectedReport} from '../engine/report-selection.js?v=runtime-v36';
+import {pdfLibrary} from '../io/pdf-viewer-library.js?v=runtime-v36';
 // A real PDF owns this managed island; form changes never reconcile its canvases.
 export function installReportReading(dialog){
  let pane=null,state=null,wanted=null,key='',doc=null,task=null,timer=0,frame=0,epoch=0,busy=false,base=null,scale=1,restore=null,suspended=false,previewAbort=null,pinnedEnd=false;
@@ -40,7 +40,7 @@ export function installReportReading(dialog){
   finally{if(renders.get(number)===job)renders.delete(number);}
  }
  function layout(keep){
-  if(suspended||!pane||!doc||!base||!state)return;const available=Math.max(120,pane.clientWidth-40),height=Math.max(140,pane.clientHeight-34);
+  if(suspended||!pane||!doc||!base||!state)return;const style=getComputedStyle(pane),available=Math.max(80,pane.clientWidth-parseFloat(style.paddingLeft)-parseFloat(style.paddingRight)),height=Math.max(140,pane.clientHeight-34);
   const next=state.paperWidth==='actual'?96/72:state.paperWidth==='page'?Math.min(available/base.width,height/base.height):state.paperWidth==='custom'?(Number(state.paperZoom)||100)/100*96/72:Math.min(available,1100)/base.width;
   const changed=Math.abs(next-scale)>.003;scale=next;state.paperZoom=Math.round(scale/(96/72)*100);
   const zoom=dialog.querySelector('[data-paper-zoom]');if(zoom)zoom.textContent=state.paperZoom+'%';
@@ -70,7 +70,7 @@ export function installReportReading(dialog){
   }catch(error){if(version===epoch&&wanted?.key===request.key){pane.dataset.pdfState='error';message('纸面暂未生成：'+error.message,true);}}
   finally{busy=false;if(!suspended&&wanted&&wanted.key!==key&&pane?.dataset.pdfState==='pending'&&dialog.open)timer=setTimeout(generate,0);}
  }
- function queue(){previewAbort?.abort();previewAbort=null;clearTimeout(timer);pane.dataset.pdfState='pending';message(doc?'内容已更新，正在重新分页…':'正在生成PDF纸面，首次会加载打印字体…');timer=setTimeout(generate,350);}
+ function queue(){previewAbort?.abort();previewAbort=null;clearTimeout(timer);pane.dataset.pdfState='pending';message(doc?'内容已更新，正在重新分页…':'正在排版报告…');timer=setTimeout(generate,350);}
  function jump(n){if(!pane||!doc)return;pinnedEnd=false;n=Math.max(1,Math.min(doc.numPages,Math.round(Number(n)||1)));const node=pages.get(n)?.node;if(node){pane.scrollTop=node.offsetTop;paintPage(n);position();pane.focus({preventScroll:true});}}
  dialog.addEventListener('scroll',event=>{if(event.target===pane){cancelAnimationFrame(frame);frame=requestAnimationFrame(position);}},{capture:true,passive:true});
  for(const type of ['wheel','touchstart','pointerdown'])dialog.addEventListener(type,event=>{if(pane?.contains(event.target))pinnedEnd=false;},{capture:true,passive:true});

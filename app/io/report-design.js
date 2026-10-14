@@ -13,7 +13,7 @@ export function importantCell(section,row,column,report) {
   const header=section.headers[column]||'',text=String(row[column]??'—');
   const value=/^[+-]?\d+(?:\.\d+)?$/.test(text)?Number(text):null;
   const critical=/距.*线|.*距线/.test(header)&&value!==null&&value<0&&value>=-(report.spec?.band||20);
-  return {bold:critical||/^(学生|姓名)|排名|校排|班排/.test(header),critical};
+  return {bold:critical||/^(学生|姓名)|排名|校排|班排|总分|得分率/.test(header),critical};
 }
 export function compactMeta(report) {
   return (report.meta||[]).filter(([key,value])=>!['学校','分析考试','研究对象'].includes(key)||!String(report.subtitle||'').includes(String(value)));

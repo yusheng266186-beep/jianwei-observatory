@@ -1,6 +1,6 @@
-import {classDefaults,SUBJECTS,normalizeDataset} from '../data/compat.js?v=runtime-v35';
-import {valid,average,sum,distribution,groupKey,GROUPS} from './metrics.js?v=runtime-v35';
-import {schoolRank} from './ranking.js?v=runtime-v35';
+import {classDefaults,SUBJECTS,normalizeDataset} from '../data/compat.js?v=runtime-v36';
+import {valid,average,sum,distribution,groupKey,GROUPS} from './metrics.js?v=runtime-v36';
+import {schoolRank} from './ranking.js?v=runtime-v36';
 const append=(map,key,value)=>{if(!map.has(key))map.set(key,[]);map.get(key).push(value);};
 export class Atlas {
   constructor(dataset) {
@@ -95,7 +95,7 @@ export class Atlas {
     if(metric==='total')return row.total;
     if(metric==='gradeRank')return this.gradeRank(row);
     if(metric==='percentile')return this.percentile(row);
-    if(metric==='rank')return this.exam(row.exam).scope==='city'?row.cityRank:row.schoolRank;
+    if(metric==='rank')return this.exam(row.exam).scope==='city'?row.cityRank:this.gradeRank(row);
     if(metric==='top'||metric==='under')return this.gap(row,metric);
     return this.subject(row,metric)?.score??null;
   }
