@@ -102,7 +102,7 @@ const scenes=['board','class','papers','people','follow','library'];
  },{mobile});
  await test('图表导出：缺失断开、实际零分保留，渐变随SVG和PNG完整导出',async({page})=>{
   const result=await page.evaluate(async()=>{
-   const {trajectory,bars}=await import('./app/ui/plots.js?v=runtime-v32');
+   const {trajectory,bars}=await import('./app/ui/plots.js?v=runtime-v33');
    const host=document.createElement('section');host.className='block';host.id='visual-fixture';host.innerHTML=trajectory('匿名趋势',['一','二','缺失阶段','四','五'],[{name:'匿名阶段',values:[10,30,null,0,20]}])+bars('匿名条形',[{label:'实际零分',value:0},{label:'未填成绩',value:null},{label:'已有成绩',value:40}]);document.getElementById('stage').replaceChildren(host);
    const svg=host.querySelector('.trajectory'),line=svg.querySelector('.plot-line'),bar=host.querySelector('.bars');
    const references=[...host.querySelectorAll('[fill^="url("]')].map(el=>el.getAttribute('fill').slice(5,-1));
@@ -110,7 +110,7 @@ const scenes=['board','class','papers','people','follow','library'];
   });
   assert.deepEqual(result,{points:4,segments:2,areas:2,zero:0,missing:'—',allFillsResolve:true});
   for(const id of ['匿名趋势','匿名条形'])for(const png of [false,true]){
-   const pending=page.waitForEvent('download');await page.evaluate(async({id,png})=>{const {chart}=await import('./app/io/exports.js?v=runtime-v32');chart(id,png);},{id,png});
+   const pending=page.waitForEvent('download');await page.evaluate(async({id,png})=>{const {chart}=await import('./app/io/exports.js?v=runtime-v33');chart(id,png);},{id,png});
    const file=await pending;assert.equal(await file.failure(),null);const target=path.join(output,id+(png?'.png':'.svg'));await file.saveAs(target);const bytes=fs.readFileSync(target);assert.ok(bytes.length>100);
    if(!png){const decoded=await page.evaluate(async text=>{const svg=new DOMParser().parseFromString(text,'image/svg+xml');if(svg.querySelector('parsererror'))return false;return new Promise(resolve=>{const image=new Image(),url=URL.createObjectURL(new Blob([text],{type:'image/svg+xml'}));image.onload=()=>{URL.revokeObjectURL(url);resolve(image.naturalWidth>0)};image.onerror=()=>{URL.revokeObjectURL(url);resolve(false)};image.src=url;});},bytes.toString());assert.equal(decoded,true);}
   }

@@ -1,4 +1,4 @@
-import {preference,remember} from './workspace.js?v=runtime-v32';
+import {preference,remember} from './workspace.js?v=runtime-v33';
 
 // A synchronous draft survives refresh before an IndexedDB write can finish.
 export class NoteJournal {

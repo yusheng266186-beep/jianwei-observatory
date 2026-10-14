@@ -1,7 +1,7 @@
-import {button,table,esc,empty} from './html.js?v=runtime-v32';
-import {reportOptions} from './report-options.js?v=runtime-v32';
-import {selectionFor,fieldsFor,selectedReport} from '../engine/report-selection.js?v=runtime-v32';
-import {reportPaperOptions} from './report-paper-options.js?v=runtime-v32';
+import {button,table,esc,empty} from './html.js?v=runtime-v33';
+import {reportOptions} from './report-options.js?v=runtime-v33';
+import {selectionFor,fieldsFor,selectedReport} from '../engine/report-selection.js?v=runtime-v33';
+import {reportPaperOptions} from './report-paper-options.js?v=runtime-v33';
 export function reportView(report,state,{noteState='preview',canReturn=false,context='',jobs=new Set()}={}) {
  const sections=report.sections||[],index=Math.min(state.section||0,Math.max(0,sections.length-1)),selection=selectionFor(report),output=selectedReport({...report,outputSelection:selection}),source=sections[index],fields=fieldsFor(report,index,selection),query=(state.search||'').trim(),filter=String(selection.filters[index]||'').trim(),rows=(source?.rows||[]).filter(r=>(!filter||r.some(v=>String(v??'').includes(filter)))&&(!query||r.some(v=>String(v??'').includes(query)))).map(r=>fields.map(i=>r[i])),pages=Math.max(1,Math.ceil(rows.length/50)),page=Math.min(state.page||1,pages),shown=rows.slice((page-1)*50,page*50),paper=state.preview==='paper',hasOutput=selection.selected.length>0||selection.includeNote&&!!report.note?.trim();
  const settingsOpen=Boolean(state.settingsOpen&&!state.reading);

@@ -76,3 +76,10 @@ test('旧学生报告快照保留数值，但打印时不继续把未核验的�
  saved.sheets={'阶段':[['考试','年级排名'],['旧考次','2']]};const before=structuredClone(saved),print=documentSections(saved);assert.match(selectedReport(saved).sheets.阶段[0][1],/历史排名.*待核实/);
  assert.deepEqual(saved,before);assert.equal(print[0].rows[0][1],'2');assert.match(print[0].headers[1],/历史排名.*待核实/);assert.match(print[0].caption,/原快照数值保留/);
 });
+
+test('同一知识点的多道薄弱题不会让学生建议重复堆叠，原题证据仍完整',()=>{
+ const data=makeFixture(),atlas=new Atlas(data),report=buildTeachingReport(atlas,{kind:'student',exam:'52',sid:'test-4-0'});
+ const advice=report.sections.find(s=>s.title==='学科短板与改进方向').rows.find(r=>r[0]==='数学')[5];
+ assert.equal((advice.match(/函数/g)||[]).length,1);
+ assert.equal(report.sections.find(s=>s.title==='个人全部小题得分').rows.filter(r=>r[0].startsWith('数学')).length,3);
+});

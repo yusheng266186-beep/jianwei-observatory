@@ -1,4 +1,4 @@
-import {valid} from './metrics.js?v=runtime-v32';
+import {valid} from './metrics.js?v=runtime-v33';
 
 export function answerStructure(answers,question,rules={}) {
   const score=answer=>answer.values[question.index],knownMax=valid(question.max)&&question.max>0;

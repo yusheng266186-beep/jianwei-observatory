@@ -1,6 +1,6 @@
-import {pickerField,numberField} from './plan-controls.js?v=runtime-v32';
-import {button,esc,number,percent,empty} from './html.js?v=runtime-v32';
-import {questionOptions,materialPeople,dateChoices,dateLabel,scheduleLabel,trainingTasks,trainingMethods,scheduleSlots,trainingSummary} from '../engine/training.js?v=runtime-v32';
+import {pickerField,numberField} from './plan-controls.js?v=runtime-v33';
+import {button,esc,number,percent,empty} from './html.js?v=runtime-v33';
+import {questionOptions,materialPeople,dateChoices,dateLabel,scheduleLabel,trainingTasks,trainingMethods,scheduleSlots,trainingSummary} from '../engine/training.js?v=runtime-v33';
 const picks=(key,options,value,multi=false)=>'<div class="chips" role="group" aria-label="'+esc(key)+'">'+options.map(([id,label])=>{const selected=multi?(value||[]).includes(id):String(value)===String(id);return button(esc(label),multi?'plan-toggle':'plan-set',{key,value:id},selected?'chip selected':'chip','aria-pressed="'+selected+'"');}).join('')+'</div>';
 const input=(label,path,value,type='text',extra='')=>type==='number'?numberField(label,path,value,Number(extra.match(/min="(\d+)"/)?.[1]||1),Number(extra.match(/max="(\d+)"/)?.[1]||100)):'<label class="field"><span>'+esc(label)+'</span><input type="'+type+'" data-plan-field="'+path+'" value="'+esc(value??'')+'" '+extra+'></label>';
 export function followEditor(atlas,plan,ui={}){

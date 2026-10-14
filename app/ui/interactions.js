@@ -1,6 +1,6 @@
-import {motion,finishAnimation} from './motion.js?v=runtime-v32';
-import {positionSpreadLabels} from './plots.js?v=runtime-v32';
-import {paperMapLayout} from '../engine/paper-structure.js?v=runtime-v32';
+import {motion,finishAnimation} from './motion.js?v=runtime-v33';
+import {positionSpreadLabels} from './plots.js?v=runtime-v33';
+import {paperMapLayout} from '../engine/paper-structure.js?v=runtime-v33';
 let motionPreference=()=>false,resizeObserver,plotObserver,railObserver,drawerHeaderObserver,revealObserver,tooltipTarget=null,tooltipOriginal=null,tooltipFrame=0,outlineFrame=0,drawerOutlineFrame=0,pointerFrame=0,outline=null,outlineEntries=[];
 const observedTables=new Set(),observedPlots=new Set(),observedReveals=new Set(),revealed=new WeakSet(),disclosures=new WeakMap();
 const selectionRails=new Set(),railStates=new WeakMap();
