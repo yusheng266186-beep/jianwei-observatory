@@ -1,7 +1,7 @@
-import {reportStudio} from '../ui/report-studio.js?v=runtime-v39';
-import {SUBJECTS} from '../data/compat.js?v=runtime-v39';
-import {studyAvailable} from '../ui/research.js?v=runtime-v39';
-import {head,button,chips,badge,block,examRail,ribbon,table,number,integer,esc,empty,field,radio,footnote} from '../ui/html.js?v=runtime-v39';
+import {reportStudio} from '../ui/report-studio.js?v=runtime-v40';
+import {SUBJECTS} from '../data/compat.js?v=runtime-v40';
+import {studyAvailable} from '../ui/research.js?v=runtime-v40';
+import {head,button,chips,badge,block,examRail,ribbon,table,number,integer,esc,empty,field,radio,footnote} from '../ui/html.js?v=runtime-v40';
 export function render(atlas,state,session) {
   const tab=state.tab||'materials';let body='';
   const routes=[['materials','材料与备份',atlas.data.scores.length+' 条成绩','导入、合并、撤回与完整备份'],['classes','班级与任务',atlas.classes.length+' 个班级','人数任务、任课信息与班级档案'],['lines','有效线',atlas.data.lines.length+' 条口径','本场两科类总分与学科线'],['papers','题目资料',atlas.papers().length+' 张试卷','题号、满分与知识点维护'],['exams','考次与口径',atlas.exams.length+' 次考试','考试顺序、排名范围与分析参数'],['reports','打印报告','4 类报告','班级、学科、学生与训练日程'],['notebook','证据报告',(session.notebook||[]).length+' 份摘录','结果快照、教师判断与完整导出']];

@@ -1,4 +1,4 @@
-import {repairSourceRanks} from './rank-repair.js?v=runtime-v39';
+import {repairSourceRanks} from './rank-repair.js?v=runtime-v40';
 // Workbook exchange format only. Research queries live in engine/atlas.js.
 export const SUBJECTS = ['语文','数学','英语','日语','物理','历史','化学','生物','政治','地理'];
 export const EXAM_ORDER = ['入口','1册','21','2册','33','3册','41','4半','4月','43','4册','51','52'];

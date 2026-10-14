@@ -10,20 +10,20 @@
   <link rel="apple-touch-icon" href="./assets/school-crest.png?v=school-v6">
   <link rel="preload" href="./assets/fonts/reading-display-core.woff2?v=type-v16" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="./assets/fonts/reading-ui-regular-core.woff2?v=type-v16" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="./styles.css?v=runtime-v39">
-  <link rel="stylesheet" href="./styles/journey.css?v=runtime-v39">
-  <link rel="stylesheet" href="./styles/glass.css?v=runtime-v39">
-  <link rel="stylesheet" href="./styles/reading-fonts.css?v=runtime-v39">
-  <link rel="stylesheet" href="./styles/typography.css?v=runtime-v39">
-  <link rel="stylesheet" href="./styles/questions.css?v=runtime-v39">
-  <link rel="stylesheet" href="./styles/material.css?v=runtime-v39">
-  <link rel="stylesheet" href="./styles/reports.css?v=runtime-v39">
-  <link rel="stylesheet" href="./styles/controls.css?v=runtime-v39">
-  <link rel="stylesheet" href="./styles/question-glass.css?v=runtime-v39">
-  <link rel="stylesheet" href="./styles/report-reading.css?v=runtime-v39">
-  <link rel="stylesheet" href="./styles/paper-material.css?v=runtime-v39">
-  <script src="./app/launch.js?v=runtime-v39" defer></script>
-  <link rel="stylesheet" href="./styles/runtime.css?v=runtime-v39">
+  <link rel="stylesheet" href="./styles.css?v=runtime-v40">
+  <link rel="stylesheet" href="./styles/journey.css?v=runtime-v40">
+  <link rel="stylesheet" href="./styles/glass.css?v=runtime-v40">
+  <link rel="stylesheet" href="./styles/reading-fonts.css?v=runtime-v40">
+  <link rel="stylesheet" href="./styles/typography.css?v=runtime-v40">
+  <link rel="stylesheet" href="./styles/questions.css?v=runtime-v40">
+  <link rel="stylesheet" href="./styles/material.css?v=runtime-v40">
+  <link rel="stylesheet" href="./styles/reports.css?v=runtime-v40">
+  <link rel="stylesheet" href="./styles/controls.css?v=runtime-v40">
+  <link rel="stylesheet" href="./styles/question-glass.css?v=runtime-v40">
+  <link rel="stylesheet" href="./styles/report-reading.css?v=runtime-v40">
+  <link rel="stylesheet" href="./styles/paper-material.css?v=runtime-v40">
+  <script src="./app/launch.js?v=runtime-v40" defer></script>
+  <link rel="stylesheet" href="./styles/runtime.css?v=runtime-v40">
 </head>
 <body data-workspace="empty">
   <header class="masthead">
@@ -33,11 +33,11 @@
     <div class="masthead-tools"><button class="button header-button research-button" data-cmd="research" aria-haspopup="dialog" aria-label="打开研究夹" title="研究夹" hidden><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M7 3.5h10a1 1 0 0 1 1 1v16l-6-4-6 4v-16a1 1 0 0 1 1-1Z"/></svg><span>研究夹</span></button><button class="button header-button find-button" data-cmd="find" aria-label="找学生" title="找学生" hidden><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg><span>找学生</span><kbd id="find-shortcut">Ctrl K</kbd></button><button class="button header-button reading-button" data-cmd="reading" aria-label="阅读设置" title="阅读设置"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 7h16M4 17h16"/><rect x="8" y="4" width="4" height="6" rx="1" fill="var(--canvas)"/><rect x="14" y="14" width="4" height="6" rx="1" fill="var(--canvas)"/></svg><span class="reading-title">阅读设置</span><span class="reading-title-mobile">阅读</span></button><button class="button header-import" data-cmd="import" aria-label="导入成绩材料"><span aria-hidden="true">＋</span><span class="import-full-label">导入材料</span><span class="import-compact-label">导入</span></button></div>
   </header>
   <div id="scene-status" class="scene-status" role="status" aria-live="polite" hidden></div>
-  <div class="scene-viewport"><main id="stage" tabindex="-1"><div class="startup"><h1>导入材料，开启研究。</h1><p>导入后，再呈现班级、学生、成绩与试题分析。</p><button class="button accent" data-cmd="import">选择成绩工作簿</button></div></main></div>
+  <div class="scene-viewport"><main id="stage" tabindex="-1" aria-busy="true"><div class="startup" role="status"><h1>正在打开研究台</h1><p>材料、报告与阅读位置正在载入。</p></div></main></div>
   <template id="empty-workspace-template">
     <section class="welcome-workspace" id="drop-zone" aria-labelledby="welcome-title">
       <div class="welcome-copy"><div class="welcome-school"><img src="./assets/school-crest.png?v=school-v6" width="62" height="62" alt="荣县第一中学校徽"><div><span>荣县第一中学</span><b>高三成绩分析</b><small>空白工作区 · 等待你的教学材料</small></div></div><h1 id="welcome-title">把成绩，<br><span>读成线索。</span></h1><p>班级、学生、阶段变化与每一道小题，<br>将在你的材料中展开。</p><div class="welcome-actions"><button class="button accent" data-cmd="import">选择成绩工作簿 <span aria-hidden="true">↗</span></button><button class="button quiet" data-cmd="template">下载录入模板</button></div><span class="welcome-formats">Excel / CSV / JSON 备份<br>支持多份文件，也可以直接拖入。</span></div>
-      <div class="welcome-art" aria-hidden="true"><img class="folio-art" src="./assets/folio-sheet.svg?v=runtime-v39" alt=""></div>
+      <div class="welcome-art" aria-hidden="true"><img class="folio-art" src="./assets/folio-sheet.svg?v=runtime-v40" alt=""></div>
       <footer class="welcome-footer"><span><i aria-hidden="true"></i>材料在当前浏览器处理与保存</span><span>导入前不呈现具体成绩或样本</span></footer>
     </section>
   </template>

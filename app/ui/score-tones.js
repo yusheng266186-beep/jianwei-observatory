@@ -1,4 +1,4 @@
-import {valid} from '../engine/metrics.js?v=runtime-v39';
+import {valid} from '../engine/metrics.js?v=runtime-v40';
 
 // Higher measured rates use deeper school blue. Unknown and abnormal rates
 // have a neutral treatment; neither is colored as a real zero or a full score.

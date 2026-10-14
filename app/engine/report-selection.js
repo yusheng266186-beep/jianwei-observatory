@@ -1,6 +1,6 @@
-import {paperSettings} from './paper-settings.js?v=runtime-v39';
-import {qualifyHistoricalRankings} from './ranking.js?v=runtime-v39';
-import {repairKnowledgeReport} from './knowledge.js?v=runtime-v39';
+import {paperSettings} from './paper-settings.js?v=runtime-v40';
+import {qualifyHistoricalRankings} from './ranking.js?v=runtime-v40';
+import {repairKnowledgeReport} from './knowledge.js?v=runtime-v40';
 export function selectionFor(report){
  const source=report.outputSelection||{},sections=report.sections||[],indices=sections.map((_,i)=>i),valid=i=>Number.isInteger(i)&&i>=0&&i<sections.length;
  const order=[...new Set((source.order||indices).filter(valid))];for(const i of indices)if(!order.includes(i))order.push(i);
