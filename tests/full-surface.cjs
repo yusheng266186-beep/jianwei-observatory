@@ -93,7 +93,7 @@ async function report(cmd='export',root='#stage'){
  await page.locator('[data-report-search]').fill('没有这条匿名记录');await page.waitForTimeout(350);assert.equal(await page.locator('#report-content tbody tr').count(),0);await page.locator('[data-report-search]').fill('');await page.waitForTimeout(350);
  await page.locator('#report-note').fill('全界面检查的匿名判断');await click('[data-cmd="report-keep"]');
  for(const kind of ['excel','word']){const pending=page.waitForEvent('download');await click(`[data-cmd="report-${kind}"]`);const d=await pending;assert.equal(await d.failure(),null);}
- await click('[data-cmd="report-print"]');assert.ok(await page.locator('#print-area .printed-pdf-page').count()>0);assert.equal(await page.evaluate(()=>window.__printCalled),1);
+ await click('[data-cmd="report-print"]');await page.waitForFunction(()=>window.__printCalled===1,undefined,{timeout:90000});assert.ok(await page.locator('#print-area .printed-pdf-page').count()>0);
  await click('[data-cmd="close-report"]');
 }
 async function drawerViews(name){
@@ -266,7 +266,7 @@ await group('10 研究夹、摘录和本页导航的所有操作',async()=>{
  for(const target of unique(await page.locator('[data-cmd="section-jump"]').evaluateAll(es=>es.map(e=>e.dataset.target))))await click(`[data-cmd="section-jump"][data-target="${target}"]`);await click('[data-cmd="section-top"]');
  await click('#stage [data-cmd="research-pin"]');await click('.research-button');await inspect('研究夹');await click('[data-cmd="research-rename"]');await page.locator('[name="study-name"]').fill('更名后的班级观察');await click('[data-form="research-name"] [type="submit"]');forms.push('research-name');
  await click('[data-cmd="research-rename"]');await click('[data-cmd="research-name-cancel"]');await click('[data-cmd="research-tab"][data-tab="recent"]');await click('[data-cmd="research-pin-entry"]');await click('[data-cmd="research-tab"][data-tab="saved"]');await click('[data-cmd="research-open"]');
- await click('#stage [data-cmd="capture"]');await page.locator('#report-note').fill('匿名摘录检查');await click('[data-cmd="report-return"]');
+ await click('#stage [data-cmd="capture"]');await click('.report-head-actions [data-cmd="report-settings"]');await page.locator('#report-note').fill('匿名摘录检查');await click('[data-cmd="report-return"]');
  await nav('library');await set('tab','notebook');await inspect('证据卡片');await click('[data-cmd="notebook-open"]');await click('[data-cmd="close-report"]');await click('[data-cmd="notebook-return"]');await click('[data-cmd="research-back"]');
  await nav('library');await set('tab','notebook');await click('[data-cmd="notebook-export"]');await inspect('全部摘录预览');await click('[data-cmd="close-report"]');await click('[data-cmd="notebook-remove"]');await click('[data-cmd="undo-action"]');
  await click('.research-button');await click('[data-cmd="research-remove"]');await click('[data-cmd="undo-action"]');await click('[data-cmd="research-close"]');

@@ -1,6 +1,6 @@
-import {motion,finishAnimation} from './motion.js?v=runtime-v36';
-import {positionSpreadLabels} from './plots.js?v=runtime-v36';
-import {paperMapLayout} from '../engine/paper-structure.js?v=runtime-v36';
+import {motion,finishAnimation} from './motion.js?v=runtime-v37';
+import {positionSpreadLabels} from './plots.js?v=runtime-v37';
+import {paperMapLayout} from '../engine/paper-structure.js?v=runtime-v37';
 let motionPreference=()=>false,resizeObserver,plotObserver,railObserver,drawerHeaderObserver,revealObserver,tooltipTarget=null,tooltipOriginal=null,tooltipFrame=0,outlineFrame=0,drawerOutlineFrame=0,pointerFrame=0,outline=null,outlineEntries=[];
 const observedTables=new Set(),observedPlots=new Set(),observedReveals=new Set(),revealed=new WeakSet(),disclosures=new WeakMap();
 const selectionRails=new Set(),railStates=new WeakMap();
@@ -156,10 +156,12 @@ export function enhance(root=document,{reveal=true}={}) {
   refreshDrawerSections();
 }
 function refreshDrawerSections(){
-  const dialog=document.getElementById('research-drawer'),nav=dialog?.querySelector('.drawer-section-nav');if(!nav)return;
-  nav.style.setProperty('--drawer-header-height',Math.max(66,dialog.querySelector('.drawer-top')?.getBoundingClientRect().height||0)+'px');
+  const dialog=document.getElementById('research-drawer');if(!dialog)return;
+  const body=dialog.querySelector('.drawer-body');
+  dialog.style.setProperty('--drawer-scrollbar',Math.max(0,body?body.offsetWidth-body.clientWidth:0)+'px');
+  const nav=dialog.querySelector('.drawer-section-nav');if(!nav)return;
   const entries=[...nav.querySelectorAll('.drawer-section-link[data-target]')].map(button=>({button,section:document.getElementById(button.dataset.target)})).filter(e=>e.section&&dialog.contains(e.section));if(!entries.length)return;
-  let selected=entries[0];if(dialog.open){const edge=nav.getBoundingClientRect().bottom+24;selected=entries.find(entry=>entry.section.getBoundingClientRect().bottom>edge)||entries.at(-1);}
+  let selected=entries[0];if(dialog.open){const edge=(body||nav).getBoundingClientRect().top+24;selected=entries.find(entry=>entry.section.getBoundingClientRect().bottom>edge)||entries.at(-1);}
   for(const entry of entries)if(entry===selected)entry.button.setAttribute('aria-current','location');else entry.button.removeAttribute('aria-current');
 }
 function refreshOutline() {
@@ -213,7 +215,7 @@ export function installInteractions({reducedMotion}) {
   if('ResizeObserver' in window)railObserver=new ResizeObserver(entries=>{for(const entry of entries)if(entry.target.isConnected)selectionRail(entry.target);});
   if('ResizeObserver' in window){drawerHeaderObserver=new ResizeObserver(refreshDrawerSections);const header=document.querySelector('#research-drawer .drawer-top');if(header)drawerHeaderObserver.observe(header);}
   if('IntersectionObserver' in window)revealObserver=new IntersectionObserver(entries=>{let order=0;for(const entry of entries)if(entry.isIntersecting){revealObserver.unobserve(entry.target);observedReveals.delete(entry.target);if(!motionPreference())entry.target.animate([{opacity:entry.target.matches('.block,.follow-workbench')?1:.94,translate:'0px 6px'},{opacity:1,translate:'0px 0px'}],{...motion.arrive,delay:Math.min(order++,3)*16,fill:'backwards'});}},{rootMargin:'0px 0px -25px 0px',threshold:.06});
-  document.addEventListener('scroll',event=>{if(event.target?.matches?.('.goal-cards[data-scroll-key]')){galleryOffsets.set(event.target.dataset.scrollKey,event.target.scrollLeft);hideTooltip();}else if(event.target?.matches?.('.paper-profile-scroll')){refreshPaperProfiles();hideTooltip();}else if(event.target?.matches?.('.table-scroll'))refreshTable(event.target.closest?.('.table-frame'));else {hideTooltip();if(event.target?.id==='research-drawer'){cancelAnimationFrame(drawerOutlineFrame);drawerOutlineFrame=requestAnimationFrame(refreshDrawerSections);}else if(event.target===document||event.target===document.documentElement){cancelAnimationFrame(outlineFrame);outlineFrame=requestAnimationFrame(()=>{const scrolled=String(window.scrollY>18);if(document.body.dataset.scrolled!==scrolled)document.body.dataset.scrolled=scrolled;refreshOutline();});}}},{capture:true,passive:true});
+  document.addEventListener('scroll',event=>{if(event.target?.matches?.('.goal-cards[data-scroll-key]')){galleryOffsets.set(event.target.dataset.scrollKey,event.target.scrollLeft);hideTooltip();}else if(event.target?.matches?.('.paper-profile-scroll')){refreshPaperProfiles();hideTooltip();}else if(event.target?.matches?.('.table-scroll'))refreshTable(event.target.closest?.('.table-frame'));else {hideTooltip();if(event.target?.matches?.('#research-drawer,.drawer-body')){cancelAnimationFrame(drawerOutlineFrame);drawerOutlineFrame=requestAnimationFrame(refreshDrawerSections);}else if(event.target===document||event.target===document.documentElement){cancelAnimationFrame(outlineFrame);outlineFrame=requestAnimationFrame(()=>{const scrolled=String(window.scrollY>18);if(document.body.dataset.scrolled!==scrolled)document.body.dataset.scrolled=scrolled;refreshOutline();});}}},{capture:true,passive:true});
   document.addEventListener('click',event=>{const summary=event.target.closest?.('summary');if(!summary||event.target.closest?.('button,a,input'))return;const details=summary.parentElement;if(details.matches('.card-scores,.card-meta,.record-accordion,.method-note,.class-profile,.report-context,.report-part-options,.report-field-options,.report-note-details')){event.preventDefault();toggleDetails(details);}});
   document.addEventListener('pointerover',event=>{if(event.pointerType==='touch')return;const target=event.target.closest?.('[data-plot-action],.plot-item,.plot-point,.student-dot,.heat-cell[title],[data-tip]');if(target)showTooltip(target,event.clientX,event.clientY);});
   document.addEventListener('pointermove',event=>{if(!tooltipTarget)return;cancelAnimationFrame(tooltipFrame);tooltipFrame=requestAnimationFrame(()=>placeTooltip(event.clientX,event.clientY));});

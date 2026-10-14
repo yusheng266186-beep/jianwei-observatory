@@ -1,5 +1,5 @@
-import {sourceRankReference} from './rank-reference.js?v=runtime-v36';
-import {legacyRanks,validRank} from '../engine/ranking.js?v=runtime-v36';
+import {sourceRankReference} from './rank-reference.js?v=runtime-v37';
+import {legacyRanks,validRank} from '../engine/ranking.js?v=runtime-v37';
 export function rankFingerprint(row){
  const key=[row.rawExam,row.sourceRow,row.classNo,row.rawTotal,row.total].join('|');
  let a=2166136261,b=2246822519;

@@ -1,9 +1,9 @@
-import {paperMetrics,paperSettings} from '../engine/paper-settings.js?v=runtime-v36';
-import {selectedReport} from '../engine/report-selection.js?v=runtime-v36';
-import {esc} from '../ui/html.js?v=runtime-v36';
-import {SITE_NAME} from '../brand.js?v=runtime-v36';
-import {qualifyHistoricalRankings} from '../engine/ranking.js?v=runtime-v36';
-import {sectionGroup,metricSection,importantCell,compactMeta} from './report-design.js?v=runtime-v36';
+import {paperMetrics,paperSettings} from '../engine/paper-settings.js?v=runtime-v37';
+import {selectedReport} from '../engine/report-selection.js?v=runtime-v37';
+import {esc} from '../ui/html.js?v=runtime-v37';
+import {SITE_NAME} from '../brand.js?v=runtime-v37';
+import {qualifyHistoricalRankings} from '../engine/ranking.js?v=runtime-v37';
+import {sectionGroup,metricSection,importantCell,compactMeta} from './report-design.js?v=runtime-v37';
 // All three outlets share the same sections, field splits and missing-value rules.
 export function documentSections(report){
  report=qualifyHistoricalRankings(report);

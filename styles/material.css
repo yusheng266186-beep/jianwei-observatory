@@ -128,12 +128,17 @@ input::placeholder,textarea::placeholder{color:#718ba0}
 .reading-choice.selected{background:var(--panel-sheen),var(--selection-fill);border-color:var(--selection-border);box-shadow:inset 0 1px 0 #fff}
 .reading-choice span{color:#5d7b92}.reading-choice.selected i{border-color:#4f7c9d;background:#fff}
 
-/* Every window shares its light, edge and backdrop. Blur lives on the backdrop. */
+/* Windows share their glass, light and edge, with one blur plane. */
 .sheet-dialog,.research-dialog,.research-drawer,.table-reader{background:var(--surface-window);border:0;border-radius:var(--radius-window);box-shadow:var(--material-window-shadow);backdrop-filter:blur(22px) saturate(1.18);-webkit-backdrop-filter:blur(22px) saturate(1.18)}
-.research-drawer{border-left-color:#d4e6f2;border-radius:20px 0 0 20px}
+#research-drawer{--drawer-gutter:31px;--drawer-scrollbar:0px;border-left-color:#d4e6f2;border-radius:20px 0 0 20px;padding:0;overflow:hidden;scrollbar-gutter:auto}
+.research-drawer[open]{display:flex;flex-direction:column}
+#drawer-content{display:flex;flex-direction:column;flex:1;min-width:0;min-height:0;overflow:hidden}
+#drawer-content>.drawer-body{flex:1;min-width:0;min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-gutter:stable;padding:0 var(--drawer-gutter) calc(36px + env(safe-area-inset-bottom));scroll-padding-block:24px;mask-image:linear-gradient(to bottom,transparent,#000 14px,#000 calc(100% - 14px),transparent)}
 .sheet-dialog::backdrop,.research-drawer::backdrop,.table-reader::backdrop{background:#23435d1f;backdrop-filter:none;-webkit-backdrop-filter:none}
 .drawer-top,.filter-drawer-footer,.table-reader-top{background:var(--glass-sheen),#eff7fcea;border-color:#88a9c130;box-shadow:inset 0 1px 0 #ffffffba;backdrop-filter:none;-webkit-backdrop-filter:none}
-#research-drawer .drawer-top{background:var(--glass-sheen),#eff7fcea}
+#research-drawer .drawer-top{position:relative;top:auto;flex-shrink:0;margin:0;padding-inline:var(--drawer-gutter);background:var(--glass-sheen),#eff7fcea}
+#drawer-content>:is(.drawer-tabs,.drawer-section-nav){position:relative;top:auto;flex-shrink:0;margin:10px calc(var(--drawer-gutter) + var(--drawer-scrollbar)) 14px var(--drawer-gutter);background:var(--glass-sheen),#eff7fceb;box-shadow:var(--material-inset-shadow)}
+#drawer-content>:is(.drawer-tabs,.drawer-section-nav)>button{min-width:0;flex:1 1 0;white-space:normal;overflow-wrap:anywhere}
 #research-drawer[data-kind] .block,#research-drawer .block{background:var(--panel-sheen),#ffffffbd;border-color:#ffffffbd;border-radius:var(--radius-inner);box-shadow:var(--material-shadow)}
 #research-drawer[data-kind=question] .drawer-title{background:var(--inset-sheen),#e6f0f87d;border-color:#99b8cd38;border-radius:var(--radius-inner);box-shadow:var(--material-inset-shadow)}
 #research-drawer[data-kind] .number-ribbon{background:var(--panel-sheen),#ffffffa8;border-color:#ffffffba;border-radius:var(--radius-inner);box-shadow:var(--material-shadow)}
@@ -267,11 +272,12 @@ body[data-motion=calm] :is(.button,.navigation-dock button):is(:hover,:active){t
  body{background-attachment:scroll}
  .masthead,body[data-scrolled=true] .masthead{border-radius:16px;backdrop-filter:blur(20px) saturate(1.2);-webkit-backdrop-filter:blur(20px) saturate(1.2)}
  .navigation-dock{border-radius:18px;backdrop-filter:blur(20px) saturate(1.2);-webkit-backdrop-filter:blur(20px) saturate(1.2)}
- .dock-indicator{border-radius:11px}.research-drawer{border-radius:16px 0 0 16px}
+ .dock-indicator{border-radius:11px}#research-drawer{--drawer-gutter:21px;border-radius:16px 0 0 16px;padding:0}
  :is(#stage,.scene-leaving-canvas) .question-map .question-square[data-score-tone]{border-radius:14px}
  .welcome-workspace{border-radius:19px}.score-tone-legend{font-size:9px;gap:5px 10px}
 }
 @media(prefers-reduced-transparency:reduce){
+ #drawer-content>.drawer-body{mask-image:none}
  :root{--material-panel:#fff;--material-inset:#f3f7fb;--material-window:#fff;--material-chrome:#f5f9fc;--panel-sheen:none;--inset-sheen:none;--glass-sheen:none;--window-sheen:none}
  body{--surface-control:linear-gradient(155deg,#fff,#f0f6fb)}
  :is(.masthead,.navigation-dock,.study-outline,.compare-tray,.sheet-dialog,.research-dialog,.research-drawer,.table-reader){background:#f5f9fc;backdrop-filter:none;-webkit-backdrop-filter:none}
@@ -279,6 +285,7 @@ body[data-motion=calm] :is(.button,.navigation-dock button):is(:hover,:active){t
  :is(.question-square,.personal-question-card,.lens-question,.cover-score-square)[data-score-tone]{background:var(--score-base)!important}
 }
 @media(forced-colors:active){
+ #drawer-content>.drawer-body{mask-image:none}
  :is(#stage,.scene-leaving-canvas)[data-scene] :is(.block,.student-card,.paper-cover,.paper-profile,.materials-stage,.follow-card,.class-split,.class-atlas,.student-scope,.directory-lenses,.report-options,.report-outline),
  #research-drawer[data-kind] :is(.block,.drawer-title,.number-ribbon,.lens-insight,.lens-scope){background:Canvas!important;color:CanvasText!important;border:1px solid CanvasText!important;box-shadow:none!important}
  :is(.button,.chip,.class-key,.exam-stop,.scope-class,.lens-button,.reading-choice,.report-type,.plan-question,.picker-button){background:ButtonFace!important;color:ButtonText!important;border:1px solid ButtonText!important;box-shadow:none}

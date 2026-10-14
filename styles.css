@@ -548,10 +548,10 @@ body[data-scrolled=true] .masthead{background:#f7fafde9;border-bottom-color:#d6e
 .card-meta summary::-webkit-details-marker{display:none}
 .card-scores>div,.card-meta>dl,.record-accordion>.block{overflow:hidden}
 .table-frame{min-width:0;max-width:100%;margin-top:16px}
-.table-tools{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px}
+.table-tools{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:9px}
 .table-tools>span{font-size:11px;color:#7c97b2;white-space:nowrap}
 .table-tools>span i{font-style:normal;color:#b6c5d4;margin:0 5px}
-.table-tools>div{display:flex;align-items:center;gap:5px}
+.table-tools>div{display:flex;align-items:center;flex-wrap:wrap;gap:5px;min-width:0;max-width:100%;margin-left:auto}
 .table-shift{border:1px solid #d9e7f5;border-radius:6px;min-width:28px;height:27px;background:#ffffff9c;color:#5f80a1;font-size:12px;transition:background .2s,border-color .2s}
 .table-shift:hover:where(:not(:disabled)){background:#ffffff;border-color:#b0c0d1}
 .table-expand{font-size:11px;min-height:27px;padding:3px 8px;color:#5a7999;background:#ffffff85;border-color:#d9e7f5}

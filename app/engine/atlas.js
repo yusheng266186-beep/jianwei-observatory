@@ -1,6 +1,6 @@
-import {classDefaults,SUBJECTS,normalizeDataset} from '../data/compat.js?v=runtime-v36';
-import {valid,average,sum,distribution,groupKey,GROUPS} from './metrics.js?v=runtime-v36';
-import {schoolRank} from './ranking.js?v=runtime-v36';
+import {classDefaults,SUBJECTS,normalizeDataset} from '../data/compat.js?v=runtime-v37';
+import {valid,average,sum,distribution,groupKey,GROUPS} from './metrics.js?v=runtime-v37';
+import {schoolRank} from './ranking.js?v=runtime-v37';
 const append=(map,key,value)=>{if(!map.has(key))map.set(key,[]);map.get(key).push(value);};
 export class Atlas {
   constructor(dataset) {
