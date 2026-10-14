@@ -1,6 +1,14 @@
 // Storage has no analysis dependencies. The landing page can confirm whether
 // a workspace exists without downloading the research application.
-const DB='hengji-evidence-workspace',TABLE='materials',localPrefix='hengji:';
+export function workspaceStorage(pathname=''){
+ const scope=/^\/jianwei-observatory-preview(?:\/|$)/.test(pathname)?'gemini-preview':'';
+ return {scope,database:'hengji-evidence-workspace'+(scope?'-'+scope:''),prefix:'hengji'+(scope?'-'+scope:'')+':'};
+}
+// The Pages preview shares an origin with production. Its documents and workers
+// must use the same isolated namespace, including on reload and background work.
+const {scope:STORAGE_SCOPE,database:DB,prefix:localPrefix}=workspaceStorage(globalThis.location?.pathname||'');
+export {STORAGE_SCOPE};
+const TABLE='materials';
 export const PREPARED_VERSION=46;
 export function preference(key,fallback){try{return JSON.parse(localStorage.getItem(localPrefix+key))??fallback;}catch{return fallback;}}
 export function remember(key,value){try{localStorage.setItem(localPrefix+key,JSON.stringify(value));return true;}catch{return false;}}
@@ -29,6 +37,7 @@ export function writePrepared(entries){const ready=Promise.resolve(entries);read
 export async function readWorkspace(){
  let current=null;try{current=await access(['dataset','prepared']);}catch{}
  if(current?.dataset)return {dataset:current.dataset,prepared:current.prepared?.version===PREPARED_VERSION,stamp:current.prepared?.stamp??null,origin:'saved'};
+ if(STORAGE_SCOPE)return {dataset:null,prepared:false,origin:'empty'};
  try{const legacy=await access('dataset',null,false,'jianwei-local','workspace');if(legacy)return {dataset:legacy,prepared:false,origin:'migrated'};}catch{}
  return {dataset:null,prepared:false,origin:'empty'};
 }
@@ -36,6 +45,7 @@ export async function inspectWorkspace(){
  const db=await open();
  const saved=await new Promise((resolve,reject)=>{const tx=db.transaction(TABLE,'readonly'),request=tx.objectStore(TABLE).getKey('dataset');request.onsuccess=()=>resolve(request.result!==undefined);request.onerror=()=>reject(request.error);tx.oncomplete=()=>db.close();});
  if(saved)return {stored:true,origin:'saved'};
+ if(STORAGE_SCOPE)return {stored:false,origin:'empty'};
  try{const db=await open('jianwei-local');if(!db.objectStoreNames.contains('workspace')){db.close();return {stored:false,origin:'empty'};}const legacy=await new Promise((resolve,reject)=>{const tx=db.transaction('workspace','readonly'),r=tx.objectStore('workspace').getKey('dataset');r.onsuccess=()=>resolve(r.result!==undefined);r.onerror=()=>reject(r.error);tx.oncomplete=()=>db.close();});if(legacy)return {stored:true,origin:'migrated'};}catch{}
  return {stored:false,origin:'empty'};
 }

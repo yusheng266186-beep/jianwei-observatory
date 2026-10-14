@@ -56,6 +56,10 @@ TRAINING_PRIVATE_DIR=/absolute/private/directory node tools/deploy-training.cjs
 
 本分支前端默认使用测试服务。合并之前可用 `python3 -m http.server 4175 --bind 127.0.0.1` 预览；该来源已列入测试服务允许来源，正式网页仍使用原版。
 
+独立 Pages 预览地址为 <https://yusheng266186-beep.github.io/jianwei-observatory-preview/>。专用预览仓库通过 Actions 提取本分支的静态前端，不上传后端、测试材料或凭据，不修改正式仓库的 Pages 来源。分支更新后可在预览仓库手动重新运行部署流程。
+
+由于两个 Pages 地址同源，预览路径使用独立的 `gemini-preview` 本机存储范围：成绩与预计算缓存、教学计划、偏好、教师会话和练习分别保存，后台 Worker 也使用同一预览范围，并跳过正式站及旧版数据迁移。试用前可从正式站下载完整 JSON 备份，再在预览站导入；它不会自动采用正式站的材料。
+
 ## 检查与范围
 
 `node --test tests/*.test.js` 包含匿名请求边界、结构校验、并发额度、重复任务 ID、事件重放和失败信息脱敏检查。`node tests/exercise-studio.cjs` 使用模拟网络验证 UI 和打印，不消耗模型额度；可用 `EXERCISE_SAMPLE=/private/generated.json` 检查实际生成的题目版式。`AUDIT_BROWSER=webkit` 检查移动浏览器对应的渲染。

@@ -4,8 +4,9 @@
   const source=import(new URL(script.dataset.storage||'./data/storage.js?v=runtime-v45',base));
   const materials=source.then(storage=>storage.inspectWorkspace());
   function prepare(){return new Promise((resolve,reject)=>{const worker=new Worker(new URL(script.dataset.prepare||'./data/prepare-worker.js?v=runtime-v45',base),{type:'module'}),timer=setTimeout(()=>finish(new Error('材料恢复超时，请刷新后重试')),120000);function finish(error,value){clearTimeout(timer);worker.terminate();error?reject(error):resolve(value);}worker.onmessage=({data})=>finish(data.error?new Error(data.error):null,data.result);worker.onerror=()=>finish(new Error('材料恢复组件未能打开，请刷新后重试'));worker.postMessage({operation:'hydrate'});});}
-  const reading=(()=>{try{return JSON.parse(localStorage.getItem('hengji:reading'))||{};}catch{return {};}})();
-  for(const [key,fallback] of Object.entries({density:'comfortable',surface:'glass',motion:'system'}))document.body.dataset[key]=reading[key]||fallback;
+  const readingDefaults={density:'comfortable',surface:'glass',motion:'system'};
+  function applyReading(reading={}){for(const [key,fallback] of Object.entries(readingDefaults))document.body.dataset[key]=reading[key]||fallback;}
+  applyReading();source.then(storage=>applyReading(storage.preference('reading',{}))).catch(()=>{});
   function start(){
     if(!application){application=Promise.all([import(new URL(script.dataset.runtime||'./main.js?v=runtime-v45',base)),materials]).then(async([module,value])=>{boot=value;await module.mount(boot);if(pendingFiles){const list=pendingFiles;pendingFiles=null;window.dispatchEvent(new CustomEvent('hengji:import-files',{detail:list}));}});application.catch(error=>{application=null;failure('启动组件未能载入：'+error.message);});}
     return application;
