@@ -1,12 +1,12 @@
-import {head,button,chips,examChips,badge,block,ribbon,table,number,integer,percent,esc,personButton,search,footnote,empty} from '../ui/html.js?v=runtime-v37';
-import {bars,rateStyle,rateLegend,chartButtons} from '../ui/plots.js?v=runtime-v37';
-import {average,sum,valid} from '../engine/metrics.js?v=runtime-v37';
-import {answerRows,evidence} from '../io/exports.js?v=runtime-v37';
-import {queryQuestionMap} from '../engine/question-map.js?v=runtime-v37';
-import {questionCard} from '../ui/question-cards.js?v=runtime-v37';
-import {paperProfile} from '../ui/paper-profile.js?v=runtime-v37';
-import {scoreTone,scoreStyle} from '../ui/score-tones.js?v=runtime-v37';
-import {paperCountLabel} from '../engine/paper-structure.js?v=runtime-v37';
+import {head,button,chips,examChips,badge,block,ribbon,table,number,integer,percent,esc,personButton,search,footnote,empty} from '../ui/html.js?v=runtime-v38';
+import {bars,rateStyle,rateLegend,chartButtons} from '../ui/plots.js?v=runtime-v38';
+import {average,sum,valid} from '../engine/metrics.js?v=runtime-v38';
+import {answerRows,evidence} from '../io/exports.js?v=runtime-v38';
+import {queryQuestionMap} from '../engine/question-map.js?v=runtime-v38';
+import {questionCard} from '../ui/question-cards.js?v=runtime-v38';
+import {paperProfile} from '../ui/paper-profile.js?v=runtime-v38';
+import {scoreTone,scoreStyle} from '../ui/score-tones.js?v=runtime-v38';
+import {paperCountLabel} from '../engine/paper-structure.js?v=runtime-v38';
 export function render(atlas,state) {
   const papers=atlas.papers(),paper=papers.find(p=>p.key===state.key);
   if(!paper) {
@@ -27,7 +27,7 @@ export function render(atlas,state) {
       return '<button class="heat-cell heat-button answer-cell" data-cmd="answer-question" data-key="'+esc(paper.key)+'" data-index="'+q.index+'" data-sid="'+esc(a.sid)+'" data-classes="'+esc(scope.join(','))+'" style="'+rateStyle(rate)+'" title="'+esc(atlas.name(a.sid))+' · 第'+esc(q.label)+'题 · '+esc(q.knowledge||'知识点未标注')+'" aria-label="'+esc(atlas.name(a.sid))+'，第'+esc(q.label)+'题，得分'+(valid(value)?number(value):'未填写')+'，展开题目观察">'+number(value)+'</button>';
     })]),{className:'heatmap',label:'个人学科小题得分'})+'<div class="pagination">'+button('←','page',{step:-1},'outline',page<=1?'disabled':'')+'<span>'+page+' / '+Math.max(1,Math.ceil(answers.length/40))+'</span>'+button('→','page',{step:1},'outline',page>=Math.max(1,Math.ceil(answers.length/40))?'disabled':'')+'</div>','点击姓名看学生，点击得分格子看这份作答与同题参照；保留原范围和位置。');
   } else if(state.tab==='knowledge') {
-    body=block('知识点的得分结构',bars('knowledge-rates',lens.skills.map(skill=>({label:skill.name,value:skill.rate,cmd:'knowledge-open',data:{key:paper.key,knowledge:skill.name,classes:scope.join(',')}})),{percentages:true}),'同一知识点按实际作答样本和题目满分加权；点击条形追到关联题目与学生。',chartButtons('knowledge-rates'))+'<div class="knowledge-road">'+lens.skills.map((skill,i)=>'<article class="knowledge-card"><div class="knowledge-order">'+String(i+1).padStart(2,'0')+'</div><div><div class="overline">'+esc(skill.advice)+'</div><h2>'+button(esc(skill.name)+' ↗','knowledge-open',{key:paper.key,knowledge:skill.name,classes:scope.join(',')},'knowledge-title')+'</h2><p>得分率 '+percent(skill.rate)+' · 平均失分 '+number(skill.loss)+'</p><div class="question-links">'+skill.questions.map(q=>button(esc(q.label)+'题','question',{index:q.index},'outline')).join('')+'</div></div><strong>'+percent(skill.rate)+'</strong></article>').join('')+'</div>';
+    body=block('知识点的得分结构',bars('knowledge-rates',lens.skills.map(skill=>({label:skill.name,value:skill.rate,cmd:'knowledge-open',data:{key:paper.key,knowledge:skill.name,classes:scope.join(',')}})),{percentages:true}),'按原表知识点分组，未标注题独立保留并按题号分析；得分率按实际作答样本与明确满分加权。',chartButtons('knowledge-rates'))+'<div class="knowledge-road">'+lens.skills.map((skill,i)=>'<article class="knowledge-card"><div class="knowledge-order">'+String(i+1).padStart(2,'0')+'</div><div><div class="overline">'+esc(skill.advice)+'</div><h2>'+button(esc(skill.name)+' ↗','knowledge-open',{key:paper.key,knowledge:skill.name,classes:scope.join(',')},'knowledge-title')+'</h2><p>得分率 '+percent(skill.rate)+' · 平均失分 '+number(skill.loss)+'</p><div class="question-links">'+skill.questions.map(q=>button(esc(q.label)+'题','question',{index:q.index},'outline')).join('')+'</div></div><strong>'+percent(skill.rate)+'</strong></article>').join('')+'</div>';
   } else if(state.tab==='details') {
     body=block('每道题的完整指标',table(['题号','知识点','有效样本','均分','满分','得分率','平均失分','区分度','零分人数','满分人数'],lens.questions.map(q=>[button(esc(q.label),'question',{index:q.index},'person-link'),esc(q.knowledge||'未标注'),integer(q.count),number(q.mean),number(q.max),percent(q.rate),number(q.loss),number(q.discrimination,2),integer(q.zero),integer(q.full)])),'全部 '+lens.questions.length+' 个得分项，点击题号展开观察窗。');
   } else if(state.tab==='classes') {

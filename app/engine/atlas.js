@@ -1,6 +1,7 @@
-import {classDefaults,SUBJECTS,normalizeDataset} from '../data/compat.js?v=runtime-v37';
-import {valid,average,sum,distribution,groupKey,GROUPS} from './metrics.js?v=runtime-v37';
-import {schoolRank} from './ranking.js?v=runtime-v37';
+import {classDefaults,SUBJECTS,normalizeDataset} from '../data/compat.js?v=runtime-v38';
+import {valid,average,sum,distribution,groupKey,GROUPS} from './metrics.js?v=runtime-v38';
+import {schoolRank,validRank,legacyRanks} from './ranking.js?v=runtime-v38';
+import {knowledgeLabels} from './knowledge.js?v=runtime-v38';
 const append=(map,key,value)=>{if(!map.has(key))map.set(key,[]);map.get(key).push(value);};
 export class Atlas {
   constructor(dataset) {
@@ -15,7 +16,7 @@ export class Atlas {
   }
   // An Atlas is a dataset snapshot. Material/line/profile edits create a new
   // Atlas; bounded caches never survive an import, undo or workspace restore.
-  invalidateCaches(){this.summaryCache=new WeakMap();this.groupCache=new Map();this.snapshotCache=new Map();this.paperCache=new Map();this.paperPreviews=new Map();this.paperList=null;}
+  invalidateCaches(){this.summaryCache=new WeakMap();this.groupCache=new Map();this.snapshotCache=new Map();this.paperCache=new Map();this.paperPreviews=new Map();this.classRankCache=new Map();this.paperList=null;}
   profile(no){return {...classDefaults(Number(no)),...this.data.profiles[no]};}
   name(sid){return this.people.get(sid)?.name||'未命名学生';}
   exam(id){return this.exams.find(e=>e.id===id)||{id,label:id};}
@@ -80,6 +81,19 @@ export class Atlas {
   materialAt(sid,exam='latest'){const records=this.materialStory(sid);return exam==='latest'||!exam?records.at(-1):records.find(r=>r.exam===exam);}
   subjectRank(row,subject){const score=this.subject(row,subject);return this.exam(row.exam).scope==='city'?score?.rank??null:score?.schoolRank??score?.rank??null;}
   gradeRank(row){return schoolRank(row);}
+  classRank(row){
+    if(!row)return null;
+    if(!legacyRanks(row)&&validRank(row.classRank))return row.classRank;
+    if(!valid(row.total))return null;
+    const records=this.classAt(row.classNo,row.exam);
+    if(!records.some(record=>record.sid===row.sid&&record.total===row.total))return null;
+    const key=row.classNo+'|'+row.exam;
+    if(!this.classRankCache.has(key)){
+      const ordered=records.filter(record=>valid(record.total)).map(record=>record.total).sort((a,b)=>b-a),ranks=new Map();
+      ordered.forEach((total,index)=>{if(!ranks.has(total))ranks.set(total,index+1);});this.classRankCache.set(key,ranks);
+    }
+    return this.classRankCache.get(key).get(row.total)??null;
+  }
   percentile(row) {
     if(!valid(row?.total))return null;
     const key=row.exam+'|'+groupKey(this.profile(row.classNo));
@@ -94,6 +108,7 @@ export class Atlas {
     if(!row)return null;
     if(metric==='total')return row.total;
     if(metric==='gradeRank')return this.gradeRank(row);
+    if(metric==='classRank')return this.classRank(row);
     if(metric==='percentile')return this.percentile(row);
     if(metric==='rank')return this.exam(row.exam).scope==='city'?row.cityRank:this.gradeRank(row);
     if(metric==='top'||metric==='under')return this.gap(row,metric);
@@ -132,10 +147,10 @@ export class Atlas {
       return {...question,index,max,mean,count:values.length,rate:max&&mean!==null?mean/max:null,loss:max&&mean!==null?average(values.map(v=>Math.max(0,max-v))):null,zero:values.filter(v=>v===0).length,full:max?values.filter(v=>v>=max).length:null,discrimination:max&&ordered.length>=6&&highMean!==null&&lowMean!==null?(highMean-lowMean)/max:null};
     });
     const knowledge=new Map();
-    for(const question of questions) for(const label of (question.knowledge||'未标注').split(/[,，;；]/).map(s=>s.trim()).filter(Boolean)) append(knowledge,label,question);
+    for(const question of questions){const labels=knowledgeLabels(question.knowledge);for(const label of labels.length?labels:['未标注'])append(knowledge,label,question);}
     const skills=[...knowledge].map(([name,qs])=>{
       const known=qs.filter(q=>q.max&&q.count),possible=sum(known.map(q=>q.max*q.count)),earned=sum(known.map(q=>q.mean*q.count)),rate=possible?earned/possible:null;
-      return {name,questions:qs,rate,loss:known.length?sum(known.map(q=>q.loss)):null,advice:rate===null?'补充满分':rate<(this.data.rules?.lowRate??.5)?'优先修复':rate<(this.data.rules?.focusRate??.75)?'巩固迁移':'保持优势'};
+      return {name,labelled:name!=='未标注',questions:qs,rate,loss:known.length?sum(known.map(q=>q.loss)):null,advice:name==='未标注'?'按题号分析':rate===null?'补充满分':rate<(this.data.rules?.lowRate??.5)?'优先修复':rate<(this.data.rules?.focusRate??.75)?'巩固迁移':'保持优势'};
     }).sort((a,b)=>(b.loss??-1)-(a.loss??-1));
     const eligible=new Set([...this.rows(exam).filter(r=>(!classes.length||classes.includes(r.classNo))&&valid(r.subjects?.[subject]?.score)).map(r=>r.sid+'|'+r.classNo),...answers.map(r=>r.sid+'|'+r.classNo)]);
     const result={key,subject,exam,answers,questions,skills,coverage:eligible.size?answers.length/eligible.size:0,mean:average(measuredAnswers.map(a=>totals.get(a)))};

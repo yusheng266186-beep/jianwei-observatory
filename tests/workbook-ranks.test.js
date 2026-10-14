@@ -25,6 +25,22 @@ test('重新合并原表能补回旧版丢失的4册校排，保留学生与原�
 test('平面成绩表的年级排名与校排名列都能导入，不误读市排名',()=>{
  for(const column of ['校排名','校名次','校排','年级排名','年级名次']){const data=parseFlat([['姓名','班级','考试','总分','市排名',column],['匿名学生',4,'4册',450,1400,28]],'匿名排名.csv');assert.equal(data.scores[0].cityRank,1400);assert.equal(new Atlas(data).gradeRank(data.scores[0]),28);}
 });
+test('CSV补入旧工作区的校排后保留明确范围，刷新归一化也不会变回未知',()=>{
+ const source=parseFlat([['姓名','班级','考试','总分','校赋名','班级排名'],['匿名学生',4,'52',450,217,2]],'明确排名.csv'),old=structuredClone(source);
+ Object.assign(old.scores[0],{sourceRow:9999,schoolRank:2,classRank:9,rankSources:{},rankProvenance:undefined});
+ const merged=mergeDatasets(old,source);assert.equal(new Atlas(merged).gradeRank(merged.scores[0]),217);assert.equal(merged.scores[0].classRank,2);assert.equal(merged.scores[0].rankSources.schoolRank,'校赋名');
+});
+test('CSV的明确班排不会让旧位置列的数字继续冒充校排',()=>{
+ const source=parseFlat([['姓名','班级','考试','总分','班级排名'],['匿名学生',4,'52',450,2]],'班级排名.csv'),old=structuredClone(source);
+ Object.assign(old.scores[0],{sourceRow:9999,schoolRank:2,classRank:null,rankSources:undefined,rankProvenance:undefined});
+ const merged=mergeDatasets(old,source);assert.equal(new Atlas(merged).gradeRank(merged.scores[0]),null);assert.equal(merged.scores[0].schoolRank,null);assert.equal(merged.scores[0].classRank,2);
+});
+test('平面成绩表只保留明确提供的原分，不从赋分复制或反向推算',()=>{
+ const source=parseFlat([['姓名','班级','考试','总分','化学赋分','数学成绩'],['匿名学生',4,'52',450,90,75]],'赋分表.csv'),row=source.scores[0];
+ assert.equal(row.subjects['化学'].score,90);assert.equal(row.subjects['化学'].raw,null);assert.equal(row.subjects['数学'].raw,null);
+ const both=parseFlat([['姓名','班级','考试','化学折合成绩','化学原分','数学原始成绩'],['匿名学生',4,'52',90,64.5,75]],'原赋分表.csv').scores[0];
+ assert.equal(both.subjects['化学'].score,90);assert.equal(both.subjects['化学'].raw,64.5);assert.equal(both.subjects['数学'].score,null);assert.equal(both.subjects['数学'].raw,75);
+});
 
 test('交接表复用校原名/校赋名表头的历史块按原表实际范围导入，不把班排2写成校排',()=>{
  const rows=[['考试','学校','班级','姓名','原分','总分','市原名','市赋名','校原名','校赋名'],['41物','荣县一中',4,'匿名校验',488.5,488.5,11,11,null,2],['2册物','荣县一中',4,'匿名校验',442,467,3100,3148,63,2]],book=XLSX.utils.book_new();

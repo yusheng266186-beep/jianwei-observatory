@@ -1,4 +1,4 @@
-import {pdfLibrary} from './pdf-viewer-library.js?v=runtime-v37';
+import {pdfLibrary} from './pdf-viewer-library.js?v=runtime-v38';
 // The native print dialog receives the same PDF pages, with their existing
 // margins and page numbers. Reuse one raster surface and release it after print.
 export async function printPDF(blob){

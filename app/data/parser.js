@@ -1,6 +1,6 @@
-import { SUBJECTS, EXAM_ORDER, EXAM_NAMES, classDefaults, finite, normalizeDataset } from './compat.js?v=runtime-v37';
-import {mergeContext} from './context.js?v=runtime-v37';
-import {rankColumns,ranksFrom} from '../engine/ranking.js?v=runtime-v37';
+import { SUBJECTS, EXAM_ORDER, EXAM_NAMES, classDefaults, finite, normalizeDataset } from './compat.js?v=runtime-v38';
+import {mergeContext} from './context.js?v=runtime-v38';
+import {explicitRanks,rankColumns,ranksFrom} from '../engine/ranking.js?v=runtime-v38';
 const txt=v=>String(v??'').trim();
 const num=v=>v==null||txt(v)===''?null:Number.isFinite(Number(v))?Number(v):null;
 const code=v=>txt(v).replace(/[物历]$/,'');
@@ -164,19 +164,21 @@ export function detectFlat(rows){
  const headerRow=rows.findIndex(r=>r.some(c=>['姓名','学生姓名','name'].includes(txt(c).toLowerCase())));
  const rowIndex=headerRow<0?0:headerRow,headers=(rows[rowIndex]||[]).map(txt),mapping={};
  for(const [key] of FLAT_FIELDS){
-  const aliases=ALIASES[key]||[key,key+'成绩',key+'赋分'];
+  const aliases=ALIASES[key]||[key,key+'成绩',key+'赋分',key+'折合分',key+'折合成绩'];
   mapping[key]=['schoolRank','classRank','cityRank'].includes(key)?aliases.map(alias=>headers.findIndex(h=>h.toLowerCase()===alias)).find(i=>i>=0)??-1:headers.findIndex(h=>aliases.includes(h.toLowerCase()));if(mapping[key]<0)mapping[key]=null;
  }
+ for(const subject of SUBJECTS){const column=headers.findIndex(header=>[subject+'原分',subject+'原始分',subject+'原始成绩'].includes(header));mapping['raw:'+subject]=column<0?null:column;}
  return {headers,mapping,headerRow:rowIndex,preview:rows.slice(rowIndex+1,rowIndex+6)};
 }
 export function parseFlat(rows,source,mapping=null){
  const data=fresh(source),idFor=people(data),auto=detectFlat(rows);mapping||=auto.mapping;
+ const ranks=Object.fromEntries(['schoolRank','classRank','cityRank'].filter(key=>mapping[key]!=null&&mapping[key]!==''&&Number.isInteger(Number(mapping[key]))&&Number(mapping[key])>=0).map(key=>[key,{column:Number(mapping[key]),label:auto.headers[Number(mapping[key])]||FLAT_FIELDS.find(([field])=>field===key)[1]}]));
  for(const row of rows.slice(auto.headerRow+1)){
   const val=k=>mapping[k]==null||mapping[k]===''?null:row[Number(mapping[k])];
   const name=txt(val('name')),n=num(txt(val('classNo')).replace(/[^\d]/g,''));if(!name||!n)continue;
   const e=code(val('exam'))||'本次',category=txt(val('track')).toLowerCase(),t=category==='history'||category.includes('历')?'history':category==='physics'||category.includes('物')?'physics':track(val('exam'),n),subjects={};
-  for(const s of SUBJECTS){const v=num(val(s));if(v!=null)subjects[s]={score:v,raw:v,rank:null,schoolRank:null};}
-  data.scores.push({exam:e,rawExam:txt(val('exam')),sid:idFor(name),classNo:n,track:t,total:num(val('total')),rawTotal:num(val('rawTotal')),cityRank:num(val('cityRank')),schoolRank:num(val('schoolRank')),classRank:num(val('classRank')),subjects,language:txt(val('language'))|| (subjects['日语']?'日语':subjects['英语']?'英语':'')});
+  for(const s of SUBJECTS){const v=num(val(s)),rawColumn=Object.hasOwn(mapping,'raw:'+s)?mapping['raw:'+s]:auto.mapping['raw:'+s],raw=rawColumn==null?null:num(row[Number(rawColumn)]);if(v!=null||raw!=null)subjects[s]={score:v,raw,rank:null,schoolRank:null};}
+  data.scores.push({exam:e,rawExam:txt(val('exam')),sid:idFor(name),classNo:n,track:t,total:num(val('total')),rawTotal:num(val('rawTotal')),...ranksFrom(row,ranks,{provenance:'column-headings-v2'}),subjects,language:txt(val('language'))|| (subjects['日语']?'日语':subjects['英语']?'英语':'')});
   data.profiles[n]||={...classDefaults(n),track:t};
  }
  return examsFrom(data);
@@ -210,9 +212,9 @@ function mergeScore(previous,incoming) {
  for(const [subject,record] of Object.entries(incoming.subjects||{}))if(changed(previous.subjects?.[subject]?.score,record.score))for(const key of ['rank','schoolRank','classRank','cityRank'])if(!finite(record[key]))result.subjects[subject][key]=null;
  // An explicit new column scope repairs old positional assumptions, even when
  // the total score itself has not changed.
- if(Object.keys(incoming.rankSources||{}).length&&!previous.rankSources){for(const key of ['schoolRank','classRank','cityRank'])result[key]=incoming[key]??null;}
- if(previous.sourceRow&&previous.rankProvenance!=='column-headings-v1')for(const [subject,record] of Object.entries(incoming.subjects||{})){
-  if(record.rankProvenance==='column-headings-v1')for(const key of ['schoolRank','classRank','cityRank'])result.subjects[subject][key]=record[key]??null;
+ if(Object.keys(incoming.rankSources||{}).length&&!Object.keys(previous.rankSources||{}).length){for(const key of ['schoolRank','classRank','cityRank'])result[key]=incoming[key]??null;}
+ if(previous.sourceRow&&!explicitRanks(previous))for(const [subject,record] of Object.entries(incoming.subjects||{})){
+  if(explicitRanks(record))for(const key of ['schoolRank','classRank','cityRank'])result.subjects[subject][key]=record[key]??null;
  }
  return result;
 }

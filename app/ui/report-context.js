@@ -1,6 +1,7 @@
-import {button,esc} from './html.js?v=runtime-v37';
-import {materialPeople} from '../engine/training.js?v=runtime-v37';
-import {reportSpec} from './report-studio.js?v=runtime-v37';
+import {button,esc} from './html.js?v=runtime-v38';
+import {materialPeople} from '../engine/training.js?v=runtime-v38';
+import {reportSpec} from './report-studio.js?v=runtime-v38';
+import {reportTypes} from '../engine/reports.js?v=runtime-v38';
 export function normalizeReportScope(atlas,spec,change){
  const next={...spec,...change};
  return reportSpec(atlas,{reportKind:next.kind,reportExam:next.exam,reportNo:next.no,reportSubjectClass:next.no,reportPlanClass:next.no,reportSubject:next.subject,reportBand:next.band,reportSid:next.sid,reportRaw:next.includeRaw});
@@ -8,7 +9,8 @@ export function normalizeReportScope(atlas,spec,change){
 export function reportContext(atlas,report,state){
  if(!report.kind||!report.spec)return '';
  const spec=report.spec,choices=(key,options,value)=>'<div class="chips" role="group">'+options.map(([id,title])=>button(esc(title),'report-scope',{key,value:id},String(value)===String(id)?'chip selected':'chip','aria-pressed="'+(String(value)===String(id))+'"')).join('')+'</div>';
- let controls=spec.kind==='follow'?'':'<p class="report-context-label">考试</p>'+choices('exam',atlas.exams.map(e=>[e.id,(e.label||e.id)+' · '+e.id]),spec.exam);
+ let controls='<p class="report-context-label">报告类型</p>'+choices('kind',reportTypes.map(([id,title])=>[id,title]),spec.kind);
+ controls+=spec.kind==='follow'?'':'<p class="report-context-label">考试</p>'+choices('exam',atlas.exams.map(e=>[e.id,(e.label||e.id)+' · '+e.id]),spec.exam);
  if(['class','subject','follow'].includes(spec.kind))controls+='<p class="report-context-label">'+(spec.kind==='class'?'班级':'班级范围')+'</p>'+choices('no',[...(spec.kind!=='class'?[['all','全部参考班']]:[]),...atlas.classes.map(no=>[no,no+'班'])],spec.no);
  if(spec.kind==='class')controls+='<p class="report-context-label">临界生观察范围</p>'+choices('band',[[10,'线下10分'],[20,'线下20分'],[30,'线下30分']],spec.band);
  if(spec.kind==='subject'){const subjects=[...new Set([...atlas.rows(spec.exam).flatMap(r=>Object.keys(r.subjects||{})),...atlas.papers().filter(p=>p.exam===spec.exam).map(p=>p.subject)].map(s=>['英语','日语'].includes(s)?'外语':s))];controls+='<p class="report-context-label">学科</p>'+choices('subject',subjects.map(s=>[s,s]),spec.subject);}

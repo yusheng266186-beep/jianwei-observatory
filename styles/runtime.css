@@ -7,5 +7,23 @@ dialog[data-backdrop-phase=leaving]::backdrop{animation:surface-backdrop-out var
 @keyframes surface-backdrop-out{from{opacity:var(--surface-backdrop-from,1)}to{opacity:0}}
 .surface-loading{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;min-height:50vh;padding:clamp(24px,5vw,64px);gap:14px}
 .surface-loading h2,.surface-loading p{margin:0}.surface-loading p{color:var(--muted)}
+/* Fit modal workspaces to the visible area when a mobile keyboard opens. */
+.sheet-dialog[open],.table-reader[open]{top:var(--visual-view-top,0px);bottom:var(--visual-view-bottom,0px);max-height:min(85dvh,calc(var(--visual-view-height,100dvh) - 24px))}
+.report-dialog[open],.table-reader[open]{max-height:calc(var(--visual-view-height,100dvh) - 24px)}
+#research-drawer[open]{top:var(--visual-view-top,0px);bottom:auto;height:var(--visual-view-height,100dvh);max-height:var(--visual-view-height,100dvh)}
+.report-dialog.is-reading[open]{height:var(--visual-view-height,100dvh);max-height:var(--visual-view-height,100dvh);margin-block:0}
+.table-reader[open]{height:calc(var(--visual-view-height,100dvh) - 24px)}
+#table-reader-content,.reader-canvas,.reader-canvas>.table-frame{display:flex;flex-direction:column;min-height:0;flex:1}
+#table-reader-content{height:100%}.reader-head,.reader-canvas .table-tools,.reader-canvas .table-overflow-note{flex-shrink:0}
+.reader-canvas .table-scroll{flex:1;min-height:0;height:auto;max-height:none}
 body[data-motion=calm] dialog[data-backdrop-phase]::backdrop{animation:none!important}
 @media(prefers-reduced-motion:reduce){dialog[data-backdrop-phase]::backdrop{animation:none!important}}
+
+/* Report types stay visible before opening content settings. */
+.report-kind-switch{display:flex;flex-wrap:wrap;gap:6px;flex-shrink:0;padding:0 0 10px;min-width:0}
+.report-kind-switch .chip{white-space:normal;min-width:0;line-height:1.5}
+.report-dialog.is-reading .report-kind-switch{display:none}
+@media(max-width:560px){.report-kind-switch{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;padding-bottom:7px}.report-kind-switch .chip{padding:5px 4px;font-size:10px;min-height:34px;text-align:center}}
+
+.person-canvas>.number-ribbon,#research-drawer[data-kind=person] .number-ribbon{grid-template-columns:repeat(5,minmax(0,1fr))}
+@media(max-width:760px){.person-canvas>.number-ribbon,#research-drawer[data-kind=person] .number-ribbon{grid-template-columns:repeat(2,minmax(0,1fr))}.person-canvas>.number-ribbon>div:first-child,#research-drawer[data-kind=person] .number-ribbon>div:first-child{grid-column:1/-1}}

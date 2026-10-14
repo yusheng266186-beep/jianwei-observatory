@@ -1,4 +1,5 @@
-import {valid} from './metrics.js?v=runtime-v37';
+import {knowledgeLabels} from './knowledge.js?v=runtime-v38';
+import {valid} from './metrics.js?v=runtime-v38';
 
 export const trainingTasks=[['concept','概念梳理'],['worked','例题讲解'],['same','同类练习'],['variation','变式迁移'],['correction','错题订正'],['retest','再测验']];
 export const trainingMethods=[['individual','个别指导'],['group','小组互助'],['independent','独立训练'],['lesson','课堂专题']];
@@ -34,7 +35,7 @@ export function draftForPlan(atlas,context={},existing=null){
  return plan;
 }
 export const snapshotQuestion=q=>({label:q.label,index:q.index,knowledge:q.knowledge,max:q.max,score:q.score,rate:q.rate});
-export function trainingSummary(plan){const t=plan.training||{},qs=t.questions||[],tasks=(t.tasks||[]).map(id=>trainingTasks.find(([key])=>id===key)?.[1]).filter(Boolean);return [qs.length?'第'+qs.map(q=>q.label).join('、')+'题':t.goal?'专项训练':'题目待选择',t.goal?'重点：'+t.goal:'',...new Set(qs.flatMap(q=>(q.knowledge||'').split(/[,，;；]/).map(s=>s.trim()).filter(Boolean))),tasks.join('、')||'任务待设置'].filter(Boolean).join(' · ');}
+export function trainingSummary(plan){const t=plan.training||{},qs=t.questions||[],tasks=(t.tasks||[]).map(id=>trainingTasks.find(([key])=>id===key)?.[1]).filter(Boolean);return [qs.length?'第'+qs.map(q=>q.label).join('、')+'题':t.goal?'专项训练':'题目待选择',t.goal?'重点：'+t.goal:'',...new Set(qs.flatMap(q=>knowledgeLabels(q.knowledge))),tasks.join('、')||'任务待设置'].filter(Boolean).join(' · ');}
 export function selectedPlans(plans,state={},atlas){const query=(state.planSearch||'').trim();return plans.filter(p=>(!state.planClass||state.planClass==='all'||Number(p.classNo)===Number(state.planClass))&&(!state.planStatus||state.planStatus==='all'||p.status===state.planStatus)&&planMatchesTime(p,state.planTiming)&&(!query||[atlas?.name(p.sid),p.subject,p.note,trainingSummary(p)].some(v=>String(v||'').includes(query))));}
 
 export function materialPeople(atlas,exam){return [...new Set([...atlas.rows(exam),...atlas.data.answers.filter(a=>a.exam===exam)].map(r=>r.sid))].map(sid=>atlas.materialAt(sid,exam)).filter(Boolean).sort((a,b)=>a.classNo-b.classNo||atlas.name(a.sid).localeCompare(atlas.name(b.sid),'zh-CN'));}

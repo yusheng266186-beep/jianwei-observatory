@@ -1,4 +1,6 @@
 const base=new URL('../../assets/report-fonts/',import.meta.url);
+// New core/manifest filenames invalidate only changed assets; keep the rare
+// shard URLs stable so an upgrade can reuse fonts already saved on this device.
 const cacheName='rongxian-print-fonts-report-v36';
 let manifestTask,warmingTask;
 export async function cachedFontFile(name) {
@@ -18,7 +20,7 @@ export async function cachedFontFile(name) {
 }
 export function reportFontManifest() {
   if(!manifestTask) {
-    const task=cachedFontFile('manifest.json').then(response=>response.json());
+    const task=cachedFontFile('manifest-v38.json').then(response=>response.json());
     manifestTask=task;task.catch(()=>{if(manifestTask===task)manifestTask=null;});
   }
   return manifestTask;

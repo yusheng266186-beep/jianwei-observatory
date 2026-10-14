@@ -1,6 +1,6 @@
-import {pdfBlob,pdfKey,idlePDFWorker} from '../io/exports.js?v=runtime-v37';
-import {selectedReport} from '../engine/report-selection.js?v=runtime-v37';
-import {pdfLibrary} from '../io/pdf-viewer-library.js?v=runtime-v37';
+import {pdfBlob,pdfKey,idlePDFWorker} from '../io/exports.js?v=runtime-v38';
+import {selectedReport} from '../engine/report-selection.js?v=runtime-v38';
+import {pdfLibrary} from '../io/pdf-viewer-library.js?v=runtime-v38';
 // A real PDF owns this managed island; form changes never reconcile its canvases.
 export function installReportReading(dialog){
  let pane=null,state=null,wanted=null,key='',doc=null,task=null,timer=0,frame=0,epoch=0,busy=false,base=null,scale=1,restore=null,suspended=false,previewAbort=null,pinnedEnd=false;
@@ -29,14 +29,17 @@ export function installReportReading(dialog){
  }
  async function paintPage(number){
   const item=pages.get(number),version=epoch;if(suspended||globalThis.document.hidden||!item||item.done||renders.has(number)||!doc)return;
-  const document=doc,localScale=scale;let job;
+  const sourceDocument=doc,localScale=scale;let render,textLayer,cancelled=false;
+  const job={cancel(){cancelled=true;render?.cancel();textLayer?.cancel();}};renders.set(number,job);
   try{
-   const page=await document.getPage(number);if(version!==epoch||localScale!==scale||!item.node.isConnected)return;
+   const page=await sourceDocument.getPage(number);if(cancelled||version!==epoch||localScale!==scale||!item.node.isConnected)return;
    const viewport=page.getViewport({scale:localScale}),ratio=Math.min(2,devicePixelRatio||1),canvas=item.node.querySelector('canvas');canvas.width=Math.ceil(viewport.width*ratio);canvas.height=Math.ceil(viewport.height*ratio);
-   const render=page.render({canvasContext:canvas.getContext('2d',{alpha:false}),viewport,transform:ratio!==1?[ratio,0,0,ratio,0,0]:undefined});job=render;renders.set(number,render);await render.promise;if(version!==epoch||localScale!==scale)return;
-   const text=await page.getTextContent();if(version!==epoch||localScale!==scale)return;const layer=item.node.querySelector('.textLayer');layer.replaceChildren();const module=await pdfLibrary();await new module.TextLayer({textContentSource:text,container:layer,viewport}).render();
+   render=page.render({canvasContext:canvas.getContext('2d',{alpha:false}),viewport,transform:ratio!==1?[ratio,0,0,ratio,0,0]:undefined});await render.promise;if(version!==epoch||localScale!==scale)return;
+   const text=await page.getTextContent();if(version!==epoch||localScale!==scale)return;const previousLayer=item.node.querySelector('.textLayer'),layer=document.createElement('div');layer.className='textLayer';previousLayer.replaceWith(layer);
+   const module=await pdfLibrary();if(version!==epoch||localScale!==scale)return;
+   textLayer=new module.TextLayer({textContentSource:text,container:layer,viewport});await textLayer.render();
    if(version!==epoch||localScale!==scale||!item.node.isConnected)return;item.done=true;item.node.dataset.rendered='true';const r=item.node.getBoundingClientRect(),host=pane?.getBoundingClientRect();if(host&&(r.bottom<host.top-400||r.top>host.bottom+400)){canvas.width=canvas.height=1;item.done=false;item.node.removeAttribute('data-rendered');}
-  }catch(error){if(error.name!=='RenderingCancelledException'&&version===epoch){item.node.dataset.rendered='error';const text=item.node.querySelector('.pdf-page-accessible');text.textContent='此页显示失败，可重新生成纸面。';}}
+  }catch(error){if(!['RenderingCancelledException','AbortException'].includes(error.name)&&version===epoch&&localScale===scale&&item.node.isConnected){item.node.dataset.rendered='error';const text=item.node.querySelector('.pdf-page-accessible');text.textContent='此页显示失败，可重新生成纸面。';}}
   finally{if(renders.get(number)===job)renders.delete(number);}
  }
  function layout(keep){
@@ -70,7 +73,7 @@ export function installReportReading(dialog){
   }catch(error){if(version===epoch&&wanted?.key===request.key){pane.dataset.pdfState='error';message('纸面暂未生成：'+error.message,true);}}
   finally{busy=false;if(!suspended&&wanted&&wanted.key!==key&&pane?.dataset.pdfState==='pending'&&dialog.open)timer=setTimeout(generate,0);}
  }
- function queue(){previewAbort?.abort();previewAbort=null;clearTimeout(timer);pane.dataset.pdfState='pending';message(doc?'内容已更新，正在重新分页…':'正在排版报告…');timer=setTimeout(generate,350);}
+ function queue(delay=160){previewAbort?.abort();previewAbort=null;clearTimeout(timer);pane.dataset.pdfState='pending';message(doc?'内容已更新，正在重新分页…':'正在排版报告…');timer=setTimeout(generate,delay);}
  function jump(n){if(!pane||!doc)return;pinnedEnd=false;n=Math.max(1,Math.min(doc.numPages,Math.round(Number(n)||1)));const node=pages.get(n)?.node;if(node){pane.scrollTop=node.offsetTop;paintPage(n);position();pane.focus({preventScroll:true});}}
  dialog.addEventListener('scroll',event=>{if(event.target===pane){cancelAnimationFrame(frame);frame=requestAnimationFrame(position);}},{capture:true,passive:true});
  for(const type of ['wheel','touchstart','pointerdown'])dialog.addEventListener(type,event=>{if(pane?.contains(event.target))pinnedEnd=false;},{capture:true,passive:true});
@@ -101,7 +104,7 @@ export function installReportReading(dialog){
    const output=selectedReport(report),nextKey=pdfKey(output),previousWanted=wanted?.key;wanted={report:output,key:nextKey};if(!output.sections.length&&!output.note?.trim()){dispose();wanted=null;pane.innerHTML='<div class="pdf-empty">勾选要导出的章节，开始纸面预览。</div>';pane.dataset.pdfState='empty';state.pdfPage=1;pane.dataset.currentPage='1';position();return;}
    // Form / button redraws of the same pending paper must not cancel its
    // worker, particularly when a download is claiming that preview's result.
-   if(nextKey!==key){restore=keep;if(previousWanted!==nextKey)queue();}else layout(keep);position();
+   if(nextKey!==key){restore=keep;if(previousWanted!==nextKey)queue(!doc||keep?.reset?0:160);}else layout(keep);position();
   },
   open(){if(!pane?.pdfBlob||pane.dataset.pdfState!=='ready')return;const url=URL.createObjectURL(pane.pdfBlob);window.open(url,'_blank','noopener');setTimeout(()=>URL.revokeObjectURL(url),120000);},
   edge(value){if(!pane)return;pinnedEnd=value==='end';pane.scrollTop=pinnedEnd?pane.scrollHeight:0;pane.focus({preventScroll:true});position();},

@@ -38,7 +38,7 @@ async function closeDrawer(){if(await page.locator('#research-drawer').getAttrib
 async function layout(name){
  const state=await page.evaluate(()=>{
   const visible=e=>!!e.getClientRects().length&&getComputedStyle(e).visibility!=='hidden';
-  const root=document.activeElement?.closest('dialog[open]')||document.getElementById('stage');
+  const root=document.querySelector('dialog:modal')||document.getElementById('stage');
   return {width:innerWidth,overflow:document.documentElement.scrollWidth-innerWidth,root:root.id,text:root.textContent,buttons:[...root.querySelectorAll('button,[data-plot-action],.student-dot')].filter(visible).map(e=>({tag:e.tagName,label:e.getAttribute('aria-label')||e.textContent.trim(),data:{...e.dataset},disabled:!!e.disabled})),charts:[...root.querySelectorAll('svg:not(.mini):not(.dock-symbol svg)')].filter(e=>e.id&&visible(e)).map(e=>({id:e.id,width:e.getBoundingClientRect().width,height:e.getBoundingClientRect().height,viewBox:e.getAttribute('viewBox')})),forms:[...root.querySelectorAll('form')].map(e=>e.dataset.form||'mapping')};
  });
  delete state.text;
@@ -47,7 +47,7 @@ async function layout(name){
  for(const chart of state.charts)assert.ok(chart.width>10&&chart.height>5,name+' 图表不可见 '+chart.id);
 }
 async function inspect(name,{tables=true,charts=true,mobile=true}={}){
- const root='#'+await page.evaluate(()=>document.activeElement?.closest('dialog[open]')?.id||'stage');
+ const root='#'+await page.evaluate(()=>document.querySelector('dialog:modal')?.id||'stage');
  const details=page.locator(root+' details');for(let i=0;i<await details.count();i++)if(await details.nth(i).isVisible()&&await details.nth(i).getAttribute('open')===null)await click(details.nth(i).locator('summary'));
  await layout(name);
  if(mobile){for(const width of [390,320,820]){await page.setViewportSize({width,height:900});await layout(name+'@'+width);if(width===390){const mobileCapture=output+'/mobile-'+views.length+'.png';await page.screenshot({path:mobileCapture});captures.push({name,file:path.basename(mobileCapture),viewport:page.viewportSize(),root});}}await page.setViewportSize({width:1440,height:1000});}
@@ -325,14 +325,16 @@ await group('14 文件拖入、错误恢复与通知关闭',async()=>{
 
 await group('15 宽表打印、PDF 与 Word 的全部字段',async()=>{
  await nav('people');await click('#stage [data-cmd="export"]');await click('[data-cmd="report-print"]');
+ await page.waitForFunction(()=>window.__printCalled===1,undefined,{timeout:90000});
+ const {text}=require('./paper-preview-helpers.cjs'),printedText=await text(page);assert.ok(printedText.includes(fixture.students[0].name));assert.ok(printedText.includes('数学'));
  await page.setViewportSize({width:1030,height:720});await page.emulateMedia({media:'print'});
- const printed=await page.locator('#print-area table').evaluateAll(tables=>tables.map(table=>({cols:table.querySelectorAll('thead th').length,width:table.getBoundingClientRect().width,scroll:table.scrollWidth,area:document.getElementById('print-area').getBoundingClientRect().width})));
- assert.ok(printed.length>5,'宽成绩表应分组');
- for(const table of printed){assert.ok(table.cols<=10);assert.ok(table.width<=table.area+1&&table.scroll<=table.area+1,'纸张宽度内保留全部列');}
+ const printed=await page.locator('#print-area .printed-pdf-page').evaluateAll(pages=>pages.map(p=>({width:p.getBoundingClientRect().width,height:p.getBoundingClientRect().height,loaded:p.complete&&p.naturalWidth>0})));
+ assert.ok(printed.length>0);assert.equal(printed.length,await page.locator('.report-paper-scroll').evaluate(e=>e.pdfDocument.numPages));
+ for(const sheet of printed){assert.ok(sheet.loaded);assert.ok(Math.abs(sheet.width/sheet.height-210/297)<0.01,'打印使用实际 A4 PDF 页');}
  await page.pdf({path:output+'/wide-report.pdf',preferCSSPageSize:true});
  await page.screenshot({path:output+'/print-layout.png'});
  await page.emulateMedia({media:'screen'});await page.setViewportSize({width:1440,height:1000});await click('[data-cmd="close-report"]');
- const report={title:'匿名宽表字段保全',subtitle:'文档导出回归',created:'2026-10-11',note:'保留零分与缺失值',sections:[{title:'完整宽表',headers:['考试','姓名','班级',...Array.from({length:53},(_,i)=>'字段'+i)],rows:[['考试甲','匿名学生',4,...Array.from({length:53},(_,i)=>i===0?0:i===1?null:'值'+i)]]}]};
+ const report={title:'匿名宽表字段保全',subtitle:'文档导出回归',created:'2026-10-11',paper:{orientation:'landscape'},note:'保留零分与缺失值',sections:[{title:'完整宽表',headers:['考试','姓名','班级',...Array.from({length:53},(_,i)=>'字段'+i)],rows:[['考试甲','匿名学生',4,...Array.from({length:53},(_,i)=>i===0?0:i===1?null:'值'+i)]]}]};
  await page.evaluate(async report=>{const {reportHTML}=await import('./app/io/exports.js?v=surface-20261011j');document.getElementById('print-area').innerHTML=reportHTML(report);},report);
  const tables=await page.locator('#print-area table').evaluateAll(tables=>tables.map(table=>({headers:[...table.querySelectorAll('th')].map(e=>e.textContent),row:[...table.querySelectorAll('tbody tr:first-child td')].map(e=>e.textContent)})));
  function verify(tables){for(const table of tables){assert.ok(table.headers.length<=10);assert.deepEqual(table.headers.slice(0,3),report.sections[0].headers.slice(0,3));}for(const [index,header] of report.sections[0].headers.entries()){const matches=tables.filter(table=>table.headers.includes(header));assert.ok(matches.length,header+' 导出遗漏');for(const table of matches)assert.equal(table.row[table.headers.indexOf(header)],String(report.sections[0].rows[0][index]??'—'));}}
@@ -344,12 +346,12 @@ await group('15 宽表打印、PDF 与 Word 的全部字段',async()=>{
 
 await group('16 各类面板反复改变窗口宽度后的玻璃显示',async()=>{
  async function panel(name,dialogId=''){
-  const id=dialogId||await page.evaluate(()=>document.activeElement.closest('dialog[open]').id);
+  const id=dialogId||await page.evaluate(()=>document.querySelector('dialog:modal').id);
   if(dialogId)await page.locator('#'+id).focus();
-  assert.equal(await page.locator('#'+id).evaluate(e=>getComputedStyle(e).backdropFilter),'none','内容层应避免重复背景模糊');
-  assert.notEqual(await page.locator('#'+id).evaluate(e=>getComputedStyle(e,'::backdrop').backdropFilter),'none','保留玻璃背景');
+  const layers=await page.locator('#'+id).evaluate(e=>[getComputedStyle(e).backdropFilter,getComputedStyle(e,'::backdrop').backdropFilter]);
+  assert.equal(layers.filter(value=>value!=='none').length,1,'窗口只保留一层玻璃模糊');
   await inspect('玻璃面板:'+name,{tables:false,charts:false});
-  await page.locator('#'+id).evaluate(e=>{e.scrollTop=Math.min(300,e.scrollHeight-e.clientHeight);});await page.waitForTimeout(180);await layout('玻璃面板滚动:'+name);
+  await page.locator('#'+id).evaluate(e=>{const scroll=e.querySelector('.drawer-body,.table-scroll,.report-paper-scroll')||e;scroll.scrollTop=Math.min(300,scroll.scrollHeight-scroll.clientHeight);});await page.waitForTimeout(180);await layout('玻璃面板滚动:'+name);
   const file=output+'/glass-scroll-'+id+'-'+captures.length+'.png';await page.screenshot({path:file});captures.push({name:name+'滚动',file:path.basename(file),root:'#'+id,viewport:page.viewportSize()});
  }
  await click('[data-cmd="reading"]');await panel('阅读设置');await click('[data-cmd="reading-close"]');
@@ -360,7 +362,7 @@ await group('16 各类面板反复改变窗口宽度后的玻璃显示',async()=
  await nav('people');await click('[data-cmd="directory-filters"]');await panel('筛选');await closeDrawer();
  await click('.student-name');await panel('学生');await closeDrawer();
  const ids=await page.locator('[data-cmd="compare-toggle"]').evaluateAll(es=>es.slice(0,2).map(e=>e.dataset.sid));for(const sid of ids)await click(`[data-cmd="compare-toggle"][data-sid="${sid}"]`);await click('[data-cmd="compare-open"]');await panel('对比');await closeDrawer();
- await click('#stage [data-cmd="export"]');await panel('报告');await click('[data-cmd="table-open"]');await panel('宽表');await click('[data-cmd="table-close"]');await click('[data-cmd="close-report"]');
+ await click('#stage [data-cmd="export"]');await panel('报告');await click('[data-cmd="report-preview-mode"][data-value="details"]');await click('[data-cmd="table-open"]');await panel('宽表');await click('[data-cmd="table-close"]');await click('[data-cmd="close-report"]');
  await nav('library');await set('tab','classes');await inspect('资料编辑缩放',{charts:false});
  await page.locator('#files').setInputFiles(material);await page.waitForSelector('[data-inbox="commit"]');await panel('导入','inbox');await click('[data-inbox="close"]');
 });
@@ -371,7 +373,7 @@ await group('17 手机条形图字号、行距和点击区域',async()=>{
   const root=scene==='papers'?'#drawer-content':'#stage';
   for(const width of [390,320,1440]){
    await page.setViewportSize({width,height:1000});await page.waitForTimeout(200);
-   const sizes=await page.locator(root+' svg.bars').evaluateAll(charts=>charts.map(svg=>{const scale=svg.getBoundingClientRect().width/svg.viewBox.baseVal.width;return {id:svg.id,width:svg.getBoundingClientRect().width,viewHeight:svg.viewBox.baseVal.height,font:parseFloat(getComputedStyle(svg.querySelector('text')).fontSize)*scale,rows:[...svg.querySelectorAll(':scope>.plot-item')].map(item=>({height:item.getBoundingClientRect().height,hit:item.querySelector('rect:not(.plot-bar)').getBoundingClientRect().height,label:item.querySelector('text').getBoundingClientRect().height}))};}));
+   const sizes=[];for(const chart of await page.locator(root+' svg.bars').all()){await chart.scrollIntoViewIfNeeded();await page.waitForTimeout(120);sizes.push(await chart.evaluate(svg=>{const scale=svg.getBoundingClientRect().width/svg.viewBox.baseVal.width;return {id:svg.id,width:svg.getBoundingClientRect().width,viewHeight:svg.viewBox.baseVal.height,font:parseFloat(getComputedStyle(svg.querySelector('text')).fontSize)*scale,rows:[...svg.querySelectorAll(':scope>.plot-item')].map(item=>({height:item.getBoundingClientRect().height,hit:item.querySelector('rect:not(.plot-bar)').getBoundingClientRect().height,label:item.querySelector('text').getBoundingClientRect().height}))};}));}
    assert.ok(sizes.length);for(const chart of sizes){assert.ok(chart.font>=10,chart.id+' 字号过小');for(const row of chart.rows){assert.ok(row.hit>=28,chart.id+' 点击行过窄');assert.ok(row.label<=row.hit,chart.id+' 标签挤出点击行');}}
    if(width===390&&scene!=='board'){
     const id=sizes[0].id,expected=await page.locator(`[id="${id}"]`).evaluate(svg=>({font:getComputedStyle(svg.querySelector('text')).font,height:Math.trunc(svg.viewBox.baseVal.height*2),width:Math.trunc(svg.viewBox.baseVal.width*2)}));

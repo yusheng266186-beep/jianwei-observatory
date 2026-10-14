@@ -47,7 +47,7 @@ async function importData(p){await p.locator('#files').setInputFiles({name:'匿�
    await p.waitForSelector('.pdf-page[data-rendered=true]');await p.screenshot({path:path.join(out,'student-preview-'+viewport.width+'.png')});
    const count=await p.locator('.report-paper-scroll').evaluate(e=>e.pdfDocument.numPages);assert(count>1);
    let fontBytes=0;for(const response of fontResponses)fontBytes+=(await response.body()).length;
-   assert(fontResponses.every(r=>!r.url().endsWith('.otf')));assert(fontBytes<3000000,'cold fonts must remain below 3 MB, including rare glyphs');
+   assert(fontResponses.every(r=>!r.url().endsWith('.otf')));assert(fontBytes<800000,'common report vocabulary plus a rare name stays below 800 KB');
    const previous=fontResponses.length;await p.locator('[data-cmd=close-report]').click();await p.waitForFunction(()=>!document.getElementById('report-dialog').open);await p.locator('[data-cmd=teaching-report-build]').click();await ready(p);assert.equal(fontResponses.length,previous,'reopening reuses persistent font assets');
    assert.deepEqual(errors,[]);console.log(JSON.stringify({viewport,coldMs,fontBytes,pages:count,checks:'source headings → student PDF, rare glyph, real bytes, Word, all-subject topics, no borders, persisted fonts'}));await context.close();
   }

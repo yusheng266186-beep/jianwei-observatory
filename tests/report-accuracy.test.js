@@ -63,12 +63,20 @@ test('按知识点行标题读取并展开显式合并单元格，未标注题�
  assert.deepEqual(data.answers[0].values,[0,4,7]);
 });
 test('按实际文字选择打印字体分片，生僻字、混合粗细和页脚数字仍保留原文',()=>{
- const manifest=JSON.parse(readFileSync(new URL('../assets/report-fonts/manifest.json',import.meta.url),'utf8'));
+ const manifest=JSON.parse(readFileSync(new URL('../assets/report-fonts/manifest-v38.json',import.meta.url),'utf8'));
  const prepared=prepareReportFonts({content:[{text:'核查龘同学',bold:true},{table:{body:[['真实0分',0]]}}],footer:n=>({text:'第'+n+'页',font:'Report'})},manifest);
  const runs=prepared.definition.content[0].text;
  assert.equal(runs.map(r=>r.text).join(''),'核查龘同学');assert(prepared.parts.some(p=>p.id!=='core'));
  assert.equal(prepared.definition.footer(17).text.map(r=>r.text).join(''),'第17页');
  assert(prepared.parts.length<6);
+});
+test('首批宋体覆盖学科、考次和常用教学词汇，升级清单保留全部旧字体覆盖范围',()=>{
+ const load=name=>JSON.parse(readFileSync(new URL('../assets/report-fonts/'+name,import.meta.url),'utf8'));
+ const previous=load('manifest.json'),current=load('manifest-v38.json'),points=part=>part.ranges.flatMap(([start,end])=>Array.from({length:end-start+1},(_,i)=>start+i));
+ const all=current.parts.flatMap(points);assert.equal(new Set(all).size,all.length,'各分片声明互不重叠');assert.deepEqual([...all].sort((a,b)=>a-b),previous.parts.flatMap(points).sort((a,b)=>a-b));
+ const core=new Set(points(current.parts.find(p=>p.id==='core')));for(const char of '语文数学英语日语物理化学生物历史政治地理高三第二次月考函数图像听力七选五阅读')assert(core.has(char.codePointAt(0)),char);
+ const prepared=prepareReportFonts({content:[{text:'语文高三第二次月考函数与图像',bold:true}]},current);assert.deepEqual(prepared.parts.map(p=>p.id),['core']);
+ for(const part of current.parts.filter(p=>p.id!=='core'))assert.deepEqual(part.files,previous.parts.find(p=>p.id===part.id).files,'生僻字复用既有缓存地址');
 });
 
 test('无原表关联的历史报告不认证旧名次，也不把技术排查提示打印给读者',()=>{

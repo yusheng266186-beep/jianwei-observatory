@@ -37,7 +37,10 @@
     "test:runtime": "node tests/runtime-surfaces.cjs && node tests/pdf-background.cjs",
     "test:report-accuracy": "node tests/report-accuracy.cjs",
     "test:report-mobile": "node tests/report-mobile.cjs",
-    "test:responsive": "node tests/responsive-layout.cjs"
+    "test:responsive": "node tests/responsive-layout.cjs",
+    "test:keyboard": "node tests/keyboard-viewport.cjs",
+    "test:report-render-race": "node tests/report-render-race.cjs",
+    "test:report-types": "node tests/report-types.cjs"
   },
   "devDependencies": {
     "playwright": "1.62.1"

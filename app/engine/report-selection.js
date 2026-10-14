@@ -1,5 +1,6 @@
-import {paperSettings} from './paper-settings.js?v=runtime-v37';
-import {qualifyHistoricalRankings} from './ranking.js?v=runtime-v37';
+import {paperSettings} from './paper-settings.js?v=runtime-v38';
+import {qualifyHistoricalRankings} from './ranking.js?v=runtime-v38';
+import {repairKnowledgeReport} from './knowledge.js?v=runtime-v38';
 export function selectionFor(report){
  const source=report.outputSelection||{},sections=report.sections||[],indices=sections.map((_,i)=>i),valid=i=>Number.isInteger(i)&&i>=0&&i<sections.length;
  const order=[...new Set((source.order||indices).filter(valid))];for(const i of indices)if(!order.includes(i))order.push(i);
@@ -13,7 +14,7 @@ export function presetSections(report,preset){
  return titles.flatMap((title,i)=>patterns[preset]?.test(title)?[i]:[]);
 }
 export function selectedReport(report){
- report=qualifyHistoricalRankings(report);
+ report=qualifyHistoricalRankings(repairKnowledgeReport(report));
  if(!report.outputSelection)return report;
  const selection=selectionFor(report),chosen=selection.order.filter(i=>selection.selected.includes(i)),sections=chosen.map(index=>{
   const source=report.sections[index],fields=fieldsFor(report,index,selection),query=String(selection.filters[index]||'').trim(),rows=(source.rows||[]).filter(row=>!query||row.some(value=>String(value??'').includes(query)));
@@ -26,6 +27,9 @@ export function availablePresets(report){return [['all','完整材料'],['overvi
 // Carry choices by their meaning, never by an index from the previous report.
 export function transferSelection(previous,next){
  const old=selectionFor(previous),defaults=selectionFor(next),byTitle=new Map((next.sections||[]).map((s,i)=>[s.title,i])),mapped=new Map();
+ // A different report type has its own outline and audience. Carry the paper
+ // settings, but never move a shared appendix ahead of its new key figures.
+ if(previous.kind&&next.kind&&previous.kind!==next.kind)return {...defaults,includeMeta:old.includeMeta,includeNote:old.includeNote,paper:old.paper};
  (previous.sections||[]).forEach((s,i)=>{if(byTitle.has(s.title))mapped.set(i,byTitle.get(s.title));});
  const matched=new Set(mapped.values()),selected=old.selected.filter(i=>mapped.has(i)).map(i=>mapped.get(i));
  selected.push(...defaults.selected.filter(i=>!matched.has(i)));

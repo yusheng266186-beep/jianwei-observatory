@@ -1,8 +1,9 @@
 // A number without a declared scope is never a school/grade rank.
 export const validRank = value => Number.isInteger(value) && value > 0;
+export const explicitRanks = record => ['column-headings-v1','column-headings-v2'].includes(record?.rankProvenance);
 // Older standard-workbook imports used fixed offsets, without retaining the
 // column heading. Preserve their numbers, but do not certify their scope.
-export const legacyRanks = record => Boolean(record?.sourceRow&&!['column-headings-v1','source-audit-v2'].includes(record.rankProvenance));
+export const legacyRanks = record => Boolean(record?.sourceRow&&!explicitRanks(record)&&record.rankProvenance!=='source-audit-v2');
 export function schoolRank(record) {
   return !legacyRanks(record)&&(!record?.sourceRow||record.rankSources?.schoolRank)&&validRank(record?.schoolRank)?record.schoolRank:null;
 }
@@ -24,8 +25,8 @@ export function rankColumns(rows,start,end) {
   }
   return result;
 }
-export function ranksFrom(row,columns) {
-  const result={schoolRank:null,classRank:null,cityRank:null,rankSources:{},rankProvenance:'column-headings-v1'};
+export function ranksFrom(row,columns,{provenance='column-headings-v1'}={}) {
+  const result={schoolRank:null,classRank:null,cityRank:null,rankSources:{},rankProvenance:provenance};
   for(const [scope,{column,label}] of Object.entries(columns)) {
     const value=row[column]==null||String(row[column]).trim()===''?null:Number(row[column]);
     result[scope]=validRank(value)?value:null;

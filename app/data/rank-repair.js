@@ -1,5 +1,13 @@
-import {sourceRankReference} from './rank-reference.js?v=runtime-v37';
-import {legacyRanks,validRank} from '../engine/ranking.js?v=runtime-v37';
+import {sourceRankReference} from './rank-reference.js?v=runtime-v38';
+import {explicitRanks,validRank} from '../engine/ranking.js?v=runtime-v38';
+function explicitRankHeadings(row){
+ if(!explicitRanks(row))return false;
+ if(row.rankProvenance==='column-headings-v2')return true;
+ // Only the supplied older template reused 校原名/校赋名 for other scopes.
+ // A newly mapped school/city column, including a blank value, is authoritative.
+ const labels=Object.values(row.rankSources||{}).map(label=>String(label).replace(/\s/g,''));
+ return labels.some(label=>/班/.test(label))||!labels.some(label=>/^校[原赋]名$/.test(label));
+}
 export function rankFingerprint(row){
  const key=[row.rawExam,row.sourceRow,row.classNo,row.rawTotal,row.total].join('|');
  let a=2166136261,b=2246822519;
@@ -11,13 +19,13 @@ export function repairSourceRanks(data){
   const values=row.sourceRow&&sourceRankReference[rankFingerprint(row)];
   if(!values||row.rankProvenance==='source-audit-v2')continue;
   // Explicit class/school headings in a newly mapped workbook remain authoritative.
-  if(row.rankProvenance==='column-headings-v1'&&Object.values(row.rankSources||{}).some(s=>/班/.test(s)))continue;
+  if(explicitRankHeadings(row))continue;
   row.originalRanks||={schoolRank:row.schoolRank??null,classRank:row.classRank??null,cityRank:row.cityRank??null};
   [row.schoolRank,row.classRank,row.cityRank]=values;
   row.rankSources=Object.fromEntries(['schoolRank','classRank','cityRank'].filter(k=>validRank(row[k])).map(k=>[k,'原表对应名次列']));
   row.rankProvenance='source-audit-v2';
   for(const [subject,score] of Object.entries(row.subjects||{})){
-   if(score.rankProvenance==='column-headings-v1')continue;
+   if(explicitRanks(score))continue;
    if(['51','52','21','33','4册'].includes(row.exam)){
     score.rankSources={};score.rankProvenance='source-audit-v2';
     if(validRank(score.schoolRank))score.rankSources.schoolRank='原表学科校排名';
