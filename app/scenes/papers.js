@@ -1,12 +1,12 @@
-import {head,button,chips,examChips,badge,block,ribbon,table,number,integer,percent,esc,personButton,search,footnote,empty} from '../ui/html.js?v=runtime-v31';
-import {bars,rateStyle,rateLegend,chartButtons} from '../ui/plots.js?v=runtime-v31';
-import {average,sum,valid} from '../engine/metrics.js?v=runtime-v31';
-import {answerRows,evidence} from '../io/exports.js?v=runtime-v31';
-import {queryQuestionMap} from '../engine/question-map.js?v=runtime-v31';
-import {questionCard} from '../ui/question-cards.js?v=runtime-v31';
-import {paperProfile} from '../ui/paper-profile.js?v=runtime-v31';
-import {scoreTone,scoreStyle} from '../ui/score-tones.js?v=runtime-v31';
-import {paperCountLabel} from '../engine/paper-structure.js?v=runtime-v31';
+import {head,button,chips,examChips,badge,block,ribbon,table,number,integer,percent,esc,personButton,search,footnote,empty} from '../ui/html.js?v=runtime-v32';
+import {bars,rateStyle,rateLegend,chartButtons} from '../ui/plots.js?v=runtime-v32';
+import {average,sum,valid} from '../engine/metrics.js?v=runtime-v32';
+import {answerRows,evidence} from '../io/exports.js?v=runtime-v32';
+import {queryQuestionMap} from '../engine/question-map.js?v=runtime-v32';
+import {questionCard} from '../ui/question-cards.js?v=runtime-v32';
+import {paperProfile} from '../ui/paper-profile.js?v=runtime-v32';
+import {scoreTone,scoreStyle} from '../ui/score-tones.js?v=runtime-v32';
+import {paperCountLabel} from '../engine/paper-structure.js?v=runtime-v32';
 export function render(atlas,state) {
   const papers=atlas.papers(),paper=papers.find(p=>p.key===state.key);
   if(!paper) {
@@ -60,9 +60,9 @@ function paperCover(atlas,paper) {
   const known=paper.questions.filter(q=>valid(q.max)&&q.max>0).length,statistics=atlas.paperPreview(paper.key);
   const preview=paper.questions.map((q,index)=>{
     const {mean,count,rate}=statistics[index];
-    const detail='第'+q.label+'题 · 有效作答 '+count+' 份 · 均分 '+number(mean)+' / 满分 '+number(q.max);
+    const detail='第'+q.label+'题 · '+(q.knowledge||'知识点待补')+' · 有效作答 '+count+' 份 · 均分 '+number(mean)+' / 满分 '+number(q.max);
     const measured=valid(rate)&&rate>=0&&rate<=1;
-    return '<i class="cover-score-square" data-score-tone="'+scoreTone(rate).key+'" style="'+scoreStyle(rate)+'" data-known="'+measured+'" title="'+esc(detail)+'"><small>'+esc(q.label).replace(/题$/,'')+'</small><b>'+(valid(rate)?percent(rate):number(mean)+(valid(mean)?'分':''))+'</b></i>';
+    return '<i class="cover-score-square" data-score-tone="'+scoreTone(rate).key+'" style="'+scoreStyle(rate)+'" data-known="'+measured+'" data-knowledge="'+esc(q.knowledge||'')+'" title="'+esc(detail)+'"><small class="cover-question-label">'+esc(q.label).replace(/题$/,'')+'</small><b>'+(measured?number(rate*100).replace(/\.0$/,'')+'<em>%</em>':number(mean)+(valid(mean)?'<em>分</em>':''))+'</b><span class="cover-square-topic'+(q.knowledge?'':' is-missing')+'">'+esc(q.knowledge||'知识点待补')+'</span></i>';
   }).join('');
   const caption='全卷预览 · '+paperCountLabel(paper.questions);
   return '<button class="paper-cover" data-motion-key="paper-'+esc(paper.key)+'" data-cmd="paper" data-key="'+esc(paper.key)+'"><header><span>'+esc(paper.subject)+'</span><small>'+esc(paper.exam)+(paper.exam===atlas.latest?' · 最新':'')+'</small></header><h3>'+esc(atlas.exam(paper.exam).label)+'</h3><div class="cover-preview"><span>'+caption+'</span>'+(preview?'<div class="cover-diagram">'+preview+'</div>':'<p class="cover-no-questions">题号材料待补充</p>')+'</div><dl><dt>得分项 / 作答记录</dt><dd>'+paper.questions.length+' 项 / '+paper.answers.length+' 份</dd><dt>明确满分</dt><dd>'+known+' / '+paper.questions.length+' 项</dd></dl><footer><span>'+paper.classes.length+' 个班</span><b>研究这张卷 ↗</b></footer></button>';

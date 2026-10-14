@@ -1,5 +1,6 @@
-import {classDefaults,SUBJECTS,normalizeDataset} from '../data/compat.js?v=runtime-v31';
-import {valid,average,sum,distribution,groupKey,GROUPS} from './metrics.js?v=runtime-v31';
+import {classDefaults,SUBJECTS,normalizeDataset} from '../data/compat.js?v=runtime-v32';
+import {valid,average,sum,distribution,groupKey,GROUPS} from './metrics.js?v=runtime-v32';
+import {schoolRank} from './ranking.js?v=runtime-v32';
 const append=(map,key,value)=>{if(!map.has(key))map.set(key,[]);map.get(key).push(value);};
 export class Atlas {
   constructor(dataset) {
@@ -78,7 +79,7 @@ export class Atlas {
   }
   materialAt(sid,exam='latest'){const records=this.materialStory(sid);return exam==='latest'||!exam?records.at(-1):records.find(r=>r.exam===exam);}
   subjectRank(row,subject){const score=this.subject(row,subject);return this.exam(row.exam).scope==='city'?score?.rank??null:score?.schoolRank??score?.rank??null;}
-  gradeRank(row){const rank=valid(row?.schoolRank)?row.schoolRank:this.exam(row?.exam).scope==='school'?row?.rank:null;return valid(rank)&&rank>=1?rank:null;}
+  gradeRank(row){return schoolRank(row);}
   percentile(row) {
     if(!valid(row?.total))return null;
     const key=row.exam+'|'+groupKey(this.profile(row.classNo));

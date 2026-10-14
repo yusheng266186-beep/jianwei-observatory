@@ -1,13 +1,14 @@
-import {createPDFJob,idlePDFWorker} from './pdf-runtime.js?v=runtime-v31';
+import {rankDescription} from '../engine/ranking.js?v=runtime-v32';
+import {createPDFJob,idlePDFWorker} from './pdf-runtime.js?v=runtime-v32';
 export {idlePDFWorker};
-import {paperSettings} from '../engine/paper-settings.js?v=runtime-v31';
-import {selectedReport} from '../engine/report-selection.js?v=runtime-v31';
-import {reportHTML,wordFiles,documentSections} from './print-document.js?v=runtime-v31';
-export {reportHTML} from './print-document.js?v=runtime-v31';
-import {esc,number,percent,signed} from '../ui/html.js?v=runtime-v31';
-import {SITE_NAME,CREST_URL} from '../brand.js?v=runtime-v31';
-import {chartFontRules} from '../ui/font-export.js?v=runtime-v31';
-import {worksheetNames} from './sheet-names.js?v=runtime-v31';
+import {paperSettings} from '../engine/paper-settings.js?v=runtime-v32';
+import {selectedReport} from '../engine/report-selection.js?v=runtime-v32';
+import {reportHTML,wordFiles,documentSections} from './print-document.js?v=runtime-v32';
+export {reportHTML} from './print-document.js?v=runtime-v32';
+import {esc,number,percent,signed} from '../ui/html.js?v=runtime-v32';
+import {SITE_NAME,CREST_URL} from '../brand.js?v=runtime-v32';
+import {chartFontRules} from '../ui/font-export.js?v=runtime-v32';
+import {worksheetNames} from './sheet-names.js?v=runtime-v32';
 export function download(content,name,type='application/octet-stream') {
   const blob=content instanceof Blob?content:new Blob([content],{type}),url=URL.createObjectURL(blob),anchor=document.createElement('a');
   anchor.href=url;anchor.download=name;anchor.click();setTimeout(()=>URL.revokeObjectURL(url),5000);
@@ -36,7 +37,7 @@ export async function excel(sheets,name=SITE_NAME+'-分析材料') {
 }
 export function scoreRows(atlas,rows) {
   const subjects=atlas.comparisonSubjects(rows);
-  return [['考试','姓名','班级','科类','语种','赋分总分','原分总分','市排名','校排名','特控分差','本科分差',...subjects.flatMap(s=>[s+'赋分',s+'原分',s+'原排名',s+'特控分差',s+'本科分差'])],...rows.map(r=>[atlas.exam(r.exam).label,atlas.name(r.sid),r.classNo,r.track==='physics'?'物理类':'历史类',r.language,r.total,r.rawTotal,r.cityRank,r.schoolRank,atlas.gap(r,'top'),atlas.gap(r,'under'),...subjects.flatMap(s=>[atlas.subject(r,s)?.score??null,atlas.subject(r,s)?.raw??null,atlas.subjectRank(r,s),atlas.gap(r,'top',s),atlas.gap(r,'under',s)])])];
+  return [['考试','姓名','班级','科类','语种','赋分总分','原分总分','市排名','校排名','班排名','排名原始记录 / 范围','特控分差','本科分差',...subjects.flatMap(s=>[s+'赋分',s+'原分',s+'原排名',s+'特控分差',s+'本科分差'])],...rows.map(r=>[atlas.exam(r.exam).label,atlas.name(r.sid),r.classNo,r.track==='physics'?'物理类':'历史类',r.language,r.total,r.rawTotal,r.cityRank,atlas.gradeRank(r),r.classRank??null,rankDescription(r),atlas.gap(r,'top'),atlas.gap(r,'under'),...subjects.flatMap(s=>[atlas.subject(r,s)?.score??null,atlas.subject(r,s)?.raw??null,atlas.subjectRank(r,s),atlas.gap(r,'top',s),atlas.gap(r,'under',s)])])];
 }
 export function effectiveRows(atlas,exam,comparison='') {
   const rows=[['班级','类别','届别','班主任','参考人数','均分','均分增量','特控有效人','特控增量','特控任务','本科有效人','本科增量','本科任务','特控线下10','特控线下20','本科线下10','本科线下20','外语特控有效','外语特控双上线','外语本科有效','外语本科双上线']];
@@ -58,7 +59,7 @@ export function answerRows(atlas,answers,paperKey='') {
   return [['考试','姓名','班级','学科',...Array.from({length:max},(_,i)=>'第'+(bank[i]?.label??i+1)+'题')],...answers.map(a=>[atlas.exam(a.exam).label,atlas.name(a.sid),a.classNo,a.subject,...a.values])];
 }
 export function evidence(title,subtitle,sections,sheets={}) {return {title,subtitle,sections,sheets,created:new Date().toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'}),note:''};}
-export async function print(report,previewBlob=null) {const {printPDF}=await import('./paper-print.js?v=runtime-v31');await printPDF(previewBlob||await pdfBlob(report));}
+export async function print(report,previewBlob=null) {const {printPDF}=await import('./paper-print.js?v=runtime-v32');await printPDF(previewBlob||await pdfBlob(report));}
 export async function word(report) {
  report=selectedReport(report);
  const {JSZip}=await vendors(),zip=new JSZip();for(const [name,content] of Object.entries(wordFiles(report)))zip.file(name,content);

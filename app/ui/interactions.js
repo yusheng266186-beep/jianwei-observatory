@@ -1,6 +1,6 @@
-import {motion,finishAnimation} from './motion.js?v=runtime-v31';
-import {positionSpreadLabels} from './plots.js?v=runtime-v31';
-import {paperMapLayout} from '../engine/paper-structure.js?v=runtime-v31';
+import {motion,finishAnimation} from './motion.js?v=runtime-v32';
+import {positionSpreadLabels} from './plots.js?v=runtime-v32';
+import {paperMapLayout} from '../engine/paper-structure.js?v=runtime-v32';
 let motionPreference=()=>false,resizeObserver,plotObserver,railObserver,drawerHeaderObserver,revealObserver,tooltipTarget=null,tooltipOriginal=null,tooltipFrame=0,outlineFrame=0,drawerOutlineFrame=0,pointerFrame=0,outline=null,outlineEntries=[];
 const observedTables=new Set(),observedPlots=new Set(),observedReveals=new Set(),revealed=new WeakSet(),disclosures=new WeakMap();
 const selectionRails=new Set(),railStates=new WeakMap();
@@ -131,6 +131,7 @@ function refreshPaperProfiles(root=document){
       const p=layout.position(index);item.setAttribute('transform','translate('+p.x+','+p.y+')');
       for(const surface of item.querySelectorAll('.profile-tile,.profile-light'))surface.setAttribute('width',layout.cellWidth-1);
       item.querySelector('.profile-current-dot').setAttribute('cx',layout.cellWidth-12);
+      const topic=item.querySelector('.profile-topic');if(topic){const full=topic.dataset.topic||'',limit=Math.max(2,Math.floor((layout.cellWidth-22)/9)),chars=Array.from(full);topic.textContent=chars.length>limit?chars.slice(0,limit-1).join('')+'…':full;}
     });
   }
 }

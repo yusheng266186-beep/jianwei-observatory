@@ -1,9 +1,12 @@
-import {paperMetrics,paperSettings} from '../engine/paper-settings.js?v=runtime-v31';
-import {selectedReport} from '../engine/report-selection.js?v=runtime-v31';
-import {esc} from '../ui/html.js?v=runtime-v31';
-import {SITE_NAME} from '../brand.js?v=runtime-v31';
+import {paperMetrics,paperSettings} from '../engine/paper-settings.js?v=runtime-v32';
+import {selectedReport} from '../engine/report-selection.js?v=runtime-v32';
+import {esc} from '../ui/html.js?v=runtime-v32';
+import {SITE_NAME} from '../brand.js?v=runtime-v32';
+import {qualifyHistoricalRankings} from '../engine/ranking.js?v=runtime-v32';
+import {sectionGroup,metricSection,importantCell,compactMeta} from './report-design.js?v=runtime-v32';
 // All three outlets share the same sections, field splits and missing-value rules.
 export function documentSections(report){
+ report=qualifyHistoricalRankings(report);
  return (report.sections||[]).flatMap(s=>{
   const section={...s,caption:paperSettings(report).includeCaptions?s.caption:'',headers:s.headers||[],rows:s.rows||[],paragraphs:s.paragraphs||[]};
   const limit=paperSettings(report).orientation==='landscape'?9:6;
@@ -21,35 +24,56 @@ export function reportHTML(report){
 }
 export function pdfDefinition(report){
  report=selectedReport(report);const paper=paperMetrics(report);
- const content=[{text:SITE_NAME,style:'brand'},{text:report.title,style:'title'},{text:report.subtitle||'',style:'subtitle'},{text:'生成时间：'+(report.created||''),style:'caption'}];
- if(report.meta?.length)content.push({table:{widths:[62,'*'],body:report.meta.map(([k,v])=>[{text:k,bold:true},String(v??'—')])},layout:'noBorders',margin:[0,7,0,8]});
- documentSections(report).forEach((s,i)=>{
-  const heading=String(i+1).padStart(2,'0')+'  '+s.title;
-  if(s.headers.length&&s.rows.length){
-   const intro=[{text:heading,style:'heading'},...(s.caption?[{text:s.caption,style:'caption'}]:[]),...s.paragraphs.map(text=>({text,margin:[0,0,0,5]}))];
+ const content=[
+  {text:SITE_NAME,style:'brand'},
+  {text:report.title,style:'title'},
+  {text:report.subtitle||'',style:'subtitle'},
+  {text:'生成：'+(report.created||''),style:'caption'}
+ ];
+ const meta=compactMeta(report);
+ if(meta.length)content.push({text:meta.map(([key,value])=>key+'：'+String(value??'—')).join('  ·  '),style:'caption',margin:[0,0,0,7]});
+ const sections=documentSections(report);
+ sections.forEach((s,i)=>{
+  const group=sectionGroup(s),heading=String(i+1).padStart(2,'0')+'  '+s.title;
+  const intro=[{text:group+'  /  '+heading,style:'heading'},
+   ...(s.caption?[{text:s.caption,style:'caption'}]:[]),
+   ...s.paragraphs.map(text=>({text,margin:[0,0,0,5]}))];
+  if(metricSection(s)){
+   const cards=s.rows.map(row=>({stack:[
+    {text:String(row[0]??'—'),fontSize:8.5,color:'#444444',margin:[0,0,0,5]},
+    {text:String(row[1]??'—'),fontSize:String(row[1]??'').length>28?10:14,bold:true,lineHeight:1.15},
+    ...(row[2]?[{text:String(row[2]),fontSize:8,color:'#555555',margin:[0,5,0,0]}]:[])
+   ],fillColor:'#f2f2f2',margin:[7,7,7,7]}));
+   const body=[[{stack:intro,colSpan:2,fillColor:'#ffffff',margin:[0,0,0,2]},{}]];
+   for(let n=0;n<cards.length;n+=2)body.push(cards[n+1]?[cards[n],cards[n+1]]:[{...cards[n],colSpan:2},{}]);
+   content.push({table:{headerRows:1,keepWithHeaderRows:1,dontBreakRows:true,widths:['*','*'],body},layout:{hLineWidth:n=>n>1?6:0,vLineWidth:n=>n===1?8:0,hLineColor:()=> '#ffffff',vLineColor:()=> '#ffffff',paddingLeft:()=>0,paddingRight:()=>0,paddingTop:()=>0,paddingBottom:()=>0},margin:[0,3,0,7],pageBreak:paper.chapterPages&&i>0?'before':undefined});
+  }else if(s.headers.length&&s.rows.length){
    const weights=columnWeights(s.headers),sum=weights.reduce((a,b)=>a+b,0),widths=weights.map(w=>(paper.contentWidth-weights.length*9)*w/sum);
-   // Repeat the section identity together with the column header and first row.
-   // This keeps long reports traceable and prevents an isolated heading at a page end.
    const titleRow=[{stack:intro,colSpan:s.headers.length,border:[false,false,false,false],margin:[-4,0,-4,0]},...s.headers.slice(1).map(()=>({text:'',border:[false,false,false,false]}))];
    const tallRow=row=>row.some((value,j)=>String(value??'').split('\n').reduce((lines,line)=>lines+Math.max(1,Math.ceil(line.length/Math.max(3,Math.floor(widths[j]/paper.table)))),0)>Math.floor((paper.height-210)/(paper.table*paper.line+2)));
-   content.push({table:{headerRows:2,keepWithHeaderRows:tallRow(s.rows[0])?0:1,dontBreakRows:!s.rows.some(tallRow),widths,body:[titleRow,s.headers.map(h=>({text:h,bold:true,fillColor:'#eeeeee'})),...s.rows.map(r=>s.headers.map((_,j)=>String(r[j]??'—')))]},layout:{hLineWidth:i=>i===0?0:0.4,vLineWidth:()=>0.4,hLineColor:()=> '#555555',vLineColor:()=> '#555555',paddingLeft:()=>4,paddingRight:()=>4,paddingTop:()=>paper.padding,paddingBottom:()=>paper.padding},fontSize:paper.table,pageBreak:paper.chapterPages&&i>0?'before':undefined,margin:[0,0,0,8]});
+   const cells=s.rows.map((row,index)=>s.headers.map((_,column)=>{
+    const mark=importantCell(s,row,column,report);
+    return {text:String(row[column]??'—'),bold:mark.bold,fillColor:mark.critical?'#e3e3e3':index%2?'#f7f7f7':'#ffffff'};
+   }));
+   content.push({table:{headerRows:2,keepWithHeaderRows:tallRow(s.rows[0])?0:1,dontBreakRows:!s.rows.some(tallRow),widths,body:[titleRow,s.headers.map(h=>({text:h,bold:true,fillColor:'#eeeeee',fontSize:8.5})),...cells]},layout:{hLineWidth:n=>n===0?0:n===2?.7:.25,vLineWidth:()=>0,hLineColor:()=> '#b7b7b7',paddingLeft:()=>4,paddingRight:()=>4,paddingTop:()=>paper.padding,paddingBottom:()=>paper.padding},fontSize:paper.table,pageBreak:paper.chapterPages&&i>0?'before':undefined,margin:[0,2,0,8]});
   }else{
-   content.push({text:heading,style:'heading',headlineLevel:1,pageBreak:paper.chapterPages&&i>0?'before':undefined});
+   content.push({text:group+'  /  '+heading,style:'heading',headlineLevel:1,pageBreak:paper.chapterPages&&i>0?'before':undefined});
    if(s.caption)content.push({text:s.caption,style:'caption'});
-   s.paragraphs.forEach(p=>content.push({text:p,margin:[0,0,0,5]}));
+   s.paragraphs.forEach(text=>content.push({text,fontSize:9,color:'#444444',margin:[0,0,0,5]}));
    if(s.headers.length)content.push({text:'本范围暂无符合条件的记录。',style:'caption'});
   }
  });
  if(report.note)content.push({text:'教师判断与后续行动',style:'heading'},{text:report.note});
- return {pageSize:'A4',pageOrientation:paper.orientation,pageMargins:[48,45,48,45],defaultStyle:{font:'Report',fontSize:paper.body,color:'#111111',lineHeight:paper.line},info:{title:report.title,author:SITE_NAME},content,pageBreakBefore:(node,following)=>node.headlineLevel===1&&following.length===0,styles:{brand:{fontSize:9,color:'#444444',margin:[0,0,0,10]},title:{fontSize:19,bold:true,margin:[0,0,0,8]},subtitle:{fontSize:11,margin:[0,0,0,5]},heading:{fontSize:12,bold:true,margin:[0,14,0,6]},caption:{fontSize:9,color:'#444444',margin:[0,0,0,6]}},footer:(page,pages)=>({text:SITE_NAME+'   ·   第 '+page+' / '+pages+' 页',font:'Report',fontSize:8,color:'#555555',alignment:'center',margin:[0,14,0,0]})};
+ return {pageSize:'A4',pageOrientation:paper.orientation,pageMargins:[48,45,48,45],defaultStyle:{font:'Report',fontSize:paper.body,color:'#111111',lineHeight:paper.line},info:{title:report.title,author:SITE_NAME},content,pageBreakBefore:(node,following)=>node.headlineLevel===1&&following.length===0,styles:{brand:{fontSize:8.5,color:'#555555',margin:[0,0,0,9]},title:{fontSize:20,bold:true,margin:[0,0,0,7]},subtitle:{fontSize:10.5,margin:[0,0,0,5]},heading:{fontSize:11,bold:true,margin:[0,12,0,6]},caption:{fontSize:8.5,color:'#555555',margin:[0,0,0,5]}},footer:(page,pages)=>({text:SITE_NAME+'   ·   第 '+page+' / '+pages+' 页',font:'Report',fontSize:8,color:'#555555',alignment:'center',margin:[0,14,0,0]})};
 }
+
 const xml=text=>esc(String(text??'')).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g,'');
 export function wordFiles(report){
  report=selectedReport(report);const paper=paperMetrics(report),tableWidth=Math.round(paper.contentWidth*20),size=paper.table*2;
  const ns='http://schemas.openxmlformats.org/wordprocessingml/2006/main';
- const p=(text,style='Normal',breakBefore=false)=>'<w:p><w:pPr>'+(breakBefore?'<w:pageBreakBefore/>':'')+'<w:pStyle w:val="'+style+'"/></w:pPr><w:r><w:t xml:space="preserve">'+xml(text).replace(/\n/g,'</w:t><w:br/><w:t xml:space="preserve">')+'</w:t></w:r></w:p>';
- const tbl=s=>{const weights=columnWeights(s.headers),sum=weights.reduce((a,b)=>a+b,0),widths=weights.map(w=>Math.round(tableWidth*w/sum));return '<w:tbl><w:tblPr><w:tblW w:w="'+tableWidth+'" w:type="dxa"/><w:tblLayout w:type="fixed"/><w:tblBorders>'+['top','left','bottom','right','insideH','insideV'].map(side=>'<w:'+side+' w:val="single" w:sz="4" w:color="555555"/>').join('')+'</w:tblBorders><w:tblCellMar><w:top w:w="'+paper.padding*18+'" w:type="dxa"/><w:left w:w="90" w:type="dxa"/><w:bottom w:w="'+paper.padding*18+'" w:type="dxa"/><w:right w:w="90" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>'+widths.map(w=>'<w:gridCol w:w="'+w+'"/>').join('')+'</w:tblGrid>'+[s.headers,...s.rows].map((row,i)=>'<w:tr><w:trPr>'+(!row.some((v,j)=>String(v??'').split('\n').reduce((n,line)=>n+Math.max(1,Math.ceil(line.length/Math.max(3,Math.floor(widths[j]/20/paper.table)))),0)>Math.floor((paper.height-210)/(paper.table*paper.line+2)))?'<w:cantSplit/>':'')+(i===0?'<w:tblHeader/>':'')+'</w:trPr>'+s.headers.map((_,j)=>'<w:tc><w:tcPr><w:tcW w:w="'+widths[j]+'" w:type="dxa"/>'+(i===0?'<w:shd w:fill="EEEEEE"/>':'')+'</w:tcPr>'+p(row[j]??'—',i===0?'TableHead':'TableText')+'</w:tc>').join('')+'</w:tr>').join('')+'</w:tbl>';};
- const body=p(SITE_NAME,'Brand')+p(report.title,'Title')+p(report.subtitle,'Subtitle')+p('生成时间：'+(report.created||''),'Caption')+(report.meta||[]).map(([k,v])=>p(k+'：'+v,'Caption')).join('')+documentSections(report).map((s,i)=>p(String(i+1).padStart(2,'0')+' '+s.title,'Heading1',paper.chapterPages&&i>0)+(s.caption?p(s.caption,'Caption'):'')+s.paragraphs.map(t=>p(t)).join('')+(s.headers.length?(s.rows.length?tbl(s):p('本范围暂无符合条件的记录。','Caption')):'')).join('')+(report.note?p('教师判断与后续行动','Heading1')+p(report.note):'');
+ const p=(text,style='Normal',breakBefore=false,bold=false)=>'<w:p><w:pPr>'+(breakBefore?'<w:pageBreakBefore/>':'')+'<w:pStyle w:val="'+style+'"/></w:pPr><w:r>'+(bold?'<w:rPr><w:b/></w:rPr>':'')+'<w:t xml:space="preserve">'+xml(text).replace(/\n/g,'</w:t><w:br/><w:t xml:space="preserve">')+'</w:t></w:r></w:p>';
+ const tbl=s=>{const weights=columnWeights(s.headers),sum=weights.reduce((a,b)=>a+b,0),widths=weights.map(w=>Math.round(tableWidth*w/sum));return '<w:tbl><w:tblPr><w:tblW w:w="'+tableWidth+'" w:type="dxa"/><w:tblLayout w:type="fixed"/><w:tblBorders>'+['top','left','bottom','right','insideH','insideV'].map(side=>'<w:'+side+' w:val="single" w:sz="4" w:color="555555"/>').join('')+'</w:tblBorders><w:tblCellMar><w:top w:w="'+paper.padding*18+'" w:type="dxa"/><w:left w:w="90" w:type="dxa"/><w:bottom w:w="'+paper.padding*18+'" w:type="dxa"/><w:right w:w="90" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>'+widths.map(w=>'<w:gridCol w:w="'+w+'"/>').join('')+'</w:tblGrid>'+[s.headers,...s.rows].map((row,i)=>'<w:tr><w:trPr>'+(!row.some((v,j)=>String(v??'').split('\n').reduce((n,line)=>n+Math.max(1,Math.ceil(line.length/Math.max(3,Math.floor(widths[j]/20/paper.table)))),0)>Math.floor((paper.height-210)/(paper.table*paper.line+2)))?'<w:cantSplit/>':'')+(i===0?'<w:tblHeader/>':'')+'</w:trPr>'+s.headers.map((_,j)=>'<w:tc><w:tcPr><w:tcW w:w="'+widths[j]+'" w:type="dxa"/>'+(i===0?'<w:shd w:fill="EEEEEE"/>':importantCell(s,row,j,report).critical?'<w:shd w:fill="E3E3E3"/>':'')+'</w:tcPr>'+p(row[j]??'—',i===0?'TableHead':'TableText',false,i>0&&importantCell(s,row,j,report).bold)+'</w:tc>').join('')+'</w:tr>').join('')+'</w:tbl>';};
+ const body=p(SITE_NAME,'Brand')+p(report.title,'Title')+p(report.subtitle,'Subtitle')+p('生成时间：'+(report.created||''),'Caption')+(report.meta||[]).map(([k,v])=>p(k+'：'+v,'Caption')).join('')+documentSections(report).map((s,i)=>p(sectionGroup(s)+' / '+String(i+1).padStart(2,'0')+' '+s.title,'Heading1',paper.chapterPages&&i>0)+(s.caption?p(s.caption,'Caption'):'')+s.paragraphs.map(t=>p(t)).join('')+(s.headers.length?(s.rows.length?tbl(s):p('本范围暂无符合条件的记录。','Caption')):'')).join('')+(report.note?p('教师判断与后续行动','Heading1')+p(report.note):'');
  const style=(id,size,bold=false,extra='')=>'<w:style w:type="paragraph" w:styleId="'+id+'"><w:name w:val="'+id+'"/><w:basedOn w:val="Normal"/><w:pPr>'+extra+'</w:pPr><w:rPr><w:sz w:val="'+size+'"/><w:szCs w:val="'+size+'"/>'+(bold?'<w:b/>':'')+'</w:rPr></w:style>';
  const types=['document','styles','footer1'].map(f=>'<Override PartName="/word/'+f+'.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.'+(f==='document'?'document.main':f==='footer1'?'footer':f)+'+xml"/>').join('');
  return {'[Content_Types].xml':'<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>'+types+'</Types>',

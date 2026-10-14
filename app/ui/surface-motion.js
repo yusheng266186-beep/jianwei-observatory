@@ -1,4 +1,4 @@
-import {settle,visualFrame,cancelOwnMotion,finishAnimation} from './motion.js?v=runtime-v31';
+import {settle,visualFrame,cancelOwnMotion,finishAnimation} from './motion.js?v=runtime-v32';
 
 const states=new WeakMap();
 const calm=()=>document.body.dataset.motion==='calm'||matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -30,6 +30,6 @@ export function closeSurface(element,{hide=()=>element.close(),isOpen=()=>elemen
   state.promise=(async()=>{
     if(!reducedMotion())try{state.animation=element.animate([from,{opacity:0,transform:'translateY(16px) scale(.978)'}],{duration:220,easing:'cubic-bezier(.4,0,.8,.2)',fill:'both'});await finishAnimation(state.animation,220);}catch{}
     if(states.get(element)!==state)return false;
-    if(isOpen())hide();state.phase='closed';element.dataset.surfacePhase='closed';element.style.removeProperty('will-change');return true;
+    if(isOpen())hide();state.phase='closed';element.dataset.surfacePhase='closed';element.style.removeProperty('will-change');element.dispatchEvent(new Event('surfaceclosed'));return true;
   })();return state.promise;
 }

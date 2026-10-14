@@ -14,9 +14,9 @@ test('统考含明确校排名时同时导入市排和校排，4册及其他考�
  assert.equal(data.scores.length,records.length);
  for(const row of data.scores){assert.equal(row.schoolRank,28);assert.equal(atlas.gradeRank(row),28);if(row.exam!=='4测')assert.equal(row.cityRank,1400);}
 });
-test('统考缺校排仍保持未知，校内考试仅在校排列缺失时沿用原通用排名',()=>{
+test('任何考次缺校排都保持未知，市排不转为校排',()=>{
  const records=[{exam:'4册',city:1400,school:null},{exam:'51',city:31,school:null},{exam:'52',city:1400,school:28}],data=parseWorkbook(XLSX,workbook(records),'匿名缺排名.xlsx'),atlas=new Atlas(data);
- assert.equal(data.scores[0].cityRank,1400);assert.equal(atlas.gradeRank(data.scores[0]),null);assert.equal(atlas.gradeRank(data.scores[1]),31);assert.equal(atlas.gradeRank(data.scores[2]),28);
+ assert.equal(data.scores[0].cityRank,1400);assert.equal(atlas.gradeRank(data.scores[0]),null);assert.equal(atlas.gradeRank(data.scores[1]),null);assert.equal(atlas.gradeRank(data.scores[2]),28);
 });
 test('重新合并原表能补回旧版丢失的4册校排，保留学生与原市排',()=>{
  const source=parseWorkbook(XLSX,workbook([{exam:'4册',city:1400,school:28}]),'匿名补排.xlsx'),before=structuredClone(source);before.scores[0].schoolRank=null;

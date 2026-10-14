@@ -9,7 +9,7 @@ test('年级排名采用原表校排，市级原排名和缺失均不冒充年�
  const data=makeFixture();data.exams.find(e=>e.id==='52').scope='city';const atlas=new Atlas(data);
  assert.equal(atlas.gradeRank({exam:'52',schoolRank:12,rank:100}),12);
  assert.equal(atlas.gradeRank({exam:'52',rank:100}),null);
- assert.equal(atlas.gradeRank({exam:'51',rank:18}),18);
+ assert.equal(atlas.gradeRank({exam:'51',rank:18}),null);
  for(const schoolRank of [null,0,-1,NaN])assert.equal(atlas.gradeRank({exam:'52',schoolRank}),null);
  assert.equal(atlas.value({exam:'52',schoolRank:12},'gradeRank'),12);
 });

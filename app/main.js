@@ -1,37 +1,38 @@
-import {openSurface,closeSurface} from './ui/surface-motion.js?v=runtime-v31';
-import {installReportReading} from './ui/report-reading.js?v=runtime-v31';
-import {selectionFor,fieldsFor,presetSections,selectedReport,transferSelection} from './engine/report-selection.js?v=runtime-v31';
-import {installPlanControls} from './ui/plan-controls.js?v=runtime-v31';
-import {buildTeachingReport} from './engine/reports.js?v=runtime-v31';
-import {reportContext,normalizeReportScope} from './ui/report-context.js?v=runtime-v31';
-import {reportSpec} from './ui/report-studio.js?v=runtime-v31';
-import {followEditor} from './ui/follow-editor.js?v=runtime-v31';
-import {normalizePlan,draftForPlan,questionOptions,snapshotQuestion,materialPeople,validDate} from './engine/training.js?v=runtime-v31';
-import {questionView,questionEvidence} from './ui/question.js?v=runtime-v31';
-import {queryQuestionMap,questionSequence} from './engine/question-map.js?v=runtime-v31';
-import {SITE_NAME} from './brand.js?v=runtime-v31';
-import {subjectView,knowledgeView,lensEvidence} from './ui/lenses.js?v=runtime-v31';
-import {subjectLens,skillLens,questionLens} from './engine/lenses.js?v=runtime-v31';
-import {directoryFilterView} from './scenes/directory.js?v=runtime-v31';
-import {renderInto} from './ui/render.js?v=runtime-v31';
-import {installInteractions,enhance,prepareUpdate,pruneInteractions,shiftTable,openDisclosure} from './ui/interactions.js?v=runtime-v31';
-import {readingDefaults,readingView,applyReading} from './ui/reading.js?v=runtime-v31';
-import {reportView} from './ui/report.js?v=runtime-v31';
-import {welcomeView} from './ui/welcome.js?v=runtime-v31';
-import {composeScene} from './ui/composition.js?v=runtime-v31';
-import {researchView,studyDescription,studyAvailable,studyKey} from './ui/research.js?v=runtime-v31';
-import {Atlas} from './engine/atlas.js?v=runtime-v31';
-import {normalizeDataset,SUBJECTS} from './data/compat.js?v=runtime-v31';
-import {hydrate,save,saveWorkspace,restoreDataset,hasMaterials,preference,remember,previous,emptyDataset,loadNotebook,saveNotebook} from './data/workspace.js?v=runtime-v31';
-import {mergeDatasets} from './data/parser.js?v=runtime-v31';
-import {Inbox} from './data/inbox.js?v=runtime-v31';
-import {NoteJournal} from './data/notes.js?v=runtime-v31';
-import {motion,settle,visualFrame,cancelOwnMotion,finishAnimation,enterCanvas,arrangeRows,prepareCanvasSlide,finishCanvasSlide} from './ui/motion.js?v=runtime-v31';
-import {esc,button,empty,table} from './ui/html.js?v=runtime-v31';
-import {excel,word,pdf,print,download,chart,scoreRows,effectiveRows,subjectRows,answerRows,evidence} from './io/exports.js?v=runtime-v31';
-import {directoryDefaults,lensValues,queryDirectory,directoryViewValues,directoryViewName} from './engine/directory.js?v=runtime-v31';
-import {peekView,compareView,drawerEvidence} from './ui/explorer.js?v=runtime-v31';
-import {dockIcon} from './ui/icons.js?v=runtime-v31';
+import {openSurface,closeSurface} from './ui/surface-motion.js?v=runtime-v32';
+import {warmReportFonts} from './io/report-fonts.js?v=runtime-v32';
+import {installReportReading} from './ui/report-reading.js?v=runtime-v32';
+import {selectionFor,fieldsFor,presetSections,selectedReport,transferSelection} from './engine/report-selection.js?v=runtime-v32';
+import {installPlanControls} from './ui/plan-controls.js?v=runtime-v32';
+import {buildTeachingReport} from './engine/reports.js?v=runtime-v32';
+import {reportContext,normalizeReportScope} from './ui/report-context.js?v=runtime-v32';
+import {reportSpec} from './ui/report-studio.js?v=runtime-v32';
+import {followEditor} from './ui/follow-editor.js?v=runtime-v32';
+import {normalizePlan,draftForPlan,questionOptions,snapshotQuestion,materialPeople,validDate} from './engine/training.js?v=runtime-v32';
+import {questionView,questionEvidence} from './ui/question.js?v=runtime-v32';
+import {queryQuestionMap,questionSequence} from './engine/question-map.js?v=runtime-v32';
+import {SITE_NAME} from './brand.js?v=runtime-v32';
+import {subjectView,knowledgeView,lensEvidence} from './ui/lenses.js?v=runtime-v32';
+import {subjectLens,skillLens,questionLens} from './engine/lenses.js?v=runtime-v32';
+import {directoryFilterView} from './scenes/directory.js?v=runtime-v32';
+import {renderInto} from './ui/render.js?v=runtime-v32';
+import {installInteractions,enhance,prepareUpdate,pruneInteractions,shiftTable,openDisclosure} from './ui/interactions.js?v=runtime-v32';
+import {readingDefaults,readingView,applyReading} from './ui/reading.js?v=runtime-v32';
+import {reportView} from './ui/report.js?v=runtime-v32';
+import {welcomeView} from './ui/welcome.js?v=runtime-v32';
+import {composeScene} from './ui/composition.js?v=runtime-v32';
+import {researchView,studyDescription,studyAvailable,studyKey} from './ui/research.js?v=runtime-v32';
+import {Atlas} from './engine/atlas.js?v=runtime-v32';
+import {normalizeDataset,SUBJECTS} from './data/compat.js?v=runtime-v32';
+import {hydrate,save,saveWorkspace,restoreDataset,hasMaterials,preference,remember,previous,emptyDataset,loadNotebook,saveNotebook} from './data/workspace.js?v=runtime-v32';
+import {mergeDatasets} from './data/parser.js?v=runtime-v32';
+import {Inbox} from './data/inbox.js?v=runtime-v32';
+import {NoteJournal} from './data/notes.js?v=runtime-v32';
+import {motion,settle,visualFrame,cancelOwnMotion,finishAnimation,enterCanvas,arrangeRows,prepareCanvasSlide,finishCanvasSlide} from './ui/motion.js?v=runtime-v32';
+import {esc,button,empty,table} from './ui/html.js?v=runtime-v32';
+import {excel,word,pdf,print,download,chart,scoreRows,effectiveRows,subjectRows,answerRows,evidence} from './io/exports.js?v=runtime-v32';
+import {directoryDefaults,lensValues,queryDirectory,directoryViewValues,directoryViewName} from './engine/directory.js?v=runtime-v32';
+import {peekView,compareView,drawerEvidence} from './ui/explorer.js?v=runtime-v32';
+import {dockIcon} from './ui/icons.js?v=runtime-v32';
 
 const routes=[['board','年级总览','▦'],['class','班级研究','▥'],['papers','试卷研究','▧'],['people','学生研究','◎'],['follow','教学跟进','↗'],['library','资料与报告','⊞']];
 const defaults={board:{mode:'overview',metric:'underRate',historyMetric:'mean',search:'',page:1},class:{tab:'snapshot',value:'score',trendMetric:'mean',matrix:'total',search:'',page:1,matched:false},papers:{key:'',tab:'map',classes:[],question:0,order:'paper',questionSearch:'',questionFocus:'all',search:'',page:1},people:{sid:'',storyMetric:'total',...directoryDefaults,filtersOpen:innerWidth>760},follow:{tier:'under',band:20,side:'below',classes:[],search:'',page:1},library:{tab:'materials'}};
@@ -51,10 +52,10 @@ let materialBusy=false,inMemoryUndo=null,navigationEpoch=0;
 const num=value=>value===null||String(value).trim()===''?null:Number.isFinite(Number(value))?Number(value):null;
 const converted=value=>value==='true'?true:value==='false'?false:value;
 const stage=()=>document.getElementById('stage');
-function placeNotification() {
+function placeNotification(preferredHost=null) {
   const toast=document.getElementById('toast'),focused=document.activeElement?.closest('dialog[open]');
   modalOrder=modalOrder.filter(dialog=>dialog.open);
-  const host=focused||modalOrder.at(-1)||document.body;if(toast.parentElement===host)return;
+  const host=preferredHost||focused||modalOrder.at(-1)||document.body;if(toast.parentElement===host)return;
   const shown=Boolean(toast.showPopover)&&toast.matches(':popover-open');if(shown)toast.hidePopover();
   host.append(toast);if(shown)toast.showPopover();
 }
@@ -67,7 +68,7 @@ function notify(message,action={}) {
 }
 const tablePositionKey=el=>paintedObject+'|'+(el.closest('.block')?.querySelector('h2')?.textContent||'')+'|'+(el.closest('.table-frame')?.dataset.tableKey||el.querySelector('table')?.getAttribute('aria-label'));
 function closeReader(){return dismissDialog('table-reader');}
-function showDialog(dialog){observationRequest++;return openSurface(dialog,{reducedMotion});}
+function showDialog(dialog){observationRequest++;const opened=openSurface(dialog,{reducedMotion});modalOrder=modalOrder.filter(item=>item!==dialog&&item.open);modalOrder.push(dialog);placeNotification(dialog);return opened;}
 function dismissDialog(id){
   if(id==='plan-dialog')planControls?.close();
   if(id==='report-dialog')reportRequest++;
@@ -188,7 +189,7 @@ function go(scene,values={},resetScroll=false,{root=false,recordTrail=true}={}) 
   Object.assign(books[scene],values);current=scene;persistBooks();
   const next=path(scene);if(location.hash!==next)history.pushState(null,'',next);paint(true);
 }
-function warmScene(scene){if(hasMaterials(atlas.data)&&!loaded.has(scene)){const task=import('./scenes/'+scene+'.js?v=runtime-v31');loaded.set(scene,task);task.catch(()=>{if(loaded.get(scene)===task)loaded.delete(scene);});}}
+function warmScene(scene){if(hasMaterials(atlas.data)&&!loaded.has(scene)){const task=import('./scenes/'+scene+'.js?v=runtime-v32');loaded.set(scene,task);task.catch(()=>{if(loaded.get(scene)===task)loaded.delete(scene);});}}
 function openEntry(scene){
   const values={board:{mode:'overview',search:'',page:1},class:{tab:'snapshot',search:'',page:1},papers:{key:'',shelfExam:atlas.latest,shelfSubject:'all'},people:{sid:'',...directoryDefaults},library:{tab:'materials'}}[scene]||{};
   go(scene,values,true,{root:true});
@@ -213,7 +214,7 @@ async function paint(transition=false,focus=null) {
     const available=hasMaterials(atlas.data);let view;
     if(!available)view=welcomeView();
     else {
-      if(!loaded.has(scene))loaded.set(scene,import('./scenes/'+scene+'.js?v=runtime-v31'));
+      if(!loaded.has(scene))loaded.set(scene,import('./scenes/'+scene+'.js?v=runtime-v32'));
       const module=await loaded.get(scene);if(serial!==paintId)return;
       if(sceneObject(scene)!==paintedObject&&!stage().dataset.sliding&&!reducedMotion())await foregroundFrame();if(serial!==paintId)return;
       view=scene==='class'&&!atlas.classes.length?{html:empty('先带入一个班的材料','从导入原表开始建立班级画布。')+button('导入材料','import',{},'accent'),report:null}:module.render(atlas,structuredClone(books[scene]),session);
@@ -233,7 +234,7 @@ async function paint(transition=false,focus=null) {
       const slide=available&&transition&&oldScene&&oldScene!==scene&&!reducedMotion()?prepareCanvasSlide(stage(),direction,{onCleanup:pruneInteractions}):null;
       if(!slide)finishCanvasSlide();
       if(!changed)for(const el of stage().querySelectorAll('[data-motion-key]'))cancelOwnMotion(el);
-      renderInto(stage(),view.html,{replace:changed});stage().dataset.scene=scene;stage().dataset.animate=!changed&&transition&&!reducedMotion()?'true':'false';paintedObject=object;
+      renderInto(stage(),view.html,{replace:changed});if(scene==='library'&&books.library.tab==='reports')warmReportFonts().catch(()=>{});stage().dataset.scene=scene;stage().dataset.animate=!changed&&transition&&!reducedMotion()?'true':'false';paintedObject=object;
       if(focus){const root=focus.inDrawer?document.getElementById('drawer-content'):stage(),input=root.querySelector('[data-field="'+focus.key+'"]');input?.focus({preventScroll:true});if(input&&input.type!=='number')try{input.setSelectionRange(focus.position,focus.position);}catch{}}
       else if(focusedData&&!changed){const next=[...stage().querySelectorAll('[data-cmd]')].find(el=>Object.entries(focusedData).every(([k,v])=>el.dataset[k]===v));next?.focus({preventScroll:true});}
       for(const el of stage().querySelectorAll('.table-scroll'))el.scrollLeft=paintedScrolls.get(tablePositionKey(el))||0;
@@ -370,7 +371,7 @@ function changeReportScope(key,value){
  exportReport=next;reportNoteRevision++;clearTimeout(noteTimer);reportNoteState='preview';
  Object.assign(reportScope,{section:0,page:1,search:'',preview:'paper',personSearch:key==='sid'?reportScope.personSearch:''});drawReport({reset:true});
 }
-function teachingReport(spec){const raw=Boolean(spec.includeRaw),report=buildTeachingReport(atlas,{...spec,includeRaw:['class','subject'].includes(spec.kind)?true:spec.includeRaw},session.plans);report.spec.includeRaw=raw;if(!raw&&['class','subject'].includes(spec.kind))report.outputSelection={...selectionFor(report),selected:report.sections.flatMap((s,i)=>s.title.startsWith('附录：')?[]:[i])};return report;}
+function teachingReport(spec){const raw=Boolean(spec.includeRaw),report=buildTeachingReport(atlas,{...spec,includeRaw:['class','subject'].includes(spec.kind)?true:spec.includeRaw},session.plans);report.spec.includeRaw=raw;if(!raw&&['class','subject','student'].includes(spec.kind))report.outputSelection={...selectionFor(report),selected:report.sections.flatMap((s,i)=>s.title.startsWith('附录：')||spec.kind==='student'&&s.title==='个人全部小题得分'?[]:[i])};return report;}
 function showNoteState(state){reportNoteState=state;const el=document.getElementById('report-note-state');if(el){el.dataset.state=state;el.textContent={preview:'组合可保存到摘录；教师判断会自动留存',saving:'正在保存判断…',saved:'已保存到本机摘录',error:'本机保存未完成 · 请下载材料保留判断'}[state];}if(exportReport?.id){const label=document.querySelector('#report-content .inbox-top .overline');if(label)label.textContent=state==='saved'?'教学证据 / 已摘录':'教学证据 / 正在留存';const keep=document.querySelector('#report-content [data-cmd="report-keep"]');if(keep)keep.textContent='保存组合修改';}}
 async function persistReportNote() {
   if(!exportReport?.id){showNoteState('preview');return;}

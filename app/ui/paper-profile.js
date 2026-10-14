@@ -1,8 +1,8 @@
-import {button,esc,integer,number,percent} from './html.js?v=runtime-v31';
-import {chartButtons} from './plots.js?v=runtime-v31';
-import {scoreTone,scoreTones,scoreLegend} from './score-tones.js?v=runtime-v31';
-import {valid} from '../engine/metrics.js?v=runtime-v31';
-import {paperStructure,paperCountLabel,paperMapLayout,questionNumbers} from '../engine/paper-structure.js?v=runtime-v31';
+import {button,esc,integer,number,percent} from './html.js?v=runtime-v32';
+import {chartButtons} from './plots.js?v=runtime-v32';
+import {scoreTone,scoreTones,scoreLegend} from './score-tones.js?v=runtime-v32';
+import {valid} from '../engine/metrics.js?v=runtime-v32';
+import {paperStructure,paperCountLabel,paperMapLayout,questionNumbers} from '../engine/paper-structure.js?v=runtime-v32';
 
 export function paperProfile(lens,{threshold,selected,metrics,examLabel=lens.exam,scopeLabel='全部参考班'}) {
   const questions=lens.questions,structure=paperStructure(questions),layout=paperMapLayout(questions.length,760);
@@ -17,7 +17,7 @@ export function paperProfile(lens,{threshold,selected,metrics,examLabel=lens.exa
       +'<text class="profile-number" x="11" y="22" fill="'+shade.ink+'" font-size="'+fontSize+'">'+esc(label)+'</text>'
       +'<text class="profile-rate" x="11" y="52" fill="'+tone+'" font-size="22">'+(normal?number(q.rate*100):'—')+(normal?'<tspan font-size="10" dx="2">%</tspan>':'')+'</text>'
       +'<text class="profile-score" x="11" y="74" fill="'+shade.muted+'" font-size="9">'+(merged?'合并 ':'均 ')+number(q.mean)+' / '+number(q.max)+'</text>'
-      +(normal?'<text class="profile-sample" x="11" y="94" fill="'+shade.muted+'" font-size="9">有效 '+integer(q.count)+' 份</text>':'<text class="profile-unknown" x="11" y="94" fill="'+shade.muted+'" font-size="9">'+(!valid(q.max)||q.max<=0?'满分待补':q.count?'比例异常':'无有效作答')+'</text>')+'</g>';
+      +'<text class="profile-topic" data-topic="'+esc(q.knowledge||'知识点待补')+'" x="11" y="94" fill="'+shade.muted+'" font-size="9">'+esc((q.knowledge||'知识点待补').length>Math.floor((layout.cellWidth-22)/9)?(q.knowledge||'知识点待补').slice(0,Math.max(2,Math.floor((layout.cellWidth-22)/9)-1))+'…':q.knowledge||'知识点待补')+'</text>'+'</g>';
   }).join('');
   const low=questions.filter(q=>valid(q.rate)&&q.rate<threshold).length,missing=questions.filter(q=>q.count<lens.answers.length).length,maxMissing=questions.filter(q=>!valid(q.max)||q.max<=0).length;
   const clues=[['low','低得分率',low,'低于 '+percent(threshold)],['missing','有空白的题目',missing,'已有记录中的未填得分'],['max','满分资料待补',maxMissing,'原始分数继续保留']];

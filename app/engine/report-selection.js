@@ -1,4 +1,5 @@
-import {paperSettings} from './paper-settings.js?v=runtime-v31';
+import {paperSettings} from './paper-settings.js?v=runtime-v32';
+import {qualifyHistoricalRankings} from './ranking.js?v=runtime-v32';
 export function selectionFor(report){
  const source=report.outputSelection||{},sections=report.sections||[],indices=sections.map((_,i)=>i),valid=i=>Number.isInteger(i)&&i>=0&&i<sections.length;
  const order=[...new Set((source.order||indices).filter(valid))];for(const i of indices)if(!order.includes(i))order.push(i);
@@ -8,10 +9,11 @@ export function selectionFor(report){
 export function fieldsFor(report,index,selection=selectionFor(report)){const headers=report.sections[index]?.headers||[],fields=selection.fields[index];return Array.isArray(fields)?[...new Set(fields.filter(i=>Number.isInteger(i)&&i>=0&&i<headers.length))]:headers.map((_,i)=>i);}
 export function presetSections(report,preset){
  const titles=(report.sections||[]).map(s=>s.title||'');if(preset==='all')return titles.map((_,i)=>i);
- const patterns={overview:/概况|阶段|评估|比较|短板|统计口径|说明/,weak:/攻坚|突破|薄弱|短板|训练优先|教学跟进|统计口径/,paper:/小题|逐题|知识点|统计口径/,follow:/跟进|训练|执行日程|复核|计划说明|材料说明/};
+ const patterns={overview:/概况|阶段|评估|比较|短板|统计口径|说明/,weak:/攻坚|突破|薄弱|短板|训练优先|优先训练|教学跟进|统计口径/,paper:/小题|逐题|知识点|统计口径/,follow:/跟进|训练|执行日程|复核|计划说明|材料说明/};
  return titles.flatMap((title,i)=>patterns[preset]?.test(title)?[i]:[]);
 }
 export function selectedReport(report){
+ report=qualifyHistoricalRankings(report);
  if(!report.outputSelection)return report;
  const selection=selectionFor(report),chosen=selection.order.filter(i=>selection.selected.includes(i)),sections=chosen.map(index=>{
   const source=report.sections[index],fields=fieldsFor(report,index,selection),query=String(selection.filters[index]||'').trim(),rows=(source.rows||[]).filter(row=>!query||row.some(value=>String(value??'').includes(query)));

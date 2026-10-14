@@ -11,7 +11,7 @@ test('学科报告纳入总分已达线的薄弱学生，英语日语统一比�
  const math=buildTeachingReport(a,{kind:'subject',no:4,subject:'数学',exam:'52'});const weak=math.sections.find(s=>s.title==='薄弱学生与针对性安排').rows;assert(weak.some(r=>r[0].includes(a.name('test-4-2'))&&r[3]==='-10.0'));assert(!weak.some(r=>r[0].includes(a.name('test-4-1'))));
 });
 test('学生报告保留阶段校排名、全部题目、真实0分和未知满分',()=>{
- const a=atlas(),r=buildTeachingReport(a,{kind:'student',sid:'test-4-0',exam:'52'});const stages=r.sections.find(s=>s.title==='阶段成绩变化').rows;assert.equal(stages.length,2);assert.equal(stages[1][3],'1');const qs=r.sections.find(s=>s.title==='个人全部小题得分').rows;assert.equal(qs.length,5);assert.equal(qs[0][2],'0.0');assert.equal(qs[0][4],'0.0%');assert.equal(qs[2][4],'—');
+ const a=atlas(),r=buildTeachingReport(a,{kind:'student',sid:'test-4-0',exam:'52'});const stages=r.sections.find(s=>s.title==='阶段成绩变化').rows;assert.equal(stages.length,2);assert.equal(stages[1][3],'校排 1');const qs=r.sections.find(s=>s.title==='个人全部小题得分').rows;assert.equal(qs.length,5);assert.equal(qs[0][2],'0.0');assert.equal(qs[0][4],'0.0%');assert.equal(qs[2][4],'—');
 });
 test('训练选择只计算明确满分，未知和异常题不自动认定薄弱，题目快照独立于后续题库',()=>{
  const a=atlas(),qs=questionOptions(a,{sid:'test-4-0',exam:'52',key:'数学|52'});assert.equal(qs[0].rate,0);assert(qs[0].weak);assert.equal(qs[2].rate,null);assert(!qs[2].weak);const p=draftForPlan(a,{sid:'test-4-0',exam:'52',key:'数学|52'});assert.equal(p.training.questions.length,2);const snapshot=p.training.questions[0];a.data.banks['数学|52'][0].knowledge='新标签';assert.equal(snapshot.knowledge,'函数');

@@ -1,6 +1,6 @@
-import {pdfBlob,pdfKey,idlePDFWorker} from '../io/exports.js?v=runtime-v31';
-import {selectedReport} from '../engine/report-selection.js?v=runtime-v31';
-import {pdfLibrary} from '../io/pdf-viewer-library.js?v=runtime-v31';
+import {pdfBlob,pdfKey,idlePDFWorker} from '../io/exports.js?v=runtime-v32';
+import {selectedReport} from '../engine/report-selection.js?v=runtime-v32';
+import {pdfLibrary} from '../io/pdf-viewer-library.js?v=runtime-v32';
 // A real PDF owns this managed island; form changes never reconcile its canvases.
 export function installReportReading(dialog){
  let pane=null,state=null,wanted=null,key='',doc=null,task=null,timer=0,frame=0,epoch=0,busy=false,base=null,scale=1,restore=null,suspended=false,previewAbort=null,pinnedEnd=false;
@@ -76,7 +76,8 @@ export function installReportReading(dialog){
  for(const type of ['wheel','touchstart','pointerdown'])dialog.addEventListener(type,event=>{if(pane?.contains(event.target))pinnedEnd=false;},{capture:true,passive:true});
  dialog.addEventListener('keydown',event=>{if(event.target===pane&&['Home','PageUp','PageDown','ArrowUp','ArrowDown'].includes(event.key))pinnedEnd=false;if(event.target.matches('[data-report-page-target]')&&event.key==='Enter'){event.preventDefault();jump(event.target.value);}else if(event.target===pane&&event.key==='Home'){event.preventDefault();pane.scrollTop=0;position();}else if(event.target===pane&&event.key==='End'){event.preventDefault();pinnedEnd=true;pane.scrollTop=pane.scrollHeight;position();}});
  dialog.addEventListener('change',event=>{if(event.target.matches('[data-report-page-target]'))jump(event.target.value);});
- dialog.addEventListener('close',()=>{dispose();wanted=null;pane=null;resize.disconnect();});
+ const closed=()=>{if(dialog.open)return;dispose();wanted=null;pane=null;resize.disconnect();};
+ dialog.addEventListener('close',closed);dialog.addEventListener('surfaceclosed',closed);
  function suspend(){previewAbort?.abort();previewAbort=null;idlePDFWorker();suspended=true;epoch++;chapterEpoch++;clearTimeout(timer);cancelRenders();loadingTask?.destroy().catch(()=>{});loadingTask=null;}
  function resume(){suspended=false;if(!pane||!dialog.open)return;if(wanted&&wanted.key!==key)queue();else if(doc)layout(snapshot());}
  dialog.addEventListener('surfaceclosing',suspend);dialog.addEventListener('surfaceopening',resume);
@@ -92,6 +93,7 @@ export function installReportReading(dialog){
   blob(report){return pane?.dataset.pdfState==='ready'&&key===pdfKey(report)?pane.pdfBlob:null;},
   invalidate(report){if(!pane)return;chapterEpoch++;const output=selectedReport(report),nextKey=pdfKey(output);if(nextKey===key)return;wanted={report:output,key:nextKey};restore=snapshot();queue();position();},
   sync(nextState,report,keep){
+   if(!dialog.open||dialog.dataset.surfacePhase==='leaving'){suspend();return;}
    suspended=false;
    state=nextState;dialog.classList.toggle('is-reading',Boolean(state.reading));dialog.classList.toggle('is-configuring',Boolean(state.settingsOpen&&!state.reading));
    const next=dialog.querySelector('.report-paper-scroll');if(pane!==next){dispose();wanted=null;resize.disconnect();pane=next;if(pane){pane.replaceChildren();pane.scrollTop=0;resize.observe(pane);}}
