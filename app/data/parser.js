@@ -1,6 +1,6 @@
-import { SUBJECTS, EXAM_ORDER, EXAM_NAMES, classDefaults, finite, normalizeDataset } from './compat.js?v=runtime-v42';
-import {mergeContext} from './context.js?v=runtime-v42';
-import {explicitRanks,rankColumns,ranksFrom} from '../engine/ranking.js?v=runtime-v42';
+import { SUBJECTS, EXAM_ORDER, EXAM_NAMES, classDefaults, finite, normalizeDataset } from './compat.js?v=runtime-v43';
+import {mergeContext} from './context.js?v=runtime-v43';
+import {explicitRanks,rankColumns,ranksFrom} from '../engine/ranking.js?v=runtime-v43';
 const txt=v=>String(v??'').trim();
 const num=v=>v==null||txt(v)===''?null:Number.isFinite(Number(v))?Number(v):null;
 const code=v=>txt(v).replace(/[物历]$/,'');

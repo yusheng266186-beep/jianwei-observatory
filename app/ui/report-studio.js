@@ -1,7 +1,7 @@
-import {materialPeople} from '../engine/training.js?v=runtime-v42';
-import {button,chips,examRail,esc,field,empty} from './html.js?v=runtime-v42';
-import {reportTypes} from '../engine/reports.js?v=runtime-v42';
-import {reportSubjects,reportClasses,reportExams} from '../engine/report-scope.js?v=runtime-v42';
+import {materialPeople} from '../engine/training.js?v=runtime-v43';
+import {button,chips,examRail,esc,field,empty} from './html.js?v=runtime-v43';
+import {reportTypes} from '../engine/reports.js?v=runtime-v43';
+import {reportSubjects,reportClasses,reportExams} from '../engine/report-scope.js?v=runtime-v43';
 export function reportSpec(atlas,state={}){
  const kind=reportTypes.some(t=>t[0]===state.reportKind)?state.reportKind:atlas.data.scores.length?'class':'subject',exams=reportExams(atlas,kind),exam=exams.some(e=>e.id===state.reportExam)?state.reportExam:exams.at(-1)?.id||atlas.latest;
  const subjects=reportSubjects(atlas,exam),requestedSubject=['英语','日语'].includes(state.reportSubject)?'外语':state.reportSubject,subject=subjects.includes(requestedSubject)?requestedSubject:subjects[0]||'数学',classes=reportClasses(atlas,{kind,exam,subject}),no=classes.includes(Number(state.reportNo))?Number(state.reportNo):classes[0];

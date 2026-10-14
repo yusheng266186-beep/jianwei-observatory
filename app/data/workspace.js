@@ -1,5 +1,5 @@
-import {normalizeDataset} from './compat.js?v=runtime-v42';
-import {SITE_NAME} from '../brand.js?v=runtime-v42';
+import {normalizeDataset} from './compat.js?v=runtime-v43';
+import {SITE_NAME} from '../brand.js?v=runtime-v43';
 const DB='hengji-evidence-workspace',TABLE='materials';
 const localPrefix='hengji:';
 export function preference(key,fallback) { try {return JSON.parse(localStorage.getItem(localPrefix+key))??fallback;}catch{return fallback;} }

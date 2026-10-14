@@ -1,5 +1,5 @@
-import {sourceRankReference} from './rank-reference.js?v=runtime-v42';
-import {explicitRanks,validRank} from '../engine/ranking.js?v=runtime-v42';
+import {sourceRankReference} from './rank-reference.js?v=runtime-v43';
+import {explicitRanks,validRank} from '../engine/ranking.js?v=runtime-v43';
 function explicitRankHeadings(row){
  if(!explicitRanks(row))return false;
  if(row.rankProvenance==='column-headings-v2')return true;

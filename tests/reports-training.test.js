@@ -37,3 +37,10 @@ test('个人原分与明确满分保留小数精度，统计均分仍用便于�
 test('旧的简单跟进记录只在编辑草稿中补充建议，原记录不凭空产生训练数据',()=>{
  const a=atlas(),old={id:'old',sid:'test-4-0',exam:'52',subject:'数学',status:'new',schedule:{},training:{questions:[],tasks:[]}};const draft=draftForPlan(a,{},old);assert.equal(draft.training.count,5);assert.equal(draft.training.targetRate,80);assert.equal(draft.schedule.duration,10);assert(draft.training.questions.length>0);assert.deepEqual(draft.training.tasks,['same','correction']);assert.equal(old.training.count,undefined);assert.equal(old.training.questions.length,0);
 });
+
+test('有效线在关键指标中最多显示两位小数，达线与分差仍使用原始精度',()=>{
+ const data=makeFixture(),line=data.lines.find(line=>line.exam==='52'&&line.track==='physics');line.top=497.44;line.under=422.367826086956;
+ const row=data.scores.find(row=>row.sid==='test-4-0'&&row.exam==='52');row.total=422.368;const atlas=new Atlas(data),report=buildTeachingReport(atlas,{kind:'class',no:4,exam:'52'});
+ assert.equal(report.sections[0].rows.find(row=>row[0]==='物理类有效线')[1],'497.44 / 422.37');assert.equal(atlas.line(row,'under'),line.under);assert(atlas.gap(row,'under')>0);
+ assert.match(report.sections.at(-1).paragraphs[0],/判断使用原始数值/);
+});
