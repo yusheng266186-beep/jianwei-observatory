@@ -10,6 +10,8 @@ const url=process.env.AUDIT_URL||'http://127.0.0.1:4173/',widths=(process.env.AU
  const resize=async(width,height=width<600?844:1000)=>{await p.setViewportSize({width,height});await settle();};
  const importData=async value=>{await p.locator('#files').setInputFiles({name:'anonymous-responsive.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(value))});await click('[data-inbox=commit][data-mode=replace]');await p.waitForSelector('#inbox:not([open])',{state:'attached'});if(await p.locator('#toast [data-cmd=toast-close]').isVisible())await click('#toast [data-cmd=toast-close]');};
  const fit=async label=>{
+  if(await p.locator('#research-drawer[open] .drawer-title #drawer-title').count()){const inset=await p.locator('#research-drawer .drawer-title').evaluate(card=>{const heading=card.querySelector('#drawer-title'),c=card.getBoundingClientRect(),h=heading.getBoundingClientRect();return {left:h.left-c.left,right:c.right-h.right};});assert(inset.left>=12&&inset.right>=12,label+' glass title touches card edge '+JSON.stringify(inset));}
+
   const issues=await p.evaluate(()=>{
    const root=document.querySelector('dialog[open]')||document.getElementById('stage'),body=root.querySelector('.drawer-body'),problems=[];
    if(document.documentElement.scrollWidth>innerWidth+1)problems.push('page');if(root.tagName==='DIALOG'&&root.scrollWidth>root.clientWidth+1)problems.push(root.id);

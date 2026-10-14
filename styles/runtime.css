@@ -27,3 +27,6 @@ body[data-motion=calm] dialog[data-backdrop-phase]::backdrop{animation:none!impo
 
 .person-canvas>.number-ribbon,#research-drawer[data-kind=person] .number-ribbon{grid-template-columns:repeat(5,minmax(0,1fr))}
 @media(max-width:760px){.person-canvas>.number-ribbon,#research-drawer[data-kind=person] .number-ribbon{grid-template-columns:repeat(2,minmax(0,1fr))}.person-canvas>.number-ribbon>div:first-child,#research-drawer[data-kind=person] .number-ribbon>div:first-child{grid-column:1/-1}}
+/* Glass title cards need their own inset inside the drawer's outer gutter. */
+#research-drawer[data-kind] .drawer-title{padding:24px 22px 20px}
+@media(max-width:760px){#research-drawer[data-kind] .drawer-title{padding:20px 18px 16px}}
