@@ -1,5 +1,5 @@
-import {knowledgeLabels} from './knowledge.js?v=runtime-v44';
-import {valid} from './metrics.js?v=runtime-v44';
+import {knowledgeLabels} from './knowledge.js?v=runtime-v45';
+import {valid} from './metrics.js?v=runtime-v45';
 
 export const trainingTasks=[['concept','概念梳理'],['worked','例题讲解'],['same','同类练习'],['variation','变式迁移'],['correction','错题订正'],['retest','再测验']];
 export const trainingMethods=[['individual','个别指导'],['group','小组互助'],['independent','独立训练'],['lesson','课堂专题']];

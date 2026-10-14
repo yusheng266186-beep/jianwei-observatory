@@ -1,8 +1,8 @@
-import {button,esc} from './html.js?v=runtime-v44';
-import {materialPeople} from '../engine/training.js?v=runtime-v44';
-import {reportSpec} from './report-studio.js?v=runtime-v44';
-import {reportSubjects,reportClasses,reportExams} from '../engine/report-scope.js?v=runtime-v44';
-import {reportTypes} from '../engine/reports.js?v=runtime-v44';
+import {button,esc} from './html.js?v=runtime-v45';
+import {materialPeople} from '../engine/training.js?v=runtime-v45';
+import {reportSpec} from './report-studio.js?v=runtime-v45';
+import {reportSubjects,reportClasses,reportExams} from '../engine/report-scope.js?v=runtime-v45';
+import {reportTypes} from '../engine/reports.js?v=runtime-v45';
 export function normalizeReportScope(atlas,spec,change){
  const next={...spec,...change};
  return reportSpec(atlas,{reportKind:next.kind,reportExam:next.exam,reportNo:next.no,reportSubjectClass:next.no,reportPlanClass:next.no,reportSubject:next.subject,reportBand:next.band,reportSid:next.sid,reportRaw:next.includeRaw});

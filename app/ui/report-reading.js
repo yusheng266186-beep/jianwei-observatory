@@ -1,7 +1,7 @@
-import {pdfBlob,pdfKey,idlePDFWorker} from '../io/exports.js?v=runtime-v44';
-import {selectedReport} from '../engine/report-selection.js?v=runtime-v44';
-import {pdfLibrary} from '../io/pdf-viewer-library.js?v=runtime-v44';
-import {pendingReportBrief} from './report-brief.js?v=runtime-v44';
+import {pdfBlob,pdfKey,idlePDFWorker} from '../io/exports.js?v=runtime-v45';
+import {selectedReport} from '../engine/report-selection.js?v=runtime-v45';
+import {pdfLibrary} from '../io/pdf-viewer-library.js?v=runtime-v45';
+import {pendingReportBrief} from './report-brief.js?v=runtime-v45';
 // A real PDF owns this managed island; form changes never reconcile its canvases.
 export function installReportReading(dialog){
  let pane=null,state=null,wanted=null,key='',doc=null,task=null,timer=0,frame=0,epoch=0,busy=null,base=null,scale=1,restore=null,suspended=false,previewAbort=null,pinnedEnd=false;

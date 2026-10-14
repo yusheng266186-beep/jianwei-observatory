@@ -1,8 +1,8 @@
-import {valid,difference} from './metrics.js?v=runtime-v44';
-import {rankDescription,validRank,legacyRanks} from './ranking.js?v=runtime-v44';
-import {knowledgeLabels} from './knowledge.js?v=runtime-v44';
-import {number,integer,percent,signed} from '../ui/html.js?v=runtime-v44';
-import {normalizePlan,selectedPlans,scheduleLabel,trainingSummary,trainingTasks,trainingMethods,planStatuses,reviewSummary} from './training.js?v=runtime-v44';
+import {valid,difference} from './metrics.js?v=runtime-v45';
+import {rankDescription,validRank,legacyRanks} from './ranking.js?v=runtime-v45';
+import {knowledgeLabels} from './knowledge.js?v=runtime-v45';
+import {number,integer,percent,signed} from '../ui/html.js?v=runtime-v45';
+import {normalizePlan,selectedPlans,scheduleLabel,trainingSummary,trainingTasks,trainingMethods,planStatuses,reviewSummary} from './training.js?v=runtime-v45';
 
 export const reportTypes=[['class','班级诊断报告','临界对象、各科评估与小题证据'],['subject','学科教学报告','薄弱学生、题目与知识点'],['student','学生学习报告','阶段变化、个人短板与训练安排'],['follow','教学跟进计划','训练内容、具体课时与复核目标']];
 const section=(title,headers=[],rows=[],caption='',paragraphs=[])=>({title,headers,rows,caption,paragraphs});

@@ -1,4 +1,4 @@
-import {esc} from './html.js?v=runtime-v44';
+import {esc} from './html.js?v=runtime-v45';
 // Readable source content while the actual PDF, fonts and pagination prepare.
 // This brief is never used as the exported document or as a paper-layout claim.
 export function pendingReportBrief(report){

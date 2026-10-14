@@ -1,7 +1,7 @@
-import { SUBJECTS, EXAM_ORDER, EXAM_NAMES, classDefaults, finite, normalizeDataset } from './compat.js?v=runtime-v44';
-import {mergeContext} from './context.js?v=runtime-v44';
-import {identityHash,mergeStudentIdentities} from './identity.js?v=runtime-v44';
-import {explicitRanks,rankColumns,ranksFrom} from '../engine/ranking.js?v=runtime-v44';
+import { SUBJECTS, EXAM_ORDER, EXAM_NAMES, classDefaults, finite, normalizeDataset } from './compat.js?v=runtime-v45';
+import {mergeContext} from './context.js?v=runtime-v45';
+import {identityHash,mergeStudentIdentities} from './identity.js?v=runtime-v45';
+import {explicitRanks,rankColumns,ranksFrom} from '../engine/ranking.js?v=runtime-v45';
 const txt=v=>String(v??'').trim();
 const identifierHeaders=['学生识别码','学生编号','学号','识别码','studentid','queryid'];
 const num=v=>v==null||txt(v)===''?null:Number.isFinite(Number(v))?Number(v):null;
