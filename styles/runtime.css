@@ -1,11 +1,11 @@
 /* One compositor-only surface lifecycle; resting glass materials are unchanged. */
 [data-surface-motion=managed]{animation:none!important}
 dialog[data-surface-motion=managed]::backdrop{animation:none}
-dialog[data-surface-motion=managed][data-surface-phase=entering]::backdrop{animation:surface-backdrop-in .36s cubic-bezier(.16,1,.3,1) both}
-dialog[data-surface-motion=managed][data-surface-phase=leaving]::backdrop{animation:surface-backdrop-out .22s cubic-bezier(.4,0,.8,.2) both}
-@keyframes surface-backdrop-in{from{opacity:0}to{opacity:1}}
-@keyframes surface-backdrop-out{from{opacity:1}to{opacity:0}}
+dialog[data-backdrop-phase=entering]::backdrop{animation:surface-backdrop-in var(--motion-arrive) var(--motion-ease) both}
+dialog[data-backdrop-phase=leaving]::backdrop{animation:surface-backdrop-out var(--motion-leave) var(--motion-exit-ease) both}
+@keyframes surface-backdrop-in{from{opacity:var(--surface-backdrop-from,0)}to{opacity:1}}
+@keyframes surface-backdrop-out{from{opacity:var(--surface-backdrop-from,1)}to{opacity:0}}
 .surface-loading{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;min-height:50vh;padding:clamp(24px,5vw,64px);gap:14px}
 .surface-loading h2,.surface-loading p{margin:0}.surface-loading p{color:var(--muted)}
-body[data-motion=calm] dialog[data-surface-motion=managed]::backdrop{animation:none!important}
-@media(prefers-reduced-motion:reduce){dialog[data-surface-motion=managed]::backdrop{animation:none!important}}
+body[data-motion=calm] dialog[data-backdrop-phase]::backdrop{animation:none!important}
+@media(prefers-reduced-motion:reduce){dialog[data-backdrop-phase]::backdrop{animation:none!important}}

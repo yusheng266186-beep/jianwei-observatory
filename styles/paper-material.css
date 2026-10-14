@@ -1,10 +1,10 @@
 /* Paper research uses light through a surface, not outlined containers.
    Page / panel / inset depth is shared across the archive, six views and lenses. */
 :is(#stage,.scene-leaving-canvas)[data-scene=papers]{
- --paper-surface:radial-gradient(ellipse at 8% 0%,#ffffff80,transparent 66%),linear-gradient(145deg,#ffffffa8,#ecf5fa8c);
- --paper-shadow:0 3px 9px #244b6b04,0 18px 40px -26px #244b6b36;
- --paper-lift:0 5px 14px #244b6b08,0 25px 45px -27px #244b6b50;
- --paper-inset:linear-gradient(150deg,#ffffff38,#dae9f52e);
+ --paper-surface:var(--surface-panel);
+ --paper-shadow:var(--material-shadow);
+ --paper-lift:var(--material-lift-shadow);
+ --paper-inset:var(--surface-inset);
 }
 :is(#stage,.scene-leaving-canvas)[data-scene=papers] :is(.paper-cover,.paper-profile,.paper-study-start,.paper-control-deck,.paper-evidence-view>.block,.knowledge-card,.paper-browser){border:0;background:var(--paper-surface);box-shadow:var(--paper-shadow)}
 :is(#stage,.scene-leaving-canvas)[data-scene=papers] .paper-cover:is(:hover,:focus-visible){border:0;outline:none;background:var(--paper-surface);box-shadow:var(--paper-lift)}
@@ -16,32 +16,32 @@
 :is(#stage,.scene-leaving-canvas)[data-scene=papers] .paper-study-start .number-ribbon{border:0;background:transparent;box-shadow:none}
 :is(#stage,.scene-leaving-canvas)[data-scene=papers] :is(button,.question-focus,.chip,.profile-last,.outline,.knowledge-title){border:0}
 :is(#stage,.scene-leaving-canvas)[data-scene=papers] :is(.question-focus,.chip,.outline){box-shadow:none}
-:is(#stage,.scene-leaving-canvas)[data-scene=papers] :is(.question-focus,.chip,.outline).selected{background:linear-gradient(145deg,#ffffffb8,#dcecf5a3);box-shadow:0 5px 12px -8px #244b6b35}
+:is(#stage,.scene-leaving-canvas)[data-scene=papers] :is(.question-focus,.chip,.outline).selected{background:var(--surface-selected);box-shadow:var(--material-inset-shadow)}
 :is(#stage,.scene-leaving-canvas)[data-scene=papers] :is(.scene-tabs,.paper-view-tabs){border:0;background:transparent;box-shadow:none}
-:is(#stage,.scene-leaving-canvas)[data-scene=papers] .selection-indicator{border:0;background:linear-gradient(145deg,#ffffffc9,#e9f3f994);box-shadow:0 4px 11px -7px #244b6b38}
+:is(#stage,.scene-leaving-canvas)[data-scene=papers] .selection-indicator{border:0;background:var(--surface-control);box-shadow:var(--material-inset-shadow)}
 :is(#stage,.scene-leaving-canvas)[data-scene=papers] .question-map-controls{border:0}
 :is(#stage,.scene-leaving-canvas)[data-scene=papers] :is(.cover-score-square,.heat-cell,.heat-button){border:0}
 :is(#stage,.scene-leaving-canvas)[data-scene=papers] .heat-button:is(:hover,:focus-visible){box-shadow:0 4px 10px -4px #244b6b45}
 :is(#stage,.scene-leaving-canvas)[data-scene=papers] :is(.paper-profile>footer i,.score-tone-legend i){border:0}
-:is(#stage,.scene-leaving-canvas)[data-scene=papers] .paper-score-atlas .profile-question .profile-tile{stroke:none;stroke-width:0;stroke-dasharray:none;transition:filter .22s var(--ease)}
+:is(#stage,.scene-leaving-canvas)[data-scene=papers] .paper-score-atlas .profile-question .profile-tile{stroke:none;stroke-width:0;stroke-dasharray:none;transition:filter var(--motion-control) var(--motion-ease)}
 :is(#stage,.scene-leaving-canvas)[data-scene=papers] .paper-score-atlas .profile-question:hover .profile-tile{filter:drop-shadow(0 3px 4px #244b6b24)}
 .profile-current-dot{opacity:0;transition:opacity .2s}
 .profile-question:is(.is-current,:hover,:focus-visible) .profile-current-dot{opacity:.75}
 .profile-question:focus-visible .profile-number{text-decoration:underline;text-underline-offset:3px;font-weight:650}
 :is(#stage,.scene-leaving-canvas)[data-scene=papers] .paper-profile .profile-question{outline:none}
 /* The same unframed surface follows a question into its observation drawer. */
-#research-drawer:is([data-kind=question],[data-kind=knowledge]) :is(.drawer-title,.block,.number-ribbon){border:0;background:radial-gradient(ellipse at 8% 0%,#ffffff70,transparent 70%),linear-gradient(145deg,#ffffffa8,#eaf3f996);box-shadow:0 3px 9px #244b6b04,0 16px 32px -24px #244b6b36}
+#research-drawer:is([data-kind=question],[data-kind=knowledge]) :is(.drawer-title,.block,.number-ribbon){border:0;background:var(--surface-panel);box-shadow:var(--material-shadow)}
 #research-drawer:is([data-kind=question],[data-kind=knowledge]) :is(.number-ribbon>div,.question-stepper,.question-queue-context,.lens-scope,.lens-scope>span,.drawer-section-nav,.lens-filter,.score-group,.lens-question,.lens-skill-link,.question-combined-explanation){border:0!important}
 #research-drawer:is([data-kind=question],[data-kind=knowledge]) .number-ribbon>div{background:transparent;box-shadow:none}
-#research-drawer:is([data-kind=question],[data-kind=knowledge]) :is(.score-group,.lens-filter){background:linear-gradient(145deg,#ffffff7a,#edf5fa58);box-shadow:0 5px 12px -9px #244b6b30}
-#research-drawer:is([data-kind=question],[data-kind=knowledge]) :is(.score-group,.lens-filter).selected{background:linear-gradient(145deg,#ffffffc9,#d1e5f3a8);box-shadow:0 7px 16px -10px #244b6b50}
+#research-drawer:is([data-kind=question],[data-kind=knowledge]) :is(.score-group,.lens-filter){background:var(--surface-control);box-shadow:var(--material-inset-shadow)}
+#research-drawer:is([data-kind=question],[data-kind=knowledge]) :is(.score-group,.lens-filter).selected{background:var(--surface-selected);box-shadow:var(--material-inset-shadow)}
 #research-drawer:is([data-kind=question],[data-kind=knowledge]) :is(button,.chip,.outline){border:0;box-shadow:none}
 #research-drawer:is([data-kind=question],[data-kind=knowledge]) .lens-question{box-shadow:0 5px 15px -8px #244b6b25}
 #research-drawer:is([data-kind=question],[data-kind=knowledge]) .lens-question:is(:hover,:focus-visible){box-shadow:0 8px 20px -10px #244b6b45}
 .personal-question-card[data-score-tone],.lens-question[data-score-tone],.route-questions [data-score-tone]{border:0}
 /* On narrow screens the filter area becomes an inset glass shelf. */
 @media(max-width:1050px){:is(#stage,.scene-leaving-canvas)[data-scene=papers] .question-map-controls{border:0;background:var(--paper-inset);box-shadow:0 5px 16px -14px #244b6b25}}
-body[data-surface=paper] :is(#stage,.scene-leaving-canvas)[data-scene=papers] :is(.paper-cover,.paper-profile,.paper-study-start,.paper-control-deck,.block,.knowledge-card){background:#f9fcfe;box-shadow:0 5px 14px -10px #244b6b28}
+body[data-surface=paper] :is(#stage,.scene-leaving-canvas)[data-scene=papers] :is(.paper-cover,.paper-profile,.paper-study-start,.paper-control-deck,.block,.knowledge-card){background:var(--surface-panel);box-shadow:var(--material-shadow)}
 @media(prefers-reduced-transparency:reduce){:is(#stage,.scene-leaving-canvas)[data-scene=papers] :is(.paper-cover,.paper-profile,.paper-study-start,.paper-control-deck,.block,.knowledge-card){background:#f7fbfd}}
 body[data-motion=calm] :is(.profile-tile,.profile-current-dot){transition:none!important}
 @media(prefers-reduced-motion:reduce){.profile-tile,.profile-current-dot{transition:none!important}}

@@ -1,4 +1,4 @@
-import {button,esc} from './html.js?v=runtime-v34';
+import {button,esc} from './html.js?v=runtime-v35';
 
 export function composeScene(html,{back=''}={}) {
   const template=document.createElement('template');template.innerHTML=html;

@@ -1,9 +1,9 @@
-import {personalQuestionCard} from './personal-questions.js?v=runtime-v34';
-import {button,badge,block,ribbon,table,number,integer,percent,delta,esc,empty} from './html.js?v=runtime-v34';
-import {trajectory,bars,rateColor,rateLegend,seriesColors,chartButtons} from './plots.js?v=runtime-v34';
-import {directoryEntries,standingLabels} from '../engine/directory.js?v=runtime-v34';
-import {difference,valid} from '../engine/metrics.js?v=runtime-v34';
-import {evidence,scoreRows,answerRows} from '../io/exports.js?v=runtime-v34';
+import {personalQuestionCard} from './personal-questions.js?v=runtime-v35';
+import {button,badge,block,ribbon,table,number,integer,percent,delta,esc,empty} from './html.js?v=runtime-v35';
+import {trajectory,bars,rateColor,rateLegend,seriesColors,chartButtons} from './plots.js?v=runtime-v35';
+import {directoryEntries,standingLabels} from '../engine/directory.js?v=runtime-v35';
+import {difference,valid} from '../engine/metrics.js?v=runtime-v35';
+import {evidence,scoreRows,answerRows} from '../io/exports.js?v=runtime-v35';
 export function peekView(atlas,sid,exam,session,state={}) {
   const e=directoryEntries(atlas,exam||'latest').find(e=>e.person.id===sid)||directoryEntries(atlas).find(e=>e.person.id===sid);
   if(!e)return empty('暂时没有这个学生的成绩');

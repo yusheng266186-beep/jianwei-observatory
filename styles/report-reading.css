@@ -82,7 +82,7 @@
 @media(max-width:1000px){
  .report-dialog{width:calc(100vw - 16px);height:calc(100dvh - 16px);padding:12px 14px;border-radius:16px}
  .report-dialog.is-configuring .report-composer-grid{grid-template-columns:minmax(0,1fr)}
- .report-dialog.is-configuring .report-settings-scroll{position:absolute;inset:0 0 0 auto;width:min(360px,100%);z-index:5;padding:16px;background:linear-gradient(145deg,#f5fafff5,#e5eff8fa);backdrop-filter:blur(22px);border-radius:13px;box-shadow:-12px 0 30px #234a6228}
+ .report-dialog.is-configuring .report-settings-scroll{position:absolute;inset:0 0 0 auto;width:min(360px,100%);z-index:5;padding:16px;background:var(--surface-window);backdrop-filter:none;border-radius:var(--radius-inner);box-shadow:var(--material-window-shadow)}
  .report-settings-title{position:sticky;top:-16px;background:#eef6fd;padding:12px 0;z-index:1}
 }
 @media(max-width:560px){
@@ -107,7 +107,7 @@
  .report-outlets>[data-cmd=report-return]{margin-left:0}
  .report-dialog.is-reading{padding:8px}
 }
-@media(prefers-reduced-motion:no-preference){.report-dialog.is-configuring .report-settings-scroll{animation:paper-settings-in .22s var(--ease)}@keyframes paper-settings-in{from{opacity:.3;translate:-8px 0}to{opacity:1;translate:0 0}}}
+@media(prefers-reduced-motion:no-preference){.report-dialog.is-configuring .report-settings-scroll{animation:paper-settings-in var(--motion-control) var(--motion-ease)}@keyframes paper-settings-in{from{opacity:.86;translate:-6px 0}to{opacity:1;translate:0 0}}}
 /* PDF.js selectable text layer; geometry comes from the actual PDF viewport. */
 .textLayer{position:absolute;text-align:initial;inset:0;overflow:clip;opacity:1;line-height:1;text-size-adjust:none;forced-color-adjust:none;transform-origin:0 0;caret-color:CanvasText;z-index:1}
 .textLayer :is(span,br){color:transparent!important;position:absolute;white-space:pre;cursor:text;transform-origin:0 0}

@@ -1,6 +1,6 @@
-import {motion,finishAnimation} from './motion.js?v=runtime-v34';
-import {positionSpreadLabels} from './plots.js?v=runtime-v34';
-import {paperMapLayout} from '../engine/paper-structure.js?v=runtime-v34';
+import {motion,finishAnimation} from './motion.js?v=runtime-v35';
+import {positionSpreadLabels} from './plots.js?v=runtime-v35';
+import {paperMapLayout} from '../engine/paper-structure.js?v=runtime-v35';
 let motionPreference=()=>false,resizeObserver,plotObserver,railObserver,drawerHeaderObserver,revealObserver,tooltipTarget=null,tooltipOriginal=null,tooltipFrame=0,outlineFrame=0,drawerOutlineFrame=0,pointerFrame=0,outline=null,outlineEntries=[];
 const observedTables=new Set(),observedPlots=new Set(),observedReveals=new Set(),revealed=new WeakSet(),disclosures=new WeakMap();
 const selectionRails=new Set(),railStates=new WeakMap();
@@ -112,7 +112,7 @@ function refreshTable(frame) {
   for(const b of frame.querySelectorAll('.table-shift'))b.disabled=!overflow||(Number(b.dataset.direction)<0?left:right);
   const track=frame.querySelector('.table-overflow-note i');if(track){track.style.setProperty('--scroll-progress',overflow?Math.max(0,Math.min(100,scroll.scrollLeft/extent*100))+'%':'0%');track.style.setProperty('--scroll-thumb',Math.max(12,Math.min(100,scroll.clientWidth/Math.max(1,scroll.scrollWidth)*100))+'%');}
 }
-function revealSelectedClasses(root=document){for(const rail of root.querySelectorAll('.class-picker section>div,.audience-strip>.chips')){const active=document.activeElement?.closest('.selected'),selected=active&&rail.contains(active)?active:rail.querySelector('.class-key.selected,.chip.selected');if(!selected||rail.scrollWidth<=rail.clientWidth+1)continue;const target=selected.getBoundingClientRect(),host=rail.getBoundingClientRect();if(target.left<host.left||target.right>host.right)rail.scrollLeft+=target.left-host.left-(host.width-target.width)/2;}}
+function revealSelectedClasses(root=document){for(const rail of root.querySelectorAll('.class-picker section>div,.audience-strip>.chips,.exam-rail')){const active=document.activeElement?.closest('.selected'),selected=active&&rail.contains(active)?active:rail.querySelector('.class-key.selected,.chip.selected,.exam-stop.selected');if(!selected||rail.scrollWidth<=rail.clientWidth+1)continue;const target=selected.getBoundingClientRect(),host=rail.getBoundingClientRect();if(target.left<host.left||target.right>host.right)rail.scrollTo({left:rail.scrollLeft+target.left-host.left-(host.width-target.width)/2,behavior:'instant'});}}
 export function prepareUpdate({replacing=false}={}){hideTooltip();if(!replacing){sampleRails();samplePlots();}for(const rail of document.querySelectorAll('.goal-cards[data-scroll-key]'))if(!rail.closest('.scene-leaving-viewport'))galleryOffsets.set(rail.dataset.scrollKey,rail.scrollLeft);}
 export function pruneInteractions() {
   for(const node of pendingLayouts.keys())if(!node.isConnected||node.closest('.scene-leaving-viewport')){layoutObserver?.unobserve(node);pendingLayouts.delete(node);}
@@ -195,9 +195,9 @@ async function toggleDetails(details) {
   const previous=disclosures.get(details),wanted=!(previous?.wanted??details.open),body=[...details.children].find(el=>el.tagName!=='SUMMARY');
   const from=body?.getBoundingClientRect().height||0;previous?.animation.cancel();
   if(!body||motionPreference()){details.open=wanted;disclosures.delete(details);return;}
-  details.open=true;const to=wanted?body.scrollHeight:0,animation=body.animate([{height:(previous?from:wanted?0:from)+'px',opacity:wanted ? .25 : 1,overflow:'clip'},{height:to+'px',opacity:wanted?1:0,overflow:'clip'}],{duration:280,easing:'cubic-bezier(.22,.8,.22,1)',fill:'both'}),record={wanted,animation};
+  details.open=true;const to=wanted?body.scrollHeight:0,animation=body.animate([{height:(previous?from:wanted?0:from)+'px',opacity:wanted ? .85 : 1,overflow:'clip'},{height:to+'px',opacity:wanted?1:0,overflow:'clip'}],{...motion.disclose,fill:'both'}),record={wanted,animation};
   disclosures.set(details,record);
-  await finishAnimation(animation,280);
+  await finishAnimation(animation,motion.disclose.duration);
   if(disclosures.get(details)!==record)return;
   if(!wanted&&body.contains(document.activeElement))details.querySelector('summary')?.focus({preventScroll:true});
   details.open=wanted;animation.cancel();disclosures.delete(details);for(const frame of details.querySelectorAll('.table-frame'))refreshTable(frame);
@@ -212,7 +212,7 @@ export function installInteractions({reducedMotion}) {
   if('ResizeObserver' in window)plotObserver=new ResizeObserver(entries=>{for(const entry of entries)prioritizeLayout(entry.target,'plot');});
   if('ResizeObserver' in window)railObserver=new ResizeObserver(entries=>{for(const entry of entries)if(entry.target.isConnected)selectionRail(entry.target);});
   if('ResizeObserver' in window){drawerHeaderObserver=new ResizeObserver(refreshDrawerSections);const header=document.querySelector('#research-drawer .drawer-top');if(header)drawerHeaderObserver.observe(header);}
-  if('IntersectionObserver' in window)revealObserver=new IntersectionObserver(entries=>{let order=0;for(const entry of entries)if(entry.isIntersecting){revealObserver.unobserve(entry.target);observedReveals.delete(entry.target);if(!motionPreference())entry.target.animate([{opacity:entry.target.matches('.block,.follow-workbench')?1:.9,translate:'0px 8px'},{opacity:1,translate:'0px 0px'}],{...motion.arrive,delay:Math.min(order++,3)*22,fill:'backwards'});}},{rootMargin:'0px 0px -25px 0px',threshold:.06});
+  if('IntersectionObserver' in window)revealObserver=new IntersectionObserver(entries=>{let order=0;for(const entry of entries)if(entry.isIntersecting){revealObserver.unobserve(entry.target);observedReveals.delete(entry.target);if(!motionPreference())entry.target.animate([{opacity:entry.target.matches('.block,.follow-workbench')?1:.94,translate:'0px 6px'},{opacity:1,translate:'0px 0px'}],{...motion.arrive,delay:Math.min(order++,3)*16,fill:'backwards'});}},{rootMargin:'0px 0px -25px 0px',threshold:.06});
   document.addEventListener('scroll',event=>{if(event.target?.matches?.('.goal-cards[data-scroll-key]')){galleryOffsets.set(event.target.dataset.scrollKey,event.target.scrollLeft);hideTooltip();}else if(event.target?.matches?.('.paper-profile-scroll')){refreshPaperProfiles();hideTooltip();}else if(event.target?.matches?.('.table-scroll'))refreshTable(event.target.closest?.('.table-frame'));else {hideTooltip();if(event.target?.id==='research-drawer'){cancelAnimationFrame(drawerOutlineFrame);drawerOutlineFrame=requestAnimationFrame(refreshDrawerSections);}else if(event.target===document||event.target===document.documentElement){cancelAnimationFrame(outlineFrame);outlineFrame=requestAnimationFrame(()=>{const scrolled=String(window.scrollY>18);if(document.body.dataset.scrolled!==scrolled)document.body.dataset.scrolled=scrolled;refreshOutline();});}}},{capture:true,passive:true});
   document.addEventListener('click',event=>{const summary=event.target.closest?.('summary');if(!summary||event.target.closest?.('button,a,input'))return;const details=summary.parentElement;if(details.matches('.card-scores,.card-meta,.record-accordion,.method-note,.class-profile,.report-context,.report-part-options,.report-field-options,.report-note-details')){event.preventDefault();toggleDetails(details);}});
   document.addEventListener('pointerover',event=>{if(event.pointerType==='touch')return;const target=event.target.closest?.('[data-plot-action],.plot-item,.plot-point,.student-dot,.heat-cell[title],[data-tip]');if(target)showTooltip(target,event.clientX,event.clientY);});
@@ -222,7 +222,7 @@ export function installInteractions({reducedMotion}) {
     const dock=event.target.closest?.('#navigation');
     if(!dock)return;cancelAnimationFrame(pointerFrame);
     pointerFrame=requestAnimationFrame(()=>{
-      if(dock){const local=event.clientX-dock.getBoundingClientRect().left;for(const button of dock.querySelectorAll('button')){const proximity=Math.max(0,1-Math.abs(local-button.offsetLeft-button.offsetWidth/2)/120);button.style.setProperty('--dock-lift',-proximity*5+'px');button.style.setProperty('--dock-scale',1+proximity*.045);}}
+      if(dock){const local=event.clientX-dock.getBoundingClientRect().left;for(const button of dock.querySelectorAll('button')){const proximity=Math.max(0,1-Math.abs(local-button.offsetLeft-button.offsetWidth/2)/120);button.style.setProperty('--dock-lift',-proximity*2+'px');button.style.setProperty('--dock-scale',1+proximity*.012);}}
     });
   },{passive:true});
   document.getElementById('navigation')?.addEventListener('pointerleave',()=>{cancelAnimationFrame(pointerFrame);for(const button of document.querySelectorAll('#navigation button')){button.style.removeProperty('--dock-lift');button.style.removeProperty('--dock-scale');}});

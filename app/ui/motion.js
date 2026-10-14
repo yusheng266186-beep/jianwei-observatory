@@ -1,10 +1,13 @@
 // Native animations keep the live controls available throughout a transition.
-const spring='linear(0, .12, .35, .59, .78, .91, .98, 1.012, 1.016, 1.011, 1.005, 1)';
-export const settle=typeof CSS!=='undefined'&&CSS.supports('animation-timing-function',spring)?spring:'cubic-bezier(.2,.9,.25,1)';
-// A monotonic, damped glide: quick response, long gentle settling, no page bounce.
-const glide='linear(0, .035 2%, .14 5%, .36 12%, .63 24%, .82 40%, .94 62%, .985 82%, 1)';
-export const travel=typeof CSS!=='undefined'&&CSS.supports('animation-timing-function',glide)?glide:'cubic-bezier(.2,.85,.25,1)';
-export const motion={arrive:{duration:420,easing:'cubic-bezier(.16,1,.3,1)'},arrange:{duration:340,easing:settle},leave:{duration:180,easing:'cubic-bezier(.3,0,.7,1)'}};
+// CSS and native animations read the same tokens. Defaults also allow engine
+// tests and environments without a document to import this module.
+const tokens=typeof document!=='undefined'&&typeof getComputedStyle==='function'?getComputedStyle(document.documentElement):null;
+const token=(name,fallback)=>tokens?.getPropertyValue('--motion-'+name).trim()||fallback;
+const duration=(name,fallback)=>{const value=token(name,fallback+'ms');return parseFloat(value)*(value.endsWith('ms')?1:1000);};
+export const settle=token('ease','cubic-bezier(.22,1,.36,1)');
+export const travel=token('travel-ease','cubic-bezier(.2,.78,.22,1)');
+const step=(name,ms,easing=settle)=>({duration:duration(name,ms),easing});
+export const motion={feedback:step('feedback',160),control:step('control',220),disclose:step('disclose',260),arrive:step('arrive',320),arrange:step('arrange',300),travel:step('travel',400,travel),leave:step('leave',180,token('exit-ease','cubic-bezier(.4,0,.8,.2)'))};
 export function visualFrame(element){const style=getComputedStyle(element);return {opacity:style.opacity,transform:style.transform};}
 export function cancelOwnMotion(element){try{for(const animation of element.getAnimations?.()||[])try{animation.cancel();}catch{}}catch{}}
 // Exit animations are optional: a paused or unavailable animation must never
@@ -57,7 +60,7 @@ export function prepareCanvasSlide(canvas,direction,{onCleanup=()=>{}}={}) {
   return ()=>{
     if(canvasSlide!==active)return;
     if(typeof canvas.animate!=='function'||typeof leaving.animate!=='function'){finishCanvasSlide();return;}
-    const sign=direction==='backward'?-1:1,distance=document.documentElement.clientWidth+24,options={duration:460,easing:travel};
+    const sign=direction==='backward'?-1:1,distance=document.documentElement.clientWidth+24,options=motion.travel;
     const base=canvas.getBoundingClientRect();
     for(const node of canvas.querySelectorAll('.compare-tray')){const box=node.getBoundingClientRect();active.fixed.push({node,style:node.style.cssText});pinFixed(node,box,base);}
     canvas.style.willChange='transform, opacity';canvas.dataset.sliding='true';
@@ -69,10 +72,10 @@ export function prepareCanvasSlide(canvas,direction,{onCleanup=()=>{}}={}) {
 export function enterCanvas(canvas,direction) {
   if(typeof canvas.animate!=='function')return;
   const from=Number(getComputedStyle(canvas).opacity);cancelOwnMotion(canvas);
-  canvas.animate([{opacity:from<1?from:.88},{opacity:1}],{duration:220,easing:motion.arrive.easing});
+  canvas.animate([{opacity:from<1?from:.92},{opacity:1}],motion.control);
   const head=canvas.querySelector('.scene-head'),featured=canvas.querySelector('.overview-featured');
-  if(head&&direction!=='focus')head.animate([{translate:(direction==='backward'?-12:12)+'px 0px'},{translate:'0px 0px'}],motion.arrive);
-  if(featured&&featured.getBoundingClientRect().top<innerHeight)featured.animate([{translate:'0px 8px'},{translate:'0px 0px'}],motion.arrive);
+  if(head&&direction!=='focus')head.animate([{translate:(direction==='backward'?-8:8)+'px 0px'},{translate:'0px 0px'}],motion.arrive);
+  if(featured&&featured.getBoundingClientRect().top<innerHeight)featured.animate([{translate:'0px 6px'},{translate:'0px 0px'}],motion.arrive);
 }
 export function arrangeRows(root,positions,{edge=72}={}) {
   let order=0;
@@ -80,6 +83,6 @@ export function arrangeRows(root,positions,{edge=72}={}) {
   for(const {element,before,after} of measurements) {
     if(after.bottom<edge||after.top>innerHeight||typeof element.animate!=='function')continue;
     if(before&&(Math.abs(before.x-after.x)>1||Math.abs(before.y-after.y)>1))element.animate([{translate:(before.x-after.x)+'px '+(before.y-after.y)+'px'},{translate:'0px 0px'}],motion.arrange);
-    else if(!before)element.animate([{opacity:.55,translate:'0px 8px'},{opacity:1,translate:'0px 0px'}],{...motion.arrange,delay:Math.min(order++,4)*16,fill:'backwards'});
+    else if(!before)element.animate([{opacity:.86,translate:'0px 6px'},{opacity:1,translate:'0px 0px'}],{...motion.arrange,delay:Math.min(order++,4)*16,fill:'backwards'});
   }
 }
