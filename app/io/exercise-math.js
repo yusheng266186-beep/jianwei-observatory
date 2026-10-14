@@ -14,6 +14,6 @@ export async function exerciseParagraph(value,{limit=490}={}){
  const flush=()=>{if(!line.length)return;const height=Math.max(16,...line.map(n=>n.height||12));stack.push({columns:line.map(n=>({...n,margin:[0,(height-(n.height||12))/2,0,0]})),columnGap:0,margin:[0,1,0,3]});line=[];used=0;};
  const textWidth=text=>Math.ceil(measure(text)*1.12)+5;
  const addText=text=>{if(!text)return;const width=textWidth(text);line.push({text,width,fontSize:11,lineHeight:1.15});used+=width;};
- for(const part of mathParts(String(value))){if(part.latex){const math=await mathSVG(part.latex),width=Math.min(limit,Math.ceil(math.width)+2),height=math.height*Math.min(1,width/math.width);if(used+width>limit)flush();line.push({svg:math.svg,width,height});used+=width;}else{let text='';for(const char of part.text){if(char==='\n'){addText(text);text='';flush();continue;}if(used+textWidth(text+char)>limit&&!(!text&&/^[，。；：、！？,.;:!?）\]】]$/.test(char))){addText(text);text='';flush();}text+=char;}addText(text);}}
+ for(const part of mathParts(String(value))){if(part.latex){const math=await mathSVG(part.latex),width=Math.min(limit,Math.ceil(math.width)+2),height=math.height*Math.min(1,width/math.width);if(used+width>limit)flush();line.push({svg:math.svg,width,height});used+=width;}else{let text='';for(const char of part.text){if(char==='\n'){addText(text);text='';flush();continue;}if(used+textWidth(text+char)>limit&&!(!text&&/^[，。．；：、！？,.;:!?)）\]】”’]$/.test(char))){addText(text);text='';flush();}text+=char;}addText(text);}}
  flush();return {stack};
 }
