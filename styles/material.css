@@ -230,7 +230,7 @@ body[data-density=compact]{--space-panel:18px;--space-section:18px;--space-gap:1
 .question-map .question-square[data-score-tone] .question-reading>strong{color:var(--score-ink)}
 .question-square[data-score-tone] :is(.question-reading>strong>small,.question-reading>span,.question-identity>b>small,.question-mean,.question-context>span,footer,.question-open),.personal-question-card[data-score-tone] :is(header>span,strong>small,footer),.lens-question[data-score-tone] :is(header>span,p,footer),.cover-score-square[data-score-tone] small,.route-questions [data-score-tone] small{color:var(--score-muted)}
 .question-square[data-score-tone] .question-identity>.question-status{color:var(--score-muted);background:#ffffff1f;border-color:var(--score-edge)}
-.question-square[data-score-tone=mastered] .question-identity>.question-status{background:#183b5426}
+.question-square[data-score-tone=foundation] .question-identity>.question-status{background:#183b5426}
 .cover-diagram .cover-score-square[data-score-tone],.route-questions [data-score-tone]{box-shadow:var(--material-inset-shadow)}
 .question-square[data-score-tone] :is(.question-context,footer){border-color:var(--score-edge)}
 .question-square[data-score-tone] .question-context>span:not(:first-child){border-color:var(--score-edge)}
@@ -239,7 +239,7 @@ body[data-density=compact]{--space-panel:18px;--space-section:18px;--space-gap:1
 .score-tone-legend>span{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}.score-tone-legend>span:first-child{flex-basis:100%;color:#4c718d;margin-bottom:1px}
 .score-tone-legend i{width:9px;height:9px;border:1px solid #7f9ebf35;border-radius:3px;display:block}
 .profile-question[data-score-tone]:is(:hover,:focus-visible) .profile-tile{stroke:#537e9d;stroke-width:1.5;fill-opacity:1}
-.profile-question[data-score-tone=mastered]:is(:hover,:focus-visible) .profile-tile{stroke:#f4fbff}
+.profile-question[data-score-tone=foundation]:is(:hover,:focus-visible) .profile-tile{stroke:#f4fbff}
 .profile-question[data-score-tone=unknown] .profile-tile{stroke-dasharray:3 3}
 
 /* Preferences and accessibility flatten the material, preserving data colors. */

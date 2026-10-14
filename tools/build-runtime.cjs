@@ -34,7 +34,7 @@ const sourceURLs={name:'source-urls',setup(build){
  const cssName='assets/runtime-'+crypto.createHash('sha256').update(cssText).digest('hex').slice(0,12)+'.css';
  fs.writeFileSync(path.join(root,cssName),cssText);
  html=html.replace(/  <link rel="stylesheet"[^\n]+\n/g,'');
- html=html.replace(/<script src="\.\/app\/launch.js[^>]*><\/script>/,`<link rel="stylesheet" href="./${cssName}">\n  <script src="./app/launch.js?v=runtime-v46" data-runtime="./${entries['app/main.js']}" data-storage="./${entries['app/data/storage.js']}" data-prepare="./${entries['app/data/prepare-worker.js']}" defer></script>`);
+ html=html.replace(/<script src="\.\/app\/launch.js[^>]*><\/script>/,`<link rel="stylesheet" href="./${cssName}">\n  <script src="./app/launch.js?v=runtime-v47" data-runtime="./${entries['app/main.js']}" data-storage="./${entries['app/data/storage.js']}" data-prepare="./${entries['app/data/prepare-worker.js']}" defer></script>`);
  const {dockIcon}=await import(path.join(root,'app/ui/icons.js'));
  const routes=[['board','年级总览'],['class','班级研究'],['papers','试卷研究'],['people','学生研究'],['follow','教学跟进'],['library','资料与报告']];
  html=html.replace(/(<nav class="navigation-dock"[^>]*>)[\s\S]*?(<\/nav>)/,(_,start,end)=>start+'<span class="dock-indicator" aria-hidden="true"></span>'+routes.map(([id,label])=>'<button data-cmd="nav" data-scene="'+id+'"><span class="dock-symbol">'+dockIcon(id)+'</span><span>'+label+'</span><i></i></button>').join('')+end);

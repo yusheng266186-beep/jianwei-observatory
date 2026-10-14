@@ -13,11 +13,14 @@ export function trajectory(id,labels,series,{suffix='',zero=false,inverse=false,
   const values=series.flatMap(s=>s.values).filter(valid);if(!values.length)return '<div class="plot-empty">暂无可绘制的成绩</div>';
   let low=Math.min(...values),high=Math.max(...values);if(zero){low=Math.min(0,low);high=Math.max(0,high);}if(high===low){low-=1;high+=1;}
   const padding=(high-low)*.15;low-=padding;high+=padding;if(valid(floor))low=Math.max(floor,low);
-  const w=940,h=275,left=60,right=30,top=25,bottom=55,x=i=>left+i*(w-left-right)/Math.max(1,labels.length-1),y=v=>top+(inverse?v-low:high-v)/(high-low)*(h-top-bottom),prefix=key(id);
+  // Preserve every stage and readable axes; narrow containers scroll the full plot.
+  const labelWidth=Math.max(54,...labels.map(label=>[...String(label)].reduce((width,char)=>width+(/[^\x00-\xff]/.test(char)?12:7),24))),minimumWidth=Math.max(390,labels.length*labelWidth+130);
+  const digits=Math.max(String(Math.round(low)).length,String(Math.round(high)).length)+suffix.length;
+  const w=Math.max(940,minimumWidth),h=275,labelEdge=(labelWidth/2+12)*w/minimumWidth,left=Math.max(64,digits*20+25,labelEdge),right=Math.max(30,labelEdge),top=25,bottom=55,x=i=>left+i*(w-left-right)/Math.max(1,labels.length-1),y=v=>top+(inverse?v-low:high-v)/(high-low)*(h-top-bottom),prefix=key(id);
   let defs='',areas='',curves='',passivePoints='',activePoints='';
   const ticks=Array.from({length:5},(_,i)=>low+(high-low)*i/4),axis=integerTicks?[...new Set(ticks.map(Math.round))].filter(v=>v>=low&&v<=high):ticks;
   let content=axis.map(value=>'<line class="plot-grid" x1="'+left+'" x2="'+(w-right)+'" y1="'+y(value)+'" y2="'+y(value)+'" stroke="'+palette.grid+'" stroke-dasharray="2 6"/><text x="'+(left-10)+'" y="'+(y(value)+4)+'" text-anchor="end">'+number(value,0)+esc(suffix)+'</text>').join('');
-  content+=labels.map((label,i)=>'<text x="'+x(i)+'" y="'+(h-19)+'" text-anchor="middle">'+esc(label)+'</text>').join('');
+  content+=labels.map((label,i)=>'<text class="trajectory-exam-label" x="'+x(i)+'" y="'+(h-19)+'" text-anchor="middle">'+esc(label)+'</text>').join('');
   for(const [index,item] of series.entries()) {
     const color=item.color||colors[index%colors.length],segments=[];let points=[];
     const finish=()=>{if(points.length){segments.push(points);points=[];}};
@@ -35,7 +38,7 @@ export function trajectory(id,labels,series,{suffix='',zero=false,inverse=false,
     });
   }
   content+=areas+curves+passivePoints+activePoints;
-  return '<div class="plot-legend">'+series.map((s,i)=>'<span><i style="background:'+(s.color||colors[i%colors.length])+'"></i>'+esc(s.name)+'</span>').join('')+'</div><svg id="'+esc(id)+'" class="trajectory" viewBox="0 0 '+w+' '+h+'" role="'+(series.some(s=>s.points?.some(p=>p?.cmd))?'group':'img')+'" aria-label="成绩趋势"><defs>'+defs+'</defs>'+content+'</svg>';
+  return '<div class="plot-legend">'+series.map((s,i)=>'<span><i style="background:'+(s.color||colors[i%colors.length])+'"></i>'+esc(s.name)+'</span>').join('')+'</div><div class="trajectory-frame"><div class="trajectory-scroll" tabindex="0" role="region" aria-label="阶段变化图，可左右滚动查看全部考次"><svg id="'+esc(id)+'" class="trajectory" style="--trajectory-min-width:'+minimumWidth+'px" viewBox="0 0 '+w+' '+h+'" role="'+(series.some(s=>s.points?.some(p=>p?.cmd))?'group':'img')+'" aria-label="成绩趋势"><defs>'+defs+'</defs>'+content+'</svg></div><p class="trajectory-scroll-note">左右滑动，查看完整阶段</p></div>';
 }
 export function bars(id,items,{percentages=false,signed=false}={}) {
   const measured=items.map(r=>r.value).filter(valid),max=Math.max(1,...measured.map(Math.abs)),w=1060,h=Math.max(70,items.length*37+20),base=signed?490:190,prefix=key(id);

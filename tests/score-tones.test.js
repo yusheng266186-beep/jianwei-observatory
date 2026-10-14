@@ -13,16 +13,16 @@ test('真实零分、分段边界与未知/异常比例分别处理',()=>{
   assert.notEqual(scoreTone(0).fill,scoreTone(null).fill);
 });
 
-test('得分率越高，蓝色明度持续降低',()=>{
+test('得分率越低，蓝色越深，低分需要优先关注',()=>{
   const values=scoreTones.map(t=>luminance(rgb(t.fill)));
-  for(let i=1;i<values.length;i++)assert.ok(values[i]<values[i-1],scoreTones[i].key);
-  assert.ok(values[0]-values.at(-1)>.5);
+  for(let i=1;i<values.length;i++)assert.ok(values[i]>values[i-1],scoreTones[i].key);
+  assert.ok(values.at(-1)-values[0]>.5);
 });
 
 test('得分色块的前景文字在透明底和最亮高光处仍可读',()=>{
   for(const tone of [...scoreTones,scoreTone(null)]){
     const base=rgb(tone.fill).map(v=>v*235/255+255*(1-235/255));
-    const highlight=tone.key==='mastered'?20/255:61/255;
+    const highlight=tone.key==='foundation'?20/255:61/255;
     const light=base.map(v=>v*(1-highlight)+255*highlight);
     for(const background of [rgb(tone.fill),base,light]){
       assert.ok(contrast(rgb(tone.ink),background)>=4.5,tone.key+' 主文字');

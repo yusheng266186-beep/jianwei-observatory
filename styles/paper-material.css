@@ -48,7 +48,7 @@ body[data-motion=calm] :is(.profile-tile,.profile-current-dot){transition:none!i
 @media(forced-colors:active){:is(#stage,.scene-leaving-canvas)[data-scene=papers] :is(.paper-cover,.paper-profile,.paper-study-start,.paper-control-deck,.knowledge-card,.question-square){border:1px solid CanvasText;background:Canvas;box-shadow:none}:is(#stage,.scene-leaving-canvas)[data-scene=papers] .paper-score-atlas .profile-question .profile-tile{stroke:CanvasText;stroke-width:1}.profile-current-dot{fill:CanvasText}}
 @media print{:is(#stage,.scene-leaving-canvas)[data-scene=papers] :is(.paper-cover,.paper-profile,.paper-study-start,.paper-control-deck,.knowledge-card){background:#fff;box-shadow:none}}
 
-.profile-question[data-score-tone=mastered] .profile-light{opacity:1}
+.profile-question[data-score-tone=foundation] .profile-light{opacity:1}
 #research-drawer:is([data-kind=question],[data-kind=knowledge]) .lens-question footer>i{border:0;box-shadow:none;background:#ffffff29}
 :is(#stage,.scene-leaving-canvas)[data-scene=papers] :is(.table-frame,.table-scroll){border:0;box-shadow:0 8px 22px -18px #244b6b20}
 :is(#stage,.scene-leaving-canvas)[data-scene=papers] :is(.head-action,.study-save,.paper-cover header>small){border:0;box-shadow:0 4px 12px -9px #244b6b35}

@@ -27,7 +27,7 @@ data.plans=[{id:'cohesion-plan',sid:'test-4-4',exam:'52',classNo:4,tier:'under',
     assert.deepEqual(profile.map(x=>x.tone),expected);
     for(let i=0;i<cards.length;i++)assert.equal(await p.locator('.question-square').nth(i).evaluate(e=>getComputedStyle(e).getPropertyValue('--score-base').trim()),profile[i].fill);
     assert.equal(await p.locator('.question-meter,.profile-meter-fill,.cover-stem').count(),0);assert.match(await p.locator('.question-square').nth(0).innerText(),/0\.0%/);assert.match(await p.locator('.question-square').nth(6).innerText(),/-20\.0%/);assert.match(await p.locator('.question-square').nth(7).innerText(),/125\.0%/);
-    assert.match(await p.locator('.score-tone-legend').first().textContent(),/蓝色越深，得分率越高/);
+    assert.match(await p.locator('.score-tone-legend').first().textContent(),/蓝色越深，得分率越低/);
     const issues=await p.locator('.question-square').evaluateAll(es=>{
       const rgb=s=>s.match(/[\d.]+/g).map(Number),lum=c=>c.reduce((n,v,i)=>{v/=255;return n+(v<=.04045?v/12.92:((v+.055)/1.055)**2.4)*[.2126,.7152,.0722][i];},0),ratio=(a,b)=>(Math.max(lum(a),lum(b))+.05)/(Math.min(lum(a),lum(b))+.05),issues=[];
       for(const e of es){const style=getComputedStyle(e),bg=rgb(style.backgroundColor),alpha=bg[3]??1,base=bg.slice(0,3).map(v=>v*alpha+255*(1-alpha)),highlight=style.getPropertyValue('--score-highlight').trim(),ha=parseInt(highlight.slice(-2),16)/255,light=base.map(v=>v*(1-ha)+255*ha);

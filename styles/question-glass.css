@@ -30,8 +30,8 @@
 .question-map .question-square[data-score-tone]>footer{border-top:0;margin:9px 0 0;padding:0;font-size:9px;gap:5px}
 .question-map .question-square[data-score-tone] .question-open{font-size:10px;gap:6px}
 .question-map .question-square[data-score-tone] .question-open>i{display:inline-grid;place-items:center;width:23px;height:23px;background:#ffffff1a;border:0;border-radius:50%;font-size:12px}
-.question-square[data-score-tone=mastered] .question-number{background:linear-gradient(145deg,#ffffff1f,#ffffff05);border:0}
-:is(#stage,.scene-leaving-canvas) .question-map .question-square[data-score-tone=mastered]{box-shadow:0 3px 8px #1c3e5b06,0 14px 28px -18px #244b6b42}
+.question-square[data-score-tone=foundation] .question-number{background:linear-gradient(145deg,#ffffff1f,#ffffff05);border:0}
+:is(#stage,.scene-leaving-canvas) .question-map .question-square[data-score-tone=foundation]{box-shadow:0 3px 8px #1c3e5b06,0 14px 28px -18px #244b6b42}
 :is(#stage,.scene-leaving-canvas) .question-map .question-square[data-score-tone=unknown]{border:0}
 @media(max-width:560px){:is(#stage,.scene-leaving-canvas) .question-map .question-square[data-score-tone]{padding:17px 18px 12px}.question-map .question-square[data-score-tone] .question-context>span{font-size:10px}.question-map .question-square[data-score-tone]>footer{font-size:10px}}
 @media(hover:none){:is(#stage,.scene-leaving-canvas) .question-map .question-square[data-score-tone]:hover{transform:none}}

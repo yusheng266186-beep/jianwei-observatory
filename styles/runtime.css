@@ -45,3 +45,11 @@ dialog #toast{bottom:var(--toast-clearance,max(16px,env(safe-area-inset-bottom))
 .follow-review b,.follow-review small{display:block;line-height:1.6}
 .follow-review p{margin:6px 0 0;line-height:1.6}
 @media(max-width:400px){.pdf-pending-brief dl>div{grid-template-columns:minmax(0,1fr);gap:3px}}
+/* Touch keeps the designed pressed state; browser tap paint must not add a
+   rectangular blue layer. Keyboard focus remains visible. */
+html{-webkit-tap-highlight-color:transparent}
+.trajectory-frame{min-width:0;max-width:100%}
+.trajectory-scroll{min-width:0;max-width:100%;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scrollbar-width:thin;scrollbar-color:#779bb844 transparent;border-radius:var(--radius-inner)}
+.trajectory-scroll .trajectory{display:block;width:100%;min-width:var(--trajectory-min-width,390px);max-width:none;height:auto}
+.trajectory-scroll-note{display:none;margin:6px 0 0;font-size:11px;color:var(--muted)}
+.trajectory-frame[data-overflow=true] .trajectory-scroll-note{display:block}
