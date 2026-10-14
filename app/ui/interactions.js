@@ -29,18 +29,18 @@ function animatePlot(svg){
     shape.animate([{transform:'translate('+dx+'px,'+dy+'px) scale('+sx+','+sy+')'},{transform:'translate(0,0) scale(1)'}],motion.arrange);
   }
 }
-function sampleRails(){for(const rail of selectionRails){const state=railStates.get(rail);if(state?.indicator?.isConnected){const rect=state.indicator.getBoundingClientRect(),host=rail.getBoundingClientRect();state.x=rect.left-host.left+rail.scrollLeft;state.width=rect.width;}}}
+function sampleRails(){for(const rail of selectionRails){const state=railStates.get(rail);if(state?.indicator?.isConnected){const rect=state.indicator.getBoundingClientRect(),host=rail.getBoundingClientRect();Object.assign(state,{x:rect.left-host.left+rail.scrollLeft,y:rect.top-host.top+rail.scrollTop,width:rect.width,height:rect.height});}}}
 function selectionRail(rail){
   const selected=rail.querySelector('.chip.selected');if(!selected)return;
-  let state=railStates.get(rail);if(!state){state={x:null,width:0};railStates.set(rail,state);selectionRails.add(rail);railObserver?.observe(rail);}
-  const x=selected.offsetLeft,width=selected.offsetWidth;
+  let state=railStates.get(rail);if(!state){state={x:null,y:0,width:0,height:0};railStates.set(rail,state);selectionRails.add(rail);railObserver?.observe(rail);}
+  const x=selected.offsetLeft,y=selected.offsetTop,width=selected.offsetWidth,height=selected.offsetHeight;
   if(!width)return;
-  if(state.indicator?.isConnected&&state.target===selected&&state.targetX===x&&state.targetWidth===width)return;
-  if(state.indicator?.isConnected){const rect=state.indicator.getBoundingClientRect(),host=rail.getBoundingClientRect();state.x=rect.left-host.left+rail.scrollLeft;state.width=rect.width;for(const animation of state.indicator.getAnimations())animation.cancel();}
+  if(state.indicator?.isConnected&&state.target===selected&&state.targetX===x&&state.targetY===y&&state.targetWidth===width&&state.targetHeight===height)return;
+  if(state.indicator?.isConnected){const rect=state.indicator.getBoundingClientRect(),host=rail.getBoundingClientRect();Object.assign(state,{x:rect.left-host.left+rail.scrollLeft,y:rect.top-host.top+rail.scrollTop,width:rect.width,height:rect.height});for(const animation of state.indicator.getAnimations())animation.cancel();}
   let indicator=rail.querySelector(':scope > .selection-indicator');if(!indicator){indicator=document.createElement('span');indicator.className='selection-indicator';indicator.setAttribute('aria-hidden','true');rail.prepend(indicator);}
-  indicator.style.width=width+'px';indicator.style.transform='translateX('+x+'px)';indicator.style.borderRadius=getComputedStyle(selected).borderRadius;
-  if(!motionPreference()&&state.x!==null&&(Math.abs(state.x-x)>1||Math.abs(state.width-width)>1))indicator.animate([{transform:'translateX('+state.x+'px) scaleX('+state.width/Math.max(1,width)+')'},{transform:'translateX('+x+'px) scaleX(1)'}],motion.arrange);
-  Object.assign(state,{indicator,x,width,target:selected,targetX:x,targetWidth:width});
+  indicator.style.width=width+'px';indicator.style.height=height+'px';indicator.style.transform='translate('+x+'px,'+y+'px)';indicator.style.transformOrigin='left top';indicator.style.borderRadius=getComputedStyle(selected).borderRadius;
+  if(!motionPreference()&&state.x!==null&&(Math.abs(state.x-x)>1||Math.abs(state.y-y)>1||Math.abs(state.width-width)>1||Math.abs(state.height-height)>1))indicator.animate([{transform:'translate('+state.x+'px,'+state.y+'px) scale('+state.width/Math.max(1,width)+','+state.height/Math.max(1,height)+')'},{transform:'translate('+x+'px,'+y+'px) scale(1,1)'}],motion.arrange);
+  Object.assign(state,{indicator,x,y,width,height,target:selected,targetX:x,targetY:y,targetWidth:width,targetHeight:height});
 }
 function refreshPlot(svg) {
   if(svg.classList.contains('trajectory')){const scroll=svg.closest('.trajectory-scroll'),frame=scroll?.closest('.trajectory-frame');if(frame)frame.dataset.overflow=String(scroll.scrollWidth>scroll.clientWidth+1);}
@@ -147,7 +147,7 @@ export function enhance(root=document,{reveal=true}={}) {
   }
   for(const frame of root.querySelectorAll('.table-frame'))prioritizeLayout(frame,'table');
   for(const svg of root.querySelectorAll('.bars,.trajectory,.spread,.landscape'))prioritizeLayout(svg,'plot');
-  for(const rail of root.querySelectorAll('.scene-tabs > .chips,.drawer-tabs,.exercise-target > .chips'))selectionRail(rail);
+  for(const rail of root.querySelectorAll('.scene-tabs > .chips,.drawer-tabs,.exercise-difficulties,.exercise-subjects'))selectionRail(rail);
   revealSelectedClasses(root);
   for(const rail of root.querySelectorAll('.goal-cards[data-scroll-key]'))rail.scrollLeft=galleryOffsets.get(rail.dataset.scrollKey)||0;
   if(reveal&&revealObserver&&!motionPreference())for(const node of root.querySelectorAll('.block,.student-scope,.follow-workbench,.knowledge-card,.personal-skills article,.source-launchpad>button,.student-card,.paper-cover,.question-tile'))if(!revealed.has(node)){revealed.add(node);if(node.getBoundingClientRect().top>innerHeight-25){observedReveals.add(node);revealObserver.observe(node);}}

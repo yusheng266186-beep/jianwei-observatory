@@ -7,3 +7,12 @@
 @media(max-width:600px){#exercise-dialog{width:calc(100vw - 12px);max-width:calc(100vw - 12px);max-height:calc(100dvh - 12px)}#exercise-content{padding:15px}.exercise-target,.exercise-review,.exercise-connection{padding:15px;margin:13px 0}.exercise-footer{margin:16px -15px -15px;padding:13px 15px;position:static}.exercise-footer>div:last-child{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%}.exercise-footer .button{min-width:0;white-space:normal}.exercise-approval{padding:12px}.exercise-connection input{max-width:100%;min-width:0}.exercise-history .button{max-width:80vw}}
 
 @media(prefers-reduced-motion:no-preference){.exercise-question,.exercise-connection[open]>:not(summary),.exercise-evidence[open]>:not(summary),.exercise-answer[open]>:not(summary),.exercise-edit[open]>:not(summary){animation:scope-arrive var(--motion-control) var(--motion-ease)}}
+.exercise-course{margin:20px 0}.exercise-course h3,.exercise-target h4{font-size:15px;margin:0 0 12px}.exercise-target h4{margin-top:22px}
+.exercise-subjects,.exercise-difficulties{position:relative;isolation:isolate;border-radius:var(--radius-control)}
+.exercise-subjects>.chip{position:relative;z-index:1}.exercise-difficulties{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));align-items:stretch;gap:8px}
+.exercise-difficulties>.exercise-difficulty{position:relative;z-index:1;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:5px;min-width:0;padding:13px 10px;text-align:left;white-space:normal;line-height:1.5;cursor:pointer}
+.exercise-difficulty strong{font-size:13px;font-weight:500}.exercise-difficulty small{font-size:10px;color:var(--muted)}.exercise-difficulty-note{min-height:3em;margin:11px 0 16px}
+.exercise-subjects>.chip.selected,.exercise-difficulties>.chip.selected{background:transparent;box-shadow:none}.exercise-difficulties>.selection-indicator,.exercise-subjects>.selection-indicator{top:0;bottom:auto}
+.exercise-connection [data-ai-code]{font-variant-numeric:tabular-nums;letter-spacing:.22em;max-width:260px}
+@media(max-width:760px){.exercise-difficulties{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:440px){.exercise-difficulties{grid-template-columns:repeat(2,minmax(0,1fr))}.exercise-difficulties>.exercise-difficulty{padding:12px}.exercise-difficulty-note{min-height:0}}

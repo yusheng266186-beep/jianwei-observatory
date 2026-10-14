@@ -558,10 +558,12 @@ let exerciseStudioTask;
 async function openExercises(context={}){
  if(!exerciseStudioTask){const task=import('./ui/exercise-studio.js').then(({createExerciseStudio})=>createExerciseStudio({notify,show:showDialog,close:dialog=>dismissDialog(dialog.id),getAtlas:()=>atlas,onAttach(record,source){
   if(!atlas.materialAt(source.sid,source.exam)){notify('该学生材料已更换，练习仍保存在本机。');return;}
-  if(!planDraft||planDraft.sid!==source.sid||planDraft.exam!==source.exam)openPlan({sid:source.sid,exam:source.exam,id:source.plan?.id,key:'数学|'+source.exam});
-  planDraft.subject='数学';planDraft.training.key='数学|'+source.exam;planDraft.training.exercise=record;planDraft.training.goal=record.request.focus;planDraft.training.count=record.sheet.questions.length;planDraft.schedule.duration=record.request.minutes;rememberPlanDraft();drawPlan();showDialog(document.getElementById('plan-dialog'));notify('已加入训练草稿，请确认日期与复核安排后保存。');
+  const subject=record.request.subject,key=subject+'|'+source.exam;
+  if(!planDraft||planDraft.sid!==source.sid||planDraft.exam!==source.exam||planDraft.id&&planDraft.training.key!==key)openPlan({sid:source.sid,exam:source.exam,id:source.plan?.training?.key===key?source.plan.id:undefined,key});
+  if(planDraft.training.key!==key)setPlanValue('training.key',key);
+  planDraft.subject=subject;planDraft.training.key=key;planDraft.training.exercise=record;planDraft.training.goal=record.request.focus;planDraft.training.count=record.sheet.questions.length;planDraft.schedule.duration=record.request.minutes;rememberPlanDraft();drawPlan();showDialog(document.getElementById('plan-dialog'));notify('已加入训练草稿，请确认日期与复核安排后保存。');
  }}));exerciseStudioTask=task;task.catch(()=>{if(exerciseStudioTask===task)exerciseStudioTask=null;});}
- const studio=await exerciseStudioTask,sid=context.sid||planDraft?.sid,exam=context.exam||planDraft?.exam||atlas.latest;await studio.open({sid,exam,plan:planDraft?.sid===sid&&planDraft.exam===exam?planDraft:null});
+ const studio=await exerciseStudioTask,sid=context.sid||planDraft?.sid,exam=context.exam||planDraft?.exam||atlas.latest;await studio.open({sid,exam,subject:context.subject,plan:planDraft?.sid===sid&&planDraft.exam===exam?planDraft:null});
 }
 const planPaths=new Set(['sid','exam','teacher','note','reviewDate','result','review.correct','review.total','training.key','training.tasks','training.method','training.count','training.targetRate','training.goal','schedule.date','schedule.slot','schedule.period','schedule.time','schedule.duration','ui.no','ui.search','ui.questionFilter','ui.knowledge']);
 function rememberPlanDraft(){if(!remember('followDraft',planDraft?{plan:planDraft,ui:planUI}:null))notify('训练草稿本机保存未完成，当前页面仍保留，请保存计划或下载备份');}

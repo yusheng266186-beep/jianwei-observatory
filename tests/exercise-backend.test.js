@@ -1,11 +1,11 @@
 import test from 'node:test';import assert from 'node:assert/strict';import crypto from 'node:crypto';
-import storeModule from '../backend/store.cjs';import serverModule from '../backend/server.cjs';import worker from '../backend/worker.cjs';
+import storeModule from '../backend/store.cjs';import serverModule from '../backend/server.cjs';import worker from '../backend/worker.cjs';import totp from '../backend/totp.cjs';
 const {MemoryStore}=storeModule,{createServer}=serverModule,secret='test-only-'+crypto.randomBytes(24).toString('hex');
-const env={TRAINING_SESSION_SECRET:secret,TRAINING_TEACHER_CODE_HASH:crypto.createHash('sha256').update('teacher-test-only').digest('hex'),TRAINING_ORIGINS:'https://school.test',TRAINING_DAILY_LIMIT:'2'};
+const env={TRAINING_SESSION_SECRET:secret,TRAINING_TOTP_SECRET:totp.encodeSecret(Buffer.from('12345678901234567890')),TRAINING_ORIGINS:'https://school.test',TRAINING_DAILY_LIMIT:'2'};
 const input={subject:'数学',grade:'高三',curriculum:'已学函数与导数',focus:'求导与单调性',count:3,minutes:15,difficulty:'基础巩固',evidence:[]};
 test('教师验证、跨域边界、匿名请求、并发额度、重复ID、断线重查与任务隔离',async()=>{const store=new MemoryStore(),dispatched=[],server=createServer({store,env,dispatch:async key=>dispatched.push(key)});await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port;let token='';const call=(path,{method='GET',body,id,origin='https://school.test',auth=true}={})=>fetch(base+path,{method,headers:{Origin:origin,'Content-Type':'application/json',...(auth&&token?{Authorization:'Bearer '+token}:{}),...(id?{'X-Request-ID':id}:{})},...(body?{body:JSON.stringify(body)}:{})});try{
  assert.equal((await call('/jobs/'+crypto.randomUUID())).status,401);assert.equal((await call('/health',{origin:'https://evil.test'})).status,403);assert.equal((await call('/session',{method:'POST',body:{code:'wrong'}})).status,401);
- const session=await call('/session',{method:'POST',body:{code:'teacher-test-only'}});token=(await session.json()).token;assert(token);
+ const session=await call('/session',{method:'POST',body:{code:totp.codeForCounter(env.TRAINING_TOTP_SECRET,Math.floor(Date.now()/30000))}});token=(await session.json()).token;assert(token);
  const id=crypto.randomUUID();assert.equal((await call('/jobs',{method:'POST',body:{...input,sid:'private'},id})).status,400);
  const all=await Promise.all(Array.from({length:8},()=>call('/jobs',{method:'POST',body:input,id})));assert(all.every(r=>r.status===202));assert.equal([...store.data.keys()].filter(k=>k.startsWith('budget/')).length,1);
  assert.equal((await call('/jobs',{method:'POST',body:{...input,focus:'不同目标'},id})).status,409);
