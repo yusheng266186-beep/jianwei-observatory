@@ -1,4 +1,4 @@
-import {motion,visualFrame,cancelOwnMotion,finishAnimation} from './motion.js?v=runtime-v38';
+import {motion,visualFrame,cancelOwnMotion,finishAnimation} from './motion.js?v=runtime-v39';
 
 const states=new WeakMap();
 const calm=()=>document.body.dataset.motion==='calm'||matchMedia('(prefers-reduced-motion: reduce)').matches;

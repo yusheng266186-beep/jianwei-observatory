@@ -1,8 +1,8 @@
-import {openSurface,closeSurface} from './surface-motion.js?v=runtime-v38';
-import {motion} from './motion.js?v=runtime-v38';
-import {esc} from './html.js?v=runtime-v38';
-import {todayLocal,dateLabel,validDate} from '../engine/training.js?v=runtime-v38';
-import {calendarDays,addDays,shiftMonth,parseDateText,parseTimeText,clampWhole,pad} from '../engine/calendar.js?v=runtime-v38';
+import {openSurface,closeSurface} from './surface-motion.js?v=runtime-v39';
+import {motion} from './motion.js?v=runtime-v39';
+import {esc} from './html.js?v=runtime-v39';
+import {todayLocal,dateLabel,validDate} from '../engine/training.js?v=runtime-v39';
+import {calendarDays,addDays,shiftMonth,parseDateText,parseTimeText,clampWhole,pad} from '../engine/calendar.js?v=runtime-v39';
 const icon=kind=>'<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">'+(kind==='date'?'<rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M7.5 3v4m9-4v4M4 10h16m-12 4h2m4 0h2m-8 3h2"/>':'<circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.5 2"/>')+'</svg>';
 const idFor=path=>'plan-control-'+path.replace(/\W/g,'-');
 export function pickerField(label,path,value,kind,{min='',empty='待安排'}={}){

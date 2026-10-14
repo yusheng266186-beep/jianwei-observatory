@@ -1,10 +1,10 @@
-import {knowledgeLabels} from '../engine/knowledge.js?v=runtime-v38';
-import {personalQuestionCard,personalQuestionLink} from '../ui/personal-questions.js?v=runtime-v38';
-import {renderDirectory} from './directory.js?v=runtime-v38';
-import {head,button,chips,badge,block,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote,empty} from '../ui/html.js?v=runtime-v38';
-import {trajectory,chartButtons,rateColor,rateLegend} from '../ui/plots.js?v=runtime-v38';
-import {difference,valid,sum} from '../engine/metrics.js?v=runtime-v38';
-import {scoreRows,answerRows,evidence} from '../io/exports.js?v=runtime-v38';
+import {knowledgeLabels} from '../engine/knowledge.js?v=runtime-v39';
+import {personalQuestionCard,personalQuestionLink} from '../ui/personal-questions.js?v=runtime-v39';
+import {renderDirectory} from './directory.js?v=runtime-v39';
+import {head,button,chips,badge,block,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote,empty} from '../ui/html.js?v=runtime-v39';
+import {trajectory,chartButtons,rateColor,rateLegend} from '../ui/plots.js?v=runtime-v39';
+import {difference,valid,sum} from '../engine/metrics.js?v=runtime-v39';
+import {scoreRows,answerRows,evidence} from '../io/exports.js?v=runtime-v39';
 export function render(atlas,state,session) {
   const story=state.sid?atlas.story(state.sid):[];
   const materials=state.sid?atlas.materialStory(state.sid):[],row=atlas.materialAt(state.sid,state.exam)||materials.at(-1);

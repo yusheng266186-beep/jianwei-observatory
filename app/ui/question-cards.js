@@ -1,7 +1,7 @@
-import {esc,number,integer,percent} from './html.js?v=runtime-v38';
-import {valid} from '../engine/metrics.js?v=runtime-v38';
-import {questionNumbers} from '../engine/paper-structure.js?v=runtime-v38';
-import {scoreTone,scoreStyle} from './score-tones.js?v=runtime-v38';
+import {esc,number,integer,percent} from './html.js?v=runtime-v39';
+import {valid} from '../engine/metrics.js?v=runtime-v39';
+import {questionNumbers} from '../engine/paper-structure.js?v=runtime-v39';
+import {scoreTone,scoreStyle} from './score-tones.js?v=runtime-v39';
 
 export function questionCard(q,{records,threshold,selected=false}) {
   const measured=valid(q.rate),normal=measured&&q.rate>=0&&q.rate<=1;

@@ -1,5 +1,5 @@
-import {pdfDefinition} from './print-document.js?v=runtime-v38';
-import {reportFontManifest,cachedFontFile,prepareReportFonts} from './report-fonts.js?v=runtime-v38';
+import {pdfDefinition} from './print-document.js?v=runtime-v39';
+import {reportFontManifest,cachedFontFile,prepareReportFonts} from './report-fonts.js?v=runtime-v39';
 let engineReady;
 async function engine(){
  if(!engineReady){const attempt=(async()=>{
