@@ -1,4 +1,5 @@
 'use strict';
+const {completionUsage,incompleteCompletion}=require('./completion-diagnostics.cjs');
 const {request}=require('./tencent.cjs'),{routes}=require('./model-control.cjs'),{adaptModelBody}=require('./model-adapter.cjs'),{USER_AGENT,readCompletion}=require('./kimi.cjs');
 function upstreamError(response,key){
  let detail;try{detail=JSON.parse(response.body).error;}catch{}
@@ -25,12 +26,13 @@ function parseStream(source,protocol){
    }
   }
  }
- if(!done||!['stop','end_turn'].includes(finish)||!output.trim())throw new Error('MODEL_INCOMPLETE');
- return {output,usage:{input:usage.input_tokens||usage.promptTokenCount||0,output:usage.output_tokens||usage.candidatesTokenCount||0,thinking:usage.output_tokens_details?.reasoning_tokens||usage.thoughtsTokenCount||0}};
+ if(!done||!['stop','end_turn'].includes(finish)||!output.trim())throw incompleteCompletion({protocol,finish,done,output,usage});
+ return {output,usage:completionUsage(usage)};
 }
 function parseResponse(response,protocol){
  if(String(response.body).trimStart().startsWith('{')){
   let data;try{data=JSON.parse(response.body);}catch{throw new Error('MODEL_BAD_RESPONSE');}
+  if(protocol==='gemini'){const candidate=data.candidates?.[0],output=(candidate?.content?.parts||[]).filter(p=>!p.thought&&typeof p.text==='string').map(p=>p.text).join('');if(candidate?.finishReason!=='STOP'||!output.trim())throw incompleteCompletion({protocol,finish:candidate?.finishReason,done:!!candidate?.finishReason,output,usage:data.usageMetadata});return {output,usage:completionUsage(data.usageMetadata)};}
   const content=protocol==='anthropic'?data.content:protocol==='responses'?(data.output||[]).filter(x=>x.type==='message').flatMap(x=>x.content||[]):null;
   const output=content?content.filter(x=>['text','output_text'].includes(x.type)).map(x=>x.text||'').join(''):data.choices?.[0]?.message?.content;
   if(!output||(protocol==='anthropic'?data.stop_reason!=='end_turn':protocol==='responses'?data.status!=='completed':data.choices?.[0]?.finish_reason!=='stop'))throw new Error('MODEL_INCOMPLETE');

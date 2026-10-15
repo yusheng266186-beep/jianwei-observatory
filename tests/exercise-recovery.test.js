@@ -17,3 +17,5 @@ test('已接收后过期或删除的插图不自动重新提交，只有未确�
  for(const job of [{status:'queued'},{status:'running'},{status:'unconfirmed',acceptedAt:100}])assert.equal(exerciseImageRecovery(job,'JOB_NOT_FOUND'),'failed');
  assert.equal(exerciseImageRecovery({status:'unconfirmed'},'JOB_NOT_FOUND'),'replay');assert.equal(exerciseImageRecovery({status:'submitting'},'JOB_REMOVED'),'failed');assert.equal(exerciseImageRecovery({status:'running'},'NETWORK_TIMEOUT'),'wait');
 });
+import {mergeJobSnapshot,jobSnapshotCurrent} from '../app/engine/exercise-jobs.js';
+test('继续题组后，旧失败查询不能覆盖新任务状态',()=>{const record={status:'running',resumeAvailable:false,groupRevision:4};assert(!jobSnapshotCurrent(record,{status:'failed',groupRevision:2}));assert.equal(mergeJobSnapshot(record,{status:'failed',groupRevision:2}),false);assert.equal(record.status,'running');mergeJobSnapshot(record,{status:'ready',groupRevision:5,completedQuestions:6});assert.equal(record.status,'ready');assert.equal(record.groupRevision,5);});
