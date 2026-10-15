@@ -1,3 +1,4 @@
+import {validateExerciseDiagram,exerciseDiagramSchema} from './exercise-diagrams.mjs';
 // Shared browser/server boundary. Student identity never belongs in this request.
 export const EXERCISE_VERSION=1;
 export const EXERCISE_SUBJECTS=[
@@ -36,8 +37,12 @@ const levels=['基础','巩固','迁移'],types=['填空','选择','多选','解
 const text=(v,max)=>typeof v==='string'&&v.trim().length>0&&v.length<=max;
 const keys=(o,allowed)=>o&&typeof o==='object'&&!Array.isArray(o)&&Object.keys(o).every(k=>allowed.includes(k));
 export function validateExerciseRequest(value){
- if(!keys(value,['subject','grade','curriculum','focus','count','minutes','difficulty','evidence'])||!EXERCISE_SUBJECTS.some(s=>s.id===value.subject)||value.grade!=='高三'||!text(value.curriculum,160)||!text(value.focus,500)||!Number.isInteger(value.count)||value.count<3||value.count>8||!Number.isInteger(value.minutes)||value.minutes<5||value.minutes>60||!difficultyProfile(value.difficulty)||!Array.isArray(value.evidence)||value.evidence.length>12)throw new Error('请确认学科、训练重点、教材范围、3–8题及5–60分钟。');
- for(const e of value.evidence)if(!keys(e,['label','knowledge','score','max'])||!text(e.label,60)||typeof e.knowledge!=='string'||e.knowledge.length>200||typeof e.score!=='number'||!Number.isFinite(e.score)||typeof e.max!=='number'||!Number.isFinite(e.max)||e.max<=0||e.score<0||e.score>e.max)throw new Error('训练依据只接受明确满分、有效得分的匿名得分项。');
+ if(!keys(value,['subject','grade','curriculum','focus','count','minutes','difficulty','evidence','basis','visuals','template'])||!EXERCISE_SUBJECTS.some(s=>s.id===value.subject)||value.grade!=='高三'||!text(value.curriculum,160)||!text(value.focus,500)||!Number.isInteger(value.count)||value.count<3||value.count>12||!Number.isInteger(value.minutes)||value.minutes<5||value.minutes>90||!difficultyProfile(value.difficulty)||!Array.isArray(value.evidence)||value.evidence.length>24)throw new Error('请确认学科、训练重点、教材范围、3–12题及5–90分钟。');
+ for(const e of value.evidence)if(!keys(e,['label','knowledge','score','max','exam'])||!text(e.label,60)||typeof e.knowledge!=='string'||e.knowledge.length>200||typeof e.score!=='number'||!Number.isFinite(e.score)||typeof e.max!=='number'||!Number.isFinite(e.max)||e.max<=0||e.score<0||e.score>e.max)throw new Error('训练依据只接受明确满分、有效得分的匿名得分项。');
+ if(value.evidence.some(e=>e.exam!==undefined&&(!Number.isInteger(e.exam)||e.exam<1||e.exam>6)))throw new Error('考试依据编号无效。');
+ if(value.visuals!==undefined&&!['vector','hybrid','none'].includes(value.visuals))throw new Error('图示策略无效。');
+ if(value.template!==undefined&&!['targeted','variation','retest'].includes(value.template))throw new Error('训练模板无效。');
+ if(value.basis!==undefined){const b=value.basis;if(!keys(b,['mode','examCount','weakPoints'])||!['latest','common','manual'].includes(b.mode)||!Number.isInteger(b.examCount)||b.examCount<0||b.examCount>6||!Array.isArray(b.weakPoints)||b.weakPoints.length>10)throw new Error('考试分析范围无效。');for(const g of b.weakPoints)if(!keys(g,['knowledge','examCount','score','max','items'])||!text(g.knowledge,200)||!Number.isInteger(g.examCount)||g.examCount<1||g.examCount>b.examCount||!Number.isInteger(g.items)||g.items<1||!Number.isFinite(g.score)||!Number.isFinite(g.max)||g.max<=0||g.score<0||g.score>=g.max)throw new Error('共性薄弱点依据无效。');if(b.mode==='common'&&(b.examCount<2||!b.weakPoints.length||b.weakPoints.some(g=>g.examCount<2)))throw new Error('至少选择两次有共同知识点失分的考试。');}
  return structuredClone(value);
 }
 export function validateExerciseResult(value,request){
@@ -49,7 +54,8 @@ export function validateExerciseResult(value,request){
  if(!keys(value,['title','objective','questions'])||!text(value.title,100)||!text(value.objective,500)||!Array.isArray(value.questions)||value.questions.length!==request.count)throw new Error('题目数量或训练目标不完整。');
  const stems=new Set();
  for(const [i,q] of value.questions.entries()){
-  if(!keys(q,['id','level','type','stem','choices','answer','analysis','points','maxScore','minutes'])||q.id!==i+1||!levels.includes(q.level)||!types.includes(q.type)||!text(q.stem,3000)||!text(q.answer,2000)||!text(q.analysis,4000)||!Array.isArray(q.choices)||!Array.isArray(q.points)||!q.points.length||q.points.length>8||q.points.some(p=>!text(p,300))||!Number.isInteger(q.maxScore)||q.maxScore<1||q.maxScore>25||!Number.isInteger(q.minutes)||q.minutes<1||q.minutes>30)throw new Error('第'+(i+1)+'题的题干、答案、解析或评分点不完整。');
+  if(!keys(q,['id','level','type','stem','choices','answer','analysis','points','maxScore','minutes','diagram'])||q.id!==i+1||!levels.includes(q.level)||!types.includes(q.type)||!text(q.stem,3000)||!text(q.answer,2000)||!text(q.analysis,4000)||!Array.isArray(q.choices)||!Array.isArray(q.points)||!q.points.length||q.points.length>8||q.points.some(p=>!text(p,300))||!Number.isInteger(q.maxScore)||q.maxScore<1||q.maxScore>25||!Number.isInteger(q.minutes)||q.minutes<1||q.minutes>30)throw new Error('第'+(i+1)+'题的题干、答案、解析或评分点不完整。');
+  if(q.diagram)q.diagram=validateExerciseDiagram(q.diagram);
   const choice=['选择','多选'].includes(q.type);
   if(choice&&(q.choices.length!==4||q.choices.some(c=>!text(c,1000))||new Set(q.choices).size!==4||!(q.type==='选择'?/^[ABCD]$/:/^(?:AB|AC|AD|BC|BD|CD|ABC|ABD|ACD|BCD|ABCD)$/).test(q.answer)))throw new Error('第'+(i+1)+'题的选项或答案不符合题型要求。');
   if(!choice&&q.choices.length)throw new Error('非选择题不能附带选项。');
@@ -70,4 +76,4 @@ export function exerciseEvidence(atlas,{sid,exam,plan,subject='数学'}={}){
  const questions=selected.length?selected:atlas.questionsFor(row,subject);
  return questions.filter(q=>typeof q.score==='number'&&Number.isFinite(q.score)&&typeof q.max==='number'&&Number.isFinite(q.max)&&q.max>0&&q.score>=0&&q.score<=q.max&&q.score<q.max).sort((a,b)=>a.score/a.max-b.score/b.max).slice(0,12).map(q=>({label:String(q.label),knowledge:String(q.knowledge||'').replace(/^知识点未标注$/,''),score:q.score,max:q.max}));
 }
-export const exerciseSchema={type:'object',additionalProperties:false,required:['title','objective','questions'],properties:{title:{type:'string'},objective:{type:'string'},questions:{type:'array',items:{type:'object',additionalProperties:false,required:['id','level','type','stem','choices','answer','analysis','points','maxScore','minutes'],properties:{id:{type:'integer'},level:{type:'string',enum:levels},type:{type:'string',enum:types},stem:{type:'string'},choices:{type:'array',items:{type:'string'}},answer:{type:'string'},analysis:{type:'string'},points:{type:'array',items:{type:'string'}},maxScore:{type:'integer'},minutes:{type:'integer'}}}}}};
+export const exerciseSchema={type:'object',additionalProperties:false,required:['title','objective','questions'],properties:{title:{type:'string'},objective:{type:'string'},questions:{type:'array',items:{type:'object',additionalProperties:false,required:['id','level','type','stem','choices','answer','analysis','points','maxScore','minutes'],properties:{id:{type:'integer'},level:{type:'string',enum:levels},type:{type:'string',enum:types},stem:{type:'string'},choices:{type:'array',items:{type:'string'}},answer:{type:'string'},analysis:{type:'string'},points:{type:'array',items:{type:'string'}},maxScore:{type:'integer'},minutes:{type:'integer'},diagram:exerciseDiagramSchema}}}}};

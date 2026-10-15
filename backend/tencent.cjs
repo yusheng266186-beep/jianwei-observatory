@@ -25,6 +25,6 @@ async function cos(host,path,{method='GET',body='',headers={},auth=credentials()
  const httpString=method.toLowerCase()+'\n'+pathname+'\n'+queryString+'\n'+headerString+'\n',signKey=hmac(auth.SecretKey,keyTime,'sha1','hex');
  const signature=hmac(signKey,'sha1\n'+keyTime+'\n'+hash(httpString,'sha1')+'\n','sha1','hex');
  const authorization='q-sign-algorithm=sha1&q-ak='+auth.SecretId+'&q-sign-time='+keyTime+'&q-key-time='+keyTime+'&q-header-list='+names.join(';')+'&q-url-param-list='+queryNames.join(';')+'&q-signature='+signature;
- return request('https://'+host+path,{method,body,headers:{...all,Authorization:authorization},maxBytes:1024*1024});
+ return request('https://'+host+path,{method,body,headers:{...all,Authorization:authorization},maxBytes:6*1024*1024});
 }
 module.exports={request,cloud,cos,credentials,hash};

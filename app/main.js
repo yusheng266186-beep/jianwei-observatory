@@ -563,7 +563,7 @@ async function openExercises(context={}){
   if(planDraft.training.key!==key)setPlanValue('training.key',key);
   planDraft.subject=subject;planDraft.training.key=key;planDraft.training.exercise=record;planDraft.training.goal=record.request.focus;planDraft.training.count=record.sheet.questions.length;planDraft.schedule.duration=record.request.minutes;rememberPlanDraft();drawPlan();showDialog(document.getElementById('plan-dialog'));notify('已加入训练草稿，请确认日期与复核安排后保存。');
  }}));exerciseStudioTask=task;task.catch(()=>{if(exerciseStudioTask===task)exerciseStudioTask=null;});}
- const studio=await exerciseStudioTask,sid=context.sid||planDraft?.sid,exam=context.exam||planDraft?.exam||atlas.latest;await studio.open({sid,exam,subject:context.subject,plan:planDraft?.sid===sid&&planDraft.exam===exam?planDraft:null});
+ const studio=await exerciseStudioTask,sid=context.hub?null:context.sid||planDraft?.sid,exam=context.exam||planDraft?.exam||atlas.latest;await studio.open({sid,exam,subject:context.subject,plan:!context.hub&&planDraft?.sid===sid&&planDraft.exam===exam?planDraft:null});
 }
 const planPaths=new Set(['sid','exam','teacher','note','reviewDate','result','review.correct','review.total','training.key','training.tasks','training.method','training.count','training.targetRate','training.goal','schedule.date','schedule.slot','schedule.period','schedule.time','schedule.duration','ui.no','ui.search','ui.questionFilter','ui.knowledge']);
 function rememberPlanDraft(){if(!remember('followDraft',planDraft?{plan:planDraft,ui:planUI}:null))notify('训练草稿本机保存未完成，当前页面仍保留，请保存计划或下载备份');}
@@ -623,6 +623,7 @@ async function commands(event) {
   const d=b.dataset,state=books[current];
   if(/^(plan-|follow-|notebook-|reading-)|^(clear|undo|undo-action|capture)$/.test(d.cmd))invalidateViews();
   try {
+    if(d.cmd==='exercise-hub'){await openExercises({hub:true});return;}
     if(d.cmd==='exercise-open'){await openExercises(d);return;}
     if(d.cmd.startsWith('plan-')){
       if(d.cmd==='plan-open')openPlan(d);

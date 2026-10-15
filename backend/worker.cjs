@@ -1,11 +1,11 @@
 'use strict';
-const {COSStore}=require('./store.cjs'),{generate}=require('./generator.cjs');
-async function run(event,{store=new COSStore(),generator=generate,now=Date.now}={}){
+const {COSStore}=require('./store.cjs'),{generate}=require('./generator.cjs'),{generateIllustration}=require('./illustration.cjs');
+async function run(event,{store=new COSStore(),generator=generate,illustrator=generateIllustration,now=Date.now}={}){
  if(!event||!/^jobs\/[a-f0-9]{32}\/[a-f0-9-]{36}$/.test(event.key||''))throw new Error('INVALID_JOB_EVENT');
  const found=await store.get(event.key+'/meta.json'),job=found?.value;if(!job||job.deadline<now())return {skipped:true};
  if(!await store.create(event.key+'/run.json',{startedAt:now()}))return {skipped:true};
- try{const result=await generator(job.input);await store.create(event.key+'/result.json',{...result,status:'ready',finishedAt:now()});return {ok:true};}
- catch(error){const code=['MODEL_RATE_LIMIT','MODEL_INCOMPLETE','MODEL_CONTENT_INVALID','MODEL_REQUEST_FAILED','NETWORK_TIMEOUT'].includes(error.message)?error.message:'GENERATION_FAILED';await store.create(event.key+'/result.json',{status:'failed',error:code,finishedAt:now()});return {ok:false};}
+ try{let result;if(job.type==='illustration'){const parent=event.key.slice(0,event.key.lastIndexOf('/'))+'/'+job.input.sourceId,source=await store.get(parent+'/result.json'),diagram=source?.value.sheet?.questions.find(q=>q.id===job.input.questionId)?.diagram;if(diagram?.kind!=='illustration')throw new Error('IMAGE_SOURCE_INVALID');result={image:await illustrator(diagram),sourceId:job.input.sourceId,questionId:job.input.questionId,model:'gpt-image-2'};}else result=await generator(job.input);await store.create(event.key+'/result.json',{...result,status:'ready',finishedAt:now()});return {ok:true};}
+ catch(error){const code=['MODEL_RATE_LIMIT','MODEL_INCOMPLETE','MODEL_CONTENT_INVALID','MODEL_REQUEST_FAILED','NETWORK_TIMEOUT','IMAGE_NOT_CONFIGURED','IMAGE_RATE_LIMIT','IMAGE_REQUEST_FAILED','IMAGE_RESPONSE_INVALID','IMAGE_SOURCE_INVALID','IMAGE_UNAVAILABLE','IMAGE_URL_REJECTED'].includes(error.message)?error.message:'GENERATION_FAILED';await store.create(event.key+'/result.json',{status:'failed',error:code,finishedAt:now()});return {ok:false};}
 }
 async function handle(event,options={}){
  if(!Array.isArray(event?.Records))return run(event,options);

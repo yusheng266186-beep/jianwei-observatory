@@ -53,6 +53,12 @@ export function prepareReportFonts(definition,manifest) {
     if(Array.isArray(value))return value.map(v=>node(v,inheritedBold));
     const styles=Array.isArray(value.style)?value.style:[value.style],styleBold=styles.reduce((bold,name)=>definition.styles?.[name]?.bold??bold,inheritedBold),bold=value.bold??styleBold;
     const result={...value};
+    if(value.svgTextFonts&&typeof value.svg==='string'){
+      const decode=text=>text.replace(/&(?:amp|lt|gt|quot|apos);/g,entity=>({'&amp;':'&','&lt;':'<','&gt;':'>','&quot;':'"','&apos;':"'"}[entity]));
+      const encode=text=>text.replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[char]));
+      result.svg=value.svg.replace(/<text\b([^>]*)>([^<]*)<\/text>/g,(_,attrs,text)=>'<text'+attrs+'>'+runs(decode(text),bold).map(run=>'<tspan font-family="'+run.font+'">'+encode(run.text)+'</tspan>').join('')+'</text>');
+      delete result.svgTextFonts;
+    }
     if(value.font==='Report')result.font='Report-core';
     if(Object.hasOwn(value,'text'))result.text=Array.isArray(value.text)?value.text.map(v=>node(v,bold)):runs(value.text,bold);
     for(const key of ['content','stack','columns'])if(value[key])result[key]=value[key].map(v=>node(v,bold));
