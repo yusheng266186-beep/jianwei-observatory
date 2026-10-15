@@ -15,7 +15,7 @@ function snapshot(selection,env=process.env){
  if(!route||!route.catalog.includes(model)||!['eco','standard','deep'].includes(effort))throw fail('MODEL_SELECTION_INVALID');
  if(!configured(provider,env))throw fail('MODEL_NOT_CONFIGURED');
  const profile=modelProfile(provider,model),efforts=profile?.efforts||(provider==='kimi-code'?{deep:'max'}:{deep:'high'});if(!Object.hasOwn(efforts,effort))throw fail('MODEL_SELECTION_INVALID');const reasoningEffort=efforts[effort];
- return {provider,model,effort,reasoningEffort,protocol:route.protocol,base:route.url,credentialRef:route.key,profileVersion:profiles.version,timeoutMs:915000,...(profile?{adapterProfile:structuredClone(profile)}:{})};
+ return {provider,model,effort,reasoningEffort,protocol:route.protocol,base:route.url,credentialRef:route.key,profileVersion:profiles.version,timeoutMs:885000,...(profile?{adapterProfile:structuredClone(profile)}:{})};
 }
 function defaultSelection(env=process.env){const provider=env.TRAINING_PROVIDER||'gemini';return {provider,model:routes[provider]?.model||'k3',effort:'deep'};}
 function publicCatalog(env=process.env){return Object.entries(routes).map(([id,r])=>({id,label:r.label,defaultModel:r.model,protocol:r.protocol,configured:configured(id,env),models:r.catalog.map(model=>{const p=modelProfile(id,model);return {id:model,name:p?.name||(id==='kimi-code'?'Kimi K3':id==='gemini'?'Gemini 3.8 Flash':model),efforts:p?.efforts||(id==='kimi-code'?{deep:'max'}:{deep:'high'}),note:p?.note||''};})}));}

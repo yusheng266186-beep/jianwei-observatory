@@ -2,7 +2,7 @@
 const {request}=require('./tencent.cjs'),{routes}=require('./model-control.cjs'),{adaptModelBody}=require('./model-adapter.cjs'),{USER_AGENT,readCompletion}=require('./kimi.cjs');
 function upstreamError(response,key){
  let detail;try{detail=JSON.parse(response.body).error;}catch{}
- const message=String(detail?.message||''),code=detail?.code==='subscription_expired'?'MODEL_SUBSCRIPTION_EXPIRED':/insufficient (?:credits|balance)|余额不足/i.test(message)?'MODEL_BALANCE_REQUIRED':response.status===401||response.status===403?'MODEL_AUTH_FAILED':response.status===429?'MODEL_RATE_LIMIT':'MODEL_REQUEST_FAILED';
+ const message=String(detail?.message||''),code=detail?.code==='subscription_expired'?'MODEL_SUBSCRIPTION_EXPIRED':/insufficient (?:credits|balance)|余额不足/i.test(message)?'MODEL_BALANCE_REQUIRED':response.status===401||response.status===403?'MODEL_AUTH_FAILED':response.status===429?'MODEL_RATE_LIMIT':[408,504,524].includes(response.status)?'MODEL_UPSTREAM_TIMEOUT':'MODEL_REQUEST_FAILED';
  return Object.assign(new Error(code),{diagnostic:{kind:'upstream',status:response.status,message:String(response.body).replaceAll(key,'[REDACTED]').slice(0,4000)}});
 }
 function parseStream(source,protocol){
@@ -42,9 +42,10 @@ async function completeRemote(prompt,generation,{key,transport=request,probe=fal
  const route=routes[generation.provider];if(!route||route.url!==generation.base||route.protocol!==generation.protocol||!route.catalog.includes(generation.model)||!key)throw new Error('MODEL_NOT_CONFIGURED');
  const body=adaptModelBody({messages:[{role:'system',content:prompt.system},{role:'user',content:JSON.stringify(prompt.input)}],max_tokens:probe?256:32768,effort:generation.effort},{name:generation.provider,model:generation.model},generation.effort,{profile:generation.adapterProfile,probe});
  const suffix=route.protocol==='anthropic'?'/v1/messages':route.protocol==='responses'?'/responses':'/chat/completions';
- const response=await transport(route.url.replace(/\/$/,'')+suffix,{method:'POST',body:JSON.stringify(body),headers:{'Content-Type':'application/json','User-Agent':USER_AGENT,...(route.protocol==='anthropic'?{'x-api-key':key,'anthropic-version':'2023-06-01'}:{Authorization:'Bearer '+key})},timeout:probe?45000:840000,deadlineMs:probe?45000:840000,maxBytes:8*1024*1024,signal,...(onProgress?{onChunk:require('./progress.cjs').streamProgress(route.protocol,onProgress)}:{})});
+ const reader=require('./stream-reader.cjs').createStreamReader(route.protocol),progress=onProgress?require('./progress.cjs').streamProgress(route.protocol,onProgress):null;
+ const response=await transport(route.url.replace(/\/$/,'')+suffix,{method:'POST',body:JSON.stringify(body),headers:{'Content-Type':'application/json','User-Agent':USER_AGENT,...(route.protocol==='anthropic'?{'x-api-key':key,'anthropic-version':'2023-06-01'}:{Authorization:'Bearer '+key})},timeout:probe?45000:840000,deadlineMs:probe?45000:840000,maxBytes:64*1024*1024,collectBody:false,signal,onChunk:chunk=>{reader.write(chunk);progress?.(chunk);}});
  if(response.status!==200)throw upstreamError(response,key);
- return {...parseResponse(response,route.protocol),model:generation.model,provider:generation.provider,reasoningEffort:generation.reasoningEffort};
+ return {...parseResponse(reader.received?{...response,body:reader.finish()}:response,route.protocol),model:generation.model,provider:generation.provider,reasoningEffort:generation.reasoningEffort};
 }
 async function probeModel(generation,{env=process.env,transport=request}={}){
  const started=Date.now(),prompt={system:'只输出JSON对象，字段value为整数。计算37乘19，不输出解释。禁止Markdown和代码围栏，回复首字符必须为{，末字符必须为}。',input:{task:'37×19'},schema:{type:'object',properties:{value:{type:'integer'}},required:['value'],additionalProperties:false}};

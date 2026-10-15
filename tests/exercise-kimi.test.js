@@ -18,7 +18,7 @@ test('Kimi rejects interrupted or truncated streams, invalid JSON and incomplete
  }
 });
 test('Kimi connection errors redact keys and unsupported endpoint kinds fail before network access',async()=>{
- const key='private-test-credential',prompt=await generator.buildExercisePrompt(input);await assert.rejects(kimi.completeKimi(prompt,{key,transport:async()=>({status:403,body:'denied '+key})}),error=>error.message==='MODEL_REQUEST_FAILED'&&error.diagnostic.status===403&&!error.diagnostic.message.includes(key));assert.throws(()=>kimi.kimiProfile('untrusted'),/MODEL_ENDPOINT_INVALID/);assert.equal(generator.generationProfile('kimi-platform').timeoutMs,915000);assert.equal(generator.generationProfile('gemini').timeoutMs,450000);
+ const key='private-test-credential',prompt=await generator.buildExercisePrompt(input);await assert.rejects(kimi.completeKimi(prompt,{key,transport:async()=>({status:403,body:'denied '+key})}),error=>error.message==='MODEL_REQUEST_FAILED'&&error.diagnostic.status===403&&!error.diagnostic.message.includes(key));assert.throws(()=>kimi.kimiProfile('untrusted'),/MODEL_ENDPOINT_INVALID/);assert.equal(generator.generationProfile('kimi-platform').timeoutMs,885000);assert.equal(generator.generationProfile('gemini').timeoutMs,885000);
 });
 
 test('Moonshot schema supplies types inside question alternatives without changing the source contract',async()=>{

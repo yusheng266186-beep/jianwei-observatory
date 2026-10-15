@@ -2,12 +2,12 @@
 const https=require('node:https'),crypto=require('node:crypto');
 const hash=(value,algorithm='sha256')=>crypto.createHash(algorithm).update(value).digest('hex');
 const hmac=(key,value,algorithm='sha256',encoding)=>crypto.createHmac(algorithm,key).update(value).digest(encoding);
-function request(url,{method='GET',headers={},body='',timeout=30000,deadlineMs=0,maxBytes=1024*1024,onChunk,signal}={}){
+function request(url,{method='GET',headers={},body='',timeout=30000,deadlineMs=0,maxBytes=1024*1024,onChunk,signal,collectBody=true}={}){
  return new Promise((resolve,reject)=>{
   const target=new URL(url);if(target.protocol!=='https:')return reject(new Error('HTTPS_REQUIRED'));
   let deadline,abort;const finish=(error,result)=>{clearTimeout(deadline);if(abort)signal?.removeEventListener('abort',abort);if(error)reject(error);else resolve(result);};
   const req=https.request(target,{method,headers:{...headers,...(body?{'Content-Length':Buffer.byteLength(body)}:{})}},res=>{
-   let bytes=0,chunks=[];res.on('data',chunk=>{bytes+=chunk.length;if(bytes>maxBytes){res.destroy(new Error('RESPONSE_LIMIT'));return;}chunks.push(chunk);if(res.statusCode===200&&onChunk){try{onChunk(chunk);}catch(error){req.destroy(error);}}});
+   let bytes=0,chunks=[];res.on('data',chunk=>{bytes+=chunk.length;if(bytes>maxBytes){res.destroy(new Error('RESPONSE_LIMIT'));return;}if(collectBody||res.statusCode!==200)chunks.push(chunk);if(res.statusCode===200&&onChunk){try{onChunk(chunk);}catch(error){req.destroy(error);}}});
    res.on('end',()=>finish(null,{status:res.statusCode,headers:res.headers,body:Buffer.concat(chunks).toString('utf8')}));
    res.on('error',error=>finish(error));res.on('aborted',()=>finish(new Error('NETWORK_INTERRUPTED')));
   });
