@@ -67,6 +67,7 @@ export function validateExerciseResult(value,request){
   if(q.diagram)validateExerciseDiagram(q.diagram);
   for(const [label,values] of [['题干',[q.stem]],['答案',[q.answer]],['解析',[q.analysis]],['选项',q.choices],['评分点',q.points]])if(values.some(s=>typeof s==='string'&&!formatted(s)))throw new Error('第'+(i+1)+'题的'+label+'未按约定输出公式或正文格式。');
   const choice=['选择','多选'].includes(q.type);
+  if(request.examStyle==='sichuan-gaokao'&&choice&&q.points.length!==1)throw new Error('第'+(i+1)+'题的客观题评分须按选项计分，不拆分解题过程。');
   if(choice&&(q.choices.length!==4||q.choices.some(c=>!text(c,1000))||new Set(q.choices).size!==4||!(q.type==='选择'?/^[ABCD]$/:/^(?:AB|AC|AD|BC|BD|CD|ABC|ABD|ACD|BCD|ABCD)$/).test(q.answer)))throw new Error('第'+(i+1)+'题的选项或答案不符合题型要求。');
   if(!choice&&q.choices.length)throw new Error('非选择题不能附带选项。');
   const stem=q.stem.replace(/\s/g,'');if(stems.has(stem))throw new Error('练习中存在重复题目。');stems.add(stem);
