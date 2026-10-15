@@ -3,14 +3,14 @@ import {exerciseParagraph,exerciseLineWidth} from './exercise-math.js';
 import {validateExerciseResult,difficultyProfile,exerciseTypeLabel} from '../engine/exercise-contract.js';
 import {exerciseDiagramSVG} from './exercise-diagram.js';
 import {exercisePrintSections} from '../engine/exercise-print.js';
-import {exerciseOutputs} from './exercise-output-cache.js';
+import {exerciseFile} from './exercise-file-cache.js';
 // A zero-padding row keeps short blocks together without clipping the first glyph
 // when pdfmake moves a block to the next page. The worker owns this named layout.
 const together=stack=>({table:{widths:['*'],body:[[{stack}]],dontBreakRows:true},layout:'exerciseKeepTogether'});
 export async function exercisePDF(record,{teacher=false,name='',classNo=''}={}){
  if(!record.reviewedAt)throw new Error('请完成审题确认后输出正式练习。');
- const sheet=validateExerciseResult(record.sheet,record.request),key=JSON.stringify([record.request,sheet,teacher,name,classNo]);
- return exerciseOutputs.get(key,()=>buildExercisePDF(structuredClone(record),{teacher,name,classNo}));
+ const sheet=validateExerciseResult(record.sheet,record.request),key=JSON.stringify(['pdf-v3',record.request,sheet,teacher,name,classNo]);
+ const snapshot=structuredClone(record);return exerciseFile(key,()=>buildExercisePDF(snapshot,{teacher,name,classNo}));
 }
 async function buildExercisePDF(record,{teacher,name,classNo}){
  const sheet=record.sheet,content=[],subject=record.request.subject;

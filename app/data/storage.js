@@ -32,21 +32,25 @@ export async function access(key,value,write=false,name=DB,table=TABLE,entries=n
  });
 }
 let writes=Promise.resolve();
-export function write(entries){const snapshot=structuredClone(entries),operation=writes.then(()=>access(null,null,true,DB,TABLE,snapshot));writes=operation.catch(()=>{});return operation;}
-export function writePrepared(entries){const ready=Promise.resolve(entries);ready.catch(()=>{});const operation=writes.then(async()=>access(null,null,true,DB,TABLE,await ready));writes=operation.catch(()=>{});return operation;}
+function savedHint(entries){const data=entries.find(([key])=>key==='dataset')?.[1];if(data)remember('workspacePresent',Boolean(data.scores?.length||data.answers?.length||data.lines?.length||Object.keys(data.banks||{}).length));}
+export function write(entries){const snapshot=structuredClone(entries),operation=writes.then(()=>access(null,null,true,DB,TABLE,snapshot)).then(result=>{savedHint(snapshot);return result;});writes=operation.catch(()=>{});return operation;}
+export function writePrepared(entries){const ready=Promise.resolve(entries);ready.catch(()=>{});const operation=writes.then(async()=>{const entries=await ready,result=await access(null,null,true,DB,TABLE,entries);savedHint(entries);return result;});writes=operation.catch(()=>{});return operation;}
 export async function readWorkspace(){
  let current=null;try{current=await access(['dataset','prepared']);}catch{}
  if(current?.dataset)return {dataset:current.dataset,prepared:current.prepared?.version===PREPARED_VERSION,stamp:current.prepared?.stamp??null,origin:'saved'};
- if(STORAGE_SCOPE)return {dataset:null,prepared:false,origin:'empty'};
+ if(STORAGE_SCOPE){remember('workspacePresent',false);return {dataset:null,prepared:false,origin:'empty'};}
  try{const legacy=await access('dataset',null,false,'jianwei-local','workspace');if(legacy)return {dataset:legacy,prepared:false,origin:'migrated'};}catch{}
- return {dataset:null,prepared:false,origin:'empty'};
+ remember('workspacePresent',false);return {dataset:null,prepared:false,origin:'empty'};
+}
+function containsKey(db,table,key){
+ if(!db.objectStoreNames.contains(table)){db.close();return Promise.resolve(false);}
+ return new Promise((resolve,reject)=>{let done=false,saved=false,tx;const timer=setTimeout(()=>{try{tx?.abort();}catch{}finish(new Error('本机材料检查超时'));},4500);function finish(error){if(done)return;done=true;clearTimeout(timer);db.close();error?reject(error):resolve(saved);}try{tx=db.transaction(table,'readonly');const req=tx.objectStore(table).getKey(key);req.onsuccess=()=>{saved=req.result!==undefined;};tx.oncomplete=()=>finish();tx.onerror=()=>finish(tx.error||new Error('本机材料暂时无法读取'));tx.onabort=()=>finish(tx.error||new Error('本机材料检查已取消'));}catch(error){finish(error);}});
 }
 export async function inspectWorkspace(){
- const db=await open();
- const saved=await new Promise((resolve,reject)=>{const tx=db.transaction(TABLE,'readonly'),request=tx.objectStore(TABLE).getKey('dataset');request.onsuccess=()=>resolve(request.result!==undefined);request.onerror=()=>reject(request.error);tx.oncomplete=()=>db.close();});
- if(saved)return {stored:true,origin:'saved'};
+ const saved=await containsKey(await open(),TABLE,'dataset');
+ if(saved){remember('workspacePresent',true);return {stored:true,origin:'saved'};}
  if(STORAGE_SCOPE)return {stored:false,origin:'empty'};
- try{const db=await open('jianwei-local');if(!db.objectStoreNames.contains('workspace')){db.close();return {stored:false,origin:'empty'};}const legacy=await new Promise((resolve,reject)=>{const tx=db.transaction('workspace','readonly'),r=tx.objectStore('workspace').getKey('dataset');r.onsuccess=()=>resolve(r.result!==undefined);r.onerror=()=>reject(r.error);tx.oncomplete=()=>db.close();});if(legacy)return {stored:true,origin:'migrated'};}catch{}
+ try{if(await containsKey(await open('jianwei-local'),'workspace','dataset'))return {stored:true,origin:'migrated'};}catch{}
  return {stored:false,origin:'empty'};
 }
 // A concurrent import wins; background migration cannot overwrite newer data.

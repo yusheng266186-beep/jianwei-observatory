@@ -92,3 +92,5 @@ TRAINING_PRIVATE_DIR=/absolute/private/directory node tools/deploy-training.cjs
 教材范围可从学科模块选择，纯选项组成的目标与范围对齐；可快速选择薄弱点、补充要求和作答题型，沿用设置新建时保留输入。阅读理解属于训练内容，单项选择、简答等是作答方式。生成前的逐题Schema安排题号、训练点和所选题型，选择题限定选项与答案形态，简答没有选择项；历史阅读类型兼容保留。生成失败的维护诊断存入私有任务的diagnostic.json，任务查询不返回原始诊断，不自动再次调用模型。
 
 英语版式按完整材料和短答任务优化；预览与打印共用共同材料，保持原文。当前学科模板subject-templates-20261015.9。随机真实流程与186项测试记录见docs/EXERCISE-CONTENT-REFINEMENT-2026-10-15.md。
+
+移动端首屏、教学跟进入口、可复用PDF及两版可编辑Word导出更新见 docs/MOBILE-STARTUP-AND-WORD-2026-10-15.md。本轮云端模板与认证均未改动。

@@ -181,7 +181,8 @@ input::placeholder,textarea::placeholder{color:#6786a6}
 #toast{background:linear-gradient(135deg,#173e62f2,#1c496fe8);border-color:#b9def340;border-radius:15px;box-shadow:inset 0 1px 0 #ffffff24,0 10px 28px -10px #12395959;color:#f8fcff;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
 .scene-status{background:#ffffffb8;border-color:#ffffff;box-shadow:var(--shadow);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
 /* Controls occupy one plane; primary evidence starts near the top. */
-.head-action{gap:7px}.head-action-icon{width:16px;height:16px;flex-shrink:0}.study-save .head-action-label{display:none}
+.head-action{gap:7px}.head-action-icon{width:16px;height:16px;flex-shrink:0}.study-save .scene-head:has(.head-actions>button[data-cmd=exercise-hub]) .head-actions{position:static;flex-wrap:wrap;justify-content:flex-start;width:100%;min-width:0;gap:8px}.scene-head:has(.head-actions>button[data-cmd=exercise-hub]) .overline{min-height:0;margin-bottom:12px}.scene-head:has(.head-actions>button[data-cmd=exercise-hub])>.head-actions>.button{max-width:100%;white-space:normal}.scene-head:has(.head-actions>button[data-cmd=exercise-hub])>.head-actions>[data-cmd=exercise-hub]{flex-basis:100%;min-height:42px}
+ .head-action-label{display:none}
 .scene-toolbar{display:flex;align-items:center;justify-content:space-between;gap:15px;background:#ffffff48;border:1px solid #ffffffa8;border-radius:15px;padding:5px;margin:15px 0 20px;min-width:0}
 .scene-toolbar>.scene-tabs{margin:0;box-shadow:none;background:transparent;min-width:0;padding:0}
 .scene-toolbar>.exam-rail{margin:0;padding:0;max-width:52%;min-width:0}.scene-toolbar .exam-stop{min-height:40px;flex-basis:166px;padding:8px 11px}
@@ -347,6 +348,7 @@ body[data-motion=calm] .welcome-art,body[data-motion=calm] .sheet-dialog[open],b
 
 @media(max-width:760px){
  .scene-head:has(.head-actions>button:nth-child(2)){position:relative}.scene-head:has(.head-actions>button:nth-child(2)) .head-actions{position:absolute;top:0;right:0;gap:5px;flex-wrap:nowrap}.scene-head:has(.head-actions>button:nth-child(2)) .overline{min-height:36px;margin-bottom:4px;align-items:center}
+ .scene-head:has(.head-actions>button[data-cmd=exercise-hub]) .head-actions{position:static;flex-wrap:wrap;justify-content:flex-start;width:100%;min-width:0;gap:8px}.scene-head:has(.head-actions>button[data-cmd=exercise-hub]) .overline{min-height:0;margin-bottom:12px}.scene-head:has(.head-actions>button[data-cmd=exercise-hub])>.head-actions>.button{max-width:100%;white-space:normal}.scene-head:has(.head-actions>button[data-cmd=exercise-hub])>.head-actions>[data-cmd=exercise-hub]{flex-basis:100%;min-height:42px}
  .head-action-label{display:none}.head-actions .head-action{padding:8px;min-height:36px;min-width:36px;border-radius:11px}.head-action-icon{height:16px;width:16px}
  .scene-toolbar{display:grid;grid-template-columns:minmax(0,1fr);gap:3px;padding:4px;margin:12px 0 15px;border-radius:13px}.scene-toolbar>.exam-rail{max-width:100%;gap:5px;padding:0 2px 2px}.scene-toolbar .exam-stop{min-height:36px;flex:1;padding:7px 10px}.scene-toolbar .scene-tabs .chip{font-size:10px;padding:8px 10px;min-height:32px}
  :is(#stage,.scene-leaving-canvas)>.study-return{margin-bottom:8px;min-height:27px}.study-return>span{display:none}
