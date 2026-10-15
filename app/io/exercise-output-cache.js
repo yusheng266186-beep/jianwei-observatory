@@ -9,6 +9,7 @@ export function createExerciseOutputCache({entries=4,maxBytes=8*1024*1024}={}){
    entry={bytes:0};entry.task=new Promise((resolve,reject)=>{try{resolve(build());}catch(error){reject(error);}});saved.set(key,entry);trim();
    entry.task.then(blob=>{if(saved.get(key)!==entry)return;entry.bytes=blob.size||0;bytes+=entry.bytes;trim();},()=>remove(key,entry));return entry.task;
   },
+  remove(predicate){for(const [key,entry] of saved)if(predicate(key))remove(key,entry);},
   clear(){saved.clear();bytes=0;}
  };
 }

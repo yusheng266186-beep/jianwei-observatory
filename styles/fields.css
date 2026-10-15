@@ -1,0 +1,22 @@
+/* One writing surface for searches, forms and editorial notes. Labels belong
+   to the glass surface; embedded editors do not receive a second inner frame. */
+:root{--field-surface:linear-gradient(128deg,#ffffffa6,#f4f9fc63 58%,#e5f0f63b);--field-edge:#8faec234;--field-shadow:inset 0 1px 0 #fffffff0,inset 0 -1px 0 #7c9ab609,0 3px 12px #294c6507}
+body :is(input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=range]):not([type=hidden]):not([type=button]):not([type=submit]),textarea){max-width:100%;min-width:0;box-sizing:border-box;appearance:none;-webkit-appearance:none;border:1px solid var(--field-edge);border-radius:14px;background:var(--field-surface);box-shadow:var(--field-shadow);color:var(--ink,#244861);padding:12px 15px;line-height:1.75;transition:border-color .22s ease,background .22s ease,box-shadow .22s ease;-webkit-tap-highlight-color:transparent}
+body :is(input,textarea)::placeholder{color:#7c93a7;opacity:.8;font-weight:400}
+body :is(input,textarea):focus{outline:0;border-color:#7298b279;box-shadow:var(--field-shadow),0 0 0 3px #789bb511}
+body .field:has(>input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=range]):not([type=hidden]),>textarea){border:1px solid var(--field-edge);border-radius:16px;background:var(--field-surface);box-shadow:var(--field-shadow);padding:12px 16px;gap:5px;min-width:0;transition:border-color .22s ease,background .22s ease,box-shadow .22s ease}
+body .field:has(>input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=range]):not([type=hidden]),>textarea):focus-within{border-color:#7298b279;background:linear-gradient(128deg,#ffffffc7,#f4f9fc83 58%,#e5f0f65a);box-shadow:var(--field-shadow),0 0 0 3px #789bb511}
+body .field:has(>input,>textarea)>:is(input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=range]):not([type=hidden]),textarea){border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;outline:0!important;padding:3px 0!important;width:100%;min-height:29px;margin:0;resize:vertical}
+body .field:has(>textarea)>textarea{min-height:76px;line-height:1.9}
+body .field:has(>input,>textarea)>span{font-size:11px;color:var(--muted,#688298);font-weight:450;line-height:1.6}
+body .field:has(>[aria-invalid=true]){border-color:#a881667d;box-shadow:var(--field-shadow),0 0 0 3px #b88d6810}
+body :is(input,textarea):disabled{cursor:default;opacity:.6}
+body :is(.plan-stepper,.picker-clock) input{background:transparent!important;border:0;box-shadow:none;padding-block:8px}
+body .exercise-writing-card{min-width:0}
+body .exercise-writing-card:has(>textarea){padding:16px 18px}
+body .exercise-writing-card:has(>textarea)>textarea{padding-top:7px!important}
+body[data-surface=paper] .field:has(>input,>textarea){background:#fbfdfe}
+@media(max-width:760px){body .field:has(>input,>textarea){padding:11px 14px;border-radius:14px}body #exercise-dialog :is([data-ai-field],[data-ai-search],[data-ai-code]),body .field>:is(input[type=text],input[type=search],input:not([type]),textarea){font-size:16px}body .exercise-writing-card:has(>textarea){padding:14px 16px}}
+@media(prefers-reduced-motion:reduce){body :is(input,textarea),body .field{transition:none}}
+
+body input.search-input{background:var(--field-surface)!important}body .search>input{border:0!important;background:transparent!important;box-shadow:none!important;padding:0!important;border-radius:0}

@@ -26,7 +26,7 @@ const sourceURLs={name:'source-urls',setup(build){
  Object.assign(result.metafile.outputs,worker.metafile.outputs);
  const entries=Object.fromEntries(Object.entries(result.metafile.outputs).filter(([,v])=>v.entryPoint&&['app/main.js','app/data/storage.js','app/data/prepare-worker.js'].includes(v.entryPoint)).map(([k,v])=>[v.entryPoint,path.relative(path.join(root,'app'),path.join(root,k)).split(path.sep).join('/')]));
  let html=fs.readFileSync(path.join(root,'index.html'),'utf8');
- const sheets=['styles.css',...['journey','glass','reading-fonts','typography','questions','material','reports','controls','question-glass','report-reading','paper-material','runtime','exercises'].map(n=>'styles/'+n+'.css')];
+ const sheets=['styles.css',...['journey','glass','reading-fonts','typography','questions','material','reports','controls','question-glass','report-reading','paper-material','runtime','exercises','fields'].map(n=>'styles/'+n+'.css')];
  const css=await esbuild.build({absWorkingDir:root,stdin:{contents:sheets.map(s=>`@import ${JSON.stringify('./'+s)};`).join('\n'),loader:'css',resolveDir:root},bundle:true,write:false,minify:true,charset:'utf8',outfile:'styles.bundle.css',plugins:[{name:'css-assets',setup(build){build.onResolve({filter:/\.(woff2|png|svg)(\?|$)/},args=>({path:'../'+path.relative(root,path.resolve(args.resolveDir,args.path)).split(path.sep).join('/'),external:true}));}}]});
  // CSS imports use source-relative URLs. esbuild's external URL path is
  // preserved, so rewrite asset roots before combining the styles.

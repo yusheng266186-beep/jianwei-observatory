@@ -11,7 +11,7 @@ function parseStream(source,protocol){
   const text=event.split(/\r?\n/).filter(x=>x.startsWith('data:')).map(x=>x.slice(5).trimStart()).join('\n');if(!text||text==='[DONE]')continue;
   let data;try{data=JSON.parse(text);}catch{throw new Error('MODEL_BAD_RESPONSE');}
   if(data.type==='error'||data.error||['response.failed','response.incomplete'].includes(data.type))throw new Error('MODEL_REQUEST_FAILED');
-  if(protocol==='anthropic'){
+  if(protocol==='gemini'){const candidate=data.candidates?.[0];for(const part of candidate?.content?.parts||[])if(!part.thought)output+=part.text||'';if(candidate?.finishReason){finish=candidate.finishReason==='STOP'?'stop':candidate.finishReason;done=true;}usage=data.usageMetadata||usage;}else if(protocol==='anthropic'){
    if(data.type==='content_block_start'&&data.content_block?.type==='text')output+=data.content_block.text||'';
    if(data.type==='content_block_delta'&&data.delta?.type==='text_delta')output+=data.delta.text||'';
    if(data.type==='message_start')usage={...usage,...data.message?.usage};
@@ -26,7 +26,7 @@ function parseStream(source,protocol){
   }
  }
  if(!done||!['stop','end_turn'].includes(finish)||!output.trim())throw new Error('MODEL_INCOMPLETE');
- return {output,usage:{input:usage.input_tokens||0,output:usage.output_tokens||0,thinking:usage.output_tokens_details?.reasoning_tokens||0}};
+ return {output,usage:{input:usage.input_tokens||usage.promptTokenCount||0,output:usage.output_tokens||usage.candidatesTokenCount||0,thinking:usage.output_tokens_details?.reasoning_tokens||usage.thoughtsTokenCount||0}};
 }
 function parseResponse(response,protocol){
  if(String(response.body).trimStart().startsWith('{')){
@@ -38,11 +38,11 @@ function parseResponse(response,protocol){
  }
  return protocol==='chat-completions'?readCompletion(response.body):parseStream(response.body,protocol);
 }
-async function completeRemote(prompt,generation,{key,transport=request,probe=false}={}){
+async function completeRemote(prompt,generation,{key,transport=request,probe=false,onProgress,signal}={}){
  const route=routes[generation.provider];if(!route||route.url!==generation.base||route.protocol!==generation.protocol||!route.catalog.includes(generation.model)||!key)throw new Error('MODEL_NOT_CONFIGURED');
  const body=adaptModelBody({messages:[{role:'system',content:prompt.system},{role:'user',content:JSON.stringify(prompt.input)}],max_tokens:probe?256:32768,effort:generation.effort},{name:generation.provider,model:generation.model},generation.effort,{profile:generation.adapterProfile,probe});
  const suffix=route.protocol==='anthropic'?'/v1/messages':route.protocol==='responses'?'/responses':'/chat/completions';
- const response=await transport(route.url.replace(/\/$/,'')+suffix,{method:'POST',body:JSON.stringify(body),headers:{'Content-Type':'application/json','User-Agent':USER_AGENT,...(route.protocol==='anthropic'?{'x-api-key':key,'anthropic-version':'2023-06-01'}:{Authorization:'Bearer '+key})},timeout:120000,deadlineMs:probe?45000:840000,maxBytes:8*1024*1024});
+ const response=await transport(route.url.replace(/\/$/,'')+suffix,{method:'POST',body:JSON.stringify(body),headers:{'Content-Type':'application/json','User-Agent':USER_AGENT,...(route.protocol==='anthropic'?{'x-api-key':key,'anthropic-version':'2023-06-01'}:{Authorization:'Bearer '+key})},timeout:120000,deadlineMs:probe?45000:840000,maxBytes:8*1024*1024,signal,...(onProgress?{onChunk:require('./progress.cjs').streamProgress(route.protocol,onProgress)}:{})});
  if(response.status!==200)throw upstreamError(response,key);
  return {...parseResponse(response,route.protocol),model:generation.model,provider:generation.provider,reasoningEffort:generation.reasoningEffort};
 }

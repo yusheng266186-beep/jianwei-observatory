@@ -24,29 +24,31 @@ async function buildExercisePrompt(input){
  const body=JSON.stringify({systemInstruction:{parts:[{text:system}]},contents:[{role:'user',parts:[{text:JSON.stringify(input)}]}],generationConfig:{temperature:.4,maxOutputTokens:24576,responseMimeType:'application/json',responseJsonSchema:exerciseSchema,thinkingConfig:{thinkingLevel:'high'}}});
  return {body,template,input,system,schema:exerciseSchema};
 }
-async function generate(input,{provider=process.env.TRAINING_PROVIDER||'gemini',key,base=process.env.GEMINI_BASE_URL||'https://www.bytecatcode.org',model=process.env.GEMINI_MODEL||'gemini-3.8-flash',inspect,transport=request,generation}={}){
+async function generate(input,{provider=process.env.TRAINING_PROVIDER||'gemini',key,base=process.env.GEMINI_BASE_URL||'https://www.bytecatcode.org',model=process.env.GEMINI_MODEL||'gemini-3.8-flash',inspect,transport=request,generation,onProgress,signal}={}){
  const {validateExerciseRequest,validateExerciseResult,parseExerciseJSON}=await loadContract();input=validateExerciseRequest(input);
  if(!generation&&!['gemini','kimi-platform','kimi-code'].includes(provider))throw new Error('MODEL_NOT_CONFIGURED');
  const prompt=await buildExercisePrompt(input),{body,template}=prompt;let output,usage,metadata={};
  if(generation){provider=generation.provider;model=generation.model;}
  if(generation&&['chat-completions','anthropic','responses'].includes(generation.protocol)){
-  const result=await require('./model-completion.cjs').completeRemote(prompt,generation,{key:key||process.env[generation.credentialRef],transport});({output,usage,model}=result);metadata={provider,reasoningEffort:generation.reasoningEffort};
+  const result=await require('./model-completion.cjs').completeRemote(prompt,generation,{key:key||process.env[generation.credentialRef],transport,onProgress,signal});({output,usage,model}=result);metadata={provider,reasoningEffort:generation.reasoningEffort};
  }else if(provider.startsWith('kimi-')){
-  const result=await require('./kimi.cjs').completeKimi(prompt,{key:key||process.env.KIMI_API_KEY,kind:provider.slice(5),effort:generation?.reasoningEffort||'max',transport});
+  const result=await require('./kimi.cjs').completeKimi(prompt,{key:key||process.env.KIMI_API_KEY,kind:provider.slice(5),effort:generation?.reasoningEffort||'max',transport,onProgress,signal});
   ({output,usage,model}=result);metadata={provider:result.provider,reasoningEffort:result.reasoningEffort};
  }else{
  key=key||process.env.GEMINI_API_KEY;
  const url=new URL(base);if(url.protocol!=='https:'||!['www.bytecatcode.org','bytecat.lamclod.cn','codecdn.bytecatcode.org','code.bytecatcode.org'].includes(url.hostname)||url.username||url.password||url.search||url.hash||url.pathname!=='/')throw new Error('MODEL_ENDPOINT_INVALID');
  if(!key||model!=='gemini-3.8-flash')throw new Error('MODEL_NOT_CONFIGURED');
- const r=await transport(url.origin+'/v1beta/models/'+model+':generateContent',{method:'POST',body:generation?JSON.stringify({...JSON.parse(body),generationConfig:{...JSON.parse(body).generationConfig,thinkingConfig:{thinkingLevel:generation.reasoningEffort}}}):body,headers:{'Content-Type':'application/json','x-goog-api-key':key},timeout:330000,deadlineMs:840000,maxBytes:2*1024*1024});
+ const r=await transport(url.origin+'/v1beta/models/'+model+(onProgress?':streamGenerateContent?alt=sse':':generateContent'),{method:'POST',body:generation?JSON.stringify({...JSON.parse(body),generationConfig:{...JSON.parse(body).generationConfig,thinkingConfig:{thinkingLevel:generation.reasoningEffort,...(onProgress?{includeThoughts:true}:{})}}}):body,headers:{'Content-Type':'application/json','x-goog-api-key':key},timeout:330000,deadlineMs:840000,maxBytes:2*1024*1024,signal,...(onProgress?{onChunk:require('./progress.cjs').streamProgress('gemini',onProgress)}:{})});
  if(r.status!==200)throw upstreamFailure(r,key);
+ if(onProgress&&!r.body.trimStart().startsWith('{')){({output,usage}=require('./model-completion.cjs').parseStream(r.body,'gemini'));}else{
  let data;try{data=JSON.parse(r.body);}catch{throw new Error('MODEL_BAD_RESPONSE');}
  const candidate=data.candidates?.[0];if(candidate?.finishReason!=='STOP')throw new Error('MODEL_INCOMPLETE');
  output=(candidate.content?.parts||[]).filter(p=>!p.thought&&typeof p.text==='string').map(p=>p.text).join('');
  usage={input:data.usageMetadata?.promptTokenCount||0,output:data.usageMetadata?.candidatesTokenCount||0,thinking:data.usageMetadata?.thoughtsTokenCount||0};
  }
+ }
  if(generation)metadata={provider:generation.provider,reasoningEffort:generation.reasoningEffort};
- if(inspect)inspect(output);
+ onProgress?.({phase:'validating'});if(inspect)inspect(output);
  let sheet;try{sheet=validateExerciseResult(parseExerciseJSON(output),input);}catch(cause){throw Object.assign(new Error('MODEL_CONTENT_INVALID'),{cause,output});}
  if(sheet.questions.some(q=>q.diagram?.kind==='illustration')&&input.visuals!=='hybrid'||sheet.questions.filter(q=>q.diagram?.kind==='illustration').length>1||input.visuals==='none'&&sheet.questions.some(q=>q.diagram))throw Object.assign(new Error('MODEL_CONTENT_INVALID'),{cause:new Error('图示数量或类型不符合所选策略。'),output});
  return {sheet,model,...metadata,templateVersion:template.version,templateId:template.id,usage,generatedAt:new Date().toISOString()};

@@ -1,10 +1,10 @@
 export const pendingJob=record=>['submitting','unconfirmed','queued','running'].includes(record?.status);
 export const pendingImages=record=>Object.values(record.imageJobs||{}).some(pendingJob);
 export function jobState(record){if(pendingJob(record))return 'pending';if(pendingImages(record))return 'pending';if(record.status==='ready'&&record.sheet)return record.reviewedAt?'reviewed':'ready';return 'failed';}
-export function jobStateLabel(record){if(pendingImages(record)&&!pendingJob(record))return '插图生成中';return {submitting:'正在确认提交',unconfirmed:'提交待确认',queued:'后台排队中',running:'模型生成中',failed:'生成未完成',ready:record.reviewedAt?'已审题':'待审题'}[record.status]||'等待查询';}
+export function jobStateLabel(record){if(record.status==='running'&&record.progress?.phase)return ({connecting:'正在连接模型',thinking:'模型正在推演',writing:'正在输出练习',validating:'正在校验成稿'}[record.progress.phase]||'模型生成中');if(pendingImages(record)&&!pendingJob(record))return '插图生成中';return {submitting:'正在确认提交',unconfirmed:'提交待确认',queued:'后台排队中',running:'模型生成中',failed:'生成未完成',ready:record.reviewedAt?'已审题':'待审题'}[record.status]||'等待查询';}
 export function mergeJobSnapshot(record,data,at=Date.now()){
  const snapshot=()=>JSON.stringify([record.status,record.failure,record.syncIssue,record.startedAt,record.finishedAt,record.model,record.provider,record.reasoningEffort]),old=snapshot();
- record.status=data.status;record.lastCheckedAt=at;record.syncIssue='';
+ record.status=data.status;record.lastCheckedAt=at;if(data.progress&&typeof data.progress==='object')record.progress=data.progress;record.syncIssue='';
  for(const field of ['startedAt','finishedAt','serverTime','deadlineAt'])if(Number.isFinite(data[field]))record[field]=data[field];
  for(const field of ['model','provider','reasoningEffort'])if(typeof data[field]==='string')record[field]=data[field];
  if(Number.isFinite(data.createdAt))record.serverCreatedAt=data.createdAt;
