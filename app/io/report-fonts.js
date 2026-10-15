@@ -56,7 +56,7 @@ export function prepareReportFonts(definition,manifest) {
     if(value.svgTextFonts&&typeof value.svg==='string'){
       const decode=text=>text.replace(/&(?:amp|lt|gt|quot|apos);/g,entity=>({'&amp;':'&','&lt;':'<','&gt;':'>','&quot;':'"','&apos;':"'"}[entity]));
       const encode=text=>text.replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[char]));
-      result.svg=value.svg.replace(/<text\b([^>]*)>([^<]*)<\/text>/g,(_,attrs,text)=>'<text'+attrs+'>'+runs(decode(text),bold).map(run=>'<tspan font-family="'+run.font+'">'+encode(run.text)+'</tspan>').join('')+'</text>');
+      result.svg=value.svg.replace(/<text\b([^>]*)>([\s\S]*?)<\/text>/g,(_,attrs,text)=>'<text'+attrs+'>'+text.split(/(<[^>]+>)/).map(part=>part.startsWith('<')?part:runs(decode(part),bold).map(run=>'<tspan font-family="'+run.font+'">'+encode(run.text)+'</tspan>').join('')).join('')+'</text>');
       delete result.svgTextFonts;
     }
     if(value.font==='Report')result.font='Report-core';

@@ -2,7 +2,12 @@ import {richExerciseHTML} from './exercise-math.js';
 import {validateExerciseDiagram} from '../engine/exercise-diagrams.js';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
 const line=(x1,y1,x2,y2,extra='')=>`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" ${extra}/>`;
-const label=(x,y,value,extra='')=>`<text x="${x}" y="${y}" ${extra}>${esc(String(value??'').replace(/([A-Za-z])\^([23])/g,(_,letter,power)=>letter+(power==='2'?'²':'³')))}</text>`;
+export function diagramLabelLines(value){
+ // Keep an element/formula token intact instead of splitting NaHCO3 mid-word.
+ const tokens=String(value).match(/[A-Za-z][A-Za-z0-9^·⁻¹²³₀-₉]*|\s+|./gu)||[],lines=[];let line='',width=0;
+ for(const token of tokens){const w=[...token].reduce((n,c)=>n+(/[^\x00-\xff]/.test(c)?13:6.5),0);if(line&&width+w>105){lines.push(line.trim());line='';width=0;}line+=token;width+=w;}if(line.trim())lines.push(line.trim());return lines;
+}
+const label=(x,y,value,extra='')=>`<text x="${x}" y="${y}" ${extra}>${esc(String(value??'').replace(/([A-Za-z])\^([23])/g,(_,letter,power)=>letter+(power==='2'?'²':'³'))).replace(/\b(?:[A-Z][a-z]?\d*){2,}\b/g,formula=>formula.replace(/\d+/g,n=>'<tspan baseline-shift="sub" font-size="9">'+n+'</tspan>'))}</text>`;
 export function exerciseDiagramSVG(value){
  const d=validateExerciseDiagram(value);if(d.kind==='illustration')return null;let parts='';
  if(['plot','bars'].includes(d.kind)){
@@ -19,7 +24,7 @@ export function exerciseDiagramSVG(value){
   }
   for(const n of nodes.values()){
    const shape=n.shape==='block'?`<rect x="${n.x-60}" y="${n.y-23}" width="120" height="46" rx="3" fill="white"/>`:n.shape==='vessel'?`<path d="M ${n.x-25} ${n.y-25} V ${n.y+22} Q ${n.x} ${n.y+32} ${n.x+25} ${n.y+22} V ${n.y-25}" fill="none"/>`:n.shape==='circle'?`<circle cx="${n.x}" cy="${n.y}" r="22" fill="white"/>`:`<circle cx="${n.x}" cy="${n.y}" r="${n.shape==='junction'?3:2.5}" fill="#151a1f"/>`;
-   parts+=shape;const chars=[...n.label],lines=chars.length>9?[chars.slice(0,9).join(''),chars.slice(9).join('')]:[n.label],base=n.y+(['block','circle'].includes(n.shape)?5:n.shape==='vessel'?0:-9);for(const [i,text] of lines.entries())parts+=label(Math.max(65,Math.min(575,n.x)),base+(i-(lines.length-1)/2)*15,text,'text-anchor="middle"');
+   parts+=shape;const lines=diagramLabelLines(n.label),base=n.y+(['block','circle'].includes(n.shape)?5:n.shape==='vessel'?50:-9);for(const [i,text] of lines.entries())parts+=label(Math.max(65,Math.min(575,n.x)),base+(i-(lines.length-1)/2)*15,text,'text-anchor="middle"');
   }
  }
  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 380" width="640" height="380" role="img" aria-label="${esc(d.description)}"><title>${esc(d.caption)}</title><rect width="640" height="380" fill="white"/><g stroke="#151a1f" stroke-width="1.25" fill="none">${parts.replace(/<text /g,'<text fill="#151a1f" stroke="none" font-family="serif" font-size="13" ')}</g></svg>`;

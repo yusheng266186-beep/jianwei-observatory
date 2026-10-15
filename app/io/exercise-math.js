@@ -9,6 +9,10 @@ export async function mathSVG(latex){await warmExerciseMath();if(latex.length>25
 export async function richExerciseHTML(value){const parts=[];for(const part of mathParts(value)){if(part.latex){const m=await mathSVG(part.latex);parts.push('<span class="exercise-formula" role="img" aria-label="'+esc('公式：'+part.latex)+'">'+m.svg+'</span>');}else parts.push(esc(part.text).replace(/\n/g,'<br>'));}return parts.join('');}
 let measureTask;
 async function printMeasure(){if(!measureTask){const task=(async()=>{const manifest=await reportFontManifest(),core=manifest.parts.find(p=>p.id==='core'),font=new FontFace('ExercisePrintCore',await(await cachedFontFile(core.files.regular)).arrayBuffer());await font.load();document.fonts.add(font);const ctx=document.createElement('canvas').getContext('2d');ctx.font='11px ExercisePrintCore';return text=>ctx.measureText(text).width;})();measureTask=task;task.catch(()=>{if(measureTask===task)measureTask=null;});}return measureTask;}
+export async function exerciseLineWidth(value){
+ if(String(value).includes('\n'))return Infinity;
+ const measure=await printMeasure();let width=0;for(const part of mathParts(value))width+=part.latex?(await mathSVG(part.latex)).width+2:Math.ceil(measure(part.text)*1.015)+1;return width;
+}
 export async function exerciseParagraph(value,{limit=490}={}){
  const parts=mathParts(String(value));if(parts.every(part=>!part.latex))return {text:String(value),fontSize:11,lineHeight:1.45,margin:[0,1,0,3]};
  const measure=await printMeasure(),stack=[];let line=[],used=0;

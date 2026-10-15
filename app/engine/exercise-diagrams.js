@@ -1,5 +1,7 @@
 const kinds=['plot','geometry','forces','circuit','apparatus','flow','bars','illustration'];
-const text=(s,n)=>typeof s==='string'&&s.length<=n&&!/[<>]|javascript:/i.test(s);
+// Comparisons and chemical flow arrows are teaching text. The renderer escapes
+// every label; reject markup without treating "a -> b" or "x < 0" as HTML.
+const text=(s,n)=>typeof s==='string'&&s.length<=n&&!/<\s*\/?\s*[a-z!][^>]*>|javascript:/i.test(s);
 const keys=(v,allowed)=>v&&typeof v==='object'&&!Array.isArray(v)&&Object.keys(v).every(k=>allowed.includes(k));
 export function validateExerciseDiagram(d){
  if(!keys(d,['kind','caption','description','xLabel','yLabel','xRange','yRange','series','nodes','edges','image'])||!kinds.includes(d.kind)||!text(d.caption,160)||!text(d.description,1600))throw new Error('图示类型、说明或字段不完整。');

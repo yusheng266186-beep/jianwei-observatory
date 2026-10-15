@@ -24,7 +24,7 @@ export function openSurface(element,{show=()=>element.showModal(),isOpen=()=>ele
   element.style.willChange='transform, opacity';
   const complete=()=>{if(states.get(element)!==state)return;state.phase='open';element.dataset.surfacePhase='open';element.style.removeProperty('will-change');};
   if(reducedMotion()){complete();return Promise.resolve();}
-  const timing=element.matches?.('.plan-picker-panel')?motion.control:motion.arrive;
+  const timing=element.matches?.('.plan-picker-panel,.exercise-choice-panel')?motion.control:motion.arrive;
   try{state.animation=element.animate([from,{opacity:1,transform:'none'}],{...timing,fill:'both'});state.promise=finishAnimation(state.animation,timing.duration).then(complete);return state.promise;}catch{complete();return Promise.resolve();}
 }
 export function closeSurface(element,{hide=()=>element.close(),isOpen=()=>element.open,reducedMotion=calm}={}){

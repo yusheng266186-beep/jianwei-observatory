@@ -26,7 +26,7 @@ function synchronize(current,next) {
   if(current.hasAttribute('data-managed')&&next.hasAttribute('data-managed'))return;
   // A retiring teacher picker keeps its populated calendar until fadeout.
   // Updating its form must not turn the outgoing glass panel into an empty box.
-  if(current.matches('.plan-picker-panel:popover-open')&&current.dataset.surfacePhase==='leaving')return;
+  if(current.matches('.plan-picker-panel:popover-open,.exercise-choice-panel:popover-open')&&current.dataset.surfacePhase==='leaving')return;
   reconcile(current,next);
 }
 function reconcile(parent,next) {
