@@ -54,7 +54,8 @@
     "test:identity": "node tests/identity-import.cjs",
     "test:teaching-polish": "node tests/teaching-polish.cjs",
     "test:exercise-hub": "node tests/exercise-hub.cjs",
-    "test:exercise-submission": "node tests/exercise-submission.cjs"
+    "test:exercise-submission": "node tests/exercise-submission.cjs",
+    "test:exercise-feedback": "node tests/exercise-feedback.cjs"
   },
   "devDependencies": {
     "esbuild": "0.25.11",

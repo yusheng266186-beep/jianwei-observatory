@@ -25,8 +25,9 @@ function synchronize(current,next) {
   // A PDF renderer owns this island; outer form updates must retain its canvases.
   if(current.hasAttribute('data-managed')&&next.hasAttribute('data-managed'))return;
   // A retiring teacher picker keeps its populated calendar until fadeout.
-  // Updating its form must not turn the outgoing glass panel into an empty box.
-  if(current.matches('.plan-picker-panel:popover-open,.exercise-choice-panel:popover-open')&&current.dataset.surfacePhase==='leaving')return;
+  // Calendar ownership lasts through fadeout. A populated exercise menu must
+  // still receive changed subject options before a quick reopen.
+  if(current.dataset.surfacePhase==='leaving'&&(current.matches('.plan-picker-panel:popover-open')||current.matches('.exercise-choice-panel:popover-open')&&!next.childElementCount))return;
   reconcile(current,next);
 }
 function reconcile(parent,next) {
