@@ -1,6 +1,6 @@
 'use strict';
 const http=require('node:http'),crypto=require('node:crypto');
-const {COSStore}=require('./store.cjs'),{hash}=require('./tencent.cjs'),{loadContract}=require('./generator.cjs');
+const {COSStore}=require('./store.cjs'),{hash}=require('./tencent.cjs'),{loadContract,generationProfile}=require('./generator.cjs');
 const {decodeSecret,matchingCounter,STEP_MS,VALIDITY_MS}=require('./totp.cjs');
 const version='training-v1',uuid=/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
 const error=(status,code)=>Object.assign(new Error(code),{status});
@@ -18,7 +18,7 @@ function createServer({store=new COSStore(),env=process.env,now=Date.now,dispatc
   try{
    if(!allowed)throw error(403,'ORIGIN_REJECTED');if(req.method==='OPTIONS')return send(204,{});
    const url=new URL(req.url,'https://service.local');
-   if(req.method==='GET'&&url.pathname==='/health'){const {EXERCISE_SUBJECTS,EXERCISE_DIFFICULTIES}=await loadContract();return send(200,{version,model:'gemini-3.8-flash',subjects:EXERCISE_SUBJECTS.map(s=>s.id),difficulties:EXERCISE_DIFFICULTIES.map(d=>d.id),auth:{type:'totp',stepSeconds:STEP_MS/1000,validitySeconds:VALIDITY_MS/1000,singleUse:true}});}
+   if(req.method==='GET'&&url.pathname==='/health'){const {EXERCISE_SUBJECTS,EXERCISE_DIFFICULTIES}=await loadContract();return send(200,{version,...generationProfile(env.TRAINING_PROVIDER||'gemini'),subjects:EXERCISE_SUBJECTS.map(s=>s.id),difficulties:EXERCISE_DIFFICULTIES.map(d=>d.id),auth:{type:'totp',stepSeconds:STEP_MS/1000,validitySeconds:VALIDITY_MS/1000,singleUse:true}});}
    if(req.method==='POST'&&url.pathname==='/session'){
     // Reserve an attempt and consume the code atomically across SCF instances.
     const minute=Math.floor(now()/60000);let allowedAttempt=false;for(let slot=0;slot<10;slot++)if(await store.create('auth-attempts/'+owner+'/'+minute+'/'+slot+'.json',{at:now()})){allowedAttempt=true;break;}if(!allowedAttempt)throw error(429,'AUTH_RATE_LIMIT');
@@ -36,10 +36,10 @@ function createServer({store=new COSStore(),env=process.env,now=Date.now,dispatc
     const date=new Date(createdAt+8*3600000).toISOString().slice(0,10),limit=Number(env.TRAINING_DAILY_LIMIT||30);let reserved=false;
     for(let slot=0;slot<limit;slot++){const quotaKey='budget/'+owner+'/'+date+'/'+slot+'.json',old=await store.get(quotaKey);if(old){if(old.value.id===id){reserved=true;break;}continue;}if(await store.create(quotaKey,{id})){reserved=true;break;}if((await store.get(quotaKey))?.value.id===id){reserved=true;break;}}
     if(!reserved)throw error(429,'DAILY_LIMIT');
-    if(!saved){const created=await store.create(key+'/meta.json',{id,type,fingerprint,input,status:'queued',createdAt,deadline:createdAt+600000});saved=await store.get(key+'/meta.json');if(saved.value.fingerprint!==fingerprint)throw error(409,'REQUEST_ID_CONFLICT');if(created)await dispatch(key);}
+    if(!saved){const created=await store.create(key+'/meta.json',{id,type,fingerprint,input,...(type==='exercise'?{generation:generationProfile(env.TRAINING_PROVIDER||'gemini')}:{}),status:'queued',createdAt,deadline:createdAt+600000});saved=await store.get(key+'/meta.json');if(saved.value.fingerprint!==fingerprint)throw error(409,'REQUEST_ID_CONFLICT');if(created)await dispatch(key);}
     return send(202,{id,status:'queued',createdAt:saved.value.createdAt});
    }
-   const match=url.pathname.match(/^\/jobs\/([a-f0-9-]+)$/);if(req.method==='GET'&&match&&uuid.test(match[1])){const key='jobs/'+owner+'/'+match[1],record=await store.get(key+'/meta.json');if(!record)throw error(404,'JOB_NOT_FOUND');const result=await store.get(key+'/result.json'),run=await store.get(key+'/run.json'),deadline=run?run.value.startedAt+450000:record.value.deadline+15000,expired=deadline<now();const output=result?.value||{status:expired?'failed':run?'running':'queued',...(expired?{error:'JOB_EXPIRED'}:{})};return send(200,{id:match[1],createdAt:record.value.createdAt,...(run?{startedAt:run.value.startedAt}:{}),deadlineAt:deadline,serverTime:now(),...output});}
+   const match=url.pathname.match(/^\/jobs\/([a-f0-9-]+)$/);if(req.method==='GET'&&match&&uuid.test(match[1])){const key='jobs/'+owner+'/'+match[1],record=await store.get(key+'/meta.json');if(!record)throw error(404,'JOB_NOT_FOUND');const result=await store.get(key+'/result.json'),run=await store.get(key+'/run.json'),deadline=run?(run.value.deadlineAt||run.value.startedAt+450000):record.value.deadline+15000,expired=deadline<now();const output=result?.value||{status:expired?'failed':run?'running':'queued',...(expired?{error:'JOB_EXPIRED'}:{})};return send(200,{id:match[1],createdAt:record.value.createdAt,...(record.value.generation?{model:record.value.generation.model,provider:record.value.generation.provider,reasoningEffort:record.value.generation.reasoningEffort}:{}),...(run?{startedAt:run.value.startedAt}:{}),deadlineAt:deadline,serverTime:now(),...output});}
    throw error(404,'NOT_FOUND');
   }catch(e){send(e.status||503,{error:e.status?e.message:'SERVICE_UNAVAILABLE'});}
  });

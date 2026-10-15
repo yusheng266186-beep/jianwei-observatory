@@ -25,3 +25,21 @@ test('浏览器离开及API重开不会取消已接收的云端任务，原编�
  server=createServer({store,env,dispatch});await new Promise(r=>server.listen(0,'127.0.0.1',r));base='http://127.0.0.1:'+server.address().port;const recovered=await(await call('/jobs/'+id)).json();assert.equal(recovered.status,'ready');assert(recovered.startedAt<=recovered.finishedAt);assert.equal((await call('/jobs',{method:'POST',body:input,id})).status,202);assert.equal(calls,1);
  }finally{release();await work;await new Promise(r=>server.close(r));}
 });
+
+test('Kimi任务保存接收时的模型配置，八分钟仍可查询，不沿用旧模型的短超时或重复调用',async()=>{
+ const store=new MemoryStore(),dispatched=[];let at=Date.now(),release,started,calls=0;
+ const server=createServer({store,env:{...env,TRAINING_PROVIDER:'kimi-platform'},now:()=>at,dispatch:async key=>dispatched.push(key)});
+ await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port;let token='',work;
+ const call=(path,{method='GET',body,id}={})=>fetch(base+path,{method,headers:{Origin:'https://school.test','Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{}),...(id?{'X-Request-ID':id}:{})},...(body?{body:JSON.stringify(body)}:{})});
+ const gate=new Promise(r=>release=r),running=new Promise(r=>started=r);
+ try{
+  assert.equal((await(await call('/health')).json()).model,'kimi-k3');
+  token=(await(await call('/session',{method:'POST',body:{code:totp.codeForCounter(env.TRAINING_TOTP_SECRET,Math.floor(at/30000))}})).json()).token;
+  const id=crypto.randomUUID();assert.equal((await call('/jobs',{method:'POST',body:input,id})).status,202);
+  const key=dispatched[0],meta=(await store.get(key+'/meta.json')).value;assert.equal(meta.generation.provider,'kimi-platform');assert.equal(meta.generation.reasoningEffort,'max');
+  work=worker.run({key},{store,now:()=>at,generator:async(request,options)=>{calls++;assert.equal(options.provider,'kimi-platform');started();await gate;return {sheet:{title:'完成'},model:'kimi-k3'};}});await running;
+  at+=8*60000;const snapshot=await(await call('/jobs/'+id)).json();assert.equal(snapshot.status,'running');assert.equal(snapshot.model,'kimi-k3');assert(snapshot.deadlineAt>at);
+  assert.equal((await call('/jobs',{method:'POST',body:input,id})).status,202);assert.equal(calls,1);
+  release();await work;assert.equal((await(await call('/jobs/'+id)).json()).status,'ready');
+ }finally{release();await work;await new Promise(r=>server.close(r));}
+});

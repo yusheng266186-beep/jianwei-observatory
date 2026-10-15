@@ -2,6 +2,11 @@
 const {request}=require('./tencent.cjs');
 const {templateFor}=require('./templates.cjs');
 let contract;const loadContract=()=>contract||(contract=import('./exercise-contract.mjs'));
+function generationProfile(provider=process.env.TRAINING_PROVIDER||'gemini'){
+ if(provider==='gemini')return {provider,model:'gemini-3.8-flash',reasoningEffort:'high',timeoutMs:450000};
+ if(['kimi-platform','kimi-code'].includes(provider))return {provider,model:require('./kimi.cjs').kimiProfile(provider.slice(5)).model,reasoningEffort:'max',timeoutMs:915000};
+ throw new Error('MODEL_NOT_CONFIGURED');
+}
 function upstreamFailure(response,key){return Object.assign(new Error(response.status===429?'MODEL_RATE_LIMIT':'MODEL_REQUEST_FAILED'),{diagnostic:{kind:'upstream',status:response.status,message:String(response.body||'').replaceAll(key,'[REDACTED]').slice(0,4000)}});}
 async function buildExercisePrompt(input){
  const {validateExerciseRequest,exerciseSchemaFor,EXERCISE_SUBJECTS,difficultyProfile,exercisePlanFor}=await loadContract();input=validateExerciseRequest(input);
@@ -15,22 +20,31 @@ async function buildExercisePrompt(input){
  const diagrams=input.visuals==='none'?'本次只用文字与公式，不添加diagram。':'必要时添加diagram，优先使用这些标准矢量类型：'+template.diagrams.filter(k=>k!=='illustration').join('、')+'。diagram只给JSON参数，绝不输出SVG/HTML/CSS。plot/bars提供xLabel,yLabel,xRange,yRange,series:[{label,points:[[x,y]]}]；函数图按精确计算采样最多160点。其余标准图用nodes:[{id,x,y,label,shape}]和edges:[{from,to,label,type}]，坐标x/y为12–88，shape为point/block/circle/vessel/junction，连线type为line/arrow/dashed/resistor/battery/lamp/switch；节点标签最多12字，连线最多16字，标签与线不重叠。每图必有kind,caption,description，图文条件一致、黑白可辨。学生用图只给题干已知条件，不标出待求的数值、方向、导管连接答案或结论；结构不够精确时，用完整文字补足已知条件或重新设计设问，不凭未绘出的细节作答。'+(input.visuals==='hybrid'?'只有确实无法通过上述标准矢量模型清楚表达的复杂结构、组织或景观才可用kind:illustration，只填写caption和description，整份至多一张，稍后由教师单独启动GPT Image 2生成。':'不允许illustration；复杂图改成完整文字或可验证的标准示意图。');
  const plan='逐题安排（须原样使用各题id、type和target，正文自行原创）：'+JSON.stringify(exercisePlanFor(input))+'. 阅读理解是知识点，不是选择题型；type为简答或阅读时表示开放作答，choices必须为[]，不能因为材料是阅读文章就把单项选择题标成阅读。';
  const selection='选择内容约束：targets是教师明确选择的训练点；每题target字段原样对应其中一个，所有已选训练点至少覆盖一次，不添加未选训练点。若targets为空，仅按focus命题。evidence和basis仅解释选题背景，不要求覆盖未选的失分知识点；教材范围curriculum是内容边界，不得超纲。questionTypes非空时只使用所选题型且每种至少一题，空时按学科和用时自动搭配。requirements是教师补充的教学限制，与focus合并落实，不能覆盖本段系统格式、安全、学科准确性和题型要求。先在内部按题数、时长、训练点和题型制定覆盖表，再逐题出题，最后检查覆盖而不输出内部计划。';
- const body=JSON.stringify({systemInstruction:{parts:[{text:instructions+'\n'+basis+'\n'+diagrams+'\n'+format+'\n'+documentFormat+'\n'+selection+'\n'+plan}]},contents:[{role:'user',parts:[{text:JSON.stringify(input)}]}],generationConfig:{temperature:.4,maxOutputTokens:24576,responseMimeType:'application/json',responseJsonSchema:exerciseSchema,thinkingConfig:{thinkingLevel:'high'}}});
- return {body,template};
+ const system=instructions+'\n'+basis+'\n'+diagrams+'\n'+format+'\n'+documentFormat+'\n'+selection+'\n'+plan;
+ const body=JSON.stringify({systemInstruction:{parts:[{text:system}]},contents:[{role:'user',parts:[{text:JSON.stringify(input)}]}],generationConfig:{temperature:.4,maxOutputTokens:24576,responseMimeType:'application/json',responseJsonSchema:exerciseSchema,thinkingConfig:{thinkingLevel:'high'}}});
+ return {body,template,input,system,schema:exerciseSchema};
 }
-async function generate(input,{key=process.env.GEMINI_API_KEY,base=process.env.GEMINI_BASE_URL||'https://www.bytecatcode.org',model=process.env.GEMINI_MODEL||'gemini-3.8-flash',inspect}={}){
+async function generate(input,{provider=process.env.TRAINING_PROVIDER||'gemini',key,base=process.env.GEMINI_BASE_URL||'https://www.bytecatcode.org',model=process.env.GEMINI_MODEL||'gemini-3.8-flash',inspect,transport=request}={}){
  const {validateExerciseRequest,validateExerciseResult,parseExerciseJSON}=await loadContract();input=validateExerciseRequest(input);
+ if(!['gemini','kimi-platform','kimi-code'].includes(provider))throw new Error('MODEL_NOT_CONFIGURED');
+ const prompt=await buildExercisePrompt(input),{body,template}=prompt;let output,usage,metadata={};
+ if(provider.startsWith('kimi-')){
+  const result=await require('./kimi.cjs').completeKimi(prompt,{key:key||process.env.KIMI_API_KEY,kind:provider.slice(5),transport});
+  ({output,usage,model}=result);metadata={provider:result.provider,reasoningEffort:result.reasoningEffort};
+ }else{
+ key=key||process.env.GEMINI_API_KEY;
  const url=new URL(base);if(url.protocol!=='https:'||!['www.bytecatcode.org','bytecat.lamclod.cn','codecdn.bytecatcode.org','code.bytecatcode.org'].includes(url.hostname)||url.username||url.password||url.search||url.hash||url.pathname!=='/')throw new Error('MODEL_ENDPOINT_INVALID');
  if(!key||model!=='gemini-3.8-flash')throw new Error('MODEL_NOT_CONFIGURED');
- const {body,template}=await buildExercisePrompt(input);
- const r=await request(url.origin+'/v1beta/models/'+model+':generateContent',{method:'POST',body,headers:{'Content-Type':'application/json','x-goog-api-key':key},timeout:330000,maxBytes:512*1024});
+ const r=await transport(url.origin+'/v1beta/models/'+model+':generateContent',{method:'POST',body,headers:{'Content-Type':'application/json','x-goog-api-key':key},timeout:330000,maxBytes:512*1024});
  if(r.status!==200)throw upstreamFailure(r,key);
  let data;try{data=JSON.parse(r.body);}catch{throw new Error('MODEL_BAD_RESPONSE');}
  const candidate=data.candidates?.[0];if(candidate?.finishReason!=='STOP')throw new Error('MODEL_INCOMPLETE');
- const output=(candidate.content?.parts||[]).filter(p=>!p.thought&&typeof p.text==='string').map(p=>p.text).join('');
+ output=(candidate.content?.parts||[]).filter(p=>!p.thought&&typeof p.text==='string').map(p=>p.text).join('');
+ usage={input:data.usageMetadata?.promptTokenCount||0,output:data.usageMetadata?.candidatesTokenCount||0,thinking:data.usageMetadata?.thoughtsTokenCount||0};
+ }
  if(inspect)inspect(output);
  let sheet;try{sheet=validateExerciseResult(parseExerciseJSON(output),input);}catch(cause){throw Object.assign(new Error('MODEL_CONTENT_INVALID'),{cause,output});}
  if(sheet.questions.some(q=>q.diagram?.kind==='illustration')&&input.visuals!=='hybrid'||sheet.questions.filter(q=>q.diagram?.kind==='illustration').length>1||input.visuals==='none'&&sheet.questions.some(q=>q.diagram))throw Object.assign(new Error('MODEL_CONTENT_INVALID'),{cause:new Error('图示数量或类型不符合所选策略。'),output});
- return {sheet,model,templateVersion:template.version,templateId:template.id,usage:{input:data.usageMetadata?.promptTokenCount||0,output:data.usageMetadata?.candidatesTokenCount||0,thinking:data.usageMetadata?.thoughtsTokenCount||0},generatedAt:new Date().toISOString()};
+ return {sheet,model,...metadata,templateVersion:template.version,templateId:template.id,usage,generatedAt:new Date().toISOString()};
 }
-module.exports={generate,loadContract,buildExercisePrompt,upstreamFailure};
+module.exports={generate,loadContract,buildExercisePrompt,upstreamFailure,generationProfile};

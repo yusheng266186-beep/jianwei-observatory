@@ -2,8 +2,19 @@
 const https=require('node:https'),crypto=require('node:crypto');
 const hash=(value,algorithm='sha256')=>crypto.createHash(algorithm).update(value).digest('hex');
 const hmac=(key,value,algorithm='sha256',encoding)=>crypto.createHmac(algorithm,key).update(value).digest(encoding);
-function request(url,{method='GET',headers={},body='',timeout=30000,maxBytes=1024*1024}={}){
- return new Promise((resolve,reject)=>{const target=new URL(url);if(target.protocol!=='https:')return reject(new Error('HTTPS_REQUIRED'));const req=https.request(target,{method,headers:{...headers,...(body?{'Content-Length':Buffer.byteLength(body)}:{})}},res=>{let bytes=0,chunks=[];res.on('data',chunk=>{bytes+=chunk.length;if(bytes>maxBytes){res.destroy(new Error('RESPONSE_LIMIT'));return;}chunks.push(chunk);});res.on('end',()=>resolve({status:res.statusCode,headers:res.headers,body:Buffer.concat(chunks).toString('utf8')}));res.on('error',reject);});req.setTimeout(timeout,()=>req.destroy(new Error('NETWORK_TIMEOUT')));req.on('error',reject);req.end(body);});
+function request(url,{method='GET',headers={},body='',timeout=30000,deadlineMs=0,maxBytes=1024*1024}={}){
+ return new Promise((resolve,reject)=>{
+  const target=new URL(url);if(target.protocol!=='https:')return reject(new Error('HTTPS_REQUIRED'));
+  let deadline;const finish=(error,result)=>{clearTimeout(deadline);if(error)reject(error);else resolve(result);};
+  const req=https.request(target,{method,headers:{...headers,...(body?{'Content-Length':Buffer.byteLength(body)}:{})}},res=>{
+   let bytes=0,chunks=[];res.on('data',chunk=>{bytes+=chunk.length;if(bytes>maxBytes){res.destroy(new Error('RESPONSE_LIMIT'));return;}chunks.push(chunk);});
+   res.on('end',()=>finish(null,{status:res.statusCode,headers:res.headers,body:Buffer.concat(chunks).toString('utf8')}));
+   res.on('error',error=>finish(error));res.on('aborted',()=>finish(new Error('NETWORK_INTERRUPTED')));
+  });
+  req.setTimeout(timeout,()=>req.destroy(new Error('NETWORK_TIMEOUT')));req.on('error',error=>finish(error));
+  if(deadlineMs>0)deadline=setTimeout(()=>req.destroy(new Error('NETWORK_TIMEOUT')),deadlineMs);
+  req.end(body);
+ });
 }
 function credentials(env=process.env){return {SecretId:env.TENCENTCLOUD_SECRETID||env.TENCENTCLOUD_SECRET_ID,SecretKey:env.TENCENTCLOUD_SECRETKEY||env.TENCENTCLOUD_SECRET_KEY,Token:env.TENCENTCLOUD_SESSIONTOKEN||env.TENCENTCLOUD_TOKEN};}
 async function cloud(service,action,version,params,{region='ap-chengdu',auth=credentials(),timeout=45000}={}){
