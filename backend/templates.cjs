@@ -1,5 +1,5 @@
 'use strict';
-const version='subject-templates-20261015.3';
+const version='subject-templates-20261015.4';
 const templates={
  '语文':{focus:'阅读信息筛选、语言运用与表达',rule:'现代文用完整原创材料，避免伪造作者出处。阅读同材料题组材料保持完全一致。答案分层列点，区分概括、分析和评价。写作明确文体、任务和字数，不用一句作文题代替整份训练。',diagrams:['flow','bars']},
  '数学':{focus:'概念理解、计算与推理',rule:'先列定义域、参数范围和边界；答案独立代回验证。涉及图像时给出准确坐标、刻度和足够采样点；坐标点必须由表达式逐点计算。几何图标清点、线和条件，非按比例图注明示意图，不能凭图猜数据。所有公式用 LaTeX。',diagrams:['plot','geometry']},

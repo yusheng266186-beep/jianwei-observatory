@@ -3,11 +3,17 @@ import {exerciseParagraph,exerciseLineWidth} from './exercise-math.js';
 import {validateExerciseResult,difficultyProfile} from '../engine/exercise-contract.js';
 import {exerciseDiagramSVG} from './exercise-diagram.js';
 import {exercisePrintSections} from '../engine/exercise-print.js';
+import {exerciseOutputs} from './exercise-output-cache.js';
 // A zero-padding row keeps short blocks together without clipping the first glyph
 // when pdfmake moves a block to the next page. The worker owns this named layout.
 const together=stack=>({table:{widths:['*'],body:[[{stack}]],dontBreakRows:true},layout:'exerciseKeepTogether'});
 export async function exercisePDF(record,{teacher=false,name='',classNo=''}={}){
- if(!record.reviewedAt)throw new Error('请完成审题确认后输出正式练习。');const sheet=validateExerciseResult(record.sheet,record.request),content=[],subject=record.request.subject;
+ if(!record.reviewedAt)throw new Error('请完成审题确认后输出正式练习。');
+ const sheet=validateExerciseResult(record.sheet,record.request),key=JSON.stringify([record.request,sheet,teacher,name,classNo]);
+ return exerciseOutputs.get(key,()=>buildExercisePDF(structuredClone(record),{teacher,name,classNo}));
+}
+async function buildExercisePDF(record,{teacher,name,classNo}){
+ const sheet=record.sheet,content=[],subject=record.request.subject;
  content.push({text:subject+(teacher?'专项练习参考答案与评分要点':'专项练习'),fontSize:20,bold:true,alignment:'center',margin:[0,0,0,10]});
  content.push({text:[name?'姓名：'+name:'姓名：____________',classNo?'班级：'+classNo+'班':'班级：________', '建议用时：'+record.request.minutes+'分钟'].join('    '),fontSize:10,margin:[0,0,0,10]});
  content.push({text:'训练难度：'+difficultyProfile(record.request.difficulty).id,fontSize:10,margin:[0,0,0,7]});
