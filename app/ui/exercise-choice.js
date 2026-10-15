@@ -3,23 +3,27 @@ import {openSurface,closeSurface} from './surface-motion.js';
 
 // The same glass and interruptible motion as the teacher's date/time controls.
 export function exerciseChoice(id,label,value,options){
- const selected=options.find(o=>o.value===value)||options[0];
- return `<div class="field exercise-choice" data-render-key="choice-${id}"><span id="exercise-${id}-label">${esc(label)}</span><button type="button" class="exercise-choice-trigger" data-exercise-choice="${id}" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="exercise-${id}-label exercise-${id}-value" aria-controls="exercise-${id}-options"><span id="exercise-${id}-value">${esc(selected?.label||'请选择')}</span><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="m4 6 4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div id="exercise-${id}-options" class="exercise-choice-panel" popover="manual" role="listbox" aria-labelledby="exercise-${id}-label">${options.map(o=>`<button type="button" role="option" tabindex="-1" aria-selected="${o.value===value}" data-exercise-option="${esc(o.value)}"><span>${esc(o.label)}</span><i aria-hidden="true">${o.value===value?'✓':''}</i></button>`).join('')}</div></div>`;
+ const selected=options.find(o=>o.value===value),display=selected?.label||(value?(id==='curriculum'?'自定 · ':'')+value:options[0]?.label||'请选择');
+ return `<div class="field exercise-choice" data-render-key="choice-${id}"><span id="exercise-${id}-label">${esc(label)}</span><button type="button" class="exercise-choice-trigger" data-exercise-choice="${id}" title="${esc(display)}" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="exercise-${id}-label exercise-${id}-value" aria-controls="exercise-${id}-options"><span id="exercise-${id}-value">${esc(display)}</span><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="m4 6 4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div id="exercise-${id}-options" class="exercise-choice-panel" popover="manual" role="listbox" aria-labelledby="exercise-${id}-label">${options.map(o=>`<button type="button" role="option" tabindex="-1" aria-selected="${o.value===value}" data-exercise-option="${esc(o.value)}"><span>${esc(o.label)}</span><i aria-hidden="true">${o.value===value?'✓':''}</i></button>`).join('')}</div></div>`;
 }
 
 export function installExerciseChoices(root,onChange){
  let active=null,frame=0;
- const opened=p=>p.matches(':popover-open')||p.classList.contains('choice-fallback-open');
+ const nativeOpen=p=>typeof p.showPopover==='function'&&p.matches(':popover-open');
+ const opened=p=>nativeOpen(p)||p.classList.contains('choice-fallback-open');
  function position(){
   if(!active)return;const {trigger,panel}=active;if(!trigger.isConnected)return void close(false,true);
-  const r=trigger.getBoundingClientRect(),v=window.visualViewport,left=v?.offsetLeft||0,top=v?.offsetTop||0,width=v?.width||innerWidth,height=v?.height||innerHeight;
-  const w=Math.min(Math.max(r.width,230),width-24),below=top+height-r.bottom-12,above=r.top-top-12,down=below>=Math.min(230,above),space=Math.max(80,down?below:above);
-  panel.style.width=w+'px';panel.style.maxHeight=Math.min(330,space)+'px';panel.style.left=Math.max(left+12,Math.min(r.left,left+width-w-12))+'px';panel.style.top=(down?r.bottom+6:Math.max(top+12,r.top-panel.offsetHeight-6))+'px';
+  const fallback=!nativeOpen(panel),r=trigger.getBoundingClientRect(),v=window.visualViewport,windowLeft=v?.offsetLeft||0,windowTop=v?.offsetTop||0,box=fallback?root.closest('dialog')?.getBoundingClientRect():null,left=Math.max(windowLeft,box?.left??windowLeft),top=Math.max(windowTop,box?.top??windowTop),right=Math.min(windowLeft+(v?.width||innerWidth),box?.right??Infinity),bottom=Math.min(windowTop+(v?.height||innerHeight),box?.bottom??Infinity),width=right-left;
+  const w=Math.min(Math.max(r.width,230),width-24),below=bottom-r.bottom-12,above=r.top-top-12,down=below>=Math.min(230,above),space=Math.max(44,down?below:above);
+  panel.style.position=fallback?'absolute':'fixed';panel.style.width=w+'px';panel.style.maxHeight=Math.min(330,space)+'px';
+  const x=Math.max(left+12,Math.min(r.left,right-w-12)),y=down?r.bottom+6:Math.max(top+12,r.top-panel.offsetHeight-6),parent=fallback?panel.offsetParent:null,origin=parent?.getBoundingClientRect();
+  panel.style.left=(x-(origin?.left||0)+(parent?.scrollLeft||0)-(parent?.clientLeft||0))+'px';panel.style.top=(y-(origin?.top||0)+(parent?.scrollTop||0)-(parent?.clientTop||0))+'px';
  }
+
  const schedule=()=>{if(active&&!frame)frame=requestAnimationFrame(()=>{frame=0;position();});};
  function close(focus=false,immediate=false){
   const old=active;if(!old)return Promise.resolve();active=null;old.trigger.setAttribute('aria-expanded','false');
-  const hide=()=>{if(old.panel.matches(':popover-open'))old.panel.hidePopover();old.panel.classList.remove('choice-fallback-open');};
+  const hide=()=>{if(nativeOpen(old.panel))old.panel.hidePopover();old.panel.classList.remove('choice-fallback-open');};
   const done=immediate?(hide(),Promise.resolve()):closeSurface(old.panel,{hide,isOpen:()=>opened(old.panel)});
   if(focus&&old.trigger.isConnected)old.trigger.focus({preventScroll:true});return done;
  }
@@ -28,7 +32,7 @@ export function installExerciseChoices(root,onChange){
   const panel=root.querySelector('#'+trigger.getAttribute('aria-controls'));if(!panel)return;
   active={trigger,panel};trigger.setAttribute('aria-expanded','true');
   openSurface(panel,{show:()=>{try{panel.showPopover();}catch{panel.classList.add('choice-fallback-open');}},isOpen:()=>opened(panel)});position();
-  const options=[...panel.querySelectorAll('[role=option]')],selected=panel.querySelector('[aria-selected=true]');(last?options.at(-1):selected||options[0])?.focus({preventScroll:true});selected?.scrollIntoView({block:'nearest'});
+  const options=[...panel.querySelectorAll('[role=option]')],selected=panel.querySelector('[aria-selected=true]');(last?options.at(-1):selected||options[0])?.focus({preventScroll:true});if(selected)panel.scrollTop=Math.max(0,selected.offsetTop-(panel.clientHeight-selected.offsetHeight)/2);
  }
  root.addEventListener('click',async event=>{
   const opener=event.target.closest('[data-exercise-choice]');if(opener){open(opener);return;}

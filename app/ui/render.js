@@ -13,9 +13,10 @@ function synchronize(current,next) {
   if(current.nodeType===3||current.nodeType===8){if(current.nodeValue!==next.nodeValue)current.nodeValue=next.nodeValue;return;}
   const managed=current.hasAttribute('data-managed')&&next.hasAttribute('data-managed');
   const surfaceOwned=current.dataset.surfaceMotion==='managed'&&current.dataset.surfacePhase!=='closed';
+  const fallbackClasses=surfaceOwned?['choice-fallback-open','picker-fallback-open'].filter(name=>current.classList.contains(name)):[];
   const keepOpen=current.tagName==='DETAILS'&&!next.hasAttribute('data-controlled'),wasOpen=current.open;
   for(const attr of [...current.attributes])if(!next.hasAttribute(attr.name)&&!(managed&&(attr.name==='style'||attr.name.startsWith('data-pdf')||attr.name==='data-current-page'))&&!(surfaceOwned&&(attr.name==='style'||attr.name==='inert'||attr.name.startsWith('data-surface-'))))current.removeAttribute(attr.name);
-  for(const attr of next.attributes)if(current.getAttribute(attr.name)!==attr.value)current.setAttribute(attr.name,attr.value);
+  for(const attr of next.attributes){const value=attr.name==='class'&&fallbackClasses.length?[...new Set(attr.value.split(/\s+/).concat(fallbackClasses))].join(' '):attr.value;if(current.getAttribute(attr.name)!==value)current.setAttribute(attr.name,value);}
   if(keepOpen)current.open=wasOpen;
   if(current.matches('input,textarea')) {
     if(current.value!==next.value)current.value=next.value;
@@ -27,7 +28,7 @@ function synchronize(current,next) {
   // A retiring teacher picker keeps its populated calendar until fadeout.
   // Calendar ownership lasts through fadeout. A populated exercise menu must
   // still receive changed subject options before a quick reopen.
-  if(current.dataset.surfacePhase==='leaving'&&(current.matches('.plan-picker-panel:popover-open')||current.matches('.exercise-choice-panel:popover-open')&&!next.childElementCount))return;
+  if(current.dataset.surfacePhase==='leaving'&&(typeof current.showPopover==='function'&&current.matches('.plan-picker-panel:popover-open')||typeof current.showPopover==='function'&&current.matches('.exercise-choice-panel:popover-open')&&!next.childElementCount))return;
   reconcile(current,next);
 }
 function reconcile(parent,next) {

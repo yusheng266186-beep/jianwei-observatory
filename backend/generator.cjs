@@ -52,7 +52,7 @@ async function generate(input,{provider=process.env.TRAINING_PROVIDER||'gemini',
  }
  }
  if(generation)metadata={provider:generation.provider,reasoningEffort:generation.reasoningEffort};
- onProgress?.({phase:'validating'});if(inspect)inspect(output);
+ onProgress?.({phase:'validating',responseChars:output.length,draftSource:output.slice(0,256000)});if(inspect)inspect(output);
  let sheet;try{sheet=validateExerciseResult(parseExerciseJSON(output),input);}catch(cause){throw Object.assign(new Error('MODEL_CONTENT_INVALID'),{cause,output});}
  if(sheet.questions.some(q=>q.diagram?.kind==='illustration')&&input.visuals!=='hybrid'||sheet.questions.filter(q=>q.diagram?.kind==='illustration').length>1||input.visuals==='none'&&sheet.questions.some(q=>q.diagram))throw Object.assign(new Error('MODEL_CONTENT_INVALID'),{cause:new Error('图示数量或类型不符合所选策略。'),output});
  return {sheet,model,...metadata,templateVersion:template.version,templateId:template.id,usage,generatedAt:new Date().toISOString()};

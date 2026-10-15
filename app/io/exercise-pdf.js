@@ -7,7 +7,7 @@ import {exerciseFile} from './exercise-file-cache.js';
 // A zero-padding row keeps short blocks together without clipping the first glyph
 // when pdfmake moves a block to the next page. The worker owns this named layout.
 const together=stack=>({table:{widths:['*'],body:[[{stack}]],dontBreakRows:true},layout:'exerciseKeepTogether'});
-export async function exercisePDF(record,{teacher=false,name='',classNo=''}={}){
+export async function exercisePDF(record,{teacher=false,name=record.student?.name||'',classNo=record.student?.classNo??''}={}){
  if(!record.reviewedAt)throw new Error('请完成审题确认后输出正式练习。');
  const sheet=validateExerciseResult(record.sheet,record.request),key=JSON.stringify(['pdf-v4-baseline',record.request,sheet,teacher,name,classNo,{exerciseId:record.id}]);
  const snapshot=structuredClone(record);return exerciseFile(key,()=>buildExercisePDF(snapshot,{teacher,name,classNo}));
