@@ -7,3 +7,6 @@ test('本机文件缓存不可读或保存失败时，当前导出仍然有效',
 const n=(tag,children=[],text='',attrs={})=>({localName:tag,children,textContent:text||children.map(c=>c.textContent).join(''),getAttribute:k=>attrs[k]??null});
 test('Word原生公式保留分数、根式、上下标与XML文本',()=>{const root=n('math',[n('mfrac',[n('msup',[n('mi',[],'x'),n('mn',[],'2')]),n('msqrt',[n('mi',[],'y')])]),n('mo',[],'<')]);const xml=mathMLToOffice(root);for(const tag of ['m:oMath','m:f','m:sSup','m:rad'])assert(xml.includes('<'+tag+'>'));assert(xml.includes('&lt;'));assert(!xml.includes('<w:drawing>'));});
 test('Word矩阵、积分上下限与条件标签保持独立结构，不默默丢弃未知运算',()=>{const matrix=mathMLToOffice(n('math',[n('mtable',[n('mtr',[n('mtd',[n('mn',[],'1')]),n('mtd',[n('mn',[],'2')])])])]));assert(matrix.includes('<m:mr>'));assert.equal((matrix.match(/<m:e>/g)||[]).length,2);assert(mathMLToOffice(n('mover',[n('mo',[],'→'),n('mtext',[],'加热')])).includes('<m:limUpp>'));assert.throws(()=>mathMLToOffice(n('unknown')),/OFFICE_MATH_UNSUPPORTED/);});
+
+import {wordParagraphLines} from '../app/io/exercise-word.js';
+test('Word阅读材料的空行使用段距，末尾换行不会在强制分页前留下空白页',()=>{const source='First paragraph.\n\nSecond paragraph.\n\n';assert.deepEqual(wordParagraphLines(source),['First paragraph.','Second paragraph.']);assert.equal(source,'First paragraph.\n\nSecond paragraph.\n\n');});

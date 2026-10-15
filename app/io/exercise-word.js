@@ -5,11 +5,14 @@ import {exerciseDiagramSVG} from './exercise-diagram.js';
 import {mathMLToOffice} from './exercise-word-math.js';
 import {exerciseFile} from './exercise-file-cache.js';
 const xml=value=>String(value??'').replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g,'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
+// Blank source lines are paragraph spacing, not extra Word paragraphs before
+// a page break; retaining those empty paragraphs can create a blank page.
+export const wordParagraphLines=value=>String(value).split('\n').filter(line=>line.trim());
 let zipTask;
 async function zipLibrary(){if(!zipTask){const task=import('../../vendor/jszip.min.js').then(()=>{if(!window.JSZip)throw new Error('Word组件未能载入，请重试');return window.JSZip;});zipTask=task;task.catch(()=>{if(zipTask===task)zipTask=null;});}return zipTask;}
 export async function exerciseWord(record,{teacher=false,name='',classNo=''}={}){
  if(!record.reviewedAt)throw new Error('请完成审题确认后输出正式练习。');
- const sheet=validateExerciseResult(record.sheet,record.request),key=JSON.stringify(['docx-v2',record.request,sheet,teacher,name,classNo]);
+ const sheet=validateExerciseResult(record.sheet,record.request),key=JSON.stringify(['docx-v3',record.request,sheet,teacher,name,classNo]);
  const snapshot=structuredClone(record);return exerciseFile(key,()=>buildExerciseWord(snapshot,{teacher,name,classNo}));
 }
 async function buildExerciseWord(record,{teacher,name,classNo}){
@@ -24,7 +27,7 @@ async function buildExerciseWord(record,{teacher,name,classNo}){
  };
  const inline=async value=>{const out=[];for(const part of mathParts(String(value))){if(!part.latex){out.push(textRun(part.text));continue;}const rendered=await mathSVG(part.latex);try{await warmExerciseMath();const mml=await window.MathJax.tex2mmlPromise(part.latex,{display:false}),doc=new DOMParser().parseFromString(mml,'application/xml');if(doc.querySelector('parsererror,merror'))throw new Error('INVALID_MATHML');out.push(mathMLToOffice(doc.documentElement));}catch{out.push(await image(rendered.svg,{width:Math.min(460,rendered.width),height:Math.max(20,rendered.height),svg:true,alt:'公式 '+part.latex}));}}return out.join('');};
  const p=async(value,style='Normal',extra='')=>'<w:p><w:pPr><w:pStyle w:val="'+style+'"/>'+extra+'</w:pPr>'+await inline(value)+'</w:p>';
- const lines=async(value,style='Normal',extra='')=>(await Promise.all(String(value).split('\n').map(line=>p(line,style,extra)))).join('');
+ const lines=async(value,style='Normal',extra='')=>(await Promise.all(wordParagraphLines(value).map(line=>p(line,style,extra)))).join('');
  let body=await p(subject+(teacher?'专项练习参考答案与评分要点':'专项练习'),'Title')+await p(sheet.title,'Subtitle')+await p((name?'姓名：'+name:'姓名：____________')+'    '+(classNo?'班级：'+classNo+'班':'班级：________')+'    建议用时：'+record.request.minutes+'分钟','Meta')+await p('题量：'+sheet.questions.length+'题    满分：'+sheet.questions.reduce((n,q)=>n+q.maxScore,0)+'分    训练难度：'+difficultyProfile(record.request.difficulty).id,'Meta')+await p('教学范围：'+record.request.curriculum,'Meta')+await p('训练目标：'+sheet.objective);
  for(const section of exercisePrintSections(sheet.questions)){
   if(section.material)body+=await p('共同材料 第'+section.questions.map(q=>q.id).join('、')+'题','Heading1')+await lines(section.material);
@@ -33,7 +36,7 @@ async function buildExerciseWord(record,{teacher,name,classNo}){
    if(q.target)body+=await p('训练点：'+q.target,'Meta');body+=await lines(q.stem,'Normal',q.diagram&&q.stem.length<650?'<w:keepNext/>':'');
    if(q.diagram){let src,svg=false;if(q.diagram.kind==='illustration'){if(!q.diagram.image)throw new Error('复杂插图尚未生成，请先补充图示。');src='data:'+q.diagram.image.mime+';base64,'+q.diagram.image.data;}else{src=exerciseDiagramSVG(q.diagram);svg=true;}body+='<w:p><w:pPr><w:jc w:val="center"/><w:keepNext/></w:pPr>'+await image(src,{svg,width:430,height:255,alt:q.diagram.description||q.diagram.caption})+'</w:p>'+await p(q.diagram.caption,'Caption');}
    for(const [i,c] of q.choices.entries())body+=await p('ABCD'[i]+'. '+c);
-   if(teacher){body+=await p('参考答案','Heading2')+await lines(q.answer)+await p('第'+q.id+'题 解析与评分要点','Heading2')+await lines(q.analysis)+await p('评分要点','Heading2');for(const point of q.points)body+=await p('• '+point);}
+   if(teacher){body+=await p('参考答案','Heading2')+await lines(q.answer)+await p('第'+q.id+'题 解析与评分要点','Heading2')+await lines(q.analysis,'Normal',q.analysis.length<1000?'<w:keepLines/>':'')+await p('评分要点','Heading2');for(const point of q.points)body+=await p('• '+point);}
    else{const choice=['选择','多选'].includes(q.type),limit=subject==='英语'?Number(q.stem.match(/(?:no more than|at most|within)\s+(\d+)\s+words/i)?.[1]):0;body+=await p(choice?'作答：________':'作答与订正：');if(!choice){const n=limit&&limit<=30?2:q.type==='填空'?2:q.type==='写作'?9:5;for(let i=0;i<n;i++)body+='<w:p><w:pPr><w:pStyle w:val="AnswerLine"/><w:pBdr><w:bottom w:val="single" w:sz="2" w:color="DDDDDD"/><w:between w:val="single" w:sz="2" w:color="DDDDDD"/></w:pBdr></w:pPr><w:r><w:t> </w:t></w:r></w:p>';}}
   }
  }
