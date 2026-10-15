@@ -31,11 +31,17 @@ export function exerciseSubjects(atlas,{sid,exam}={}){
 export function parseExerciseJSON(source){return JSON.parse(source);}
 const formatted=text=>!/[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(text)&&text.split(/(\$\$[\s\S]*?\$\$|\$[^$\n]+\$)/g).every((part,i)=>i%2||!(/\\[A-Za-z{}]/.test(part)));
 
-const levels=['基础','巩固','迁移'],types=['填空','选择','多选','解答','简答','阅读','写作','实验','计算','翻译'];
+export const EXERCISE_QUESTION_TYPES=['填空','选择','多选','解答','简答','阅读','写作','实验','计算','翻译'];
+const levels=['基础','巩固','迁移'],types=EXERCISE_QUESTION_TYPES;
+const subjectTypes={语文:['选择','简答','阅读','写作'],数学:['选择','多选','填空','解答'],英语:['选择','填空','阅读','写作','翻译'],日语:['选择','填空','阅读','写作','翻译'],物理:['选择','多选','实验','计算'],化学:['选择','多选','填空','实验','计算'],生物:['选择','多选','填空','实验','简答'],历史:['选择','简答','阅读'],政治:['选择','简答','阅读'],地理:['选择','简答','阅读']};
+export const exerciseQuestionTypes=subject=>subjectTypes[subject]||types;
 const text=(v,max)=>typeof v==='string'&&v.trim().length>0&&v.length<=max;
 const keys=(o,allowed)=>o&&typeof o==='object'&&!Array.isArray(o)&&Object.keys(o).every(k=>allowed.includes(k));
 export function validateExerciseRequest(value){
- if(!keys(value,['subject','grade','curriculum','focus','count','minutes','difficulty','evidence','basis','visuals','template'])||!EXERCISE_SUBJECTS.some(s=>s.id===value.subject)||value.grade!=='高三'||!text(value.curriculum,160)||!text(value.focus,500)||!Number.isInteger(value.count)||value.count<3||value.count>12||!Number.isInteger(value.minutes)||value.minutes<5||value.minutes>90||!difficultyProfile(value.difficulty)||!Array.isArray(value.evidence)||value.evidence.length>24)throw new Error('请确认学科、训练重点、教材范围、3–12题及5–90分钟。');
+ if(!keys(value,['subject','grade','curriculum','focus','count','minutes','difficulty','evidence','basis','visuals','template','targets','requirements','questionTypes'])||!EXERCISE_SUBJECTS.some(s=>s.id===value.subject)||value.grade!=='高三'||!text(value.curriculum,160)||!text(value.focus,500)||!Number.isInteger(value.count)||value.count<3||value.count>12||!Number.isInteger(value.minutes)||value.minutes<5||value.minutes>90||!difficultyProfile(value.difficulty)||!Array.isArray(value.evidence)||value.evidence.length>24)throw new Error('请确认学科、训练重点、教材范围、3–12题及5–90分钟。');
+ if(value.requirements!==undefined&&(typeof value.requirements!=='string'||value.requirements.length>1000))throw new Error('补充要求最多1000字。');
+ if(value.targets!==undefined&&(!Array.isArray(value.targets)||value.targets.length>8||value.targets.length>value.count||new Set(value.targets).size!==value.targets.length||value.targets.some(t=>!text(t,200))))throw new Error('每次最多选择8个不同训练点，题数须不少于训练点数量。');
+ if(value.questionTypes!==undefined&&(!Array.isArray(value.questionTypes)||value.questionTypes.length>value.count||new Set(value.questionTypes).size!==value.questionTypes.length||value.questionTypes.some(t=>!exerciseQuestionTypes(value.subject).includes(t))))throw new Error('请选择适合当前学科的题型，题数须不少于所选题型数量。');
  for(const e of value.evidence)if(!keys(e,['label','knowledge','score','max','exam'])||!text(e.label,60)||typeof e.knowledge!=='string'||e.knowledge.length>200||typeof e.score!=='number'||!Number.isFinite(e.score)||typeof e.max!=='number'||!Number.isFinite(e.max)||e.max<=0||e.score<0||e.score>e.max)throw new Error('训练依据只接受明确满分、有效得分的匿名得分项。');
  if(value.evidence.some(e=>e.exam!==undefined&&(!Number.isInteger(e.exam)||e.exam<1||e.exam>6)))throw new Error('考试依据编号无效。');
  if(value.visuals!==undefined&&!['vector','hybrid','none'].includes(value.visuals))throw new Error('图示策略无效。');
@@ -48,7 +54,9 @@ export function validateExerciseResult(value,request){
  if(!keys(value,['title','objective','questions'])||!text(value.title,100)||!text(value.objective,500)||!Array.isArray(value.questions)||value.questions.length!==request.count)throw new Error('题目数量或训练目标不完整。');
  const stems=new Set();
  for(const [i,q] of value.questions.entries()){
-  if(!keys(q,['id','level','type','stem','choices','answer','analysis','points','maxScore','minutes','diagram'])||q.id!==i+1||!levels.includes(q.level)||!types.includes(q.type)||!text(q.stem,3000)||!text(q.answer,2000)||!text(q.analysis,4000)||!Array.isArray(q.choices)||!Array.isArray(q.points)||!q.points.length||q.points.length>8||q.points.some(p=>!text(p,300))||!Number.isInteger(q.maxScore)||q.maxScore<1||q.maxScore>25||!Number.isInteger(q.minutes)||q.minutes<1||q.minutes>30)throw new Error('第'+(i+1)+'题的题干、答案、解析或评分点不完整。');
+  if(!keys(q,['id','level','type','stem','choices','answer','analysis','points','maxScore','minutes','diagram','target'])||q.id!==i+1||!levels.includes(q.level)||!types.includes(q.type)||!text(q.stem,3000)||!text(q.answer,2000)||!text(q.analysis,4000)||!Array.isArray(q.choices)||!Array.isArray(q.points)||!q.points.length||q.points.length>8||q.points.some(p=>!text(p,300))||!Number.isInteger(q.maxScore)||q.maxScore<1||q.maxScore>25||!Number.isInteger(q.minutes)||q.minutes<1||q.minutes>30)throw new Error('第'+(i+1)+'题的题干、答案、解析或评分点不完整。');
+  if(q.target!==undefined&&!text(q.target,200)||request.targets?.length&&!request.targets.includes(q.target))throw new Error('第'+(i+1)+'题未对应已选训练点。');
+  if(request.questionTypes?.length&&!request.questionTypes.includes(q.type))throw new Error('第'+(i+1)+'题不符合所选题型。');
   if(q.diagram)validateExerciseDiagram(q.diagram);
   if([q.stem,q.answer,q.analysis,...q.choices,...q.points].some(s=>typeof s==='string'&&!formatted(s)))throw new Error('第'+(i+1)+'题未按约定输出公式或正文格式。');
   const choice=['选择','多选'].includes(q.type);
@@ -58,6 +66,8 @@ export function validateExerciseResult(value,request){
   // HTML and scripts are never accepted as model-authored layout.
   if([q.stem,q.answer,q.analysis,...q.choices,...q.points].some(s=>/<\/?(?:script|iframe|img|svg|style)\b|javascript:/i.test(s)))throw new Error('题目中存在非教学内容。');
  }
+ if(request.targets?.some(t=>!value.questions.some(q=>q.target===t)))throw new Error('练习没有覆盖全部已选训练点。');
+ if(request.questionTypes?.some(t=>!value.questions.some(q=>q.type===t)))throw new Error('练习没有覆盖全部所选题型。');
  const profile=difficultyProfile(request.difficulty),required=request.difficulty==='适度提升'?['基础','巩固']:profile.required;
  if(required.some(level=>!value.questions.some(q=>q.level===level)))throw new Error('题目梯度与所选难度不匹配。');
  if(request.difficulty==='基础起步'&&value.questions.some(q=>q.level==='迁移'))throw new Error('基础起步练习不应包含迁移题。');
@@ -71,6 +81,6 @@ export function exerciseEvidence(atlas,{sid,exam,plan,subject='数学'}={}){
  const questions=selected.length?selected:atlas.questionsFor(row,subject);
  return questions.filter(q=>typeof q.score==='number'&&Number.isFinite(q.score)&&typeof q.max==='number'&&Number.isFinite(q.max)&&q.max>0&&q.score>=0&&q.score<=q.max&&q.score<q.max).sort((a,b)=>a.score/a.max-b.score/b.max).slice(0,12).map(q=>({label:String(q.label),knowledge:String(q.knowledge||'').replace(/^知识点未标注$/,''),score:q.score,max:q.max}));
 }
-export const exerciseSchema={type:'object',additionalProperties:false,required:['title','objective','questions'],properties:{title:{type:'string'},objective:{type:'string'},questions:{type:'array',items:{type:'object',additionalProperties:false,required:['id','level','type','stem','choices','answer','analysis','points','maxScore','minutes'],properties:{id:{type:'integer'},level:{type:'string',enum:levels},type:{type:'string',enum:types},stem:{type:'string'},choices:{type:'array',items:{type:'string'}},answer:{type:'string'},analysis:{type:'string'},points:{type:'array',items:{type:'string'}},maxScore:{type:'integer'},minutes:{type:'integer'},diagram:exerciseDiagramSchema}}}}};
+export const exerciseSchema={type:'object',additionalProperties:false,required:['title','objective','questions'],properties:{title:{type:'string'},objective:{type:'string'},questions:{type:'array',items:{type:'object',additionalProperties:false,required:['id','level','type','stem','choices','answer','analysis','points','maxScore','minutes'],properties:{id:{type:'integer'},level:{type:'string',enum:levels},type:{type:'string',enum:types},stem:{type:'string'},choices:{type:'array',items:{type:'string'}},answer:{type:'string'},analysis:{type:'string'},points:{type:'array',items:{type:'string'}},maxScore:{type:'integer'},minutes:{type:'integer'},target:{type:'string',maxLength:200},diagram:exerciseDiagramSchema}}}}};
 
-export function exerciseSchemaFor(request){const schema=structuredClone(exerciseSchema),q=schema.properties.questions;q.minItems=q.maxItems=request.count;Object.assign(q.items.properties.id,{minimum:1,maximum:request.count});Object.assign(q.items.properties.maxScore,{minimum:1,maximum:25});Object.assign(q.items.properties.minutes,{minimum:1,maximum:30});Object.assign(q.items.properties.choices,{maxItems:4});Object.assign(q.items.properties.points,{minItems:1,maxItems:8});return schema;}
+export function exerciseSchemaFor(request){const schema=structuredClone(exerciseSchema),q=schema.properties.questions;q.minItems=q.maxItems=request.count;Object.assign(q.items.properties.id,{minimum:1,maximum:request.count});Object.assign(q.items.properties.maxScore,{minimum:1,maximum:25});Object.assign(q.items.properties.minutes,{minimum:1,maximum:30});Object.assign(q.items.properties.choices,{maxItems:4});Object.assign(q.items.properties.points,{minItems:1,maxItems:8});if(request.targets?.length){q.items.required.push('target');q.items.properties.target.enum=[...request.targets];}else delete q.items.properties.target;if(request.questionTypes?.length)q.items.properties.type.enum=[...request.questionTypes];return schema;}

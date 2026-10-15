@@ -55,7 +55,8 @@
     "test:teaching-polish": "node tests/teaching-polish.cjs",
     "test:exercise-hub": "node tests/exercise-hub.cjs",
     "test:exercise-submission": "node tests/exercise-submission.cjs",
-    "test:exercise-feedback": "node tests/exercise-feedback.cjs"
+    "test:exercise-feedback": "node tests/exercise-feedback.cjs",
+    "test:exercise-content": "node tests/exercise-content-flow.cjs"
   },
   "devDependencies": {
     "esbuild": "0.25.11",

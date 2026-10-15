@@ -8,11 +8,16 @@ export function diagramLabelLines(value){
  for(const token of tokens){const w=[...token].reduce((n,c)=>n+(/[^\x00-\xff]/.test(c)?13:6.5),0);if(line&&width+w>105){lines.push(line.trim());line='';width=0;}line+=token;width+=w;}if(line.trim())lines.push(line.trim());return lines;
 }
 const label=(x,y,value,extra='')=>`<text x="${x}" y="${y}" ${extra}>${esc(String(value??'').replace(/([A-Za-z])\^([23])/g,(_,letter,power)=>letter+(power==='2'?'²':'³'))).replace(/\b(?:[A-Z][a-z]?\d*){2,}\b/g,formula=>formula.replace(/\d+/g,n=>'<tspan baseline-shift="sub" font-size="9">'+n+'</tspan>'))}</text>`;
+export function diagramTicks([min,max]){
+ const stepBase=(max-min)/5,power=10**Math.floor(Math.log10(stepBase)),step=[1,2,5,10].map(n=>n*power).reduce((best,n)=>Math.abs(Math.log(n/stepBase))<Math.abs(Math.log(best/stepBase))?n:best,power),first=Math.ceil(min/step-1e-10),last=Math.floor(max/step+1e-10);
+ return Array.from({length:Math.min(12,last-first+1)},(_,i)=>Number(((first+i)*step).toPrecision(10))).map(n=>Object.is(n,-0)?0:n);
+}
 export function exerciseDiagramSVG(value){
  const d=validateExerciseDiagram(value);if(d.kind==='illustration')return null;let parts='';
  if(['plot','bars'].includes(d.kind)){
   const X=x=>60+(x-d.xRange[0])/(d.xRange[1]-d.xRange[0])*510,Y=y=>290-(y-d.yRange[0])/(d.yRange[1]-d.yRange[0])*240;
-  for(let i=0;i<=5;i++){const x=d.xRange[0]+i*(d.xRange[1]-d.xRange[0])/5,y=d.yRange[0]+i*(d.yRange[1]-d.yRange[0])/5;parts+=line(X(x),50,X(x),290,'stroke="#d3d7da" stroke-width=".6"')+line(60,Y(y),570,Y(y),'stroke="#d3d7da" stroke-width=".6"')+label(X(x),310,Number(x.toPrecision(4)), 'text-anchor="middle"')+label(49,Y(y)+4,Number(y.toPrecision(4)),'text-anchor="end"');}
+  for(const x of diagramTicks(d.xRange))parts+=line(X(x),50,X(x),290,'stroke="#d3d7da" stroke-width=".6"')+label(X(x),310,x,'text-anchor="middle"');
+  for(const y of diagramTicks(d.yRange))parts+=line(60,Y(y),570,Y(y),'stroke="#d3d7da" stroke-width=".6"')+label(49,Y(y)+4,y,'text-anchor="end"');
   const zeroX=X(Math.max(d.xRange[0],Math.min(d.xRange[1],0))),zeroY=Y(Math.max(d.yRange[0],Math.min(d.yRange[1],0)));parts+=line(60,zeroY,579,zeroY)+line(zeroX,290,zeroX,40)+label(580,332,d.xLabel,'text-anchor="end"')+label(60,25,d.yLabel);
   d.series.forEach((s,i)=>{const dash=i?'stroke-dasharray="'+(i===1?'7 4':'2 4')+'"':'';if(d.kind==='bars')for(const p of s.points){const y=Y(p[1]);parts+=`<rect x="${X(p[0])-10}" y="${Math.min(y,zeroY)}" width="20" height="${Math.max(1,Math.abs(zeroY-y))}" fill="#eef0f2"/>`;}else parts+=`<polyline points="${s.points.map(p=>X(p[0])+','+Y(p[1])).join(' ')}" fill="none" stroke-width="1.8" ${dash}/>`;parts+=label(90+i*155,355,s.label);});
  }else{

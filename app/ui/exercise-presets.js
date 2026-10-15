@@ -21,3 +21,17 @@ const goals={
  '生物':['概念辨析与联系','遗传规律与概率计算','实验变量与对照设计','图表信息与证据推理']
 };
 export function exercisePresets(subject){return {modules:modules[subject]||[],goals:goals[subject]||['基础概念巩固','材料阅读与信息提取','分析推理与规范表达','综合应用与迁移']};}
+
+const scopeTerms={
+ 数学:[['集合与常用逻辑用语',/集合|交集|并集|补集|命题|逻辑/],['函数与导数',/函数|导数|单调|极值|最值|零点/],['三角函数与解三角形',/三角|正弦|余弦|解三角形/],['数列',/数列|等差|等比|递推/],['平面向量与立体几何',/向量|立体|空间|平面|翻折|球|圆柱/],['解析几何',/椭圆|双曲线|抛物线|圆锥曲线|弦长|离心率/],['概率与统计',/概率|统计|分布|随机|回归/]],
+ 物理:[['力与运动',/力|运动|速度|加速度|平抛|圆周/],['能量与动量',/能量|功|动量|碰撞/],['电场与电路',/电场|电路|电阻|电容|电势|欧姆/],['磁场与电磁感应',/磁场|电磁|感应|洛伦兹/],['振动与波',/振动|波|简谐/]],
+ 化学:[['物质结构与元素周期律',/结构|周期|化学键|晶体/],['化学反应原理',/平衡|速率|热化学|反应热/],['溶液与离子反应',/溶液|离子|水解|电离|沉淀/],['电化学',/电化学|电池|电解/],['有机化学',/有机|烃|醇|酚|醛|羧酸|酯/],['化学实验与探究',/实验|滴定|装置|制备|除杂/]],
+ 生物:[['分子与细胞',/细胞|酶|呼吸|光合|蛋白质|膜|分裂/],['遗传与进化',/遗传|基因|染色体|进化|DNA|RNA/],['稳态与调节',/稳态|调节|神经|激素|免疫/],['生物与环境',/生态|种群|群落|环境/],['生物技术与工程',/工程|克隆|发酵|生物技术/]]
+};
+// This only suggests labels already present in the teacher's materials.
+// A suggested grouping never becomes a new score-derived knowledge label.
+export function exerciseScopeMatches(subject,curriculum,knowledge){
+ const module=modules[subject]?.find(m=>curriculum==='高中'+subject+'已学内容：'+m);if(!module)return [];
+ const pattern=scopeTerms[subject]?.find(([m])=>m===module)?.[1];
+ return knowledge.filter(label=>pattern?pattern.test(label):label.includes(module)||module.includes(label));
+}
