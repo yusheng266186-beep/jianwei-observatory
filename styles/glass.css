@@ -607,7 +607,7 @@ html{scrollbar-width:auto}
 }
 
 :is(input,textarea){caret-color:var(--school-blue)}
-:is(input,textarea):focus-visible{outline:2px solid var(--blue)!important;outline-offset:3px}
+:is(input,textarea):focus-visible{outline:0!important;outline-offset:0}
 .table-scroll:focus-visible{outline-offset:3px}
 input::placeholder,textarea::placeholder{opacity:1}
 :is(input[type=radio],input[type=checkbox]){accent-color:var(--school-blue);width:16px;height:16px;flex-shrink:0;cursor:pointer}

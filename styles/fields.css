@@ -20,3 +20,12 @@ body[data-surface=paper] .field:has(>input,>textarea){background:#fbfdfe}
 @media(prefers-reduced-motion:reduce){body :is(input,textarea),body .field{transition:none}}
 
 body input.search-input{background:var(--field-surface)!important}body .search>input{border:0!important;background:transparent!important;box-shadow:none!important;padding:0!important;border-radius:0}
+
+/* Text entry uses its own edge and inner light, without an outer focus frame.
+   Programmatically focused sheets and headings are not keyboard controls. */
+body :is(input,textarea):focus-visible{outline:0!important;outline-offset:0}
+body :is(dialog,[tabindex="-1"]):focus{outline:0}
+body .field:has(>input,>textarea):focus-within{box-shadow:var(--field-shadow);border-color:#7298b279}
+body :is(input,textarea):focus{box-shadow:var(--field-shadow)}
+#exercise-content .exercise-writing-card:focus-within{outline:0;box-shadow:inset 0 1px 0 #fff,inset 1px 0 0 #ffffffa6,0 13px 30px -25px #345d7b4a}
+@media(forced-colors:active){body :is(input,textarea):focus-visible{outline:1px solid Highlight!important;outline-offset:-2px}body :is(dialog,[tabindex="-1"]):focus{outline:0}}
