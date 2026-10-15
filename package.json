@@ -59,7 +59,8 @@
     "test:exercise-content": "node tests/exercise-content-flow.cjs",
     "test:exercise-picker-background": "node tests/exercise-picker-background.cjs",
     "test:exercise-mobile-word": "node tests/exercise-mobile-word.cjs",
-    "test:exercise-center": "node tests/exercise-center.cjs"
+    "test:exercise-center": "node tests/exercise-center.cjs",
+    "test:exercise-composer": "node tests/exercise-composer.cjs"
   },
   "devDependencies": {
     "esbuild": "0.25.11",
