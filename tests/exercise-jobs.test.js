@@ -11,3 +11,4 @@ test('K3 max任务立即显示对应估时，不混用旧模型历史或将估�
  const estimated=jobTiming(r,oldSamples,100000);assert.match(estimated.label,/预计约/);assert(estimated.high>300);
  const samples=[300,400,500].map(seconds=>({...r,status:'ready',startedAt:1000,finishedAt:1000+seconds*1000}));assert.equal(jobTiming(r,samples).high,640);assert.equal(r.status,'queued');
 });
+test('切换服务、模型或强度后独立估时，不混用其他中转与模型的历史速度',()=>{const r={...record(),model:'gpt-6-sol',provider:'wefucke-gpt',reasoningEffort:'max'},samples=[40,50,60].map(seconds=>({...r,status:'ready',provider:'bytecat-gpt',startedAt:1000,finishedAt:1000+seconds*1000}));assert(jobTiming(r,samples).high>300);assert.equal(jobTiming(r,samples.map(s=>({...s,provider:r.provider}))).high,80);assert(jobTiming({...r,reasoningEffort:'low'},samples.map(s=>({...s,provider:r.provider}))).high>300);});

@@ -96,3 +96,11 @@ TRAINING_PRIVATE_DIR=/absolute/private/directory TRAINING_PROVIDER=kimi-code nod
 英语版式按完整材料和短答任务优化；预览与打印共用共同材料，保持原文。当前学科模板subject-templates-20261015.9。随机真实流程与186项测试记录见docs/EXERCISE-CONTENT-REFINEMENT-2026-10-15.md。
 
 移动端首屏、教学跟进入口、可复用PDF及两版可编辑Word导出更新见 docs/MOBILE-STARTUP-AND-WORD-2026-10-15.md。本轮云端模板与认证均未改动。
+
+## 模型工作台（预览）
+
+打开 `model-workbench.html`，使用同一认证器动态验证码。北辰的9组服务及135个模型适配已同步，保留Kimi与Gemini。选择并应用后仅影响新任务；密钥仅在worker环境变量中。最近切换和测试结果保存在独立私有COS控制区，不随14天试题清理而丢失。
+
+部署仍以 `TRAINING_PROVIDER=kimi-code` 保持初始默认值；工作台的后续选择以云端版本记录为准，不被重新部署覆盖。私有部署目录需要授权导出的 `beichen-live-current.json`；部署工具只读取其上游凭据，写入隔离训练worker，不修改北辰。
+
+详见 [模型工作台验证记录](../docs/MODEL-WORKBENCH-2026-10-15.md)。

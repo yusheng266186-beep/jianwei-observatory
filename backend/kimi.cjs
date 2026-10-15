@@ -9,7 +9,7 @@ function kimiProfile(kind='platform'){
  throw new Error('MODEL_ENDPOINT_INVALID');
 }
 function kimiExerciseSchema(schema){
- const compatible=structuredClone(schema),questions=compatible.properties.questions;
+ const compatible=structuredClone(schema),questions=compatible.properties.questions;if(!questions)return compatible;
  // MFJS requires explicit types even for constraints in an anyOf branch.
  // Supply them from the same field's base schema before generation.
  for(const item of [questions.items,...(questions.prefixItems||[])])for(const branch of item.anyOf||[]){
@@ -33,11 +33,11 @@ function readCompletion(source){
  if(!done||finish!=='stop'||!output.trim())throw Object.assign(new Error('MODEL_INCOMPLETE'),{diagnostic:{kind:'completion',finishReason:finish||'missing',streamComplete:done,usage}});
  return {output,usage:{input:usage.prompt_tokens||0,output:usage.completion_tokens||0,thinking:usage.completion_tokens_details?.reasoning_tokens||0}};
 }
-async function completeKimi({input,system,schema},{key,kind='platform',transport=request}={}){
+async function completeKimi({input,system,schema},{key,kind='platform',effort='max',transport=request,probe=false}={}){
  const profile=kimiProfile(kind);if(!key)throw new Error('MODEL_NOT_CONFIGURED');
- const body=JSON.stringify({model:profile.model,reasoning_effort:'max',max_completion_tokens:131072,messages:[{role:'system',content:system},{role:'user',content:JSON.stringify(input)}],response_format:{type:'json_schema',json_schema:{name:'student_exercise',strict:true,schema:kimiExerciseSchema(schema)}},stream:true,stream_options:{include_usage:true}});
- const response=await transport(profile.base+'/chat/completions',{method:'POST',body,headers:{'Content-Type':'application/json',Authorization:'Bearer '+key,'User-Agent':USER_AGENT},timeout:120000,deadlineMs:840000,maxBytes:8*1024*1024});
+ const body=JSON.stringify({model:profile.model,reasoning_effort:effort,max_completion_tokens:probe?4096:131072,messages:[{role:'system',content:system},{role:'user',content:JSON.stringify(input)}],response_format:{type:'json_schema',json_schema:{name:'student_exercise',strict:true,schema:kimiExerciseSchema(schema)}},stream:true,stream_options:{include_usage:true}});
+ const response=await transport(profile.base+'/chat/completions',{method:'POST',body,headers:{'Content-Type':'application/json',Authorization:'Bearer '+key,'User-Agent':USER_AGENT},timeout:120000,deadlineMs:probe?45000:840000,maxBytes:8*1024*1024});
  if(response.status!==200)throw Object.assign(new Error(response.status===429?'MODEL_RATE_LIMIT':'MODEL_REQUEST_FAILED'),{diagnostic:{kind:'upstream',status:response.status,message:String(response.body||'').replaceAll(key,'[REDACTED]').slice(0,4000)}});
- return {...readCompletion(response.body),model:profile.model,provider:'kimi-'+kind,reasoningEffort:'max'};
+ return {...readCompletion(response.body),model:profile.model,provider:'kimi-'+kind,reasoningEffort:effort};
 }
 module.exports={kimiProfile,kimiExerciseSchema,readCompletion,completeKimi,USER_AGENT};

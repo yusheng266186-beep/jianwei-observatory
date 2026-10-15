@@ -13,14 +13,14 @@ export function mergeJobSnapshot(record,data,at=Date.now()){
  return old!==snapshot();
 }
 export function jobTiming(record,history=[],at=Date.now()){
- const image=pendingImages(record)&&!pendingJob(record),count=Number(record.request?.count)||6,isKimi=r=>['k3','kimi-k3'].includes(r.model)||String(r.provider||'').startsWith('kimi-'),kimi=isKimi(record),ceiling=kimi?840:420;
- let low=image?120:kimi?90+count*12:40+count*8,high=image?330:kimi?240+count*35:90+count*18;
- const samples=history.filter(r=>r!==record&&r.status==='ready'&&(kimi?r.model===record.model&&(r.reasoningEffort||'max')===(record.reasoningEffort||'max'):!isKimi(r))&&r.request?.subject===record.request?.subject&&Math.abs((r.request.count||0)-count)<=2&&Number.isFinite(r.finishedAt)&&Number.isFinite(r.startedAt)&&r.finishedAt>r.startedAt).map(r=>(r.finishedAt-r.startedAt)/1000).filter(v=>v>=10&&v<=ceiling).slice(-12).sort((a,b)=>a-b);
+ const image=pendingImages(record)&&!pendingJob(record),count=Number(record.request?.count)||6,gemini=!record.model||record.provider==='gemini'||record.model==='gemini-3.8-flash',ceiling=gemini?420:840,sameModel=r=>(r.model||'gemini-3.8-flash')===(record.model||'gemini-3.8-flash')&&(r.provider||'gemini')===(record.provider||'gemini')&&(r.reasoningEffort||'max')===(record.reasoningEffort||'max');
+ let low=image?120:!gemini?90+count*12:40+count*8,high=image?330:!gemini?240+count*35:90+count*18;
+ const samples=history.filter(r=>r!==record&&r.status==='ready'&&sameModel(r)&&r.request?.subject===record.request?.subject&&Math.abs((r.request.count||0)-count)<=2&&Number.isFinite(r.finishedAt)&&Number.isFinite(r.startedAt)&&r.finishedAt>r.startedAt).map(r=>(r.finishedAt-r.startedAt)/1000).filter(v=>v>=10&&v<=ceiling).slice(-12).sort((a,b)=>a-b);
  if(!image&&samples.length>=3){const middle=samples[Math.floor(samples.length/2)];low=Math.max(25,Math.round(middle*.7));high=Math.min(ceiling,Math.max(low+30,Math.round(middle*1.6)));}
  const progress=image?Object.values(record.imageJobs||{}).find(pendingJob)||record:record;
  const start=progress.startedAt||progress.acceptedAt||progress.serverCreatedAt||progress.createdAt||record.createdAt||at;
  const elapsed=Math.max(0,Math.floor((Number.isFinite(progress.serverTime)&&progress.lastCheckedAt?progress.serverTime-start+at-progress.lastCheckedAt:at-start)/1000));
- const estimate=(kimi&&samples.length<3&&!image?'预计约':'通常约')+Math.max(1,Math.floor(low/60))+'–'+Math.max(2,Math.ceil(high/60))+'分钟';
+ const estimate=(!gemini&&samples.length<3&&!image?'预计约':'通常约')+Math.max(1,Math.floor(low/60))+'–'+Math.max(2,Math.ceil(high/60))+'分钟';
  const elapsedLabel='已等待 '+(elapsed<60?elapsed+'秒':Math.floor(elapsed/60)+'分'+elapsed%60+'秒');
  return {low,high,elapsed,estimate,elapsedLabel,overdue:elapsed>high,label:elapsed>high?'已超过通常用时，后台状态仍在查询':estimate+' · '+elapsedLabel};
 }

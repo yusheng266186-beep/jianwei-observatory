@@ -2,14 +2,16 @@
 const http=require('node:http'),crypto=require('node:crypto');
 const {COSStore}=require('./store.cjs'),{hash}=require('./tencent.cjs'),{loadContract,generationProfile}=require('./generator.cjs');
 const {decodeSecret,matchingCounter,STEP_MS,VALIDITY_MS}=require('./totp.cjs');
+const {createModelControl,snapshot,publicGeneration}=require('./model-control.cjs');
 const version='training-v1',uuid=/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
 const error=(status,code)=>Object.assign(new Error(code),{status});
 const safeEqual=(a,b)=>{a=Buffer.from(String(a));b=Buffer.from(String(b));return a.length===b.length&&crypto.timingSafeEqual(a,b);};
 function read(req){return new Promise((resolve,reject)=>{let size=0,chunks=[];req.on('data',c=>{size+=c.length;if(size>40000){reject(error(413,'REQUEST_TOO_LARGE'));req.destroy();}else chunks.push(c);});req.on('end',()=>{try{resolve(JSON.parse(Buffer.concat(chunks).toString('utf8')||'{}'));}catch{reject(error(400,'INVALID_JSON'));}});req.on('error',reject);});}
-function createServer({store=new COSStore(),env=process.env,now=Date.now,dispatch=async()=>{}}={}){
+function createServer({store=new COSStore(),env=process.env,now=Date.now,dispatch=async()=>{},modelStore=store}={}){
  const origins=(env.TRAINING_ORIGINS||'https://yusheng266186-beep.github.io').split(','),secret=env.TRAINING_SESSION_SECRET,totpSecret=env.TRAINING_TOTP_SECRET,owner=secret?hash(secret).slice(0,32):'';
  if(!secret||secret.length<32)throw new Error('AUTH_NOT_CONFIGURED');decodeSecret(totpSecret);
- const gate=hash(totpSecret).slice(0,20);
+ const gate=hash(totpSecret).slice(0,20),control=createModelControl({store:modelStore,env,now});
+ const reserve=async(id,createdAt,probe=false)=>{const date=new Date(createdAt+8*3600000).toISOString().slice(0,10),limit=Number(probe?(env.TRAINING_PROBE_LIMIT||20):(env.TRAINING_DAILY_LIMIT||30));for(let slot=0;slot<limit;slot++){const key=(probe?'probe-budget/':'budget/')+owner+'/'+date+'/'+slot+'.json',old=await store.get(key);if(old?.value.id===id)return;if(old)continue;if(await store.create(key,{id})||(await store.get(key))?.value.id===id)return;}throw error(429,probe?'PROBE_LIMIT':'DAILY_LIMIT');};
  const sign=body=>crypto.createHmac('sha256',secret).update(body).digest('base64url');
  const authenticate=req=>{const token=(req.headers.authorization||'').replace(/^Bearer /,''),parts=token.split('.'),[payload,signature]=parts;if(parts.length!==2||!payload||!signature||!safeEqual(sign(payload),signature))throw error(401,'AUTH_REQUIRED');let data;try{data=JSON.parse(Buffer.from(payload,'base64url'));}catch{throw error(401,'AUTH_REQUIRED');}if(data.owner!==owner||data.gate!==gate||!Number.isFinite(data.expires)||data.expires<now())throw error(401,'AUTH_EXPIRED');return data;};
  const server=http.createServer(async(req,res)=>{
@@ -18,7 +20,7 @@ function createServer({store=new COSStore(),env=process.env,now=Date.now,dispatc
   try{
    if(!allowed)throw error(403,'ORIGIN_REJECTED');if(req.method==='OPTIONS')return send(204,{});
    const url=new URL(req.url,'https://service.local');
-   if(req.method==='GET'&&url.pathname==='/health'){const {EXERCISE_SUBJECTS,EXERCISE_DIFFICULTIES}=await loadContract();return send(200,{version,...generationProfile(env.TRAINING_PROVIDER||'gemini'),subjects:EXERCISE_SUBJECTS.map(s=>s.id),difficulties:EXERCISE_DIFFICULTIES.map(d=>d.id),auth:{type:'totp',stepSeconds:STEP_MS/1000,validitySeconds:VALIDITY_MS/1000,singleUse:true}});}
+   if(req.method==='GET'&&url.pathname==='/health'){const {EXERCISE_SUBJECTS,EXERCISE_DIFFICULTIES}=await loadContract();return send(200,{version,...(env.TRAINING_MODEL_CONTROL==='true'?publicGeneration(await control.generation()):generationProfile(env.TRAINING_PROVIDER||'gemini')),subjects:EXERCISE_SUBJECTS.map(s=>s.id),difficulties:EXERCISE_DIFFICULTIES.map(d=>d.id),auth:{type:'totp',stepSeconds:STEP_MS/1000,validitySeconds:VALIDITY_MS/1000,singleUse:true}});}
    if(req.method==='POST'&&url.pathname==='/session'){
     // Reserve an attempt and consume the code atomically across SCF instances.
     const minute=Math.floor(now()/60000);let allowedAttempt=false;for(let slot=0;slot<10;slot++)if(await store.create('auth-attempts/'+owner+'/'+minute+'/'+slot+'.json',{at:now()})){allowedAttempt=true;break;}if(!allowedAttempt)throw error(429,'AUTH_RATE_LIMIT');
@@ -27,16 +29,18 @@ function createServer({store=new COSStore(),env=process.env,now=Date.now,dispatc
     const expires=now()+7*86400000,payload=Buffer.from(JSON.stringify({owner,gate,expires})).toString('base64url');return send(200,{token:payload+'.'+sign(payload),expires,authType:'totp'});
    }
    authenticate(req);
+   if(env.TRAINING_MODEL_CONTROL==='true'&&url.pathname==='/admin/models'){if(req.method==='GET')return send(200,await control.state());if(req.method==='POST')return send(200,{current:await control.apply(await read(req))});}
+   if(env.TRAINING_MODEL_CONTROL==='true'&&req.method==='POST'&&url.pathname==='/admin/probes'){
+    const id=String(req.headers['x-request-id']||'');if(!uuid.test(id))throw error(400,'REQUEST_ID_REQUIRED');const generation=snapshot(await read(req),env),key='jobs/'+owner+'/'+id,fingerprint=hash(JSON.stringify(generation)),saved=await store.get(key+'/meta.json');if(saved&&saved.value.fingerprint!==fingerprint)throw error(409,'REQUEST_ID_CONFLICT');const createdAt=saved?.value.createdAt||now();await reserve(id,createdAt,true);if(!saved&&await store.create(key+'/meta.json',{id,type:'model-probe',fingerprint,generation,status:'queued',createdAt,deadline:createdAt+600000}))await dispatch(key);return send(202,{id,status:'queued',createdAt,...publicGeneration(generation)});
+   }
    if(req.method==='GET'&&url.pathname==='/templates')return send(200,require('./templates.cjs').summary());
    if(req.method==='POST'&&['/jobs','/illustrations'].includes(url.pathname)){
     const id=String(req.headers['x-request-id']||'');if(!uuid.test(id))throw error(400,'REQUEST_ID_REQUIRED');const {validateExerciseRequest}=await loadContract();let input,type='exercise';try{input=await read(req);if(url.pathname==='/illustrations'){type='illustration';if(!input||Object.keys(input).some(k=>!['sourceId','questionId'].includes(k))||!uuid.test(input.sourceId)||!Number.isInteger(input.questionId)||input.questionId<1||input.questionId>12)throw Error();const source=await store.get('jobs/'+owner+'/'+input.sourceId+'/meta.json'),result=await store.get('jobs/'+owner+'/'+input.sourceId+'/result.json');if(source?.value.type==='illustration'||source?.value.input.visuals!=='hybrid'||result?.value.status!=='ready'||result.value.sheet?.questions.find(q=>q.id===input.questionId)?.diagram?.kind!=='illustration')throw Error();}else input=validateExerciseRequest(input);}catch{throw error(400,'TRAINING_INPUT_INVALID');}const fingerprint=hash(JSON.stringify(type==='exercise'?input:{type,input})),key='jobs/'+owner+'/'+id;let saved=await store.get(key+'/meta.json');
     if(saved&&saved.value.fingerprint!==fingerprint)throw error(409,'REQUEST_ID_CONFLICT');
     if(type==='illustration'){const pin='illustration-requests/'+owner+'/'+input.sourceId+'/'+input.questionId+'.json',existing=await store.get(pin);if(existing&&existing.value.id!==id)return send(202,{id:existing.value.id,status:'queued'});if(!existing&&!await store.create(pin,{id})){const winner=await store.get(pin);if(winner.value.id!==id)return send(202,{id:winner.value.id,status:'queued'});}}
     const createdAt=saved?.value.createdAt||now();if(saved&&saved.value.deadline<now())throw error(409,'JOB_EXPIRED');
-    const date=new Date(createdAt+8*3600000).toISOString().slice(0,10),limit=Number(env.TRAINING_DAILY_LIMIT||30);let reserved=false;
-    for(let slot=0;slot<limit;slot++){const quotaKey='budget/'+owner+'/'+date+'/'+slot+'.json',old=await store.get(quotaKey);if(old){if(old.value.id===id){reserved=true;break;}continue;}if(await store.create(quotaKey,{id})){reserved=true;break;}if((await store.get(quotaKey))?.value.id===id){reserved=true;break;}}
-    if(!reserved)throw error(429,'DAILY_LIMIT');
-    if(!saved){const created=await store.create(key+'/meta.json',{id,type,fingerprint,input,...(type==='exercise'?{generation:generationProfile(env.TRAINING_PROVIDER||'gemini')}:{}),status:'queued',createdAt,deadline:createdAt+600000});saved=await store.get(key+'/meta.json');if(saved.value.fingerprint!==fingerprint)throw error(409,'REQUEST_ID_CONFLICT');if(created)await dispatch(key);}
+    await reserve(id,createdAt);
+    if(!saved){const created=await store.create(key+'/meta.json',{id,type,fingerprint,input,...(type==='exercise'?{generation:env.TRAINING_MODEL_CONTROL==='true'?await control.generation():generationProfile(env.TRAINING_PROVIDER||'gemini')}:{}),status:'queued',createdAt,deadline:createdAt+600000});saved=await store.get(key+'/meta.json');if(saved.value.fingerprint!==fingerprint)throw error(409,'REQUEST_ID_CONFLICT');if(created)await dispatch(key);}
     return send(202,{id,status:'queued',createdAt:saved.value.createdAt,...(saved.value.generation?{model:saved.value.generation.model,provider:saved.value.generation.provider,reasoningEffort:saved.value.generation.reasoningEffort}:{})});
    }
    const match=url.pathname.match(/^\/jobs\/([a-f0-9-]+)$/);if(req.method==='GET'&&match&&uuid.test(match[1])){const key='jobs/'+owner+'/'+match[1],record=await store.get(key+'/meta.json');if(!record)throw error(404,'JOB_NOT_FOUND');const result=await store.get(key+'/result.json'),run=await store.get(key+'/run.json'),deadline=run?(run.value.deadlineAt||run.value.startedAt+450000):record.value.deadline+15000,expired=deadline<now();const output=result?.value||{status:expired?'failed':run?'running':'queued',...(expired?{error:'JOB_EXPIRED'}:{})};return send(200,{id:match[1],createdAt:record.value.createdAt,...(record.value.generation?{model:record.value.generation.model,provider:record.value.generation.provider,reasoningEffort:record.value.generation.reasoningEffort}:{}),...(run?{startedAt:run.value.startedAt}:{}),deadlineAt:deadline,serverTime:now(),...output});}
@@ -45,5 +49,5 @@ function createServer({store=new COSStore(),env=process.env,now=Date.now,dispatc
  });
  server.requestTimeout=20000;server.headersTimeout=15000;return server;
 }
-if(require.main===module)createServer().listen(Number(process.env.PORT||9000),'0.0.0.0');
+if(require.main===module)createServer({modelStore:new COSStore({prefix:'training-control-v1/'})}).listen(Number(process.env.PORT||9000),'0.0.0.0');
 module.exports={createServer};
