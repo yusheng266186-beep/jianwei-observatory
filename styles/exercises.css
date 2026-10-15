@@ -70,3 +70,26 @@ body[data-surface=paper] #exercise-dialog{background:var(--surface-window)}
 #exercise-dialog::backdrop{background:#274d6826;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
 body[data-surface=paper] #exercise-dialog::backdrop{backdrop-filter:none;-webkit-backdrop-filter:none}
 @media(prefers-reduced-transparency:reduce){#exercise-dialog::backdrop{backdrop-filter:none;-webkit-backdrop-filter:none}}
+
+/* Editable notes belong to the glass composition, with one shared surface. */
+#exercise-content .exercise-writing-card{position:relative;display:block;isolation:isolate;padding:17px 20px 8px;border:1px solid #ffffffc9;border-radius:16px;background:radial-gradient(ellipse at 0 0,#ffffff8a,transparent 72%),linear-gradient(135deg,#ffffff57,#dcebf418);box-shadow:inset 0 1px 0 #fffffff2,inset 1px 0 0 #ffffff73,0 12px 30px -27px #345d7b60;transition:background var(--motion-control) var(--motion-ease),box-shadow var(--motion-control) var(--motion-ease),border-color var(--motion-control)}
+#exercise-content .exercise-writing-card:before{content:'';position:absolute;left:0;top:21px;width:2px;height:22px;border-radius:2px;background:linear-gradient(#6c98b478,#a3c3d632);transition:height var(--motion-control) var(--motion-ease),background var(--motion-control)}
+#exercise-content .exercise-writing-card>.exercise-field-caption{margin:0 0 3px;color:var(--school-blue);font-size:12px;font-weight:550;line-height:1.8;gap:6px 18px}
+#exercise-content .exercise-writing-card>.exercise-field-caption>small{font-size:10px;font-weight:400;color:var(--muted);opacity:.8}
+#exercise-content .exercise-writing-card textarea{display:block;box-sizing:border-box;width:100%;min-height:82px;max-height:260px;margin:0;padding:9px 0 13px;border:0;border-radius:0;background:transparent;box-shadow:none;outline:none!important;resize:none;font-size:14px;font-weight:400;line-height:2;letter-spacing:.015em;color:var(--ink);overflow-x:hidden;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#789eb44d transparent;field-sizing:content}
+#exercise-content .exercise-writing-card textarea::placeholder{color:#7893a7;font-size:13px;line-height:2;opacity:.85}
+#exercise-content .exercise-writing-card:focus-within{border-color:#ffffffed;background:radial-gradient(ellipse at 0 0,#ffffffb3,transparent 75%),linear-gradient(135deg,#ffffff85,#dcebf42b);box-shadow:inset 0 1px 0 #fff,inset 1px 0 0 #ffffffa6,0 0 0 3px #799fb015,0 13px 30px -25px #345d7b4a}
+#exercise-content .exercise-writing-card:focus-within:before{height:30px;background:linear-gradient(#5c8ba9b0,#aacbdf54)}
+#exercise-content .exercise-writing-card:has(textarea:focus-visible){outline:2px solid #648ba968;outline-offset:3px}
+#exercise-content .exercise-writing-card:has([aria-invalid=true]){outline:1px solid #ad815e;outline-offset:3px}
+#exercise-content .exercise-writing-card textarea[aria-invalid=true]{outline:none!important}
+#exercise-content .exercise-supplement-note{margin-top:16px;padding-top:14px;background:radial-gradient(ellipse at 0 0,#ffffff62,transparent 72%),linear-gradient(135deg,#ffffff38,#dcebf414)}
+#exercise-content .exercise-supplement-note textarea{min-height:66px}
+@media(max-width:600px){#exercise-content .exercise-writing-card{padding:15px 15px 6px;border-radius:14px}#exercise-content .exercise-writing-card>.exercise-field-caption{font-size:11px;gap:4px 10px}#exercise-content .exercise-writing-card>.exercise-field-caption>small{font-size:9px}#exercise-content .exercise-writing-card textarea{font-size:16px;min-height:90px;padding:8px 0 11px;line-height:1.95}#exercise-content .exercise-supplement-note textarea{min-height:72px}#exercise-content .exercise-writing-card textarea::placeholder{font-size:13px}}
+body[data-surface=paper] #exercise-content .exercise-writing-card{background:var(--surface-control);border-color:var(--line)}
+@media(prefers-reduced-transparency:reduce){#exercise-content .exercise-writing-card{background:#f6fafd}#exercise-content .exercise-writing-card:focus-within{background:#fff}}
+@media(forced-colors:active){#exercise-content .exercise-writing-card{background:Canvas;border:1px solid CanvasText;box-shadow:none}#exercise-content .exercise-writing-card:has(textarea:focus-visible){outline:2px solid Highlight}#exercise-content .exercise-writing-card textarea{color:CanvasText}}
+/* Follow actions remain in normal flow with a single tutoring entry in the main card. */
+:is(#stage,.scene-leaving-canvas)[data-scene=follow] .scene-head{flex-wrap:wrap}
+:is(#stage,.scene-leaving-canvas)[data-scene=follow] .scene-head .head-actions{position:static;max-width:100%;flex-wrap:wrap}
+@media(max-width:760px){:is(#stage,.scene-leaving-canvas)[data-scene=follow] .scene-head .head-actions{justify-content:flex-start;width:100%;gap:8px}:is(#stage,.scene-leaving-canvas)[data-scene=follow] .scene-head .overline{min-height:0;margin-bottom:12px}:is(#stage,.scene-leaving-canvas)[data-scene=follow] .scene-head>.head-actions>.button{max-width:100%;white-space:normal}}
