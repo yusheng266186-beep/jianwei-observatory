@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {syncExerciseTasks,exerciseSyncDelay,exerciseSyncMessage,exerciseImageRecovery} from '../app/engine/exercise-sync.js';
+import {syncExerciseTasks,exerciseSyncDelay,exerciseSyncMessage,exerciseImageRecovery,exerciseJobRecovery} from '../app/engine/exercise-sync.js';
 test('慢任务不阻塞其它状态查询，连接并发有上限，停止后不启动后续任务',async()=>{
  let release;const blocked=new Promise(r=>release=r),visited=[],finished=[];let running=0,maximum=0,active=true;
  const task=syncExerciseTasks([1,2,3,4,5],async id=>{visited.push(id);maximum=Math.max(maximum,++running);if(id===1)await blocked;finished.push(id);running--;if(id===4)active=false;},{concurrency:2,active:()=>active});
@@ -16,6 +16,7 @@ test('同步反馈区分空闲、离线、待验证与连接异常，并包含�
 test('已接收后过期或删除的插图不自动重新提交，只有未确认任务可按原ID恢复',()=>{
  for(const job of [{status:'queued'},{status:'running'},{status:'unconfirmed',acceptedAt:100}])assert.equal(exerciseImageRecovery(job,'JOB_NOT_FOUND'),'failed');
  assert.equal(exerciseImageRecovery({status:'unconfirmed'},'JOB_NOT_FOUND'),'replay');assert.equal(exerciseImageRecovery({status:'submitting'},'JOB_REMOVED'),'failed');assert.equal(exerciseImageRecovery({status:'running'},'NETWORK_TIMEOUT'),'wait');
+ for(const status of ['failed','ready','queued','running'])assert.equal(exerciseJobRecovery({status},'JOB_NOT_FOUND'),'failed');assert.equal(exerciseJobRecovery({status:'unconfirmed'},'JOB_NOT_FOUND'),'replay');
 });
 import {mergeJobSnapshot,jobSnapshotCurrent} from '../app/engine/exercise-jobs.js';
 test('继续题组后，旧失败查询不能覆盖新任务状态',()=>{const record={status:'running',resumeAvailable:false,groupRevision:4};assert(!jobSnapshotCurrent(record,{status:'failed',groupRevision:2}));assert.equal(mergeJobSnapshot(record,{status:'failed',groupRevision:2}),false);assert.equal(record.status,'running');mergeJobSnapshot(record,{status:'ready',groupRevision:5,completedQuestions:6});assert.equal(record.status,'ready');assert.equal(record.groupRevision,5);});

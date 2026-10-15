@@ -20,8 +20,9 @@ export function exerciseSyncMessage(records,{online=true,authenticated=true}={})
 }
 // Only a never-acknowledged submission may be replayed under its original ID.
 // Missing accepted jobs are expired, never an invitation to start paid work again.
-export function exerciseImageRecovery(job,code){
+export function exerciseJobRecovery(job,code){
  if(code==='JOB_REMOVED'||code==='JOB_EXPIRED')return 'failed';
  if(code!=='JOB_NOT_FOUND')return 'wait';
- return job.acceptedAt||['queued','running'].includes(job.status)?'failed':'replay';
+ return job.acceptedAt||!['submitting','unconfirmed'].includes(job.status)?'failed':'replay';
 }
+export const exerciseImageRecovery=exerciseJobRecovery;
