@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createPDFJob,idlePDFWorker} from '../app/io/pdf-runtime.js';
+import {createPDFJob,idlePDFWorker,suspendPDFWorker,resumePDFWorker} from '../app/io/pdf-runtime.js';
 class LocalWorker{
  static hosts=[];
  constructor(){LocalWorker.hosts.push(this);this.messages=[];this.terminated=false;}
@@ -36,3 +36,5 @@ test('PDF组件失败会释放后台实例，直接重试使用新实例而不�
   const retry=createPDFJob({title:'重试'}),output=retry.claim();assert.notEqual(latest(),host);latest().complete();assert.equal(await(await output).text(),'print');idlePDFWorker();
  }finally{idlePDFWorker();globalThis.Worker=original;}
 });
+
+test('刷新或离开文档时终止预热和排队PDF，暂停期间不启动Worker，返回后可重新准备',async()=>{const original=globalThis.Worker;globalThis.Worker=LocalWorker;try{const active=createPDFJob({title:'预备学生版'}),a=active.claim(),queued=createPDFJob({title:'预备教师版'}),q=queued.claim(),host=latest();suspendPDFWorker();await assert.rejects(a,{name:'AbortError'});await assert.rejects(q,{name:'AbortError'});assert.equal(host.terminated,true);const count=LocalWorker.hosts.length,late=createPDFJob({title:'旧页面延迟预热'});await assert.rejects(late.claim(),{name:'AbortError'});assert.equal(LocalWorker.hosts.length,count);resumePDFWorker();const current=createPDFJob({title:'返回后准备'}),result=current.claim();latest().complete();assert.equal(await(await result).text(),'print');}finally{resumePDFWorker();idlePDFWorker();globalThis.Worker=original;}});

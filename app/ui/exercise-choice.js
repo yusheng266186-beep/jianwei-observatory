@@ -51,5 +51,5 @@ export function installExerciseChoices(root,onChange){
  document.addEventListener('pointerdown',event=>{if(active&&!active.panel.contains(event.target)&&!active.trigger.contains(event.target))close();},true);
  root.closest('dialog')?.addEventListener('surfaceclosing',()=>close(false,true));
  window.addEventListener('resize',schedule,{passive:true});window.visualViewport?.addEventListener('resize',schedule,{passive:true});window.visualViewport?.addEventListener('scroll',schedule,{passive:true});document.addEventListener('scroll',schedule,{passive:true,capture:true});
- return {close};
+ return {close,isOpen:()=>!!active&&opened(active.panel)};
 }

@@ -1,6 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {createRequire} from 'node:module';
 import {Atlas} from '../app/engine/atlas.js';import {buildTeachingReport} from '../app/engine/reports.js';import {documentSections,wordFiles,pdfDefinition} from '../app/io/print-document.js';
-import {validDate,dateLabel,dateChoices,planMatchesTime,questionOptions,draftForPlan,selectedPlans,snapshotQuestion} from '../app/engine/training.js';
+import {validDate,dateLabel,dateChoices,planMatchesTime,questionOptions,draftForPlan,selectedPlans,snapshotQuestion,trainingSummary,trainingQuestionLabel} from '../app/engine/training.js';
 const {makeFixture}=createRequire(import.meta.url)('./fixtures.cjs');
 const atlas=()=>new Atlas(makeFixture());
 test('班级特控/本科名单只列有效线下观察带，0与缺失不混淆，任务未设置不编造',()=>{
@@ -44,3 +44,5 @@ test('有效线在关键指标中最多显示两位小数，达线与分差仍�
  assert.equal(report.sections[0].rows.find(row=>row[0]==='物理类有效线')[1],'497.44 / 422.37');assert.equal(atlas.line(row,'under'),line.under);assert(atlas.gap(row,'under')>0);
  assert.match(report.sections.at(-1).paragraphs[0],/判断使用原始数值/);
 });
+
+test('已带题字、数字合并题和非数字项目均正确显示，跟进摘要不重复目标知识点',()=>{assert.equal(trainingQuestionLabel('27题'),'第27题');assert.equal(trainingQuestionLabel('第32题'),'第32题');assert.equal(trainingQuestionLabel('12—14'),'第12—14题');assert.equal(trainingQuestionLabel('听力'),'听力');const summary=trainingSummary({training:{goal:'阅读理解',questions:[{label:'27题',knowledge:'阅读理解'},{label:'32题',knowledge:'阅读理解'}],tasks:['same']}});assert.match(summary,/原题：第27题、第32题/);assert.equal(summary.split('阅读理解').length-1,1);assert(!summary.includes('题题'));});
