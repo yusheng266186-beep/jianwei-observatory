@@ -8,7 +8,7 @@ import {exerciseFigureParts} from './exercise-figure-layout.js';
 export {exerciseFigureParts};
 // A single terrain map is naturally taller than a two-panel diagram. Keep its
 // print size legible without consuming the entire first-page reading area.
-export function exercisePrintFigureParts(question){const figure=exerciseFigureParts(question);if(question.diagram?.kind==='science'&&question.diagram.spec.family==='conic'){const bounds={compact:[280,166],standard:[300,178],wide:[360,214]}[figure.size]||[300,178];return {...figure,width:Math.min(figure.width,bounds[0]),height:Math.min(figure.height,bounds[1])};}return question.diagram?.kind==='science'&&question.diagram.spec.family==='terrain'&&question.diagram.spec.view==='map'?{...figure,height:Math.min(260,figure.height)}:figure;}
+export function exercisePrintFigureParts(question){const figure=exerciseFigureParts(question);if(figure.widthPercent!==undefined)return figure;if(question.diagram?.kind==='science'&&question.diagram.spec.family==='conic'){const bounds={compact:[280,166],standard:[300,178],wide:[360,214]}[figure.size]||[300,178];return {...figure,width:Math.min(figure.width,bounds[0]),height:Math.min(figure.height,bounds[1])};}return question.diagram?.kind==='science'&&question.diagram.spec.family==='terrain'&&question.diagram.spec.view==='map'?{...figure,height:Math.min(260,figure.height)}:figure;}
 export function exerciseAnswerSpaceParts(question,subject){const total=exerciseAnswerSpaceHeight(question,subject),minimum=question.diagram?Math.min(70,total):total;return {minimum,trailing:total-minimum};}
 
 // Print an exactly repeated reading passage once; retain every question verbatim.

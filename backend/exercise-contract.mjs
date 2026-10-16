@@ -59,6 +59,8 @@ export function validateExerciseRequest(value){
 export const exerciseFigurePlacementSchema={type:'object',additionalProperties:false,required:['after','width','aspect'],properties:{after:{type:'string',maxLength:600},width:{type:'string',enum:['compact','standard','wide']},aspect:{type:'string',enum:['wide','square','portrait']}}};
 export const exerciseFigureRequestSchema={type:'object',additionalProperties:false,required:['caption','requirements','knownData','labels','precision','placement'],properties:{placement:exerciseFigurePlacementSchema,caption:{type:'string',maxLength:160},requirements:{type:'string',maxLength:2400},knownData:{type:'string',maxLength:3000},labels:{type:'array',maxItems:24,items:{type:'string',maxLength:40}},precision:{type:'string',enum:['exact','illustrative']}}};
 const validPlacement=p=>keys(p,['after','width','aspect'])&&text(p.after,600)&&['compact','standard','wide'].includes(p.width)&&['wide','square','portrait'].includes(p.aspect);
+// Teacher-only sizing does not change the model's placement contract.
+const validFigureLayout=p=>{if(!keys(p,['after','width','aspect','widthPercent']))return false;const {widthPercent,...base}=p;return validPlacement(base)&&(widthPercent===undefined||Number.isFinite(widthPercent)&&widthPercent>=20&&widthPercent<=100);};
 export function validateExerciseFigureRequest(v){if(!keys(v,['caption','requirements','knownData','labels','precision','placement'])||!validPlacement(v.placement)||!text(v.caption,160)||!text(v.requirements,2400)||typeof v.knownData!=='string'||v.knownData.length>3000||!Array.isArray(v.labels)||v.labels.length>24||v.labels.some(s=>!text(s,40))||!['exact','illustrative'].includes(v.precision))throw new Error('图示委托的条件、标签或精度要求不完整。');return v;}
 export function validateExerciseResult(value,request,{allowPendingFigures=false}={}){
  validateExerciseRequest(request);
@@ -72,7 +74,7 @@ export function validateExerciseResult(value,request,{allowPendingFigures=false}
   if(request.questionTypes?.length&&!request.questionTypes.includes(q.type))throw new Error('第'+(i+1)+'题不符合所选题型。');
   if(request.examStyle==='sichuan-gaokao'&&!exerciseQuestionTypes(request.subject).includes(q.type))throw new Error('第'+(i+1)+'题不符合四川高考学科题型。');
   if(q.diagram)validateExerciseDiagram(q.diagram);
-  if(q.figureLayout&&!validPlacement(q.figureLayout))throw new Error('第'+(i+1)+'题图示版位无效。');if(q.figureRequest||q.figureLayout)exerciseFigureParts(q);
+  if(q.figureLayout&&!validFigureLayout(q.figureLayout))throw new Error('第'+(i+1)+'题图示版位无效。');if(q.figureRequest||q.figureLayout)exerciseFigureParts(q);
   if(q.figureRequest){validateExerciseFigureRequest(q.figureRequest);if(!allowPendingFigures&&!q.diagram)throw new Error('第'+(i+1)+'题的必要图示尚未完成。');}
   for(const [label,values] of [['题干',[q.stem]],['答案',[q.answer]],['解析',[q.analysis]],['选项',q.choices],['评分点',q.points]])if(values.some(s=>typeof s==='string'&&!formatted(s)))throw new Error('第'+(i+1)+'题的'+label+'未按约定输出公式或正文格式。');
   const choice=['选择','多选'].includes(q.type);

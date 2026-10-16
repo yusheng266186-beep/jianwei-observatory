@@ -1,3 +1,4 @@
+import {exerciseFigurePageWidth,exerciseFigureMaxHeight} from '../engine/exercise-figure-layout.js';
 import {richExerciseHTML} from './exercise-math.js';
 import {validateExerciseDiagram} from '../engine/exercise-diagrams.js';
 import {apparatusSVG,apparatusPorts} from './exercise-apparatus.js';
@@ -51,4 +52,13 @@ export function exerciseDiagramSVG(value){
  }
  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" width="${width}" height="${height}" role="img" aria-label="${esc(d.description)}"><title>${esc(d.caption)}</title><rect x="${viewBox.split(' ')[0]}" y="${viewBox.split(' ')[1]}" width="${width}" height="${height}" fill="white"/><g stroke="#151a1f" stroke-width="1.25" font-size="13" fill="none">${parts.replace(/<text /g,'<text fill="#151a1f" stroke="none" font-family="serif" ')}</g></svg>`;
 }
-export async function exerciseDiagramHTML(d,{layout}={}){if(!d)return '';const image=d.kind==='illustration'?d.image?`<img alt="${esc(d.description)}" src="data:${d.image.mime};base64,${d.image.data}">`:`<p class="report-help">复杂插图尚未生成，可选择标准图示或文字情境。</p>`:exerciseDiagramSVG(d);return '<figure class="exercise-diagram" data-layout-width="'+(['compact','standard','wide'].includes(layout?.size)?layout.size:'standard')+'">'+image+'<figcaption>'+await richExerciseHTML(d.caption)+'</figcaption></figure>';}
+export async function exerciseDiagramHTML(d,{layout,resizable=false,questionId}={}){
+ if(!d)return '';
+ const ready=d.kind!=='illustration'||Boolean(d.image),src=d.kind==='illustration'&&d.image?'data:'+d.image.mime+';base64,'+d.image.data:'',svg=d.kind==='illustration'?'':exerciseDiagramSVG(d);
+ let width=Number(svg.match(/width="([\d.]+)"/)?.[1]||640),height=Number(svg.match(/height="([\d.]+)"/)?.[1]||380);
+ if(src&&(resizable||layout?.widthPercent!==undefined)){const image=new Image();image.src=src;await image.decode();width=image.naturalWidth;height=image.naturalHeight;}
+ const maxPercent=Math.min(100,exerciseFigureMaxHeight/exerciseFigurePageWidth*width/height*100),custom=layout?.widthPercent!==undefined,percent=custom?Math.min(layout.widthPercent,maxPercent):resizable&&ready?Math.min(layout?.width||400,(layout?.height||300)*width/height)/exerciseFigurePageWidth*100:null;
+ const media=d.kind==='illustration'?src?`<img draggable="false" alt="${esc(d.description)}" src="${src}">`:'<p class="report-help">复杂插图尚未生成，可选择标准图示或文字情境。</p>':svg;
+ const controls=resizable&&ready?`<div class="exercise-figure-resize-bar"><span data-figure-size aria-live="polite">${custom?'宽度 · '+layout.widthPercent+'%':'拖动右下角调整大小'}</span><button type="button" id="exercise-figure-resize-${questionId}" class="exercise-figure-resize" data-figure-resize role="slider" aria-label="第${questionId}题图示宽度" aria-valuemin="20" aria-valuemax="${Math.max(20,maxPercent)}" aria-valuenow="${custom?layout.widthPercent:70}" aria-valuetext="${custom?layout.widthPercent+'%':'拖动调整，方向键微调'}" title="拖动调整大小，方向键微调"><svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true"><path d="M6 15 15 6M10 15l5-5M14 15h1v-1" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button></div>`:'';
+ return '<figure class="exercise-diagram'+(resizable&&ready?' is-resizable':'')+'" data-layout-width="'+(['compact','standard','wide'].includes(layout?.size)?layout.size:'standard')+'"'+(percent!==null?' style="width:'+percent+'%;max-width:none"':'')+(resizable&&ready?' data-figure-max-percent="'+maxPercent+'" data-figure-ratio="'+width/height+'"':'')+'>'+media+'<figcaption>'+await richExerciseHTML(d.caption)+'</figcaption>'+controls+'</figure>';
+}

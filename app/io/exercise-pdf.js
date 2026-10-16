@@ -10,7 +10,7 @@ import {exerciseFile} from './exercise-file-cache.js';
 const together=stack=>({table:{widths:['*'],body:[[{stack}]],dontBreakRows:true},layout:'exerciseKeepTogether'});
 export async function exercisePDF(record,{teacher=false,name=record.student?.name||'',classNo=record.student?.classNo??''}={}){
  if(!record.reviewedAt)throw new Error('请完成审题确认后输出正式练习。');requireExerciseQualityReview(record);
- const sheet=validateExerciseResult(record.sheet,record.request),key=JSON.stringify(['pdf-v19-conic-pagination',record.request,sheet,teacher,name,classNo,{exerciseId:record.id}]);
+ const sheet=validateExerciseResult(record.sheet,record.request),key=JSON.stringify(['pdf-v20-adjustable-figures',record.request,sheet,teacher,name,classNo,{exerciseId:record.id}]);
  const snapshot=structuredClone(record);return exerciseFile(key,()=>buildExercisePDF(snapshot,{teacher,name,classNo}));
 }
 async function buildExercisePDF(record,{teacher,name,classNo}){
@@ -28,7 +28,7 @@ async function buildExercisePDF(record,{teacher,name,classNo}){
   if(!compact&&q.stem.length+q.choices.join('').length<650&&q.stem.split('\n').length<18){const prompt=together([...stack]);stack.length=0;stack.push(prompt);}
   if(teacher){stack.push({text:'参考答案',bold:true,margin:[0,8,0,3]},await paragraph(q.answer));const intro=!compact&&q.stem.length+q.answer.length+q.choices.join('').length<650?together([...stack]):{stack:[...stack]};stack.length=0;stack.push(intro);const explanation=[{text:'第 '+q.id+' 题 · 解析与评分要点',bold:true,margin:[0,7,0,3]},await paragraph(q.analysis),{text:'评分要点',bold:true,margin:[0,7,0,3]}];for(const point of q.points)explanation.push(await paragraph('• '+point));if(subject==='英语'&&q.analysis.length+q.points.join('').length<1200&&q.analysis.split('\n').length<14)stack.push(together(explanation));else stack.push(...explanation);}
   else{stack.push({table:{widths:['*'],heights:exerciseAnswerSpaceParts(q,subject).minimum,body:[[{text:' ',fontSize:1}]],dontBreakRows:true},layout:'exerciseKeepTogether',margin:[0,8,0,10]});}
-  content.push({...(compact?together(stack):{stack}),margin:[0,0,0,14+(teacher?0:exerciseAnswerSpaceParts(q,subject).trailing)]});
+  content.push({...(compact?together(stack):{stack}),margin:[0,0,0,(q.id===sheet.questions.at(-1).id?0:14)+(teacher?0:exerciseAnswerSpaceParts(q,subject).trailing)]});
  }}
  const definition={exercisePrint:true,exerciseFooter:teacher?'练后按逐题结果记录复核，保留原考试成绩。':'',pageSize:'A4',pageMargins:[44,38,44,44],defaultStyle:{font:'Report',fontSize:11,color:'#111111'},content,info:{title:subject+(teacher?'专项练习教师答案册':'专项练习')}};
  return createPDFDefinitionJob(definition).claim();
