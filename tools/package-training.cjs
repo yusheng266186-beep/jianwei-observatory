@@ -1,5 +1,8 @@
 const fs=require('node:fs'),path=require('node:path');
 const root=path.resolve(__dirname,'..');
-fs.writeFileSync(path.join(root,'backend/exercise-contract.mjs'),fs.readFileSync(path.join(root,'app/engine/exercise-contract.js'),'utf8').replace("'./exercise-diagrams.js'","'./exercise-diagrams.mjs'"));
-fs.copyFileSync(path.join(root,'app/engine/exercise-diagrams.js'),path.join(root,'backend/exercise-diagrams.mjs'));
+fs.writeFileSync(path.join(root,'backend/exercise-contract.mjs'),fs.readFileSync(path.join(root,'app/engine/exercise-contract.js'),'utf8').replace("'./exercise-diagrams.js'","'./exercise-diagrams.mjs'").replace("'./exercise-figure-layout.js'","'./exercise-figure-layout.mjs'"));
+fs.writeFileSync(path.join(root,'backend/exercise-diagrams.mjs'),fs.readFileSync(path.join(root,'app/engine/exercise-diagrams.js'),'utf8').replace("'./exercise-models.js'","'./exercise-models.mjs'").replace("'./exercise-scene.js'","'./exercise-scene.mjs'"));
+fs.copyFileSync(path.join(root,'app/engine/exercise-models.js'),path.join(root,'backend/exercise-models.mjs'));
+fs.copyFileSync(path.join(root,'app/engine/exercise-scene.js'),path.join(root,'backend/exercise-scene.mjs'));
+fs.copyFileSync(path.join(root,'app/engine/exercise-figure-layout.js'),path.join(root,'backend/exercise-figure-layout.mjs'));
 console.log('Shared anonymous-training contract synchronized.');
