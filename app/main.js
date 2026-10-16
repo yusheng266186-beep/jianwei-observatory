@@ -352,21 +352,21 @@ async function changeMaterials(operation) {
   if(materialBusy)throw new Error('当前材料仍在更新，请完成后再操作');
   materialBusy=true;revision++;try{return await operation();}finally{materialBusy=false;}
 }
-async function applyMaterials(dataset,before,message,{undo=true,prepared=false}={}) {
+async function applyMaterials(dataset,before,message,{undo=true,prepared=false,index=null}={}) {
   if(!prepared)dataset=await prepareDataset(dataset);
   await closeDrawer();inMemoryUndo=before;
   let stored=false;
   try{await saveWorkspace(dataset,before,Array.isArray(dataset.notebook)?dataset.notebook:session.notebook,{prepared:true});stored=true;}catch{}
   await restoreContext(dataset);
   if(stored)noteJournal.reset(session.notebook);
-  await installDataset(dataset,{fresh:true,prepared:true});
+  await installDataset(dataset,{fresh:true,prepared:true,index});
   notify(stored?message+'，已保存到本机':message+'，本机未保存，请下载完整备份。',undo?{label:'撤回材料更新',cmd:'undo'}:{});
 }
 async function commitMaterial(incoming,mode) {
   return changeMaterials(async()=>{
     if(atlas.data.anonymous&&!incoming.anonymous&&!incoming.scores.length)throw new Error('请先导入真实姓名的成绩原表，再补充这份小题。');
-    archiveStudy();const before=workspaceSnapshot(),dataset=await prepareMaterial(before,incoming,mode);
-    await applyMaterials(dataset,before,'材料已加入工作区',{prepared:true});
+    archiveStudy();const before=workspaceSnapshot(),{dataset,index}=await prepareMaterial(before,incoming,mode);
+    await applyMaterials(dataset,before,'材料已加入工作区',{prepared:true,index});
   });
 }
 let reportRequest=0;
@@ -902,7 +902,7 @@ async function forms(event) {
 export async function mount(boot=null) {
   history.scrollRestoration='manual';
   const shortcut=document.getElementById('find-shortcut');if(shortcut)shortcut.textContent=/Mac|iPhone|iPad/.test(navigator.platform)?'⌘ K':'Ctrl K';
-  inbox=new Inbox(commitMaterial,notify,()=>atlas.data,()=>{for(const [scene] of routes)loadScene(scene).catch(()=>{});warmReportFonts().catch(()=>{});});
+  inbox=new Inbox(commitMaterial,notify,()=>atlas.data,()=>{loadScene(current).catch(()=>{});},boot?.importReader);
   window.addEventListener('hengji:import-files',event=>inbox.read(event.detail));
   installViewportMetrics();
   installInteractions({reducedMotion});

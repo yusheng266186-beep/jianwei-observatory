@@ -20,10 +20,14 @@ const sourceURLs={name:'source-urls',setup(build){
  const worker=await esbuild.build({...options,entryPoints:{prepare:'app/data/prepare-worker.js'}});
  const workerName=Object.keys(worker.metafile.outputs)[0];
  fs.writeFileSync(path.join(root,'app/data/prepare-entry.js'),`export const prepareURL=new URL(${JSON.stringify('../../'+workerName)},import.meta.url);\n`);
+ const importer=await esbuild.build({...options,splitting:false,format:'iife',entryPoints:{importer:'app/data/worker.js'}});
+ const importerName=Object.keys(importer.metafile.outputs)[0];
+ fs.writeFileSync(path.join(root,'app/data/importer-entry.js'),`export const importerURL=new URL(${JSON.stringify('../../'+importerName)},import.meta.url);\n`);
  const storage=await esbuild.build({...options,splitting:false,entryPoints:{storage:'app/data/storage.js'}});
  const result=await esbuild.build({...options,entryPoints:{main:'app/main.js'}});
  Object.assign(result.metafile.outputs,storage.metafile.outputs);
  Object.assign(result.metafile.outputs,worker.metafile.outputs);
+ Object.assign(result.metafile.outputs,importer.metafile.outputs);
  const standalone=await esbuild.build({...options,splitting:false,entryPoints:{'figure-library':'assets/figure-library.js','model-workbench':'assets/model-workbench.js'}});Object.assign(result.metafile.outputs,standalone.metafile.outputs);
  const entries=Object.fromEntries(Object.entries(result.metafile.outputs).filter(([,v])=>v.entryPoint&&['app/main.js','app/data/storage.js','app/data/prepare-worker.js','assets/figure-library.js','assets/model-workbench.js'].includes(v.entryPoint)).map(([k,v])=>[v.entryPoint,path.relative(path.join(root,'app'),path.join(root,k)).split(path.sep).join('/')]));
  let html=fs.readFileSync(path.join(root,'index.html'),'utf8');
@@ -35,8 +39,13 @@ const sourceURLs={name:'source-urls',setup(build){
  const cssName='assets/runtime-'+crypto.createHash('sha256').update(cssText).digest('hex').slice(0,12)+'.css';
  fs.writeFileSync(path.join(root,cssName),cssText);
  const landingCSS=fs.readFileSync(path.join(root,'styles/landing.css'),'utf8'),landingName='assets/landing-'+crypto.createHash('sha256').update(landingCSS).digest('hex').slice(0,12)+'.css';fs.writeFileSync(path.join(root,landingName),landingCSS);
- html=html.replace(/  <link rel="stylesheet"[^\n]+\n/g,'');
- html=html.replace(/<script src="\.\/app\/launch.js[^>]*><\/script>/,`<link rel="stylesheet" href="./${landingName}">\n  <link rel="stylesheet" href="./${cssName}" media="print" data-workspace-styles onload="this.media='all'">\n  <script src="./app/launch.js?v=runtime-v51" data-runtime="./${entries['app/main.js']}" data-storage="./${entries['app/data/storage.js']}" data-prepare="./${entries['app/data/prepare-worker.js']}" defer></script>`);
+ html=html.replace(/  <link rel="stylesheet"[^\n]+\n/g,'').replace(/  <style data-landing-critical>[\s\S]*?<\/style>\n/g,'');
+ const mainPath='app/'+entries['app/main.js'],preload=new Set();
+ function dependencies(file){for(const entry of result.metafile.outputs[file]?.imports||[]){if(entry.external||entry.kind!=='import-statement'||preload.has(entry.path))continue;preload.add(entry.path);dependencies(entry.path);}}
+ dependencies(mainPath);
+ const early=[...preload].map(file=>'../'+file),preloadAttribute=JSON.stringify(early).replaceAll('"','&quot;');
+ const inlineLandingCSS=landingCSS.trim().replaceAll("url('../assets/","url('./assets/");
+ html=html.replace(/<script src="\.\/app\/launch.js[^>]*><\/script>/,`<style data-landing-critical>${inlineLandingCSS}</style>\n  <link rel="stylesheet" data-href="./${cssName}" data-workspace-styles>\n  <script src="./app/launch.js?v=runtime-v52" data-runtime="./${entries['app/main.js']}" data-storage="./${entries['app/data/storage.js']}" data-prepare="./${entries['app/data/prepare-worker.js']}" data-importer="../${importerName}" data-preload="${preloadAttribute}" defer></script>`);
  const landing=html.match(/<template id="empty-workspace-template">([\s\S]*?)<\/template>/)?.[1];
  if(landing)html=html.replace(/<main id="stage"[\s\S]*?<\/main>/,'<main id="stage" tabindex="-1" aria-busy="false">'+landing+'</main>');
  const {dockIcon}=await import(path.join(root,'app/ui/icons.js'));
@@ -45,6 +54,6 @@ const sourceURLs={name:'source-urls',setup(build){
  fs.writeFileSync(path.join(root,'index.html'),html);
  for(const [file,source] of [['figure-library.html','assets/figure-library.js'],['model-workbench.html','assets/model-workbench.js']]){const value=fs.readFileSync(path.join(root,file),'utf8');fs.writeFileSync(path.join(root,file),value.replace(/<script type="module" src="[^"]+"><\/script>/,'<script type="module" src="./app/'+entries[source]+'"></script>'));}
 
- fs.writeFileSync(path.join(out,'manifest.json'),JSON.stringify({main:entries['app/main.js'],storage:entries['app/data/storage.js'],prepare:entries['app/data/prepare-worker.js'],css:cssName,landing:landingName,standalone:{figures:entries['assets/figure-library.js'],models:entries['assets/model-workbench.js']},files:Object.keys(result.metafile.outputs)},null,2)+'\n');
+ fs.writeFileSync(path.join(out,'manifest.json'),JSON.stringify({main:entries['app/main.js'],storage:entries['app/data/storage.js'],prepare:entries['app/data/prepare-worker.js'],importer:importerName,preload:[...preload],css:cssName,landing:landingName,standalone:{figures:entries['assets/figure-library.js'],models:entries['assets/model-workbench.js']},files:Object.keys(result.metafile.outputs)},null,2)+'\n');
  console.log(JSON.stringify({entries,css:cssName,bytes:Object.values(result.metafile.outputs).reduce((n,v)=>n+v.bytes,0)}));
 })().catch(e=>{console.error(e);process.exitCode=1});

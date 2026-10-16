@@ -28,11 +28,18 @@ function sourceSubjectColumns(headers,exam,raw,end,ranking,school){
 }
 const fresh=source=>({schemaVersion:1,school:'荣县一中',grade:'高2024级',title:'成绩研究工作区',sourceName:source,importedAt:new Date().toISOString(),anonymous:false,students:[],scores:[],profiles:{},exams:[],lines:[],banks:{},answers:[],sheets:[]});
 function people(data){
- const map=new Map(),occupied=new Set(data.students.map(p=>p.id));
+ const map=new Map(),occupied=new Set(data.students.map(p=>p.id)),byName=new Map(),scopedScores=new Map();let indexed=0;
+ for(const person of data.students){if(!byName.has(person.name))byName.set(person.name,[]);byName.get(person.name).push(person);}
+ function scoreScope(exam,classNo){return JSON.stringify([exam,classNo]);}
  return (name,sourceId='',exam='',classNo=null)=>{
   name=txt(name);sourceId=txt(sourceId);const key=sourceId?'identifier:'+sourceId:'name:'+name;
-  if(!sourceId){const matches=data.students.filter(p=>p.name===name&&data.scores.some(r=>r.sid===p.id&&r.exam===exam&&r.classNo===classNo));if(matches.length===1)return matches[0].id;if(matches.length>1)throw new Error('同班同考次的同名学生小题记录需要学生识别码。');}
-  if(!map.has(key)){let id=identityHash(sourceId?key:name),suffix=0;while(occupied.has(id))id=identityHash(key+'|'+(++suffix));const person={id,name,...(sourceId?{sourceId}:{})};map.set(key,person);data.students.push(person);occupied.add(id);}
+  if(!sourceId){
+   // Scores are appended as sheets are read. Index each new row once rather
+   // than scanning every student's full history for every subject response.
+   for(;indexed<data.scores.length;indexed++){const row=data.scores[indexed],scope=scoreScope(row.exam,row.classNo);if(!scopedScores.has(scope))scopedScores.set(scope,new Set());scopedScores.get(scope).add(row.sid);}
+   const ids=scopedScores.get(scoreScope(exam,classNo)),matches=(byName.get(name)||[]).filter(p=>ids?.has(p.id));if(matches.length===1)return matches[0].id;if(matches.length>1)throw new Error('同班同考次的同名学生小题记录需要学生识别码。');
+  }
+  if(!map.has(key)){let id=identityHash(sourceId?key:name),suffix=0;while(occupied.has(id))id=identityHash(key+'|'+(++suffix));const person={id,name,...(sourceId?{sourceId}:{})};map.set(key,person);data.students.push(person);occupied.add(id);if(!byName.has(name))byName.set(name,[]);byName.get(name).push(person);}
   return map.get(key).id;
  };
 }
@@ -49,9 +56,9 @@ export function flatWorkbookSheet(XLSX,workbook){
  const sheets=Object.entries(workbook.Sheets).map(([name,sheet])=>({name,rows:rowsOf(XLSX,sheet)}));
  return sheets.find(s=>{const {mapping:m}=detectFlat(s.rows);return m.name!=null&&m.classNo!=null&&m.exam!=null&&(m.total!=null||SUBJECTS.some(subject=>m[subject]!=null));})||sheets.find(s=>s.rows.slice(0,15).some(row=>row.some(c=>/^(姓名|学生姓名)$/.test(txt(c)))))||sheets[0];
 }
-export function parseWorkbook(XLSX,buffer,source,progress=()=>{},mapping=null){
+export function parseWorkbook(XLSX,buffer,source,progress=()=>{},mapping=null,catalog=null){
  progress('读取工作表目录',8);
- const meta=XLSX.read(buffer,{type:'array',bookSheets:true});
+ const meta=catalog||XLSX.read(buffer,{type:'array',bookSheets:true});
  const chosen=meta.SheetNames.filter(n=>n==='学生基础'||n==='教师名单'||/^班级有效人/.test(n)||SUBJECTS.includes(n));
  if(!meta.SheetNames.includes('学生基础')){const generic=meta.SheetNames.filter(n=>!SUBJECTS.includes(n)&&!/(班级有效人|个人学科小题|班级多次|教师名单|说明)/.test(n));chosen.push(...generic);}
  const workbook=XLSX.read(buffer,{type:'array',cellFormula:false,cellStyles:false,cellHTML:false,sheets:chosen.length?chosen:undefined});
