@@ -2,7 +2,7 @@
   "main": "runtime/main-I6UVI3WL.js",
   "storage": "runtime/storage-GLVB5YEC.js",
   "prepare": "runtime/prepare-EM3F45LX.js",
-  "css": "assets/runtime-6e4ddc52dcdd.css",
+  "css": "assets/runtime-6dddc3824e3a.css",
   "landing": "assets/landing-aad41d11cb79.css",
   "files": [
     "app/runtime/shared-QEJIROVQ.js",
