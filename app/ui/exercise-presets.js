@@ -1,3 +1,4 @@
+import {exerciseCatalog} from '../data/exercise-catalog.js';
 // Optional teacher choices; these never infer a textbook edition or replace
 // the knowledge labels supplied by the imported exam materials.
 const modules={
@@ -20,7 +21,7 @@ const goals={
  '化学':['概念辨析与原理应用','方程式与守恒计算','实验设计与现象解释','信息提取与推理论证'],
  '生物':['概念辨析与联系','遗传规律与概率计算','实验变量与对照设计','图表信息与证据推理']
 };
-export function exercisePresets(subject){return {modules:modules[subject]||[],goals:goals[subject]||['基础概念巩固','材料阅读与信息提取','分析推理与规范表达','综合应用与迁移']};}
+export function exercisePresets(subject){return {modules:exerciseCatalog(subject).groups.map(g=>g.name),goals:goals[subject]||['基础概念巩固','材料阅读与信息提取','分析推理与规范表达','综合应用与迁移']};}
 
 const scopeTerms={
  数学:[['集合与常用逻辑用语',/集合|交集|并集|补集|命题|逻辑/],['函数与导数',/函数|导数|单调|极值|最值|零点/],['三角函数与解三角形',/三角|正弦|余弦|解三角形/],['数列',/数列|等差|等比|递推/],['平面向量与立体几何',/向量|立体|空间|平面|翻折|球|圆柱/],['解析几何',/椭圆|双曲线|抛物线|圆锥曲线|弦长|离心率/],['概率与统计',/概率|统计|分布|随机|回归/]],
@@ -31,7 +32,7 @@ const scopeTerms={
 // This only suggests labels already present in the teacher's materials.
 // A suggested grouping never becomes a new score-derived knowledge label.
 export function exerciseScopeMatches(subject,curriculum,knowledge){
- const module=modules[subject]?.find(m=>curriculum==='高中'+subject+'已学内容：'+m);if(!module)return [];
- const pattern=scopeTerms[subject]?.find(([m])=>m===module)?.[1];
- return knowledge.filter(label=>pattern?pattern.test(label):label.includes(module)||module.includes(label));
+ const choices=[...new Set([...(modules[subject]||[]),...exercisePresets(subject).modules])],module=choices.find(m=>curriculum==='高中'+subject+'已学内容：'+m);if(!module)return [];
+ const pattern=scopeTerms[subject]?.find(([m])=>m===module||module==='向量与几何'&&m==='平面向量与立体几何')?.[1],group=exerciseCatalog(subject).groups.find(g=>g.name===module),terms=[module,...(group?.topics||[])];
+ return knowledge.filter(label=>pattern?pattern.test(label):terms.some(t=>label.includes(t)||t.includes(label)));
 }
