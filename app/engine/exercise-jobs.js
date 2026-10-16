@@ -26,7 +26,7 @@ export function jobTiming(record,history=[],at=Date.now()){
  const elapsed=Math.max(0,Math.floor((Number.isFinite(progress.serverTime)&&progress.lastCheckedAt?progress.serverTime-start+at-progress.lastCheckedAt:at-start)/1000));
  const estimate=(!gemini&&samples.length<3&&!image?'预计约':'通常约')+Math.max(1,Math.floor(low/60))+'–'+Math.max(2,Math.ceil(high/60))+'分钟';
  const elapsedLabel='已等待 '+(elapsed<60?elapsed+'秒':Math.floor(elapsed/60)+'分'+elapsed%60+'秒');
- return {low,high,elapsed,estimate,elapsedLabel,overdue:elapsed>high,label:elapsed>high?'已超过通常用时，后台状态仍在查询':estimate+' · '+elapsedLabel};
+ return {low,high,elapsed,estimate,elapsedLabel,overdue:elapsed>high,label:elapsed>high?elapsedLabel+' · 超过通常用时，后台状态仍在查询':estimate+' · '+elapsedLabel};
 }
 export function jobConnection(record,online=true){
  if(pendingImages(record)&&!pendingJob(record))record=Object.values(record.imageJobs).find(pendingJob)||record;
