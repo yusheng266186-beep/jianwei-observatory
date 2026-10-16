@@ -1,11 +1,18 @@
 // Public, anonymous fixtures shared by the gallery and regression checks.
-const figure=(caption,spec)=>({kind:'science',caption,description:caption+'；结构示意，比例不作为题目条件。',spec});
+const figure=(caption,spec)=>({kind:'science',caption,description:caption+(['terrain','climate'].includes(spec.family)?'；教学示意数据，坐标与比例尺按所给数值绘制。':'；结构示意，比例不作为题目条件。'),spec});
 const circuit={family:'circuit',nodes:[{id:'a',x:110,y:80},{id:'b',x:270,y:80},{id:'c',x:530,y:80},{id:'d',x:110,y:205},{id:'e',x:270,y:205},{id:'f',x:530,y:205},{id:'g',x:270,y:300},{id:'h',x:530,y:300}],branches:[{from:'a',to:'b',component:'battery',label:'E'},{from:'b',to:'c',component:'switch-closed',label:'S'},{from:'a',to:'d',component:'wire',label:''},{from:'d',to:'e',component:'ammeter',label:''},{from:'e',to:'f',component:'resistor',label:'R'},{from:'c',to:'f',component:'wire',label:''},{from:'e',to:'g',component:'wire',label:''},{from:'g',to:'h',component:'voltmeter',label:''},{from:'h',to:'f',component:'wire',label:''}]};
 const ethanol={family:'molecule',atoms:[{id:'a',element:'C',hydrogens:3,x:160,y:195},{id:'b',element:'C',hydrogens:2,x:305,y:135},{id:'c',element:'O',hydrogens:1,x:450,y:195}],bonds:[{from:'a',to:'b',order:1},{from:'b',to:'c',order:1}]};
 const benzene={family:'molecule',atoms:Array.from({length:6},(_,i)=>({id:'a'+i,element:'C',hydrogens:1,x:320+110*Math.cos(i*Math.PI/3),y:175+110*Math.sin(i*Math.PI/3)})),bonds:Array.from({length:6},(_,i)=>({from:'a'+i,to:'a'+((i+1)%6),order:i%2?1:2}))};
 const cells=cellType=>({family:'cell',cellType,parts:(cellType==='plant'?['wall','membrane','cytoplasm','nucleus','vacuole','chloroplast','mitochondrion','er','golgi','ribosome']:['membrane','cytoplasm','nucleus','mitochondrion','er','golgi','ribosome']).map((id,i)=>({id,label:'甲乙丙丁戊己庚辛壬癸'[i]}))});
 const chart=(kind,caption)=>({kind,caption,description:caption+'，数据仅用于图示样式核对。',xLabel:'时间 / min',yLabel:'测量值 / a.u.',xRange:[0,4],yRange:[0,10],series:[{label:'对照组',points:[[1,3],[2,5],[3,7]]},{label:'实验组',points:[[1,4],[2,7],[3,9]]}]});
+const terrain={family:'terrain',elevations:Array.from({length:9},(_,r)=>Array.from({length:9},(_,c)=>Math.round(100+600*Math.max(0,1-((c/2-2)**2+(r/2-2)**2)/4)))),cellSizeKm:.5,interval:100,section:[[0,2],[4,2]],labels:['A','B'],view:'combined',spots:[{x:2,y:2,label:'P',showElevation:true}]};
+const climate={family:'climate',station:'甲地（示意数据）',temperature:[-6,-2,5,13,19,24,27,25,19,11,3,-4],precipitation:[5,8,15,30,55,95,150,130,65,30,15,6],temperatureRange:[-10,30],precipitationMax:200};
 export const scienceFigureSamples=[
+ {subject:'地理',note:'等高线与A—B剖面共用规则高程网格；北向、比例尺与等高距明确。',diagram:figure('等高线与对应地形剖面',terrain)},
+ {subject:'地理',note:'仅提供等高线；待绘制剖面的题目不会提前附上剖面答案。',diagram:figure('山地等高线示意',{...terrain,view:'map'})},
+ {subject:'地理',note:'横向距离与高程来自同一网格，不另外手画曲线。',diagram:figure('A—B地形剖面',{...terrain,view:'profile'})},
+ {subject:'地理',note:'12个月份完整；气温左轴°C，降水右轴mm，黑白打印仍可辨识。',diagram:figure('月均气温与月降水量',climate)},
+ {subject:'地理',note:'全年温度均为正时也不强制零度起点；降水轴始终从0开始。',diagram:figure('另一组月度气候示意',{...climate,station:'乙地（示意数据）',temperature:[25,25,23,20,17,14,13,14,17,20,22,24],precipitation:[8,10,20,45,80,110,120,90,55,30,15,7],temperatureRange:[10,30],precipitationMax:150})},
  {subject:'物理',note:'已知带沿右上方运行；箭头只表示带的方向。',diagram:figure('倾斜传送带与物块',{family:'mechanics',model:'conveyor',blockPosition:'center',angle:18,direction:'right',labels:['传送带','物块']})},
  {subject:'物理',note:'水平支承、弹簧与物块；不自动标注受力结论。',diagram:figure('水平弹簧与物块',{family:'mechanics',model:'spring-block',angle:0,direction:'none',labels:['固定壁','弹簧','物块']})},
  {subject:'物理',note:'电流表串联，电压表并联，连接点明确。',diagram:figure('测量电阻的基本电路',circuit)},

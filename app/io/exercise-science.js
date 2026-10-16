@@ -1,3 +1,4 @@
+import {terrainSVG,climateSVG,geographyFigureFrame} from './exercise-geography.js';
 import {crystalSites,scienceTextWidth} from '../engine/exercise-science.js';
 import {molecularModel} from '../engine/exercise-molecular-model.js';
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
@@ -95,8 +96,9 @@ function dna(s){
  }
  out+=T(320,rows===1?100:31,s.labels[0])+T(320,rows===1?265:370,s.labels[1]);return out;
 }
-export function scienceFigureSVG(s){return `<g data-science-family="${s.family}">${({mechanics,circuit,molecule,'molecular-model':molecular,crystal,cell,photosynthesis,dna}[s.family])(s)}</g>`;}
+export function scienceFigureSVG(s){return `<g data-science-family="${s.family}">${({terrain:terrainSVG,climate:climateSVG,mechanics,circuit,molecule,'molecular-model':molecular,crystal,cell,photosynthesis,dna}[s.family])(s)}</g>`;}
 export function scienceFigureFrame(s){
+ if(['terrain','climate'].includes(s.family))return geographyFigureFrame(s);
  if(s.family==='molecular-model')return {x:80,y:30,width:480,height:335};
  if(s.family==='cell')return {x:20,y:40,width:600,height:285};
  if(s.family==='photosynthesis')return {x:40,y:45,width:560,height:285};

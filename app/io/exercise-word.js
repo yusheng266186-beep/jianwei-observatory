@@ -1,5 +1,5 @@
 import {validateExerciseResult,difficultyProfile,exerciseTypeLabel} from '../engine/exercise-contract.js';
-import {exercisePrintSections,exerciseAnswerSpaceHeight,exerciseFigureParts} from '../engine/exercise-print.js';
+import {exercisePrintSections,exerciseAnswerSpaceHeight,exercisePrintFigureParts} from '../engine/exercise-print.js';
 import {mathParts,mathSVG,warmExerciseMath} from './exercise-math.js';
 import {exerciseDiagramSVG} from './exercise-diagram.js';
 import {mathMLToOffice,mathMLTableToWord,wordMathNeedsVector} from './exercise-word-math.js';
@@ -12,7 +12,7 @@ let zipTask;
 async function zipLibrary(){if(!zipTask){const task=import('../../vendor/jszip.min.js').then(()=>{if(!window.JSZip)throw new Error('Word组件未能载入，请重试');return window.JSZip;});zipTask=task;task.catch(()=>{if(zipTask===task)zipTask=null;});}return zipTask;}
 export async function exerciseWord(record,{teacher=false,name=record.student?.name||'',classNo=record.student?.classNo??''}={}){
  if(!record.reviewedAt)throw new Error('请完成审题确认后输出正式练习。');
- const sheet=validateExerciseResult(record.sheet,record.request),key=JSON.stringify(['docx-v13-science-layout',record.request,sheet,teacher,name,classNo,{exerciseId:record.id}]);
+ const sheet=validateExerciseResult(record.sheet,record.request),key=JSON.stringify(['docx-v15-geography-pagination',record.request,sheet,teacher,name,classNo,{exerciseId:record.id}]);
  const snapshot=structuredClone(record);return exerciseFile(key,()=>buildExerciseWord(snapshot,{teacher,name,classNo}));
 }
 async function buildExerciseWord(record,{teacher,name,classNo}){
@@ -32,10 +32,10 @@ async function buildExerciseWord(record,{teacher,name,classNo}){
  for(const section of exercisePrintSections(sheet.questions)){
   if(section.material)body+=await p('共同材料 第'+section.questions.map(q=>q.id).join('、')+'题','Heading1')+await lines(section.material);
   for(const [index,q] of section.questions.entries()){
-   const figure=q.diagram?exerciseFigureParts(q):{before:q.stem,after:''},keepStudentQuestion=!teacher&&!q.diagram&&q.stem.length+q.choices.join('').length<650;
+   const figure=q.diagram?exercisePrintFigureParts(q):{before:q.stem,after:''},keepStudentQuestion=!teacher&&!q.diagram&&q.stem.length+q.choices.join('').length<650;
    body+=await p('第'+q.id+'题  '+q.level+' / '+exerciseTypeLabel(q.type)+' / '+q.maxScore+'分','Heading1',index===0&&section.material?.length>1200?'<w:pageBreakBefore/>':'');
    if(q.target)body+=await p('训练点：'+q.target,'Meta');body+=await lines(figure.before,'Normal',keepStudentQuestion||q.diagram&&figure.before.length<650?'<w:keepNext/>':'');
-   if(q.diagram){let src,svg=false;if(q.diagram.kind==='illustration'){if(!q.diagram.image)throw new Error('复杂插图尚未生成，请先补充图示。');src='data:'+q.diagram.image.mime+';base64,'+q.diagram.image.data;}else{src=exerciseDiagramSVG(q.diagram);svg=true;}body+='<w:p><w:pPr><w:jc w:val="center"/><w:keepNext/><w:spacing w:before="80" w:after="80" w:line="240" w:lineRule="auto"/></w:pPr>'+await image(src,{svg,width:figure.width,height:figure.height,alt:q.diagram.description||q.diagram.caption})+'</w:p>'+await p(q.diagram.caption,'Caption',keepStudentQuestion?'<w:keepNext/>':'');}
+   if(q.diagram){let src,svg=false;if(q.diagram.kind==='illustration'){if(!q.diagram.image)throw new Error('复杂插图尚未生成，请先补充图示。');src='data:'+q.diagram.image.mime+';base64,'+q.diagram.image.data;}else{src=exerciseDiagramSVG(q.diagram);svg=true;}body+='<w:p><w:pPr><w:jc w:val="center"/><w:keepNext/><w:spacing w:before="80" w:after="80" w:line="240" w:lineRule="auto"/></w:pPr>'+await image(src,{svg,width:figure.width,height:figure.height,alt:q.diagram.description||q.diagram.caption})+'</w:p>'+await p(q.diagram.caption,'Caption',keepStudentQuestion||figure.after&&figure.after.length<350?'<w:keepNext/>':'');}
    if(figure.after)body+=await lines(figure.after,'Normal',keepStudentQuestion?'<w:keepNext/>':'');
    for(const [i,c] of q.choices.entries())body+=await p('ABCD'[i]+'. '+c,'Normal',keepStudentQuestion?'<w:keepNext/>':'');
    if(teacher){body+=await p('参考答案','Heading2')+await lines(q.answer)+await p('第'+q.id+'题 解析与评分要点','Heading2')+await lines(q.analysis,'Normal',q.analysis.length<1000?'<w:keepLines/>':'')+await p('评分要点','Heading2');for(const point of q.points)body+=await p('• '+point);}
