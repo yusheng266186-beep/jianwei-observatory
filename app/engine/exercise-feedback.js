@@ -1,16 +1,20 @@
 import {contentStamp} from './content-stamp.js';
 import {validDate} from './training.js';
 export const feedbackMarks=[['concept','概念理解'],['method','方法选择'],['calculation','计算'],['reading','审题'],['expression','表达与规范']];
-export const practiceSourceStamp=record=>contentStamp(record.sheet);
-export const practiceFeedbackStamp=record=>contentStamp(record.practiceFeedback||null);
-export function practiceFeedbackCurrent(record){return !!record?.practiceFeedback&&record.practiceFeedback.source===practiceSourceStamp(record);}
+// Layout is reviewable, but moving or resizing the same figure does not change
+// the questions a pupil answered. Actual diagram/content edits still do.
+export const practiceSourceStamp=record=>contentStamp({...record.sheet,questions:record.sheet.questions.map(({figureLayout,...question})=>question)});
+export function practiceFeedbackCurrent(record){const feedback=record?.practiceFeedback;return !!feedback&&feedback.source===(feedback.version===2?practiceSourceStamp(record):contentStamp(record.sheet));}
+export function practiceFeedbackStamp(record){const value=record.practiceFeedback;return contentStamp(value&&practiceFeedbackCurrent(record)?{...value,version:2,source:practiceSourceStamp(record)}:value||null);}
+export function preservePracticeFeedbackLayout(record){if(record?.practiceFeedback&&practiceFeedbackCurrent(record)&&record.practiceFeedback.version!==2)record.practiceFeedback={...record.practiceFeedback,version:2,source:practiceSourceStamp(record)};}
+export function practiceFeedbackDraft(record,date){const old=practiceFeedbackCurrent(record)?record.practiceFeedback:null;return {expected:practiceFeedbackStamp(record),date:old?.date||date,note:old?.note||'',rows:record.sheet.questions.map(q=>{const row=old?.rows.find(r=>r.id===q.id);return row?structuredClone(row):{id:q.id,state:'ungraded',score:null,marks:[]};})};}
 export function validatePracticeFeedback(record,value,{now=Date.now()}={}){
  if(!record.reviewedAt)throw new Error('请先审定练习，再记录练后结果');
  if(!value||!validDate(value.date))throw new Error('请选择真实的练习日期');
  if(!Array.isArray(value.rows)||value.rows.length!==record.sheet.questions.length)throw new Error('逐题记录不完整，请重新打开');
  const note=String(value.note||'').trim();if(note.length>600)throw new Error('教师记录最多600字');
- const rows=record.sheet.questions.map((q,i)=>{const r=value.rows[i];if(r.id!==q.id||!['ungraded','scored','unanswered'].includes(r.state))throw new Error('逐题记录与当前试题不一致');const marks=r.marks||[];if(!Array.isArray(marks)||new Set(marks).size!==marks.length||marks.some(m=>!feedbackMarks.some(([id])=>id===m)))throw new Error('请选择有效的错因标记');let score=r.state==='unanswered'?0:r.state==='ungraded'?null:r.score;if(score!==null&&(!Number.isFinite(score)||score<0||score>q.maxScore))throw new Error('第'+q.id+'题得分应在0至'+q.maxScore+'分之间');return {id:q.id,state:r.state,score,marks};});
- return {version:1,source:practiceSourceStamp(record),date:value.date,note,rows,updatedAt:now};
+ const rows=record.sheet.questions.map((q,i)=>{const r=value.rows[i];if(r.id!==q.id||!['ungraded','scored','unanswered'].includes(r.state))throw new Error('逐题记录与当前试题不一致');const marks=r.marks||[];if(!Array.isArray(marks)||new Set(marks).size!==marks.length||marks.some(m=>!feedbackMarks.some(([id])=>id===m)))throw new Error('请选择有效的错因标记');let score=r.state==='unanswered'?0:r.state==='ungraded'?null:r.score;if(score!==null&&(!Number.isFinite(score)||score<0||score>q.maxScore))throw new Error('第'+q.id+'题得分应在0至'+q.maxScore+'分之间');return {id:q.id,state:r.state,score,marks:[...marks]};});
+ return {version:2,source:practiceSourceStamp(record),date:value.date,note,rows,updatedAt:now};
 }
 export function practiceFeedbackMetrics(record){
  if(!practiceFeedbackCurrent(record))return null;const feedback=record.practiceFeedback,byId=new Map(record.sheet.questions.map(q=>[q.id,q])),graded=feedback.rows.filter(r=>r.state!=='ungraded'),score=graded.reduce((n,r)=>n+r.score,0),max=graded.reduce((n,r)=>n+byId.get(r.id).maxScore,0);
