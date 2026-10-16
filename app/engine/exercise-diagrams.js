@@ -1,13 +1,16 @@
 import {validateExerciseModel,exerciseModelSchema} from './exercise-models.js';
 import {validateExerciseScene,exerciseSceneSchema} from './exercise-scene.js';
-const kinds=['plot','geometry','forces','circuit','apparatus','flow','bars','illustration','drawing'];
+import {validateScienceFigure,scienceFigureSchema} from './exercise-science.js';
+const kinds=['plot','geometry','forces','circuit','apparatus','flow','bars','illustration','drawing','science','scatter'];
 export const exerciseEquipment=['gas-bottle','round-flask','conical-flask','three-neck-flask','beaker'];
 // Comparisons and chemical flow arrows are teaching text. The renderer escapes
 // every label; reject markup without treating "a -> b" or "x < 0" as HTML.
 const text=(s,n)=>typeof s==='string'&&s.length<=n&&!/<\s*\/?\s*[a-z!][^>]*>|javascript:/i.test(s);
 const keys=(v,allowed)=>v&&typeof v==='object'&&!Array.isArray(v)&&Object.keys(v).every(k=>allowed.includes(k));
 export function validateExerciseDiagram(d){
- if(!keys(d,['kind','caption','description','xLabel','yLabel','xRange','yRange','series','nodes','edges','image','model','scene'])||!kinds.includes(d.kind)||!text(d.caption,160)||!text(d.description,1600))throw new Error('图示类型、说明或字段不完整。');
+ if(!keys(d,['kind','caption','description','xLabel','yLabel','xRange','yRange','series','nodes','edges','image','model','scene','spec'])||!kinds.includes(d.kind)||!text(d.caption,160)||!text(d.description,1600))throw new Error('图示类型、说明或字段不完整。');
+ if(d.kind==='science'){if(Object.keys(d).some(k=>!['kind','caption','description','spec'].includes(k)))throw new Error('学科结构图不能混入其他图形字段。');validateScienceFigure(d.spec);return structuredClone(d);}
+ if(d.spec!==undefined)throw new Error('结构数据须用于学科图示。');
  if(d.kind==='drawing'){if(Object.keys(d).some(k=>!['kind','caption','description','scene'].includes(k)))throw new Error('定制矢量图不能混入其他图形数据。');validateExerciseScene(d.scene);return structuredClone(d);}
  if(d.scene!==undefined)throw new Error('绘图元素须用于定制矢量图。');
  if(d.model){validateExerciseModel(d);return structuredClone(d);}
@@ -17,9 +20,10 @@ export function validateExerciseDiagram(d){
   return structuredClone(d);
  }
  if(d.image)throw new Error('标准图示应使用矢量数据。');
- if(['plot','bars'].includes(d.kind)){
+ if(['plot','bars','scatter'].includes(d.kind)){
   for(const key of ['xRange','yRange'])if(!Array.isArray(d[key])||d[key].length!==2||d[key].some(x=>!Number.isFinite(x)||Math.abs(x)>1e6)||d[key][0]>=d[key][1])throw new Error('坐标范围无效。');
   if(!text(d.xLabel,40)||!text(d.yLabel,40)||!Array.isArray(d.series)||!d.series.length||d.series.length>4)throw new Error('坐标名称或数据组无效。');
+  if(d.kind==='bars'&&(d.yRange[0]>0||d.yRange[1]<0||d.series.some(s=>new Set(s.points.map(p=>p[0])).size!==s.points.length)))throw new Error('柱状图纵轴须包含0，同组横坐标不可重复。');
   for(const s of d.series)if(!keys(s,['label','points'])||!text(s.label,50)||!Array.isArray(s.points)||s.points.length<2||s.points.length>160||s.points.some(p=>!Array.isArray(p)||p.length!==2||p.some((n,i)=>!Number.isFinite(n)||n<d[i===0?'xRange':'yRange'][0]||n>d[i===0?'xRange':'yRange'][1])))throw new Error('图像数据超出坐标范围。');
  }else{
   if(!Array.isArray(d.nodes)||!d.nodes.length||d.nodes.length>18||!Array.isArray(d.edges)||d.edges.length>32)throw new Error('模型节点或连线数量无效。');
@@ -48,6 +52,7 @@ export function validateGeneratedExerciseFigures(sheet,request,{allowRequests=fa
   const labels=[d.xLabel,d.yLabel,...(d.series||[]).map(s=>s.label),...(d.nodes||[]).map(n=>n.label),...(d.edges||[]).map(e=>e.label)].filter(Boolean);
   if(labels.some(s=>/[$\\]/.test(s)))throw new Error('第'+q.id+'题的图中标签须使用可直接显示的文字。');
   if(d.model&&!['数学','物理'].includes(request.subject))throw new Error('第'+q.id+'题的标准模型不适用于当前学科。');
+  if(d.kind==='science'){if(d.spec.family==='mechanics'&&d.spec.model==='conveyor'&&!Object.hasOwn(d.spec,'blockPosition'))throw new Error('第'+q.id+'题的传送带图须明确物块的初始位置blockPosition。');const subjects={mechanics:['物理'],circuit:['物理'],molecule:['化学','生物'],'molecular-model':['化学','生物'],crystal:['化学'],cell:['生物'],photosynthesis:['生物'],dna:['生物']};if(!subjects[d.spec.family].includes(request.subject))throw new Error('第'+q.id+'题的学科图示与当前科目不符。');}
   if(request.subject!=='化学')continue;
   if(d.kind==='apparatus'&&d.nodes.some(n=>!n.equipment))throw new Error('第'+q.id+'题的实验装置未指定具体仪器和导管。');
   if(d.kind==='flow'&&/(?:仪器名称|仪器的名称|长[进导管]|短[出导管]|插入液面|液面[上下]|三[颈口]烧瓶)/u.test(q.stem))throw new Error('第'+q.id+'题不能用流程框代替考查结构的实验装置。');
@@ -55,4 +60,4 @@ export function validateGeneratedExerciseFigures(sheet,request,{allowRequests=fa
  }
  return sheet;
 }
-export const exerciseDiagramSchema={type:'object',additionalProperties:false,required:['kind','caption','description'],properties:{model:exerciseModelSchema,scene:exerciseSceneSchema,kind:{type:'string',enum:kinds},caption:{type:'string'},description:{type:'string'},xLabel:{type:'string'},yLabel:{type:'string'},xRange:{type:'array',items:{type:'number'}},yRange:{type:'array',items:{type:'number'}},series:{type:'array',items:{type:'object',additionalProperties:false,required:['label','points'],properties:{label:{type:'string'},points:{type:'array',items:{type:'array',items:{type:'number'}}}}}},nodes:{type:'array',items:{type:'object',additionalProperties:false,required:['id','x','y','label','shape'],properties:{id:{type:'string'},x:{type:'number'},y:{type:'number'},label:{type:'string'},shape:{type:'string',enum:['point','block','circle','vessel','junction']},equipment:{type:'string',enum:exerciseEquipment},liquidLevel:{type:'number',minimum:0,maximum:70},inlet:{type:'string',enum:['none','short','long','funnel']},additionFunnel:{type:'boolean'},outlet:{type:'string',enum:['none','short','long']}}}},edges:{type:'array',items:{type:'object',additionalProperties:false,required:['from','to','label','type'],properties:{from:{type:'string'},to:{type:'string'},label:{type:'string'},type:{type:'string',enum:['line','arrow','dashed','resistor','battery','lamp','switch','tube']}}}}}};
+export const exerciseDiagramSchema={type:'object',additionalProperties:false,required:['kind','caption','description'],properties:{model:exerciseModelSchema,scene:exerciseSceneSchema,spec:scienceFigureSchema,kind:{type:'string',enum:kinds},caption:{type:'string'},description:{type:'string'},xLabel:{type:'string'},yLabel:{type:'string'},xRange:{type:'array',items:{type:'number'}},yRange:{type:'array',items:{type:'number'}},series:{type:'array',items:{type:'object',additionalProperties:false,required:['label','points'],properties:{label:{type:'string'},points:{type:'array',items:{type:'array',items:{type:'number'}}}}}},nodes:{type:'array',items:{type:'object',additionalProperties:false,required:['id','x','y','label','shape'],properties:{id:{type:'string'},x:{type:'number'},y:{type:'number'},label:{type:'string'},shape:{type:'string',enum:['point','block','circle','vessel','junction']},equipment:{type:'string',enum:exerciseEquipment},liquidLevel:{type:'number',minimum:0,maximum:70},inlet:{type:'string',enum:['none','short','long','funnel']},additionFunnel:{type:'boolean'},outlet:{type:'string',enum:['none','short','long']}}}},edges:{type:'array',items:{type:'object',additionalProperties:false,required:['from','to','label','type'],properties:{from:{type:'string'},to:{type:'string'},label:{type:'string'},type:{type:'string',enum:['line','arrow','dashed','resistor','battery','lamp','switch','tube']}}}}}};
