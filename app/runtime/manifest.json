@@ -4,6 +4,10 @@
   "prepare": "runtime/prepare-NNHNZVFP.js",
   "css": "assets/runtime-f5bd6d5987cb.css",
   "landing": "assets/landing-aad41d11cb79.css",
+  "standalone": {
+    "figures": "runtime/figure-library-6FEI25BQ.js",
+    "models": "runtime/model-workbench-F7FR27IN.js"
+  },
   "files": [
     "app/runtime/shared-WTEO5GTN.js",
     "app/runtime/shared-GVKSRCDX.js",
@@ -44,6 +48,8 @@
     "app/runtime/shared-FLBDM6BW.js",
     "app/runtime/shared-XT7OAR7V.js",
     "app/runtime/storage-GLVB5YEC.js",
-    "app/runtime/prepare-NNHNZVFP.js"
+    "app/runtime/prepare-NNHNZVFP.js",
+    "app/runtime/figure-library-6FEI25BQ.js",
+    "app/runtime/model-workbench-F7FR27IN.js"
   ]
 }

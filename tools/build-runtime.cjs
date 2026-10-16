@@ -24,7 +24,8 @@ const sourceURLs={name:'source-urls',setup(build){
  const result=await esbuild.build({...options,entryPoints:{main:'app/main.js'}});
  Object.assign(result.metafile.outputs,storage.metafile.outputs);
  Object.assign(result.metafile.outputs,worker.metafile.outputs);
- const entries=Object.fromEntries(Object.entries(result.metafile.outputs).filter(([,v])=>v.entryPoint&&['app/main.js','app/data/storage.js','app/data/prepare-worker.js'].includes(v.entryPoint)).map(([k,v])=>[v.entryPoint,path.relative(path.join(root,'app'),path.join(root,k)).split(path.sep).join('/')]));
+ const standalone=await esbuild.build({...options,splitting:false,entryPoints:{'figure-library':'assets/figure-library.js','model-workbench':'assets/model-workbench.js'}});Object.assign(result.metafile.outputs,standalone.metafile.outputs);
+ const entries=Object.fromEntries(Object.entries(result.metafile.outputs).filter(([,v])=>v.entryPoint&&['app/main.js','app/data/storage.js','app/data/prepare-worker.js','assets/figure-library.js','assets/model-workbench.js'].includes(v.entryPoint)).map(([k,v])=>[v.entryPoint,path.relative(path.join(root,'app'),path.join(root,k)).split(path.sep).join('/')]));
  let html=fs.readFileSync(path.join(root,'index.html'),'utf8');
  const sheets=['styles.css',...['journey','glass','reading-fonts','typography','questions','material','reports','controls','question-glass','report-reading','paper-material','runtime','exercises','fields','wheels'].map(n=>'styles/'+n+'.css')];
  const css=await esbuild.build({absWorkingDir:root,stdin:{contents:sheets.map(s=>`@import ${JSON.stringify('./'+s)};`).join('\n'),loader:'css',resolveDir:root},bundle:true,write:false,minify:true,charset:'utf8',outfile:'styles.bundle.css',plugins:[{name:'css-assets',setup(build){build.onResolve({filter:/\.(woff2|png|svg)(\?|$)/},args=>({path:'../'+path.relative(root,path.resolve(args.resolveDir,args.path)).split(path.sep).join('/'),external:true}));}}]});
@@ -42,6 +43,8 @@ const sourceURLs={name:'source-urls',setup(build){
  const routes=[['board','年级总览'],['class','班级研究'],['papers','试卷研究'],['people','学生研究'],['follow','教学跟进'],['library','资料与报告']];
  html=html.replace(/(<nav class="navigation-dock"[^>]*>)[\s\S]*?(<\/nav>)/,(_,start,end)=>start+'<span class="dock-indicator" aria-hidden="true"></span>'+routes.map(([id,label])=>'<button data-cmd="nav" data-scene="'+id+'"><span class="dock-symbol">'+dockIcon(id)+'</span><span>'+label+'</span><i></i></button>').join('')+end);
  fs.writeFileSync(path.join(root,'index.html'),html);
- fs.writeFileSync(path.join(out,'manifest.json'),JSON.stringify({main:entries['app/main.js'],storage:entries['app/data/storage.js'],prepare:entries['app/data/prepare-worker.js'],css:cssName,landing:landingName,files:Object.keys(result.metafile.outputs)},null,2)+'\n');
+ for(const [file,source] of [['figure-library.html','assets/figure-library.js'],['model-workbench.html','assets/model-workbench.js']]){const value=fs.readFileSync(path.join(root,file),'utf8');fs.writeFileSync(path.join(root,file),value.replace(/<script type="module" src="[^"]+"><\/script>/,'<script type="module" src="./app/'+entries[source]+'"></script>'));}
+
+ fs.writeFileSync(path.join(out,'manifest.json'),JSON.stringify({main:entries['app/main.js'],storage:entries['app/data/storage.js'],prepare:entries['app/data/prepare-worker.js'],css:cssName,landing:landingName,standalone:{figures:entries['assets/figure-library.js'],models:entries['assets/model-workbench.js']},files:Object.keys(result.metafile.outputs)},null,2)+'\n');
  console.log(JSON.stringify({entries,css:cssName,bytes:Object.values(result.metafile.outputs).reduce((n,v)=>n+v.bytes,0)}));
 })().catch(e=>{console.error(e);process.exitCode=1});
