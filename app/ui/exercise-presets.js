@@ -31,8 +31,12 @@ const scopeTerms={
 };
 // This only suggests labels already present in the teacher's materials.
 // A suggested grouping never becomes a new score-derived knowledge label.
+export function exerciseScopeModules(subject,curriculum=''){
+ const prefix='高中'+subject+'已学内容：';if(!curriculum.startsWith(prefix))return [];
+ const choices=[...new Set([...(modules[subject]||[]),...exercisePresets(subject).modules])],selected=curriculum.slice(prefix.length).split('、').map(s=>s.trim()).filter(Boolean);
+ return selected.length&&selected.every(m=>choices.includes(m))?[...new Set(selected.map(m=>m==='平面向量与立体几何'?'向量与几何':m))]:[];
+}
 export function exerciseScopeMatches(subject,curriculum,knowledge){
- const choices=[...new Set([...(modules[subject]||[]),...exercisePresets(subject).modules])],module=choices.find(m=>curriculum==='高中'+subject+'已学内容：'+m);if(!module)return [];
- const pattern=scopeTerms[subject]?.find(([m])=>m===module||module==='向量与几何'&&m==='平面向量与立体几何')?.[1],group=exerciseCatalog(subject).groups.find(g=>g.name===module),terms=[module,...(group?.topics||[])];
- return knowledge.filter(label=>pattern?pattern.test(label):terms.some(t=>label.includes(t)||t.includes(label)));
+ const selected=exerciseScopeModules(subject,curriculum);if(!selected.length)return [];
+ return knowledge.filter(label=>selected.some(module=>{const pattern=scopeTerms[subject]?.find(([m])=>m===module||module==='向量与几何'&&m==='平面向量与立体几何')?.[1],group=exerciseCatalog(subject).groups.find(g=>g.name===module),terms=[module,...(group?.topics||[])];return pattern?pattern.test(label):terms.some(t=>label.includes(t)||t.includes(label));}));
 }

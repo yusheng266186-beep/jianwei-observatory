@@ -11,11 +11,21 @@ export function exerciseSetupContent(request){
  if(content.visuals!==undefined&&!['none','vector','hybrid'].includes(content.visuals)||content.template!==undefined&&!['targeted','variation','retest'].includes(content.template))throw new Error('草稿设置无效');
  return content;
 }
-export function savedExerciseSetups(value){return Array.isArray(value)?value.filter(row=>{try{return typeof row.id==='string'&&row.id.length<=80&&typeof row.name==='string'&&row.name.trim()&&row.name.length<=40&&Number.isFinite(row.updatedAt)&&!!exerciseSetupContent(row.content);}catch{return false;}}).map(row=>({...row,content:exerciseSetupContent(row.content)})):[];}
-export function saveExerciseSetup(rows,request,{id,name,now=Date.now(),newId=()=>crypto.randomUUID()}={}){
- name=String(name||'').trim();if(!name||name.length>40)throw new Error('请输入1–40字的草稿名称');const content=exerciseSetupContent(request),existing=rows.find(r=>r.id===id);
+export function savedExerciseSetups(value){return Array.isArray(value)?value.filter(row=>{try{return typeof row.id==='string'&&row.id.length<=80&&typeof row.name==='string'&&row.name.trim()&&row.name.length<=40&&Number.isFinite(row.updatedAt)&&!!exerciseSetupContent(row.content);}catch{return false;}}).map(row=>({id:row.id,name:row.name,createdAt:Number.isFinite(row.createdAt)?row.createdAt:row.updatedAt,updatedAt:row.updatedAt,content:exerciseSetupContent(row.content),...(typeof row.archiveSource==='string'&&row.archiveSource.length<=12000?{archiveSource:row.archiveSource}:{})})):[];}
+export const exerciseSetupStamp=row=>row?JSON.stringify([row.id,row.name,row.updatedAt,exerciseSetupContent(row.content)]):'';
+function checkCurrent(rows,id,expected){const row=rows.find(r=>r.id===id);if(!row||expected&&exerciseSetupStamp(row)!==expected)throw Object.assign(new Error('这份草稿已在其他页面更新或删除，请重新选择后再修改。'),{code:'SETUP_STALE'});return row;}
+export function saveExerciseSetup(rows,request,{id,name,expected,now=Date.now(),newId=()=>crypto.randomUUID()}={}){
+ name=String(name||'').trim();if(!name||name.length>40)throw new Error('请输入1–40字的草稿名称');const content=exerciseSetupContent(request),existing=id?checkCurrent(rows,id,expected):null;
  if(rows.some(r=>r.id!==existing?.id&&r.content.subject===content.subject&&r.name===name))throw new Error('同名草稿已存在，请更新原草稿或修改名称');
- const row={id:existing?.id||newId(),name,content,createdAt:existing?.createdAt||now,updatedAt:now};return {row,rows:[...rows.filter(r=>r.id!==row.id),row]};
+ const row={...existing,id:existing?.id||newId(),name,content,createdAt:existing?.createdAt??now,updatedAt:now};return {row,rows:[...rows.filter(r=>r.id!==row.id),row]};
+}
+export function renameExerciseSetup(rows,id,name,options={}){const row=checkCurrent(rows,id,options.expected);return saveExerciseSetup(rows,row.content,{...options,id,name});}
+export function deleteExerciseSetup(rows,id,expected){checkCurrent(rows,id,expected);return rows.filter(r=>r.id!==id);}
+export function restoreExerciseSetup(rows,row){if(rows.some(r=>r.id===row.id||r.name===row.name&&r.content.subject===row.content.subject))throw new Error('已有同名草稿，未覆盖现有内容。');return [...rows,row];}
+export function mergeExerciseSetupArchive(current,incoming,{newId=()=>crypto.randomUUID()}={}){
+ const rows=savedExerciseSetups(current);for(const source of savedExerciseSetups(incoming)){const signature=JSON.stringify([source.id,source.name,source.content]);if(rows.some(r=>r.archiveSource===signature&&JSON.stringify(r.content)===JSON.stringify(source.content)||r.id===source.id&&r.name===source.name&&JSON.stringify(r.content)===JSON.stringify(source.content)))continue;
+  let row=structuredClone(source);if(rows.some(r=>r.id===row.id||r.content.subject===row.content.subject&&r.name===row.name)){let index=2;do{row.name=source.name.slice(0,30)+'（导入'+index+++'）';}while(rows.some(r=>r.content.subject===row.content.subject&&r.name===row.name));row.id=newId();row.archiveSource=signature;}rows.push(row);
+ }return rows;
 }
 export function applyExerciseSetup(setup,current){
  const content=exerciseSetupContent(setup.content);if(content.subject!==current.subject)throw new Error('请选择当前学科的草稿');

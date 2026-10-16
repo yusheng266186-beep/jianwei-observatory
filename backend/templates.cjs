@@ -1,5 +1,6 @@
 'use strict';
-const version='subject-templates-20261016.12';
+const {curriculumBoundary}=require('./curriculum-boundaries.cjs');
+const version='subject-templates-20261016.13';
 const templates={
  '语文':{focus:'阅读信息筛选、语言运用与表达',rule:'现代文用完整原创材料，避免伪造作者出处。阅读同材料题组材料保持完全一致。答案分层列点，区分概括、分析和评价。写作明确文体、任务和字数，不用一句作文题代替整份训练。按训练点区分筛选概括、论证分析、形象情感、语言表达，设问对象和作答范围具体。现代文和诗文题提供可独立作答的完整文本，引用不伪造真实出处；原创诗文必须标明自拟。阅读参考答案逐点对应材料中的证据，不用空泛套话。写作保持完整任务，时间不足则改选阅读或语言运用。古诗文必要注释完整，不能让答题依赖未给出的背景。',diagrams:['flow','bars']},
  '数学':{focus:'概念理解、计算与推理',rule:'先列定义域、参数范围和边界；答案独立代回验证。涉及图像时给出准确坐标、刻度和足够采样点；坐标点必须由表达式逐点计算。几何图标清点、线和条件，非按比例图注明示意图，不能凭图猜数据。所有公式用 LaTeX。每题只围绕已选训练点设问，不把其他失分项混入题组。求参题逐一处理等号、退化、端点和根的位置；选择题独立求解后逐项验算，禁止多个选项等价。区分充分必要与充要条件。使用高中已学方法；字母、集合、区间、分式、向量和上下标全部用规范LaTeX，单位在数学环境中用直立体。坐标点应按同一函数求值，线段交点和图文条件一致；示意图不承担比例、角度或长度的隐含条件。',diagrams:['plot','geometry']},
@@ -25,7 +26,7 @@ const sichuanSubjects={
  '政治':'思想政治按单项选择和材料分析等非选择题组织，主体、情境、教材范围与作答任务明确；原理辨析融入规范选择或材料设问，不生成单独判断、概念背诵卡、口头辩论或活动策划代替试题。',
  '地理':'地理按单项选择和综合分析等非选择题组织；图表、区域材料及空间尺度完整，设问围绕特征、成因、过程、影响等规范任务，不用孤立术语解释、地名连线或无材料问答代替试题。'
 };
-const examRuleFor=subject=>sichuanRule+sichuanSubjects[subject]+'图示完全可选。仅当本题考查确需图示且能准确绘制时配图；语文、语言材料阅读、纯代数运算等不因开放SVG权限而强行添加流程图、装饰图或答案提示图。整份练习可以没有任何diagram。';
+const examRuleFor=subject=>sichuanRule+sichuanSubjects[subject]+curriculumBoundary(subject)+'图示完全可选。仅当本题考查确需图示且能准确绘制时配图；语文、语言材料阅读、纯代数运算等不因开放SVG权限而强行添加流程图、装饰图或答案提示图。整份练习可以没有任何diagram。';
 const strategies={targeted:{label:'薄弱点专项',rule:'围绕证据中确认的知识点先概念后应用。每道题指出明确可训练目标，避免用同一道题简单改数字凑题量。'},variation:{label:'同类变式',rule:'保留核心方法，改变情境、设问与已知条件，覆盖不同表征；至少两种不同设问。答案分别验证，不把数字换皮当迁移。'},retest:{label:'复核小测',rule:'形成能独立计分的复核小测，题干不泄露解法，覆盖确认的知识点，答案评分点便于逐题记录和后续复核。'}};
 function templateFor(subject,id='targeted'){if(!templates[subject]||!strategies[id])throw new Error('TEMPLATE_INVALID');return {version,subject,id,...templates[subject],rule:templates[subject].rule+examRuleFor(subject),strategy:strategies[id]};}
 function summary(){return {version,subjects:Object.entries(templates).map(([subject,t])=>({subject,focus:t.focus,diagrams:t.diagrams,checklist:(t.checklist||t.rule)+examRuleFor(subject)})),strategies:Object.entries(strategies).map(([id,v])=>({id,...v}))};}

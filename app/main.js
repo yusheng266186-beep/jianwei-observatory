@@ -29,7 +29,7 @@ import {researchView,studyDescription,studyAvailable,studyKey} from './ui/resear
 import {Atlas} from './engine/atlas.js?v=runtime-v45';
 import {loadScene} from './scenes/load.js?v=runtime-v45';
 import {SUBJECTS} from './data/compat.js?v=runtime-v45';
-import {access,write,STORAGE_SCOPE} from './data/storage.js';
+import {access,write,update as updateStored,STORAGE_SCOPE} from './data/storage.js';
 import {hydrate,save,saveWorkspace,restoreDataset,hasMaterials,preference,remember,previous,emptyDataset,loadNotebook,saveNotebook} from './data/workspace.js?v=runtime-v45';
 import {prepareDataset,prepareMaterial} from './data/preparation.js?v=runtime-v45';
 import {remapScopedContext} from './data/identity.js?v=runtime-v45';
@@ -344,6 +344,7 @@ async function restoreContext(incoming) {
   for(const key of ['savedPeople','comparePeople','directoryViews'])if(Array.isArray(incoming[key])){session[key]=structuredClone(incoming[key]);remember(key,session[key]);}
   if(incoming.research){research.saved=structuredClone(Array.isArray(incoming.research.saved)?incoming.research.saved:[]);research.recent=structuredClone(Array.isArray(incoming.research.recent)?incoming.research.recent.slice(0,24):[]);persistResearch();}
   if(Array.isArray(incoming.notebook))session.notebook=structuredClone(incoming.notebook);
+  if(Array.isArray(incoming.exerciseSavedSetups)){const {mergeExerciseSetupArchive}=await import('./engine/exercise-setups.js');await updateStored('exerciseSavedSetups',previous=>mergeExerciseSetupArchive(previous,incoming.exerciseSavedSetups));}
   if(Array.isArray(incoming.exercises)){const previous=await access('exercises')||[],byId=new Map(previous.map(r=>[r.id,r]));for(const record of incoming.exercises)if(record?.id&&record.sid)byId.set(record.id,structuredClone(record));if(exerciseStudioTask)await(await exerciseStudioTask).reset();await write([['exercises',[...byId.values()]]]);remember('exercisePending',[...byId.values()].some(r=>['submitting','unconfirmed','queued','running'].includes(r.status)||Object.values(r.imageJobs||{}).some(j=>['submitting','unconfirmed','queued','running'].includes(j.status))));}
 }
 async function changeMaterials(operation) {
@@ -841,7 +842,7 @@ async function commands(event) {
       try{await chart(d.id,d.cmd==='png');}
       finally{if(b.isConnected&&b.getAttribute('aria-busy')==='true'){b.disabled=false;b.removeAttribute('aria-busy');b.textContent=label;if(description===null)b.removeAttribute('aria-label');else b.setAttribute('aria-label',description);}}
     }
-    else if(d.cmd==='backup'){archiveStudy();download(JSON.stringify({...atlas.data,plans:session.plans,notebook:session.notebook,savedPeople:session.savedPeople,comparePeople:session.comparePeople,directoryViews:session.directoryViews,research,exercises:await access('exercises')||[]}),SITE_NAME+'-完整工作区-'+new Date().toLocaleDateString('sv-SE',{timeZone:'Asia/Shanghai'})+'.json','application/json');}
+    else if(d.cmd==='backup'){archiveStudy();const saved=await access(['exercises','exerciseSavedSetups']),{savedExerciseSetups}=await import('./engine/exercise-setups.js');download(JSON.stringify({...workspaceSnapshot(),exercises:saved.exercises||[],exerciseSavedSetups:savedExerciseSetups(saved.exerciseSavedSetups)}),SITE_NAME+'-完整工作区-'+new Date().toLocaleDateString('sv-SE',{timeZone:'Asia/Shanghai'})+'.json','application/json');}
     else if(d.cmd==='template')await template();
     else if(d.cmd==='four-sheets')await excel(fourSheets(),SITE_NAME+'-四表分析包');
     else if(d.cmd==='undo')await changeMaterials(async()=>{const dataset=inMemoryUndo||await previous();if(!dataset){notify('没有可撤回的材料替换');return;}await applyMaterials(dataset,workspaceSnapshot(),hasMaterials(dataset)?'已恢复上一次材料':'已恢复空白工作区',{undo:false});});

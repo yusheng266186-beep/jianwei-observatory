@@ -34,6 +34,12 @@ export async function access(key,value,write=false,name=DB,table=TABLE,entries=n
 let writes=Promise.resolve();
 function savedHint(entries){const data=entries.find(([key])=>key==='dataset')?.[1];if(data)remember('workspacePresent',Boolean(data.scores?.length||data.answers?.length||data.lines?.length||Object.keys(data.banks||{}).length));}
 export function write(entries){const snapshot=structuredClone(entries),operation=writes.then(()=>access(null,null,true,DB,TABLE,snapshot)).then(result=>{savedHint(snapshot);return result;});writes=operation.catch(()=>{});return operation;}
+// Read and modify one value in the same transaction, including across tabs.
+export function update(key,reduce){
+ const operation=writes.then(async()=>{const db=await open();return new Promise((resolve,reject)=>{let tx,result,done=false,reason;const finish=error=>{if(done)return;done=true;clearTimeout(timer);db.close();error?reject(error):resolve(result);},timer=setTimeout(()=>{reason=new Error('本机保存超时，请重试');try{tx?.abort();}catch{}finish(reason);},4500);
+  try{tx=db.transaction(TABLE,'readwrite');const store=tx.objectStore(TABLE),request=store.get(key);request.onsuccess=()=>{try{result=reduce(request.result??null);if(result&&typeof result.then==='function')throw new Error('存储更新须同步完成');store.put(result,key);}catch(error){reason=error;tx.abort();}};tx.oncomplete=()=>finish();tx.onerror=()=>finish(reason||tx.error||new Error('本机保存未完成，请重试'));tx.onabort=()=>finish(reason||tx.error||new Error('本机保存已取消'));}catch(error){try{tx?.abort();}catch{}finish(error);}
+ });});writes=operation.catch(()=>{});return operation;
+}
 export function writePrepared(entries){const ready=Promise.resolve(entries);ready.catch(()=>{});const operation=writes.then(async()=>{const entries=await ready,result=await access(null,null,true,DB,TABLE,entries);savedHint(entries);return result;});writes=operation.catch(()=>{});return operation;}
 export async function readWorkspace(){
  let current=null;try{current=await access(['dataset','prepared']);}catch{}

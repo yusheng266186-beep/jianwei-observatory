@@ -1,23 +1,36 @@
 import {esc} from './html.js';
 import {exerciseChoice} from './exercise-choice.js';
-import {write} from '../data/storage.js';
-import {saveExerciseSetup,savedExerciseSetups} from '../engine/exercise-setups.js';
+import {access,update} from '../data/storage.js';
+import {saveExerciseSetup,savedExerciseSetups,renameExerciseSetup,deleteExerciseSetup,restoreExerciseSetup,exerciseSetupStamp,exerciseSetupContent} from '../engine/exercise-setups.js';
+import {exerciseTypeLabel} from '../engine/exercise-contract.js';
 const button=(label,cmd,kind='outline',disabled=false)=>'<button type="button" class="button '+kind+'" data-ai-action="setup-'+cmd+'" '+(disabled?'disabled':'')+'>'+esc(label)+'</button>';
-export function createExerciseSetupShelf({getRequest,apply}){
- let rows=[],selected='',editing=false,name='',feedback='',undo=null;const picked=()=>rows.find(r=>r.id===selected&&r.content.subject===getRequest().subject);
- return {load(value){rows=savedExerciseSetups(value);},subjectChanged(){editing=false;name='';feedback='';},choose(id){selected=id;name=picked()?.name||'';feedback='';},setName(value){name=value;},
-  html({locked=false}={}){const request=getRequest(),matching=rows.filter(r=>r.content.subject===request.subject).sort((a,b)=>b.updatedAt-a.updatedAt),row=picked();
-   return '<section class="exercise-setup-shelf" aria-label="出题草稿"><header><div><h3>草稿与常用设置</h3><p>保存本次选择，下次为其他学生快速套用。</p></div><span data-ai-draft-status></span></header><div class="exercise-setup-toolbar">'+exerciseChoice('saved-setup','我的'+request.subject+'草稿',row?.id||'',[{value:'',label:matching.length?'选择已保存的草稿':'尚无保存的'+request.subject+'草稿'},...matching.map(r=>({value:r.id,label:r.name+' · '+r.content.count+'题 / '+r.content.minutes+'分钟'}))])+button('套用草稿','apply','outline',!row||locked)+button('保存为草稿','edit','quiet')+'</div>'+(row?'<p class="exercise-setup-context">'+esc(row.content.curriculum||'教学范围待补充')+' · '+esc(row.content.difficulty)+button('管理','manage','quiet')+'</p>':'')+(editing?'<div class="exercise-setup-editor"><label class="field"><span>草稿名称</span><input data-ai-setup-name maxlength="40" value="'+esc(name)+'" placeholder="例如：导数基础巩固 · 课后训练"></label><div>'+button(row?'另存新草稿':'保存草稿','save','accent')+(row?button('更新这份草稿','update')+button('删除草稿','delete','quiet'):'')+button('收起','cancel','quiet')+'</div><p class="report-help">保存教材范围、训练内容与练习设置；套用时使用当前学生的考试依据。草稿保存在当前浏览器。</p></div>':'')+'<p class="exercise-setup-feedback" role="status" aria-live="polite">'+esc(feedback)+(undo&&Date.now()<undo.until?button('撤销删除','undo','quiet'):'')+'</p></section>';
-  },
-  async handle(cmd,{locked=false}={}){const row=picked(),request=getRequest();
-   if(cmd==='setup-edit'||cmd==='setup-manage'){editing=true;name=row?.name||(request.subject+' · '+(request.targets?.[0]||'专项训练'));return;}
-   if(cmd==='setup-cancel'){editing=false;return;}
-   if(cmd==='setup-apply'){if(locked||!row)return;await apply(row);feedback='已套用“'+row.name+'”，可补充本次要求后生成。';editing=false;return;}
-   let next=rows,message='';
-   if(cmd==='setup-save'||cmd==='setup-update'){const saved=saveExerciseSetup(rows,request,{id:cmd==='setup-update'?row?.id:undefined,name});next=saved.rows;selected=saved.row.id;message='已保存“'+saved.row.name+'”，下次可直接套用。';}
-   if(cmd==='setup-delete'&&row){next=rows.filter(r=>r.id!==row.id);undo={row,until:Date.now()+12000};selected='';message='草稿已删除，12秒内可撤销；已生成练习仍保留。';}
-   if(cmd==='setup-undo'&&undo&&Date.now()<undo.until){next=[...rows.filter(r=>r.id!==undo.row.id),undo.row];selected=undo.row.id;undo=null;message='已恢复草稿。';}
-   if(next!==rows){await write([['exerciseSavedSetups',next]]);rows=next;feedback=message;editing=false;}
-  }
+const stamp=value=>JSON.stringify(exerciseSetupContent({...value,targets:value.targets||[],questionTypes:value.questionTypes||[],requirements:value.requirements||'',visuals:value.visuals||'none',template:value.template||'targeted'}));
+export function createExerciseSetupShelf({getRequest,apply,mutate=reduce=>update('exerciseSavedSetups',value=>reduce(savedExerciseSetups(value))),read=()=>access('exerciseSavedSetups'),now=Date.now}){
+ let rows=[],editing=false,name='',feedback='',undo=null,editTarget=null,pending=false;
+ const selected=new Map(),applied=new Map(),picked=()=>rows.find(r=>r.id===selected.get(getRequest().subject)&&r.content.subject===getRequest().subject);
+ const match=()=>{const row=picked();if(!row)return '';try{if(stamp(row.content)===stamp(getRequest()))return '与草稿一致';}catch{}return applied.get(row.content.subject)===row.id?'本次设置已调整':'尚未套用';};
+ async function refresh(){rows=savedExerciseSetups(await read());}
+ return {get pending(){return pending;},load(value){rows=savedExerciseSetups(value);editing=false;editTarget=null;},refresh,subjectChanged(){editing=false;editTarget=null;name='';feedback='';},choose(id){selected.set(getRequest().subject,id);name=picked()?.name||'';editing=false;editTarget=null;feedback='';},setName(value){name=value;},refreshStatus(root){const node=root.querySelector('[data-setup-match]');if(node)node.textContent=match();},
+ html({locked=false}={}){const request=getRequest(),matching=rows.filter(r=>r.content.subject===request.subject).sort((a,b)=>b.updatedAt-a.updatedAt),row=picked(),c=row?.content;
+ const preview=row?'<details class="exercise-setup-preview"><summary><b>查看草稿内容</b><span data-setup-match>'+esc(match())+'</span></summary><dl>'+[['教学范围',c.curriculum||'待补充'],['训练重点',c.focus||'待补充'],['练习安排',c.count+'题 / '+c.minutes+'分钟 · '+c.difficulty],['题型',c.questionTypes?.length?c.questionTypes.map(exerciseTypeLabel).join('、'):'按学科自动搭配'],['配图',{none:'不配图 · 文字与公式',vector:'按需SVG图示',hybrid:'按需图示与复杂插图'}[c.visuals||'none']],...(c.requirements?[['补充要求',c.requirements]]:[])].map(([label,value])=>'<div><dt>'+label+'</dt><dd>'+esc(value)+'</dd></div>').join('')+'</dl>'+button('管理这份草稿','manage','quiet',pending)+'</details>':'';
+ return '<section class="exercise-setup-shelf" aria-label="出题草稿"><header><div><h3>草稿与常用设置</h3><p>保存本次选择，下次为其他学生快速套用。</p></div><span data-ai-draft-status></span></header><div class="exercise-setup-toolbar">'+exerciseChoice('saved-setup','我的'+request.subject+'草稿',row?.id||'',[{value:'',label:matching.length?'选择已保存的草稿':'尚无保存的'+request.subject+'草稿'},...matching.map(r=>({value:r.id,label:r.name+' · '+r.content.count+'题 / '+r.content.minutes+'分钟'}))])+button('套用草稿','apply','outline',!row||locked||pending)+button(pending?'正在保存…':'保存为草稿','edit','quiet',pending)+'</div>'+preview+(editing?'<div class="exercise-setup-editor"><label class="field"><span>草稿名称</span><input data-ai-setup-name maxlength="40" value="'+esc(name)+'" placeholder="例如：导数基础巩固 · 课后训练"></label><div>'+button(row?'另存新草稿':'保存草稿','save','accent',pending)+(row?button('用本次设置更新','update','outline',pending)+button('仅修改名称','rename','outline',pending)+button('删除草稿','delete','quiet',pending):'')+button('收起','cancel','quiet',pending)+'</div><p class="report-help">“用本次设置更新”会替换草稿内容；“仅修改名称”保留原内容。草稿保存在当前浏览器，并随完整工作区备份导出。</p></div>':'')+'<p class="exercise-setup-feedback" role="status" aria-live="polite">'+esc(feedback)+(undo&&now()<undo.until?button('撤销删除','undo','quiet',pending):'')+'</p></section>';
+ },
+ async handle(cmd,{locked=false}={}){if(pending)return false;const row=picked(),request=structuredClone(getRequest()),subject=request.subject;
+ if(cmd==='setup-edit'||cmd==='setup-manage'){editing=true;editTarget=row?structuredClone(row):null;name=row?.name||(subject+' · '+(request.targets?.[0]||'专项训练'));return;}
+ if(cmd==='setup-cancel'){editing=false;editTarget=null;return;}
+ if(cmd==='setup-apply'){if(locked||!row)return;await apply(row);applied.set(subject,row.id);feedback='已套用“'+row.name+'”，可补充本次要求后生成。';editing=false;return;}
+ if(!['setup-save','setup-update','setup-rename','setup-delete','setup-undo'].includes(cmd))return;
+ const target=editTarget||row,expected=exerciseSetupStamp(target),savedName=name,restoring=undo;let result,deleted,restored=false;pending=true;
+ try{const saved=await mutate(latest=>{
+ if(cmd==='setup-save'||cmd==='setup-update'){result=saveExerciseSetup(latest,request,{id:cmd==='setup-update'?target?.id:undefined,name:savedName,expected,now:now()});return result.rows;}
+ if(cmd==='setup-rename'){result=renameExerciseSetup(latest,target?.id,savedName,{expected,now:now()});return result.rows;}
+ if(cmd==='setup-delete'){const next=deleteExerciseSetup(latest,target?.id,expected);deleted=target;return next;}
+ if(cmd==='setup-undo'&&restoring&&now()<restoring.until){restored=true;return restoreExerciseSetup(latest,restoring.row);}return latest;
+ });rows=savedExerciseSetups(saved);
+ if(deleted){undo={row:deleted,until:now()+12000};selected.delete(subject);}if(restored){selected.set(restoring.row.content.subject,restoring.row.id);undo=null;}
+ if(result){selected.set(subject,result.row.id);if(cmd!=='setup-rename')applied.set(subject,result.row.id);}
+ if(getRequest().subject===subject){editing=false;editTarget=null;feedback=deleted?'草稿已删除，12秒内可撤销；已生成练习仍保留。':restored?'已恢复草稿。':result?(cmd==='setup-rename'?'已改名为“'+result.row.name+'”，原训练内容保留。':'已保存“'+result.row.name+'”，下次可直接套用。'):'撤销时间已结束。';}
+ }catch(error){if(error.code==='SETUP_STALE'){await refresh().catch(()=>{});editing=false;editTarget=null;}throw error;}finally{pending=false;}
+ }
  };
 }
