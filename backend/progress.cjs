@@ -23,10 +23,10 @@ function streamProgress(protocol,report){
  return chunk=>{buffer+=decoder.write(chunk);let match;while((match=/\r?\n\r?\n/.exec(buffer))){const block=buffer.slice(0,match.index);buffer=buffer.slice(match.index+match[0].length);const data=block.split(/\r?\n/).filter(l=>l.startsWith('data:')).map(l=>l.slice(5).trimStart()).join('\n');if(data&&data!=='[DONE]')event(data);}};
 }
 function createProgressWriter({store,key,total,now=Date.now,controller}){
- let state={phase:'connecting',thinkingChars:0,responseChars:0,total,startedAt:now()},writing=Promise.resolve(),stopped=false,sequence=0;
- const update=event=>{const received=Number(event.responseChars)>state.responseChars||Number(event.thinkingChars)>state.thinkingChars||['thinkingText','summary','draftSource'].some(k=>typeof event[k]==='string'&&event[k]!==state[k]);state={...state,...event,...(received?{receivedAt:now()}:{})};};
+ let state={phase:'connecting',thinkingChars:0,responseChars:0,total,startedAt:now(),timing:{startedAt:now(),phase:'connecting',phaseStartedAt:now(),phases:{}}},writing=Promise.resolve(),stopped=false,sequence=0;
+ const update=event=>{const at=now(),phase=event.phase||state.phase,timing={...state.timing,phases:{...state.timing.phases}};if(phase!==timing.phase){timing.phases[timing.phase]=(timing.phases[timing.phase]||0)+Math.max(0,at-timing.phaseStartedAt);timing.phase=phase;timing.phaseStartedAt=at;}const received=Number(event.responseChars)>state.responseChars||Number(event.thinkingChars)>state.thinkingChars||['thinkingText','summary','draftSource'].some(k=>typeof event[k]==='string'&&event[k]!==state[k]);if(received&&!timing.firstResponseAt)timing.firstResponseAt=at;if(Number(event.responseChars)>0&&!timing.firstOutputAt)timing.firstOutputAt=at;state={...state,...event,timing,...(received?{receivedAt:at}:{})};};
  const flush=()=>{writing=writing.catch(()=>{}).then(async()=>{if(stopped)return;if(await store.get(key+'/removed.json')){controller.abort();return;}const {draftSource,...publicState}=state;await store.progress(key+'/progress.json',{...publicState,...(draftSource?{draft:partialDocument(draftSource),outputText:draftSource}:{}),sequence:++sequence,heartbeatAt:now()});});return writing;};
  const timer=setInterval(()=>flush().catch(()=>{}),5000);timer.unref?.();
- return {update,flush,async close(phase){clearInterval(timer);state={...state,phase};await flush().catch(()=>{});stopped=true;}};
+ return {update,flush,async close(phase){clearInterval(timer);update({phase});await flush().catch(()=>{});stopped=true;}};
 }
 module.exports={partialDocument,streamProgress,createProgressWriter};

@@ -1,3 +1,4 @@
+import {requireExerciseQualityReview} from '../engine/exercise-quality.js';
 import {createPDFDefinitionJob} from './pdf-runtime.js';
 import {exerciseParagraph,exerciseLineWidth} from './exercise-math.js';
 import {validateExerciseResult,difficultyProfile,exerciseTypeLabel} from '../engine/exercise-contract.js';
@@ -8,8 +9,8 @@ import {exerciseFile} from './exercise-file-cache.js';
 // when pdfmake moves a block to the next page. The worker owns this named layout.
 const together=stack=>({table:{widths:['*'],body:[[{stack}]],dontBreakRows:true},layout:'exerciseKeepTogether'});
 export async function exercisePDF(record,{teacher=false,name=record.student?.name||'',classNo=record.student?.classNo??''}={}){
- if(!record.reviewedAt)throw new Error('请完成审题确认后输出正式练习。');
- const sheet=validateExerciseResult(record.sheet,record.request),key=JSON.stringify(['pdf-v15-geography-pagination',record.request,sheet,teacher,name,classNo,{exerciseId:record.id}]);
+ if(!record.reviewedAt)throw new Error('请完成审题确认后输出正式练习。');requireExerciseQualityReview(record);
+ const sheet=validateExerciseResult(record.sheet,record.request),key=JSON.stringify(['pdf-v19-conic-pagination',record.request,sheet,teacher,name,classNo,{exerciseId:record.id}]);
  const snapshot=structuredClone(record);return exerciseFile(key,()=>buildExercisePDF(snapshot,{teacher,name,classNo}));
 }
 async function buildExercisePDF(record,{teacher,name,classNo}){

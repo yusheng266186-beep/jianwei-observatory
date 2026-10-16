@@ -52,7 +52,7 @@ export function validateGeneratedExerciseFigures(sheet,request,{allowRequests=fa
   const labels=[d.xLabel,d.yLabel,...(d.series||[]).map(s=>s.label),...(d.nodes||[]).map(n=>n.label),...(d.edges||[]).map(e=>e.label)].filter(Boolean);
   if(labels.some(s=>/[$\\]/.test(s)))throw new Error('第'+q.id+'题的图中标签须使用可直接显示的文字。');
   if(d.model&&!['数学','物理'].includes(request.subject))throw new Error('第'+q.id+'题的标准模型不适用于当前学科。');
-  if(d.kind==='science'){if(d.spec.family==='mechanics'&&d.spec.model==='conveyor'&&!Object.hasOwn(d.spec,'blockPosition'))throw new Error('第'+q.id+'题的传送带图须明确物块的初始位置blockPosition。');const subjects={mechanics:['物理'],circuit:['物理'],molecule:['化学','生物'],'molecular-model':['化学','生物'],crystal:['化学'],cell:['生物'],photosynthesis:['生物'],dna:['生物'],terrain:['地理'],climate:['地理']};if(!subjects[d.spec.family].includes(request.subject))throw new Error('第'+q.id+'题的学科图示与当前科目不符。');}
+  if(d.kind==='science'){if(d.spec.family==='mechanics'&&d.spec.model==='conveyor'&&!Object.hasOwn(d.spec,'blockPosition'))throw new Error('第'+q.id+'题的传送带图须明确物块的初始位置blockPosition。');const subjects={conic:['数学'],optics:['物理'],'uniform-field':['物理'],pedigree:['生物'],'ocean-currents':['地理'],strata:['地理'],mechanics:['物理'],circuit:['物理'],molecule:['化学','生物'],'molecular-model':['化学','生物'],crystal:['化学'],cell:['生物'],photosynthesis:['生物'],dna:['生物'],terrain:['地理'],climate:['地理']};if(!subjects[d.spec.family].includes(request.subject))throw new Error('第'+q.id+'题的学科图示与当前科目不符。');}
   if(request.subject!=='化学')continue;
   if(d.kind==='apparatus'&&d.nodes.some(n=>!n.equipment))throw new Error('第'+q.id+'题的实验装置未指定具体仪器和导管。');
   if(d.kind==='flow'&&/(?:仪器名称|仪器的名称|长[进导管]|短[出导管]|插入液面|液面[上下]|三[颈口]烧瓶)/u.test(q.stem))throw new Error('第'+q.id+'题不能用流程框代替考查结构的实验装置。');

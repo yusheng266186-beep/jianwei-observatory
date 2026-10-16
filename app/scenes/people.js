@@ -1,3 +1,4 @@
+import {metricEvidenceHTML} from '../ui/metric-evidence.js';
 import {knowledgeLabels} from '../engine/knowledge.js?v=runtime-v45';
 import {personalQuestionCard,personalQuestionLink} from '../ui/personal-questions.js?v=runtime-v45';
 import {renderDirectory} from './directory.js?v=runtime-v45';
@@ -17,6 +18,7 @@ export function render(atlas,state,session) {
   const gaps=currentSubjects.map(subject=>({subject,gap:atlas.gap(row,'under',subject)})).filter(item=>item.gap!==null).sort((a,b)=>a.gap-b.gap);
   const values=story.map(record=>atlas.value(record,metric)).filter(valid),change=values.length>1?difference(values.at(-1),values[0]):null;
   let canvas=(row.questionOnly?'<p class="drawer-clue-note">本场只有小题材料，总分与学科成绩尚未导入。阶段图中的成绩缺失保留断点。</p>':'')+ribbon([['本次赋分',number(row.total),atlas.exam(row.exam).label],['校内排名',integer(atlas.gradeRank(row)),'同考次、同科类校内名次'],['班级排名',integer(atlas.classRank(row)),'同班、同考次；原表优先，同分并列'],['特控距离',delta(atlas.gap(row,'top')),'正数表示高于有效线'],['本科距离',delta(atlas.gap(row,'under')),'正数表示高于有效线']]);
+  canvas+=metricEvidenceHTML(atlas,row);
   canvas+='<p class="percentile-note">辅助相对位置：仅按已导入的同科类有效总分换算，100为首位、0为末位，同分共享位置；它不是校内排名。</p>';
   canvas+='<div id="person-history" class="section-anchor">'+block('完整阶段变化',chips('storyMetric',[...Object.entries(names),...subjects.map(s=>[s,s+'成绩'])],metric)+trajectory('person-story',materials.map(r=>r.exam),[{name:names[metric]||metric,values:materials.map(record=>atlas.value(record,metric)),points:materials.map(record=>({cmd:'person-exam',data:{exam:record.exam}}))}],{zero:metric==='top'||metric==='under',inverse:['gradeRank','classRank'].includes(metric),floor:['gradeRank','classRank'].includes(metric)?1:null,integerTicks:['gradeRank','classRank'].includes(metric)})+'<div class="story-caption">首末有效变化 '+delta(change)+'<span>当前记录：'+esc(atlas.exam(row.exam).label)+'</span></div>','每条记录使用当次班级与有效线；校内排名数字越小越靠前，相对位置仅代表已导入材料。',chartButtons('person-story'))+'</div>';
   const subjectRows=currentSubjects.map(subject=>[subject,atlas.subject(row,subject)?.score,atlas.subject(row,subject)?.raw,atlas.subjectRank(row,subject),atlas.line(row,'top',subject),atlas.gap(row,'top',subject),atlas.line(row,'under',subject),atlas.gap(row,'under',subject)]);

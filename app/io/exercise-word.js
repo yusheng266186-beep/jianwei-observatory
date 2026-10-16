@@ -1,3 +1,4 @@
+import {requireExerciseQualityReview} from '../engine/exercise-quality.js';
 import {validateExerciseResult,difficultyProfile,exerciseTypeLabel} from '../engine/exercise-contract.js';
 import {exercisePrintSections,exerciseAnswerSpaceHeight,exercisePrintFigureParts} from '../engine/exercise-print.js';
 import {mathParts,mathSVG,warmExerciseMath} from './exercise-math.js';
@@ -11,8 +12,8 @@ export const wordParagraphLines=value=>String(value).split('\n').filter(line=>li
 let zipTask;
 async function zipLibrary(){if(!zipTask){const task=import('../../vendor/jszip.min.js').then(()=>{if(!window.JSZip)throw new Error('Word组件未能载入，请重试');return window.JSZip;});zipTask=task;task.catch(()=>{if(zipTask===task)zipTask=null;});}return zipTask;}
 export async function exerciseWord(record,{teacher=false,name=record.student?.name||'',classNo=record.student?.classNo??''}={}){
- if(!record.reviewedAt)throw new Error('请完成审题确认后输出正式练习。');
- const sheet=validateExerciseResult(record.sheet,record.request),key=JSON.stringify(['docx-v15-geography-pagination',record.request,sheet,teacher,name,classNo,{exerciseId:record.id}]);
+ if(!record.reviewedAt)throw new Error('请完成审题确认后输出正式练习。');requireExerciseQualityReview(record);
+ const sheet=validateExerciseResult(record.sheet,record.request),key=JSON.stringify(['docx-v19-conic-pagination',record.request,sheet,teacher,name,classNo,{exerciseId:record.id}]);
  const snapshot=structuredClone(record);return exerciseFile(key,()=>buildExerciseWord(snapshot,{teacher,name,classNo}));
 }
 async function buildExerciseWord(record,{teacher,name,classNo}){

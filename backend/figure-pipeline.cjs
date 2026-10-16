@@ -29,7 +29,7 @@ async function nextAttempt(store,key,manifest,q,previous,feedback,{reusePlan=fal
 async function states(store,key,manifest,options){
  const out=[];let imageUsed=false;
  for(const q of manifest.questions){const attempt=await latestAttempt(store,key,q);let state=await stepState(store,key,manifest,q,attempt,'plan',options);
-  const logs=[],log=s=>{if(s.progress)logs.push({questionId:q,stage:s.stage,model:s.result?.model|| (s.stage==='plan'?manifest.figureGeneration.model:manifest.generation.model),...s.progress});};log(state);
+  const logs=[],log=s=>{if(s.progress)logs.push({questionId:q,stage:s.stage,model:s.result?.model|| (s.stage==='plan'?manifest.figureGeneration.model:manifest.generation.model),...s.progress,usage:s.result?.usage||s.progress?.usage});};log(state);
   if(state.status==='failed'&&state.error==='FIGURE_PLAN_INVALID'&&attempt.attempt===0){const feedback=state.result?.issues||['图示参数未通过校验，请按原题与Schema重新绘制。'];await store.create(attemptKey(key,q,1),{feedback,createdAt:options.now()});return states(store,key,manifest,options);}
   if(state.status!=='ready'){out.push({...state,logs});break;}
   const diagram=state.result.diagram;
@@ -50,8 +50,8 @@ async function publish(store,key,manifest,list,now=Date.now){
  if(await removed(store,key,manifest))return;const old=(await store.get(key+'/progress.json'))?.value||{},text=(await store.get(key+'/text-progress.json'))?.value||{},active=list.find(s=>s.status!=='ready'),live=active?.progress||{},stage=active?.stage||'review',name={plan:'图示规划',render:'绘制配图',review:'图题核对'}[stage],notes=live.thinkingText||live.summary||'',phase=active?{plan:'figure-planning',render:'figure-rendering',review:'figure-reviewing'}[stage]:'ready';
  const revision=list.reduce((n,s)=>n+(s.attempt+1)*100+(s.stage==='review'?30:s.stage==='render'?20:10)+(s.status==='ready'?1:0),0);
  if((old.figureRevision||0)>revision)return;
- const figureLog=list.flatMap(s=>s.logs||[]).map(p=>({questionId:p.questionId,stage:p.stage,model:p.model,thinkingText:(p.thinkingText||'').slice(-20000),summary:p.summary||'',outputText:(p.outputText||'').slice(0,24000)}));
- await store.progress(key+'/progress.json',{...text,phase,sequence:(old.sequence||0)+1,figureRevision:revision,heartbeatAt:now(),receivedAt:live.receivedAt||old.receivedAt||now(),thinkingChars:(text.thinkingChars||0)+(live.thinkingChars||0),responseChars:text.responseChars||0,thinkingText:[text.thinkingText,notes?'第'+active.questionId+'题 · '+name+'\n'+notes:''].filter(Boolean).join('\n\n').slice(-160000),figureOutputText:live.outputText||'',figureLog,figureStage:active?{questionId:active.questionId,stage,label:name,status:active.status,attempt:active.attempt}:null,figureCompleted:list.filter(s=>s.status==='ready').length,figureTotal:manifest.questions.length});
+ const figureLog=list.flatMap(s=>s.logs||[]).map(p=>({questionId:p.questionId,stage:p.stage,model:p.model,thinkingText:(p.thinkingText||'').slice(-20000),summary:p.summary||'',timing:p.timing,usage:p.usage,outputText:(p.outputText||'').slice(0,24000)}));
+ await store.progress(key+'/progress.json',{...text,phase,sequence:(old.sequence||0)+1,figureRevision:revision,heartbeatAt:now(),receivedAt:live.receivedAt||old.receivedAt||now(),thinkingChars:(text.thinkingChars||0)+(live.thinkingChars||0),responseChars:text.responseChars||0,thinkingText:[text.thinkingText,notes?'第'+active.questionId+'题 · '+name+'\n'+notes:''].filter(Boolean).join('\n\n').slice(-160000),figureOutputText:live.outputText||'',figureLog,figureStage:active?{questionId:active.questionId,stage,label:name,status:active.status,error:active.error,attempt:active.attempt}:null,figureCompleted:list.filter(s=>s.status==='ready').length,figureTotal:manifest.questions.length});
 }
 async function begin(store,key,job,text,{now=Date.now,dispatch=async()=>{}}={}){
  const questions=job.type==='figure-refresh'?[job.input.questionId]:(text.sheet.questions||[]).filter(q=>q.figureRequest).map(q=>q.id);

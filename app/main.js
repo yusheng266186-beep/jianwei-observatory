@@ -1,3 +1,4 @@
+import {recordPageTiming} from './engine/runtime-diagnostics.js';
 import {openSurface,closeSurface,prepareBackdrop} from './ui/surface-motion.js?v=runtime-v45';
 import {warmReportFonts} from './io/report-fonts.js?v=runtime-v45';
 import {warmPDFWorker} from './io/pdf-runtime.js?v=runtime-v45';
@@ -242,7 +243,7 @@ function nav() {
 }
 function positionDock(){const dock=document.getElementById('navigation'),selected=dock.querySelector('[aria-current="page"]');if(selected){dock.style.setProperty('--dock-x',selected.offsetLeft+'px');dock.style.setProperty('--dock-w',selected.offsetWidth+'px');}}
 async function paint(transition=false,focus=null) {
-  const serial=++paintId,scene=current;nav();scenePending(serial,scene);
+  const started=performance.now(),serial=++paintId,scene=current;nav();scenePending(serial,scene);
   try {
     const available=hasMaterials(atlas.data);let view,key='';
     if(!available)view=welcomeView();
@@ -251,7 +252,7 @@ async function paint(transition=false,focus=null) {
       if(sceneObject(scene)!==paintedObject&&!stage().dataset.sliding&&!reducedMotion())await foregroundFrame();if(serial!==paintId)return;
       key=viewKey(scene);
       if(key===paintedViewKey&&sceneObject(scene)===paintedObject&&!focus){
-        if(scene==='library'&&books.library.tab==='exercises')mountExerciseCenter();sceneReady(serial);const object=sceneObject(scene);
+        if(scene==='library'&&books.library.tab==='exercises')mountExerciseCenter();sceneReady(serial);recordPageTiming(scene,performance.now()-started,{cached:true});const object=sceneObject(scene);
         if(scrollResets.has(object)){window.scrollTo({top:0,behavior:'instant'});scrollResets.delete(object);}
         return;
       }
@@ -291,8 +292,8 @@ async function paint(transition=false,focus=null) {
         else arrangeRows(stage(),positions);
       }
     };
-    apply();if(scene==='library'&&books.library.tab==='exercises')mountExerciseCenter();
-  }catch(error){if(serial!==paintId)return;finishCanvasSlide();sceneReady(serial);stage().dataset.scene=scene;paintedObject=sceneObject(scene);stage().innerHTML=empty('这张研究画布暂时没有打开',error.message)+button('重新打开','reload',{},'outline')+button('导入材料','import',{},'accent');activeReport=null;}
+    apply();if(serial===paintId)recordPageTiming(scene,performance.now()-started);if(scene==='library'&&books.library.tab==='exercises')mountExerciseCenter();
+  }catch(error){if(serial!==paintId)return;recordPageTiming(scene,performance.now()-started,{failed:true});finishCanvasSlide();sceneReady(serial);stage().dataset.scene=scene;paintedObject=sceneObject(scene);stage().innerHTML=empty('这张研究画布暂时没有打开',error.message)+button('重新打开','reload',{},'outline')+button('导入材料','import',{},'accent');activeReport=null;}
 }
 function update(key,value,toggle=false) {
   if(current==='library'&&key==='tab'&&value==='reports')prepareReports();
@@ -559,7 +560,7 @@ let exerciseStudioTask,exerciseModuleTask,exerciseOpenRequest=0;
 function exerciseModule(){if(!exerciseModuleTask){const task=import('./ui/exercise-studio.js');exerciseModuleTask=task;task.catch(()=>{if(exerciseModuleTask===task)exerciseModuleTask=null;});}return exerciseModuleTask;}
 
 function exerciseStudio(){
- if(!exerciseStudioTask){const task=exerciseModule().then(({createExerciseStudio})=>createExerciseStudio({notify,show:showDialog,close:dialog=>dismissDialog(dialog.id),getAtlas:()=>atlas,onAttach(record,source){
+ if(!exerciseStudioTask){const task=exerciseModule().then(({createExerciseStudio})=>createExerciseStudio({notify,show:showDialog,close:dialog=>dismissDialog(dialog.id),getAtlas:()=>atlas,onFeedback(record){let linked=0;for(const p of session.plans)if(p.training?.exercise?.id===record.id){p.training.exercise=structuredClone(record);linked++;}if(linked){remember('plans',session.plans);store();if(current==='follow')paint();notify('练后结果已同步至'+linked+'条教学跟进。');}else notify('练后结果已保存，可通过“加入教学跟进”关联训练安排。');},onAttach(record,source){
   if(!atlas.materialAt(source.sid,source.exam)){notify('该学生材料已更换，练习仍保存在本机。');return;}
   const subject=record.request.subject,key=subject+'|'+source.exam;
   if(!planDraft||planDraft.sid!==source.sid||planDraft.exam!==source.exam||planDraft.id&&planDraft.training.key!==key)openPlan({sid:source.sid,exam:source.exam,id:source.plan?.training?.key===key?source.plan.id:undefined,key});
@@ -638,6 +639,7 @@ async function commands(event) {
     if(d.cmd==='exercise-loading-close'){exerciseOpenRequest++;delete document.getElementById('exercise-dialog').dataset.loading;await dismissDialog('exercise-dialog');return;}
     if(d.cmd==='exercise-center'){await dismissDialog('exercise-dialog');go('library',{tab:'exercises'},true);mountExerciseCenter();return;}
     if(d.cmd==='exercise-hub'){await openExercises({hub:true});return;}
+    if(d.cmd==='exercise-record'){await (await exerciseStudio()).openRecord(d.id);return;}
     if(d.cmd==='exercise-open'){await openExercises(d);return;}
     if(d.cmd.startsWith('plan-')){
       if(d.cmd==='plan-open')openPlan(d);
