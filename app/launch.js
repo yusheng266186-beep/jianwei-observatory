@@ -19,11 +19,14 @@
  }
  function theme(){
   if(themeTask)return themeTask;const link=document.querySelector('[data-workspace-styles]');if(!link)return Promise.resolve();
+  // An already-open/cached landing may still carry the previous href-based
+  // stylesheet. Reuse it instead of assigning a missing data-href as a URL.
+  if(link.sheet){link.media='all';return Promise.resolve();}
   themeTask=new Promise((resolve,reject)=>{
    const timer=setTimeout(()=>finish(new Error('页面样式加载超时，请重试')),90000);
    const loaded=()=>finish(),failed=()=>finish(new Error('页面样式暂时无法载入'));
    function finish(error){clearTimeout(timer);link.removeEventListener('load',loaded);link.removeEventListener('error',failed);if(error){themeTask=null;link.removeAttribute('href');reject(error);}else{link.media='all';resolve();}}
-   link.addEventListener('load',loaded,{once:true});link.addEventListener('error',failed,{once:true});link.href=link.dataset.href;
+   link.addEventListener('load',loaded,{once:true});link.addEventListener('error',failed,{once:true});link.href=link.dataset.href||link.getAttribute('href');
   });return themeTask;
  }
  function warmImporter(spreadsheet=false){

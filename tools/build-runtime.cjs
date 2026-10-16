@@ -20,7 +20,7 @@ const sourceURLs={name:'source-urls',setup(build){
  const worker=await esbuild.build({...options,entryPoints:{prepare:'app/data/prepare-worker.js'}});
  const workerName=Object.keys(worker.metafile.outputs)[0];
  fs.writeFileSync(path.join(root,'app/data/prepare-entry.js'),`export const prepareURL=new URL(${JSON.stringify('../../'+workerName)},import.meta.url);\n`);
- const importer=await esbuild.build({...options,splitting:false,format:'iife',entryPoints:{importer:'app/data/worker.js'}});
+ const importer=await esbuild.build({...options,splitting:false,format:'iife',entryPoints:{importer:'app/data/importer-worker.js'}});
  const importerName=Object.keys(importer.metafile.outputs)[0];
  fs.writeFileSync(path.join(root,'app/data/importer-entry.js'),`export const importerURL=new URL(${JSON.stringify('../../'+importerName)},import.meta.url);\n`);
  const storage=await esbuild.build({...options,splitting:false,entryPoints:{storage:'app/data/storage.js'}});
@@ -45,7 +45,7 @@ const sourceURLs={name:'source-urls',setup(build){
  dependencies(mainPath);
  const early=[...preload].map(file=>'../'+file),preloadAttribute=JSON.stringify(early).replaceAll('"','&quot;');
  const inlineLandingCSS=landingCSS.trim().replaceAll("url('../assets/","url('./assets/");
- html=html.replace(/<script src="\.\/app\/launch.js[^>]*><\/script>/,`<style data-landing-critical>${inlineLandingCSS}</style>\n  <link rel="stylesheet" data-href="./${cssName}" data-workspace-styles>\n  <script src="./app/launch.js?v=runtime-v52" data-runtime="./${entries['app/main.js']}" data-storage="./${entries['app/data/storage.js']}" data-prepare="./${entries['app/data/prepare-worker.js']}" data-importer="../${importerName}" data-preload="${preloadAttribute}" defer></script>`);
+ html=html.replace(/<script src="\.\/app\/launch.js[^>]*><\/script>/,`<style data-landing-critical>${inlineLandingCSS}</style>\n  <link rel="stylesheet" data-href="./${cssName}" data-workspace-styles>\n  <script src="./app/launch.js?v=runtime-v53" data-runtime="./${entries['app/main.js']}" data-storage="./${entries['app/data/storage.js']}" data-prepare="./${entries['app/data/prepare-worker.js']}" data-importer="../${importerName}" data-preload="${preloadAttribute}" defer></script>`);
  const landing=html.match(/<template id="empty-workspace-template">([\s\S]*?)<\/template>/)?.[1];
  if(landing)html=html.replace(/<main id="stage"[\s\S]*?<\/main>/,'<main id="stage" tabindex="-1" aria-busy="false">'+landing+'</main>');
  const {dockIcon}=await import(path.join(root,'app/ui/icons.js'));
