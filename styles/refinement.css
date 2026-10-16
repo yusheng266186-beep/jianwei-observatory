@@ -104,6 +104,22 @@ body[data-surface=paper] :is(.exercise-reading-context,.exercise-wheel-shell){ba
 .exercise-document-state{display:inline-block;margin-left:12px;vertical-align:1px;padding:2px 7px;border-radius:6px;background:#dcecf46b;color:var(--muted);font-size:10px;font-style:normal;font-weight:400;white-space:nowrap}
 @media(max-width:600px){.exercise-document-state{margin-left:7px;font-size:9px;padding:2px 5px}}
 
+/* A quiet continuity row keeps saving visible without another framed card. */
+.exercise-draft-toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px 14px;margin:0 0 2px;min-width:0}
+.exercise-draft-toolbar>[role=status]{font-size:10px;line-height:1.8;color:var(--muted);overflow-wrap:anywhere}
+.exercise-draft-toolbar>.button{font-size:11px;min-height:40px;padding:8px 2px;white-space:normal;text-align:right}
+.exercise-template-tools{margin-top:0}
+.exercise-template-tools>summary{align-items:flex-start}
+.exercise-template-tools>summary>b{flex:none}
+.exercise-template-tools>summary>span{max-width:68%;min-width:0;overflow-wrap:anywhere}
+.exercise-template-tools>summary::after{margin-top:6px}
+@media(max-width:600px){
+ .exercise-draft-toolbar{gap:3px 8px}
+ .exercise-draft-toolbar>.button{min-height:44px;font-size:11px}
+ .exercise-template-tools>summary{flex-wrap:wrap;gap:2px 8px}
+ .exercise-template-tools>summary>span{max-width:none;flex:1 1 50%;text-align:left;margin-left:0}
+}
+
 /* Small, compositor-only placeholders keep a freshly opened sheet legible. */
 #exercise-content .exercise-heading:has([role=status])::after{content:'';display:block;width:min(560px,90%);height:68px;margin:26px 0 18px;border-radius:8px;background:linear-gradient(#adc8da63,#adc8da63) 0 0/78% 10px no-repeat,linear-gradient(#d0e2ed87,#d0e2ed87) 0 26px/100% 10px no-repeat,linear-gradient(#d0e2ed66,#d0e2ed66) 0 52px/60% 10px no-repeat;animation:exercise-placeholder-breathe 1.5s ease-in-out infinite}
 @keyframes exercise-placeholder-breathe{0%,100%{opacity:.45}50%{opacity:.9}}
