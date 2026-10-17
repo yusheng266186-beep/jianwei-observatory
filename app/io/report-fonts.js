@@ -20,7 +20,7 @@ export async function cachedFontFile(name) {
 }
 export function reportFontManifest() {
   if(!manifestTask) {
-    const task=cachedFontFile('manifest-v38.json').then(response=>response.json());
+    const task=cachedFontFile('manifest-v39.json').then(response=>response.json());
     manifestTask=task;task.catch(()=>{if(manifestTask===task)manifestTask=null;});
   }
   return manifestTask;
