@@ -1,10 +1,12 @@
+import {stageComparison} from '../engine/research-history.js';
+import {researchChangeHTML} from '../ui/research-change.js';
 import {metricEvidenceHTML} from '../ui/metric-evidence.js';
 import {knowledgeLabels} from '../engine/knowledge.js?v=runtime-v45';
 import {personalQuestionCard,personalQuestionLink} from '../ui/personal-questions.js?v=runtime-v45';
 import {renderDirectory} from './directory.js?v=runtime-v45';
 import {head,button,chips,badge,block,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote,empty} from '../ui/html.js?v=runtime-v45';
 import {trajectory,chartButtons,rateColor,rateLegend} from '../ui/plots.js?v=runtime-v45';
-import {difference,valid,sum} from '../engine/metrics.js?v=runtime-v45';
+import {valid,sum} from '../engine/metrics.js?v=runtime-v45';
 import {scoreRows,answerRows,evidence} from '../io/exports.js?v=runtime-v45';
 export function render(atlas,state,session) {
   const story=state.sid?atlas.story(state.sid):[];
@@ -12,15 +14,15 @@ export function render(atlas,state,session) {
   if(!row)return renderDirectory(atlas,state,session);
   const person=atlas.people.get(state.sid),p=atlas.profile(row.classNo),subjects=atlas.comparisonSubjects(story),currentSubjects=atlas.comparisonSubjects([row]),metric=state.storyMetric||'total';
   const names={total:'赋分总分',gradeRank:'校内排名',classRank:'班级排名',percentile:'相对位置（0–100）',top:'特控分差',under:'本科分差'};
-  const timeline='<aside class="person-timeline"><div class="overline">'+story.length+' 次阶段记录</div>'+materials.map((record,i)=>'<button class="story-stop '+(record.exam===row.exam?'selected':'')+'" data-cmd="person-exam" data-exam="'+esc(record.exam)+'"><span class="story-dot"></span><div><small>'+String(i+1).padStart(2,'0')+' / '+esc(record.exam)+'</small><b>'+esc(atlas.exam(record.exam).label)+'</b><span>'+record.classNo+'班 · '+(record.questionOnly?'仅小题材料':number(record.total)+'分')+'</span></div></button>').join('')+'</aside>';
+  const timeline='<aside class="person-timeline"><div class="overline">'+materials.length+' 次阶段记录</div>'+materials.map((record,i)=>'<button class="story-stop '+(record.exam===row.exam?'selected':'')+'" data-cmd="person-exam" data-exam="'+esc(record.exam)+'"><span class="story-dot"></span><div><small>'+String(i+1).padStart(2,'0')+' / '+esc(record.exam)+'</small><b>'+esc(atlas.exam(record.exam).label)+'</b><span>'+record.classNo+'班 · '+(record.questionOnly?'仅小题材料':number(record.total)+'分')+'</span></div></button>').join('')+'</aside>';
   const answerSubjects=[...new Set((atlas.personAnswers.get(row.sid+'|'+row.exam)||[]).filter(a=>a.classNo===row.classNo).map(a=>a.subject))];
   const questionSubject=answerSubjects.includes(state.subject)?state.subject:answerSubjects[0],questions=questionSubject?atlas.questionsFor(row,questionSubject):[];
   const gaps=currentSubjects.map(subject=>({subject,gap:atlas.gap(row,'under',subject)})).filter(item=>item.gap!==null).sort((a,b)=>a.gap-b.gap);
-  const values=story.map(record=>atlas.value(record,metric)).filter(valid),change=values.length>1?difference(values.at(-1),values[0]):null;
+  const comparison=stageComparison(atlas,materials,metric);
   let canvas=(row.questionOnly?'<p class="drawer-clue-note">本场只有小题材料，总分与学科成绩尚未导入。阶段图中的成绩缺失保留断点。</p>':'')+ribbon([['本次赋分',number(row.total),atlas.exam(row.exam).label],['校内排名',integer(atlas.gradeRank(row)),'同考次、同科类校内名次'],['班级排名',integer(atlas.classRank(row)),'同班、同考次；原表优先，同分并列'],['特控距离',delta(atlas.gap(row,'top')),'正数表示高于有效线'],['本科距离',delta(atlas.gap(row,'under')),'正数表示高于有效线']]);
   canvas+=metricEvidenceHTML(atlas,row);
   canvas+='<p class="percentile-note">辅助相对位置：仅按已导入的同科类有效总分换算，100为首位、0为末位，同分共享位置；它不是校内排名。</p>';
-  canvas+='<div id="person-history" class="section-anchor">'+block('完整阶段变化',chips('storyMetric',[...Object.entries(names),...subjects.map(s=>[s,s+'成绩'])],metric)+trajectory('person-story',materials.map(r=>r.exam),[{name:names[metric]||metric,values:materials.map(record=>atlas.value(record,metric)),points:materials.map(record=>({cmd:'person-exam',data:{exam:record.exam}}))}],{zero:metric==='top'||metric==='under',inverse:['gradeRank','classRank'].includes(metric),floor:['gradeRank','classRank'].includes(metric)?1:null,integerTicks:['gradeRank','classRank'].includes(metric)})+'<div class="story-caption">首末有效变化 '+delta(change)+'<span>当前记录：'+esc(atlas.exam(row.exam).label)+'</span></div>','每条记录使用当次班级与有效线；校内排名数字越小越靠前，相对位置仅代表已导入材料。',chartButtons('person-story'))+'</div>';
+  canvas+='<div id="person-history" class="section-anchor">'+block('完整阶段变化',chips('storyMetric',[...Object.entries(names),...subjects.map(s=>[s,s+'成绩'])],metric)+trajectory('person-story',materials.map(r=>r.exam),[{name:names[metric]||metric,values:materials.map(record=>atlas.value(record,metric)),points:materials.map(record=>({cmd:'person-exam',data:{exam:record.exam}}))}],{zero:metric==='top'||metric==='under',inverse:['gradeRank','classRank'].includes(metric),floor:['gradeRank','classRank'].includes(metric)?1:null,integerTicks:['gradeRank','classRank'].includes(metric)})+'<div class="story-caption research-story-caption"><div><span>首末有效变化</span>'+researchChangeHTML(comparison)+'</div><p>'+esc(comparison.count>1?atlas.exam(comparison.first.row.exam).label+' → '+atlas.exam(comparison.last.row.exam).label:comparison.count+'次有效记录')+'</p><span>当前记录：'+esc(atlas.exam(row.exam).label)+'</span></div>','每条记录使用当次班级与有效线；校内排名数字越小越靠前，相对位置仅代表已导入材料。',chartButtons('person-story'))+'</div>';
   const subjectRows=currentSubjects.map(subject=>[subject,atlas.subject(row,subject)?.score,atlas.subject(row,subject)?.raw,atlas.subjectRank(row,subject),atlas.line(row,'top',subject),atlas.gap(row,'top',subject),atlas.line(row,'under',subject),atlas.gap(row,'under',subject)]);
   canvas+='<div id="person-subjects" class="section-anchor">'+block('这一阶段的学科证据',table(['学科','赋分','原分','原排名','特控线','特控分差','本科线','本科分差'],subjectRows.map(record=>record.map((value,i)=>i===5||i===7?delta(value):i===0?esc(value):number(value,i===3?0:1))))+'<div class="teaching-hint"><span>教学关注</span><p>'+(gaps[0]?.gap<0?esc(gaps[0].subject)+'距离本科有效线 '+number(Math.abs(gaps[0].gap))+' 分，可继续打开该科小题观察失分位置。':'结合历次记录与具体小题，确定下一阶段的教学重点。')+'</p></div>')+'</div>';
   const visibleQuestions=questions.filter(q=>state.questionFilter==='lost'?q.loss!==null&&q.loss>0:state.questionFilter==='blank'?q.score===null:true);
