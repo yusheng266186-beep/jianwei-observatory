@@ -1,3 +1,4 @@
+import {syncPracticeFeedbackPlans} from './engine/exercise-feedback.js';
 import {recordPageTiming} from './engine/runtime-diagnostics.js';
 import {openSurface,closeSurface,prepareBackdrop} from './ui/surface-motion.js?v=runtime-v45';
 import {warmReportFonts} from './io/report-fonts.js?v=runtime-v45';
@@ -561,7 +562,7 @@ let exerciseStudioTask,exerciseModuleTask,exerciseOpenRequest=0;
 function exerciseModule(){if(!exerciseModuleTask){const task=import('./ui/exercise-studio.js');exerciseModuleTask=task;task.catch(()=>{if(exerciseModuleTask===task)exerciseModuleTask=null;});}return exerciseModuleTask;}
 
 function exerciseStudio(){
- if(!exerciseStudioTask){const task=exerciseModule().then(({createExerciseStudio})=>createExerciseStudio({notify,show:showDialog,close:dialog=>dismissDialog(dialog.id),getAtlas:()=>atlas,onFeedback(record){let linked=0;for(const p of session.plans)if(p.training?.exercise?.id===record.id){p.training.exercise=structuredClone(record);linked++;}if(linked){remember('plans',session.plans);store();if(current==='follow')paint();notify('练后结果已同步至'+linked+'条教学跟进。');}else notify('练后结果已保存，可通过“加入教学跟进”关联训练安排。');},onAttach(record,source){
+ if(!exerciseStudioTask){const task=exerciseModule().then(({createExerciseStudio})=>createExerciseStudio({notify,show:showDialog,close:dialog=>dismissDialog(dialog.id),getAtlas:()=>atlas,onFeedback:async record=>{const synced=syncPracticeFeedbackPlans(session.plans,record);session.plans=synced.plans;if(planDraft){const draft=syncPracticeFeedbackPlans([planDraft],record);if(draft.linked){planDraft=draft.plans[0];rememberPlanDraft();if(document.getElementById('plan-dialog').open)drawPlan();}}if(synced.linked){remember('plans',session.plans);const saved=await store();if(current==='follow')await paint();notify(saved?'练后结果已同步至'+synced.linked+'条教学跟进。':'练后结果已保存，跟进记录暂留当前页面，请下载备份。');}else notify('练后结果已保存，可通过“加入教学跟进”关联训练安排。');},onAttach(record,source){
   if(!atlas.materialAt(source.sid,source.exam)){notify('该学生材料已更换，练习仍保存在本机。');return;}
   const subject=record.request.subject,key=subject+'|'+source.exam;
   if(!planDraft||planDraft.sid!==source.sid||planDraft.exam!==source.exam||planDraft.id&&planDraft.training.key!==key)openPlan({sid:source.sid,exam:source.exam,id:source.plan?.training?.key===key?source.plan.id:undefined,key});

@@ -13,16 +13,32 @@ export function validatePracticeFeedback(record,value,{now=Date.now()}={}){
  if(!value||!validDate(value.date))throw new Error('请选择真实的练习日期');
  if(!Array.isArray(value.rows)||value.rows.length!==record.sheet.questions.length)throw new Error('逐题记录不完整，请重新打开');
  const note=String(value.note||'').trim();if(note.length>600)throw new Error('教师记录最多600字');
- const rows=record.sheet.questions.map((q,i)=>{const r=value.rows[i];if(r.id!==q.id||!['ungraded','scored','unanswered'].includes(r.state))throw new Error('逐题记录与当前试题不一致');const marks=r.marks||[];if(!Array.isArray(marks)||new Set(marks).size!==marks.length||marks.some(m=>!feedbackMarks.some(([id])=>id===m)))throw new Error('请选择有效的错因标记');let score=r.state==='unanswered'?0:r.state==='ungraded'?null:r.score;if(score!==null&&(!Number.isFinite(score)||score<0||score>q.maxScore))throw new Error('第'+q.id+'题得分应在0至'+q.maxScore+'分之间');return {id:q.id,state:r.state,score,marks:[...marks]};});
+ const rows=record.sheet.questions.map((q,i)=>{const r=value.rows[i];if(r.id!==q.id||!['ungraded','scored','unanswered'].includes(r.state))throw new Error('逐题记录与当前试题不一致');const marks=r.marks||[];if(!Array.isArray(marks)||new Set(marks).size!==marks.length||marks.some(m=>!feedbackMarks.some(([id])=>id===m)))throw new Error('请选择有效的错因标记');let score=r.state==='unanswered'?0:r.state==='ungraded'?null:r.score;if((r.state==='scored'&&score===null)||score!==null&&(!Number.isFinite(score)||score<0||score>q.maxScore))throw new Error('第'+q.id+'题得分应在0至'+q.maxScore+'分之间');return {id:q.id,state:r.state,score,marks:[...marks]};});
  return {version:2,source:practiceSourceStamp(record),date:value.date,note,rows,updatedAt:now};
 }
+// Draft totals include only valid, graded rows. Invalid scores never inflate a result.
+export function practiceFeedbackDraftMetrics(record,value){
+ const byId=new Map((record.sheet?.questions||[]).map(q=>[q.id,q])),rows=value?.rows||[],invalid=[];
+ let score=0,max=0,graded=0,unanswered=0;
+ for(const row of rows){const q=byId.get(row.id);if(!q||row.state==='ungraded')continue;
+  const points=row.state==='unanswered'?0:row.score;
+  if(!Number.isFinite(points)||points<0||points>q.maxScore){invalid.push(row.id);continue;}
+  score+=points;max+=q.maxScore;graded++;if(row.state==='unanswered')unanswered++;
+ }
+ score=Math.round(score*1e8)/1e8;max=Math.round(max*1e8)/1e8;return {score,max,rate:max?score/max:null,graded,total:byId.size,unanswered,date:value?.date||'',invalid};
+}
 export function practiceFeedbackMetrics(record){
- if(!practiceFeedbackCurrent(record))return null;const feedback=record.practiceFeedback,byId=new Map(record.sheet.questions.map(q=>[q.id,q])),graded=feedback.rows.filter(r=>r.state!=='ungraded'),score=graded.reduce((n,r)=>n+r.score,0),max=graded.reduce((n,r)=>n+byId.get(r.id).maxScore,0);
- return {score,max,rate:max?score/max:null,graded:graded.length,total:feedback.rows.length,unanswered:graded.filter(r=>r.state==='unanswered').length,date:feedback.date};
+ if(!practiceFeedbackCurrent(record))return null;const {invalid,...metrics}=practiceFeedbackDraftMetrics(record,record.practiceFeedback);return metrics;
 }
 export function practiceFeedbackSummary(record){const m=practiceFeedbackMetrics(record);return m?'练后 '+m.graded+'/'+m.total+'题已批改'+(m.graded?' · '+m.score+'/'+m.max+'分':'')+(m.unanswered?' · '+m.unanswered+'题未作答':''):record?.practiceFeedback?(Array.isArray(record.sheet?.questions)?'练习已修改，原练后记录保留':'练后记录已保留，题目载入后可查看'):'尚未记录练后结果';}
 export function practiceKnowledgeHistory(records,{sid,subject}){
  const groups=new Map();for(const r of records.filter(r=>r.sid===sid&&r.request?.subject===subject&&practiceFeedbackCurrent(r))){const per=new Map();for(const item of r.practiceFeedback.rows){if(item.state==='ungraded')continue;const q=r.sheet.questions.find(q=>q.id===item.id),target=q?.target;if(!target)continue;if(!per.has(target))per.set(target,{score:0,max:0});const g=per.get(target);g.score+=item.score;g.max+=q.maxScore;}for(const [target,g] of per){if(!groups.has(target))groups.set(target,[]);groups.get(target).push({id:r.id,date:r.practiceFeedback.date,at:r.practiceFeedback.updatedAt,rate:g.score/g.max,score:g.score,max:g.max});}}
  return [...groups].map(([target,samples])=>({target,samples:samples.sort((a,b)=>a.date.localeCompare(b.date)||a.at-b.at).slice(-5)}));
 }
-export function mergePracticeFeedback(latest,record,feedback,expected){const at=latest.findIndex(r=>r.id===record.id);if(at<0)throw new Error('这份练习已被删除，未写入结果');const saved=latest[at];if(practiceSourceStamp(saved)!==feedback.source||practiceFeedbackStamp(saved)!==expected)throw new Error('试题或练后记录已在其他页面更新，请重新打开后记录');return latest.map((r,i)=>i===at?{...r,practiceFeedback:feedback}:r);}
+export function mergePracticeFeedback(latest,record,feedback,expected){const at=latest.findIndex(r=>r.id===record.id);if(at<0)throw new Error('这份练习已被删除，未写入结果');const saved=latest[at];if(!saved.reviewedAt)throw new Error('这份练习已取消审定，请重新确认审题后记录');if(practiceSourceStamp(saved)!==feedback.source||practiceFeedbackStamp(saved)!==expected)throw new Error('试题或练后记录已在其他页面更新，请重新打开后记录');return latest.map((r,i)=>i===at?{...r,practiceFeedback:feedback}:r);}
+
+// Sync the linked exercise without changing the teacher's independent review or plan status.
+export function syncPracticeFeedbackPlans(plans,record){
+ let linked=0;const rows=plans.map(plan=>{if(plan.sid!==record.sid||plan.training?.exercise?.id!==record.id)return plan;linked++;return {...plan,training:{...plan.training,exercise:structuredClone(record)}};});
+ return {plans:rows,linked};
+}
