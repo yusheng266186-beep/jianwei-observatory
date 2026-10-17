@@ -12,7 +12,7 @@ export function createExerciseDrafts({limit=60}={}){
 }
 // Saved sheets retain their historical contract. A newly started exercise uses
 // today's subject choices, including when it begins from an older task.
-export function newExerciseDraft(request){const draft=structuredClone(request);draft.examStyle='sichuan-gaokao';if(draft.questionTypes)draft.questionTypes=draft.questionTypes.filter(type=>exerciseQuestionTypes(draft.subject).includes(type));return draft;}
+export function newExerciseDraft(request){const draft=structuredClone(request);draft.examStyle='sichuan-gaokao';draft.answerSpaceVersion=1;if(draft.questionTypes)draft.questionTypes=draft.questionTypes.filter(type=>exerciseQuestionTypes(draft.subject).includes(type));return draft;}
 // Each page commits only students it edited; unrelated drafts in other tabs
 // remain intact. A null request removes the submitted draft, not the library.
 export function mergeExerciseComposer(saved,changes,{limit=60}={}){

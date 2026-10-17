@@ -31,5 +31,5 @@ export function mergeExerciseSetupArchive(current,incoming,{newId=()=>crypto.ran
 }
 export function applyExerciseSetup(setup,current){
  const content=exerciseSetupContent(setup.content);if(content.subject!==current.subject)throw new Error('请选择当前学科的草稿');
- const {targets,requirements,questionTypes,...base}=structuredClone(current);return {...base,...content,examStyle:'sichuan-gaokao'};
+ const {targets,requirements,questionTypes,...base}=structuredClone(current);return {...base,...content,examStyle:'sichuan-gaokao',answerSpaceVersion:1};
 }
