@@ -8,7 +8,7 @@ export function exerciseChoice(id,label,value,options){
 }
 
 export function installExerciseChoices(root,onChange){
- let active=null,frame=0;
+ let active=null,frame=0;const lifecycle=new AbortController(),signal=lifecycle.signal;
  const nativeOpen=p=>typeof p.showPopover==='function'&&p.matches(':popover-open');
  const opened=p=>nativeOpen(p)||p.classList.contains('choice-fallback-open');
  function position(){
@@ -41,7 +41,7 @@ export function installExerciseChoices(root,onChange){
   // Commit before the exit finishes: a quick reopen or subject switch cannot
   // receive a delayed change from the previous menu.
   const leaving=close(true);await onChange(trigger.dataset.exerciseChoice,value);await leaving;
- });
+ },{signal});
  root.addEventListener('keydown',event=>{
   const trigger=event.target.closest('[data-exercise-choice]');
   if(trigger&&['ArrowDown','ArrowUp','Home','End'].includes(event.key)){event.preventDefault();open(trigger,event.key==='End'||event.key==='ArrowUp');return;}
@@ -51,9 +51,9 @@ export function installExerciseChoices(root,onChange){
   if(!active.panel.contains(event.target))return;
   const options=[...active.panel.querySelectorAll('[role=option]')],at=options.indexOf(event.target),next=event.key==='Home'?0:event.key==='End'?options.length-1:event.key==='ArrowDown'?(at+1)%options.length:event.key==='ArrowUp'?(at+options.length-1)%options.length:-1;
   if(next>=0){event.preventDefault();options[next]?.focus();}
- },true);
- document.addEventListener('pointerdown',event=>{if(active&&!active.panel.contains(event.target)&&!active.trigger.contains(event.target))close();},true);
- root.closest('dialog')?.addEventListener('surfaceclosing',()=>close(false,true));
- window.addEventListener('resize',schedule,{passive:true});window.visualViewport?.addEventListener('resize',schedule,{passive:true});window.visualViewport?.addEventListener('scroll',schedule,{passive:true});document.addEventListener('scroll',schedule,{passive:true,capture:true});
- return {close,isOpen:()=>!!active&&opened(active.panel)};
+ },{capture:true,signal});
+ document.addEventListener('pointerdown',event=>{if(active&&!active.panel.contains(event.target)&&!active.trigger.contains(event.target))close();},{capture:true,signal});
+ root.closest('dialog')?.addEventListener('surfaceclosing',()=>close(false,true),{signal});
+ window.addEventListener('resize',schedule,{passive:true,signal});window.visualViewport?.addEventListener('resize',schedule,{passive:true,signal});window.visualViewport?.addEventListener('scroll',schedule,{passive:true,signal});document.addEventListener('scroll',schedule,{passive:true,capture:true,signal});
+ return {close,destroy(){close(false,true);lifecycle.abort();if(frame)cancelAnimationFrame(frame);frame=0;},isOpen:()=>!!active&&opened(active.panel)};
 }

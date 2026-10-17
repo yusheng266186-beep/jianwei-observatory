@@ -306,7 +306,8 @@ function update(key,value,toggle=false) {
     value=before.includes(value)?before.filter(v=>v!==value):[...before,value];
     if(key==='exams'&&!value.length){notify('请保留至少一个考次');return;}
   }
-  state[key]=value;state.page=1;
+  const openingExerciseCenter=current==='library'&&key==='tab'&&value==='exercises'&&state.tab!==value;
+  state[key]=value;state.page=1;if(openingExerciseCenter)scrollResets.add(sceneObject('library'));
   if(current==='people'&&['standing','scoreStatus','trend','records','focusSubject','focusStatus','savedOnly'].includes(key))state.lens='custom';
   if(current==='people'&&key==='track')state.classes=[];
   if(current==='papers'&&key==='classes')state.question=0;

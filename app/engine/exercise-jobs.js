@@ -36,6 +36,20 @@ export function jobConnection(record,online=true){
  if(record.status==='unconfirmed'||record.status==='submitting')return '正在确认后台接收情况，恢复时沿用同一任务';
  return '后台独立处理，关闭页面后仍会继续';
 }
-export function filterExerciseJobs(records,{status='all',query='',describe=()=>''}={}){
- const text=query.trim().toLocaleLowerCase();return records.filter(r=>{const state=jobState(r);return (status==='all'||status==='pending'&&state==='pending'||status==='done'&&['ready','reviewed'].includes(state)||status===state)&&(!text||[describe(r),r.request?.subject,r.request?.focus,r.sheet?.title,r.student?.name,r.student?.classNo&&r.student.classNo+'班'].filter(Boolean).join(' ').toLocaleLowerCase().includes(text));}).sort((a,b)=>(jobState(a)==='pending'?0:1)-(jobState(b)==='pending'?0:1)||(b.createdAt||0)-(a.createdAt||0));
+const jobNameOrder=new Intl.Collator('zh-CN',{numeric:true,sensitivity:'base'});
+const searchText=value=>String(value??'').normalize('NFKC').toLocaleLowerCase();
+export function filterExerciseJobs(records,{status='all',query='',describe=()=>'',identify,subject='all',classNo='all',sort='priority'}={}){
+ const terms=searchText(query).trim().split(/\s+/).filter(Boolean),states=new Map(),stateOf=r=>{if(!states.has(r))states.set(r,jobState(r));return states.get(r);},people=new Map(),person=r=>{if(!people.has(r))people.set(r,identify?identify(r):{name:r.student?.name,classNo:r.student?.classNo,exam:r.student?.examLabel});return people.get(r);};
+ const matched=records.filter(r=>{
+  const state=stateOf(r),p=person(r);if(!(status==='all'||status==='pending'&&state==='pending'||status==='done'&&['ready','reviewed'].includes(state)||status===state))return false;
+  if(subject!=='all'&&r.request?.subject!==subject||classNo!=='all'&&String(p.classNo)!==String(classNo))return false;
+  if(!terms.length)return true;
+  const text=searchText([describe(r),p.name,p.classNo!=null?p.classNo+'班':'',p.exam,r.request?.subject,r.request?.focus,r.request?.curriculum,...(Array.isArray(r.request?.targets)?r.request.targets:[]),r.sheet?.title].filter(Boolean).join(' '));
+  return terms.every(term=>{const classToken=term.match(/^(\d+)班$/);if(classToken)return Number(p.classNo)===Number(classToken[1]);if(/^(语文|数学|英语|日语|物理|化学|生物|政治|历史|地理)$/.test(term))return searchText(r.request?.subject)===term;return text.includes(term);});
+ });
+ return matched.sort((a,b)=>{
+  if(sort==='name'){const names=jobNameOrder.compare(person(a).name||'',person(b).name||'');if(names)return names;}
+  if(sort==='priority'){const pending=(stateOf(a)==='pending'?0:1)-(stateOf(b)==='pending'?0:1);if(pending)return pending;}
+  return (sort==='oldest'?1:-1)*((a.createdAt||0)-(b.createdAt||0))||String(a.id).localeCompare(String(b.id));
+ });
 }
