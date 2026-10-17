@@ -29,18 +29,18 @@ function animatePlot(svg){
     shape.animate([{transform:'translate('+dx+'px,'+dy+'px) scale('+sx+','+sy+')'},{transform:'translate(0,0) scale(1)'}],motion.arrange);
   }
 }
-function sampleRails(){for(const rail of selectionRails){const state=railStates.get(rail);if(state?.indicator?.isConnected){const rect=state.indicator.getBoundingClientRect(),host=rail.getBoundingClientRect();state.x=rect.left-host.left+rail.scrollLeft;state.width=rect.width;}}}
+function sampleRails(){for(const rail of selectionRails){const state=railStates.get(rail);if(state?.indicator?.isConnected){const rect=state.indicator.getBoundingClientRect(),host=rail.getBoundingClientRect();Object.assign(state,{x:rect.left-host.left+rail.scrollLeft,y:rect.top-host.top+rail.scrollTop,width:rect.width,height:rect.height});}}}
 function selectionRail(rail){
   const selected=rail.querySelector('.chip.selected');if(!selected)return;
-  let state=railStates.get(rail);if(!state){state={x:null,width:0};railStates.set(rail,state);selectionRails.add(rail);railObserver?.observe(rail);}
-  const x=selected.offsetLeft,width=selected.offsetWidth;
+  let state=railStates.get(rail);if(!state){state={x:null,y:0,width:0,height:0};railStates.set(rail,state);selectionRails.add(rail);railObserver?.observe(rail);}
+  const x=selected.offsetLeft,y=selected.offsetTop,width=selected.offsetWidth,height=selected.offsetHeight;
   if(!width)return;
-  if(state.indicator?.isConnected&&state.target===selected&&state.targetX===x&&state.targetWidth===width)return;
-  if(state.indicator?.isConnected){const rect=state.indicator.getBoundingClientRect(),host=rail.getBoundingClientRect();state.x=rect.left-host.left+rail.scrollLeft;state.width=rect.width;for(const animation of state.indicator.getAnimations())animation.cancel();}
+  if(state.indicator?.isConnected&&state.target===selected&&state.targetX===x&&state.targetY===y&&state.targetWidth===width&&state.targetHeight===height)return;
+  if(state.indicator?.isConnected){const rect=state.indicator.getBoundingClientRect(),host=rail.getBoundingClientRect();Object.assign(state,{x:rect.left-host.left+rail.scrollLeft,y:rect.top-host.top+rail.scrollTop,width:rect.width,height:rect.height});for(const animation of state.indicator.getAnimations())animation.cancel();}
   let indicator=rail.querySelector(':scope > .selection-indicator');if(!indicator){indicator=document.createElement('span');indicator.className='selection-indicator';indicator.setAttribute('aria-hidden','true');rail.prepend(indicator);}
-  indicator.style.width=width+'px';indicator.style.transform='translateX('+x+'px)';indicator.style.borderRadius=getComputedStyle(selected).borderRadius;
-  if(!motionPreference()&&state.x!==null&&(Math.abs(state.x-x)>1||Math.abs(state.width-width)>1))indicator.animate([{transform:'translateX('+state.x+'px) scaleX('+state.width/Math.max(1,width)+')'},{transform:'translateX('+x+'px) scaleX(1)'}],motion.arrange);
-  Object.assign(state,{indicator,x,width,target:selected,targetX:x,targetWidth:width});
+  indicator.style.width=width+'px';indicator.style.height=height+'px';indicator.style.transform='translate('+x+'px,'+y+'px)';indicator.style.transformOrigin='left top';indicator.style.borderRadius=getComputedStyle(selected).borderRadius;
+  if(!motionPreference()&&state.x!==null&&(Math.abs(state.x-x)>1||Math.abs(state.y-y)>1||Math.abs(state.width-width)>1||Math.abs(state.height-height)>1))indicator.animate([{transform:'translate('+state.x+'px,'+state.y+'px) scale('+state.width/Math.max(1,width)+','+state.height/Math.max(1,height)+')'},{transform:'translate('+x+'px,'+y+'px) scale(1,1)'}],motion.arrange);
+  Object.assign(state,{indicator,x,y,width,height,target:selected,targetX:x,targetY:y,targetWidth:width,targetHeight:height});
 }
 function refreshPlot(svg) {
   if(svg.classList.contains('trajectory')){const scroll=svg.closest('.trajectory-scroll'),frame=scroll?.closest('.trajectory-frame');if(frame)frame.dataset.overflow=String(scroll.scrollWidth>scroll.clientWidth+1);}
@@ -147,7 +147,7 @@ export function enhance(root=document,{reveal=true}={}) {
   }
   for(const frame of root.querySelectorAll('.table-frame'))prioritizeLayout(frame,'table');
   for(const svg of root.querySelectorAll('.bars,.trajectory,.spread,.landscape'))prioritizeLayout(svg,'plot');
-  for(const rail of root.querySelectorAll('.scene-tabs > .chips,.drawer-tabs'))selectionRail(rail);
+  for(const rail of root.querySelectorAll('.scene-tabs > .chips,.drawer-tabs,.exercise-difficulties,.exercise-subjects'))selectionRail(rail);
   revealSelectedClasses(root);
   for(const rail of root.querySelectorAll('.goal-cards[data-scroll-key]'))rail.scrollLeft=galleryOffsets.get(rail.dataset.scrollKey)||0;
   if(reveal&&revealObserver&&!motionPreference())for(const node of root.querySelectorAll('.block,.student-scope,.follow-workbench,.knowledge-card,.personal-skills article,.source-launchpad>button,.student-card,.paper-cover,.question-tile'))if(!revealed.has(node)){revealed.add(node);if(node.getBoundingClientRect().top>innerHeight-25){observedReveals.add(node);revealObserver.observe(node);}}
@@ -217,7 +217,7 @@ export function installInteractions({reducedMotion}) {
   if('ResizeObserver' in window){drawerHeaderObserver=new ResizeObserver(refreshDrawerSections);const header=document.querySelector('#research-drawer .drawer-top');if(header)drawerHeaderObserver.observe(header);}
   if('IntersectionObserver' in window)revealObserver=new IntersectionObserver(entries=>{let order=0;for(const entry of entries)if(entry.isIntersecting){revealObserver.unobserve(entry.target);observedReveals.delete(entry.target);if(!motionPreference())entry.target.animate([{opacity:entry.target.matches('.block,.follow-workbench')?1:.94,translate:'0px 6px'},{opacity:1,translate:'0px 0px'}],{...motion.arrive,delay:Math.min(order++,3)*16,fill:'backwards'});}},{rootMargin:'0px 0px -25px 0px',threshold:.06});
   document.addEventListener('scroll',event=>{if(event.target?.matches?.('.goal-cards[data-scroll-key]')){galleryOffsets.set(event.target.dataset.scrollKey,event.target.scrollLeft);hideTooltip();}else if(event.target?.matches?.('.paper-profile-scroll')){refreshPaperProfiles();hideTooltip();}else if(event.target?.matches?.('.table-scroll'))refreshTable(event.target.closest?.('.table-frame'));else {hideTooltip();if(event.target?.matches?.('#research-drawer,.drawer-body')){cancelAnimationFrame(drawerOutlineFrame);drawerOutlineFrame=requestAnimationFrame(refreshDrawerSections);}else if(event.target===document||event.target===document.documentElement){cancelAnimationFrame(outlineFrame);outlineFrame=requestAnimationFrame(()=>{const scrolled=String(window.scrollY>18);if(document.body.dataset.scrolled!==scrolled)document.body.dataset.scrolled=scrolled;refreshOutline();});}}},{capture:true,passive:true});
-  document.addEventListener('click',event=>{const summary=event.target.closest?.('summary');if(!summary||event.target.closest?.('button,a,input'))return;const details=summary.parentElement;if(details.matches('.card-scores,.card-meta,.record-accordion,.method-note,.class-profile,.report-context,.report-part-options,.report-field-options,.report-note-details')){event.preventDefault();toggleDetails(details);}});
+  document.addEventListener('click',event=>{const summary=event.target.closest?.('summary');if(!summary||event.target.closest?.('button,a,input'))return;const details=summary.parentElement;if(details.matches('.exercise-reading-tools,.card-scores,.card-meta,.record-accordion,.method-note,.class-profile,.report-context,.report-part-options,.report-field-options,.report-note-details')){event.preventDefault();toggleDetails(details);}});
   document.addEventListener('keydown',event=>{const rail=event.target;if(event.defaultPrevented||event.altKey||event.ctrlKey||event.metaKey||!rail.matches?.('.trajectory-scroll')||!['ArrowLeft','ArrowRight'].includes(event.key))return;event.preventDefault();rail.scrollBy({left:(event.key==='ArrowLeft'?-1:1)*Math.max(120,rail.clientWidth*.7),behavior:motionPreference()?'instant':'smooth'});});
   document.addEventListener('pointerover',event=>{if(event.pointerType==='touch')return;const target=event.target.closest?.('[data-plot-action],.plot-item,.plot-point,.student-dot,.heat-cell[title],[data-tip]');if(target)showTooltip(target,event.clientX,event.clientY);});
   document.addEventListener('pointermove',event=>{if(!tooltipTarget)return;cancelAnimationFrame(tooltipFrame);tooltipFrame=requestAnimationFrame(()=>placeTooltip(event.clientX,event.clientY));});

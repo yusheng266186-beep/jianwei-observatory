@@ -1,0 +1,1 @@
+function g(t){let n=typeof t=="string"?t:JSON.stringify(t),o=2166136261,i=2246822507;for(let r=0;r<n.length;r++){let e=n.charCodeAt(r);o=Math.imul(o^e,16777619),i=Math.imul(i^e,3266489909)}return n.length.toString(36)+"-"+(o>>>0).toString(36)+"-"+(i>>>0).toString(36)}export{g as a};

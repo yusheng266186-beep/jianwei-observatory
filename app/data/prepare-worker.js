@@ -11,6 +11,7 @@ self.onmessage=async({data})=>{try{
   const atlas=new Atlas(dataset,{prepared:true});
   self.postMessage({result:{dataset,index:atlas.indexSnapshot(),prepared:true,origin:source.origin}});
  }else if(data.operation==='material'){
-  const dataset=normalizeDataset(data.mode==='replace'?data.incoming:mergeDatasets(data.before,data.incoming));dataset.userImported=true;self.postMessage({dataset});
+  const dataset=normalizeDataset(data.mode==='replace'?data.incoming:mergeDatasets(data.before,data.incoming));dataset.userImported=true;
+  const atlas=new Atlas(dataset,{prepared:true});self.postMessage({result:{dataset,index:atlas.indexSnapshot()}});
  }else self.postMessage({dataset:normalizeDataset(data.dataset)});
 }catch(error){self.postMessage({error:error.message});}};

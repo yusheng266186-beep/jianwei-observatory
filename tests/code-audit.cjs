@@ -9,7 +9,7 @@ const fixture=makeFixture();fixture.plans=['under','top'].map(tier=>({id:'test-4
 fixture.research={saved:[{id:'first-study',name:'先选的4班',scene:'class',values:{no:4,exam:'52',tab:'snapshot'},drawer:{type:'person',sid:'test-4-0',exam:'52',tab:'overview'}},{id:'second-study',name:'后选的7班',scene:'class',values:{no:7,exam:'52',tab:'snapshot'}}],recent:[]};
 fixture.notebook=[{id:'existing-note',title:'已经保存的匿名摘录',subtitle:'匿名审核',created:'2026/10/11',note:'旧判断',sections:[],sheets:{}}];
 const file=path.join(output,'anonymous-code-audit.json');fs.writeFileSync(file,JSON.stringify(fixture));
-const url=process.env.AUDIT_URL||'http://127.0.0.1:4173';
+const url=process.env.AUDIT_URL||'http://127.0.0.1:4175';
 (async()=>{
  const browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_PATH||(fs.existsSync('/usr/bin/chromium')?'/usr/bin/chromium':undefined),args:['--no-sandbox']}),results=[];
  async function test(name,fn,{empty=false}={}){
@@ -17,7 +17,7 @@ const url=process.env.AUDIT_URL||'http://127.0.0.1:4173';
   const context=await browser.newContext({viewport:{width:1440,height:1000},reducedMotion:'reduce'}),page=await context.newPage(),errors=[];page.setDefaultTimeout(7000);page.on('pageerror',e=>errors.push(e.message));
   const click=async selector=>{await page.locator(selector).first().click();await page.waitForTimeout(100);};
   try{
-   await page.goto(url);await page.waitForSelector('#navigation button');await page.waitForTimeout(150);
+   await page.goto(url);await page.waitForSelector('#welcome-title');await page.waitForTimeout(150);
    if(!empty){await page.locator('#files').setInputFiles(file);await page.locator('[data-inbox="commit"]').click();await page.waitForSelector('body[data-workspace="ready"]');await page.waitForSelector('#inbox:not([open])',{state:'attached'});}
    await fn({page,click});assert.deepEqual(errors,[]);results.push({name,ok:true});console.log('PASS '+name);
   }catch(error){results.push({name,ok:false,error:error.message,errors});console.log('FAIL '+name+' '+error.message.slice(0,900));await page.screenshot({path:path.join(output,'failure-'+results.length+'.png')});}

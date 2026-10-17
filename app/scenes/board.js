@@ -1,6 +1,7 @@
+import {researchRoster} from '../engine/research-roster.js';
 import {goalCards} from '../ui/evidence-visuals.js?v=runtime-v45';
 import {overview} from './overview.js?v=runtime-v45';
-import {head,button,chips,examChips,badge,block,examRail,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote} from '../ui/html.js?v=runtime-v45';
+import {head,button,chips,examChips,badge,block,examRail,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote,empty} from '../ui/html.js?v=runtime-v45';
 import {mini,bars,trajectory,spread,chartButtons} from '../ui/plots.js?v=runtime-v45';
 import {difference,average} from '../engine/metrics.js?v=runtime-v45';
 import {scoreRows,effectiveRows,subjectRows,evidence} from '../io/exports.js?v=runtime-v45';
@@ -59,9 +60,9 @@ export function render(atlas,state) {
     sheets={'年级历次变化':[['考试','教学组','人数','均分','特控人数','本科人数','本科率'],...historyRows]};sections=[{title:'年级历次变化',headers:sheets['年级历次变化'][0],rows:historyRows.map(row=>row.map((v,i)=>i===6?percent(v):i===3?number(v):v))}];
     return {sections,sheets};};
   } else {
-    const matched=rows.filter(row=>atlas.name(row.sid).includes(state.search||'')),page=Math.min(state.page||1,Math.max(1,Math.ceil(matched.length/50))),shown=matched.slice((page-1)*50,page*50);
-    body='<div class="roster-bar">'+search('search',state.search)+'<span>'+matched.length+' 人</span></div>'+table(['姓名','班级','语种','总分','原分','特控分差','本科分差'],shown.map(row=>[personButton(atlas,row.sid),button(row.classNo+'班','class',{no:row.classNo},'person-link'),esc(row.language),number(row.total),number(row.rawTotal),delta(atlas.gap(row,'top')),delta(atlas.gap(row,'under'))]));
-    body+='<div class="pagination">'+button('←','page',{step:-1},'outline',page<=1?'disabled':'')+'<span>'+page+' / '+Math.max(1,Math.ceil(matched.length/50))+'</span>'+button('→','page',{step:1},'outline',page*50>=matched.length?'disabled':'')+'</div>';
+    const matched=researchRoster(atlas,rows,state),page=Math.min(state.page||1,Math.max(1,Math.ceil(matched.length/50))),shown=matched.slice((page-1)*50,page*50);
+    body='<div class="roster-bar research-roster-tools">'+search('search',state.search,'查找姓名；多个姓名用逗号隔开')+chips('sort',[['source','原表顺序'],['total','总分↓'],['low','总分↑'],['name','姓名']],state.sort||'source')+'<span>显示 '+matched.length+' / '+rows.length+' 人</span></div>'+(matched.length?table(['姓名','班级','语种','总分','原分','特控分差','本科分差'],shown.map(row=>[personButton(atlas,row.sid,row.exam),button(row.classNo+'班','class',{no:row.classNo},'person-link'),esc(row.language),number(row.total),number(row.rawTotal),delta(atlas.gap(row,'top')),delta(atlas.gap(row,'under'))])):empty('没有匹配的学生','清空姓名检索后可恢复本场年级清册。')+button('清空检索','set',{key:'search',value:''},'outline'));
+    if(matched.length)body+='<div class="pagination">'+button('←','page',{step:-1},'outline',page<=1?'disabled':'')+'<span>'+page+' / '+Math.max(1,Math.ceil(matched.length/50))+'</span>'+button('→','page',{step:1},'outline',page*50>=matched.length?'disabled':'')+'</div>';
     reportData=()=>{let sections=[],sheets={};
     sheets={'年级成绩':scoreRows(atlas,matched)};sections=[{title:'年级成绩',headers:sheets['年级成绩'][0],rows:sheets['年级成绩'].slice(1)}];
     return {sections,sheets};};

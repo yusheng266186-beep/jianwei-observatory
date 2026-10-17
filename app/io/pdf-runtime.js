@@ -1,35 +1,36 @@
 // One local print worker, with foreground download owners and cancellable
 // preview owners. Cancelling an obsolete preview never cancels its download.
-let worker=null,active=null,serial=0,idleTimer=0;
+let worker=null,active=null,serial=0,idleTimer=0,leaving=false;
 const queue=[];
 const abortError=()=>new DOMException('纸面预览已取消','AbortError');
 function releaseWorker(){clearTimeout(idleTimer);worker?.terminate();worker=null;}
 function ensureWorker(){
+ if(leaving)throw abortError();
  if(worker)return worker;
- worker=new Worker(new URL('./pdf-worker.js?v=runtime-v45',import.meta.url),{type:'module'});const host=worker;
+ worker=new Worker(new URL('./pdf-worker.js?v=runtime-v50',import.meta.url),{type:'module'});const host=worker;
  host.onmessage=({data})=>{if(worker!==host||!active||data.id!==active.id)return;finish(data.error?new Error(data.error):null,data.blob);};
  host.onerror=event=>{event.preventDefault();if(worker!==host)return;releaseWorker();if(active)finish(new Error('PDF后台组件未能载入，请重试'));};
  return worker;
 }
 export function warmPDFWorker(){
- if(active||queue.length)return;
+ if(leaving||active||queue.length)return;
  try{clearTimeout(idleTimer);ensureWorker().postMessage({warm:true});idleTimer=setTimeout(releaseWorker,90000);}catch{}
 }
 function next(){
- if(active||!queue.length)return;clearTimeout(idleTimer);const job=queue.shift();active=job;
+ if(leaving||active||!queue.length)return;clearTimeout(idleTimer);const job=queue.shift();active=job;
  try{
   ensureWorker();
   job.timer=setTimeout(()=>{releaseWorker();finish(new Error('PDF生成超时，可缩小报告范围或先下载Word'));},120000);
-  worker.postMessage({id:job.id,report:job.report});
+  worker.postMessage({id:job.id,report:job.report,definition:job.definition});
  }catch(error){releaseWorker();finish(error);}
 }
 function finish(error,blob){
  const job=active;if(!job)return;active=null;clearTimeout(job.timer);job.finished=true;job.error=error;if(error)releaseWorker();error?job.reject(error):job.resolve(blob);
- if(queue.length)next();else idleTimer=setTimeout(releaseWorker,30000);
+ if(queue.length)next();else if(!leaving)idleTimer=setTimeout(releaseWorker,30000);
 }
 export function idlePDFWorker(){if(!active&&!queue.length)releaseWorker();}
-export function createPDFJob(report){
- let resolve,reject;const promise=new Promise((yes,no)=>{resolve=yes;reject=no;}),job={id:++serial,report,resolve,reject,promise,owners:0,finished:false};queue.push(job);next();
+export function createPDFJob(report,definition=null){
+ let resolve,reject;const promise=new Promise((yes,no)=>{resolve=yes;reject=no;}),job={id:++serial,report,definition,resolve,reject,promise,owners:0,finished:false};if(leaving){job.finished=true;job.error=abortError();job.reject(job.error);}else{queue.push(job);next();}
  return {promise,get failed(){return Boolean(job.error);},claim(signal){
   if(signal?.aborted)return Promise.reject(abortError());job.owners++;
   return new Promise((yes,no)=>{
@@ -39,3 +40,8 @@ export function createPDFJob(report){
   });
  }};
 }
+export const createPDFDefinitionJob=definition=>createPDFJob(null,definition);
+
+export function suspendPDFWorker(){leaving=true;const waiting=queue.splice(0);releaseWorker();if(active)finish(abortError());for(const job of waiting){job.finished=true;job.error=abortError();job.reject(job.error);}}
+export function resumePDFWorker(){leaving=false;}
+if(typeof window!=='undefined'){window.addEventListener('beforeunload',()=>{suspendPDFWorker();setTimeout(()=>{if(document.visibilityState!=='hidden')resumePDFWorker();},1000);});window.addEventListener('pagehide',suspendPDFWorker);window.addEventListener('pageshow',resumePDFWorker);}

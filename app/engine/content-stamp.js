@@ -1,0 +1,2 @@
+// A compact change detector for local review/version state, not authentication.
+export function contentStamp(value){const text=typeof value==='string'?value:JSON.stringify(value);let a=2166136261,b=2246822507;for(let i=0;i<text.length;i++){const c=text.charCodeAt(i);a=Math.imul(a^c,16777619);b=Math.imul(b^c,3266489909);}return text.length.toString(36)+'-'+(a>>>0).toString(36)+'-'+(b>>>0).toString(36);}

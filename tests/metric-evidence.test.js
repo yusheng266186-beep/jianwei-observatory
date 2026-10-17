@@ -1,0 +1,4 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {studentMetricEvidence} from '../app/engine/metric-evidence.js';
+test('数据口径共用实际统计值，保留原值与原表行，不把同班计算推广成校排',()=>{const row={classNo:4,sourceRow:27,total:500.35,rawTotal:490,rankProvenance:'column-headings-v2',rankSources:{schoolRank:'校赋排'}};let school=null;const atlas={gradeRank:()=>school,classRank:()=>2,classAt:()=>[{total:600},{total:500.35},{total:null}]};const rows=studentMetricEvidence(atlas,row);assert.equal(rows[0].value,500.35);assert.match(rows[0].basis,/27行/);assert.equal(rows[2].value,null);assert.match(rows[3].basis,/2份有效总分/);school=31;assert.match(studentMetricEvidence(atlas,row)[2].basis,/校赋排/);row.classRank=7;assert.match(studentMetricEvidence(atlas,row)[3].basis,/原表第27行/);assert.equal(row.total,500.35);});

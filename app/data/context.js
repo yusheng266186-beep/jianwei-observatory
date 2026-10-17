@@ -14,5 +14,9 @@ export function mergeContext(current,incoming,ids) {
   for(const key of ['plans','notebook','directoryViews'])if(Array.isArray(context[key])||Array.isArray(current[key]))result[key]=mergeEntries(current[key],context[key]);
   for(const key of ['savedPeople','comparePeople'])if(Array.isArray(context[key])||Array.isArray(current[key]))result[key]=[...new Set([...(current[key]||[]),...(context[key]||[])])].slice(0,key==='comparePeople'?4:Infinity);
   if(current.research||context.research)result.research={saved:mergeEntries(current.research?.saved,context.research?.saved),recent:mergeEntries(current.research?.recent,context.research?.recent).sort((a,b)=>String(b.updated||'').localeCompare(String(a.updated||''))).slice(0,24)};
+  // This is a one-time archive payload. Ordinary workbook imports must not
+  // replay an old copy of the draft library from the current dataset.
+  result.exercises=Array.isArray(incoming.exercises)?remapContext(incoming.exercises,ids):undefined;
+  result.exerciseSavedSetups=Array.isArray(incoming.exerciseSavedSetups)?structuredClone(incoming.exerciseSavedSetups):undefined;
   return result;
 }
