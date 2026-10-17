@@ -16,7 +16,7 @@ test('网页预览输出有表头的真实表格，内容经转义且科学字�
  const html=await richExerciseHTML(source.replace('12.5','<img onerror=bad>'));assert.match(html,/<table><thead>/);assert.equal((html.match(/<th scope=/g)||[]).length,7);assert.equal((html.match(/<td /g)||[]).length,14);assert.match(html,/&lt;img onerror=bad&gt;/);assert.match(html,/CO₂/);assert.doesNotMatch(html,/<img/);
 });
 test('PDF表格定义可跨Worker传输，表头重复且单行不截断',async()=>{
- const definition=await exerciseParagraph(source),clone=structuredClone(definition),table=clone.stack.find(b=>b.table);assert.equal(table.layout,'exerciseDataTable');assert.equal(table.table.headerRows,1);assert.equal(table.table.body.length,3);assert.equal(table.table.body[0].length,7);assert(table.table.dontBreakRows);assert.equal(table.table.body[1][1].stack[0].text,'12.5');assert(table.table.widths.reduce((a,b)=>a+b,0)<=490);
+ const definition=await exerciseParagraph(source),clone=structuredClone(definition),table=clone.stack.find(b=>b.table);assert.equal(table.layout,'exerciseDataTable');assert.equal(table.table.headerRows,1);assert.equal(table.table.keepWithHeaderRows,1);assert.equal(table.table.body.length,3);assert.equal(table.table.body[0].length,7);assert(table.table.dontBreakRows);assert.equal(table.table.body[1][1].stack[0].text,'12.5');assert(table.table.widths.reduce((a,b)=>a+b,0)<=490);
 });
 test('宋体科学补充字库覆盖上下标与离子电荷，旧字库与缓存地址完整保留',()=>{
  const load=n=>JSON.parse(readFileSync(new URL('../assets/report-fonts/'+n,import.meta.url))),old=load('manifest-v38.json'),current=load('manifest-v39.json'),points=m=>new Set(m.parts.flatMap(p=>p.ranges.flatMap(([a,b])=>Array.from({length:b-a+1},(_,i)=>a+i))));

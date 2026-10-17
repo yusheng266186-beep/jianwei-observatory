@@ -1,11 +1,22 @@
-// Physical writing space in points, shared by PDF and editable Word exports.
+// Physical handwriting space in points, shared by PDF and editable Word.
+export const exerciseObjectiveQuestion=q=>['选择','多选','填空'].includes(q.type);
 export function exerciseAnswerSpaceHeight(question,subject){
- if(question.type==='填空'&&question.diagram?.kind==='science'&&question.diagram.spec.family==='conic')return 35;
- const wordLimit=subject==='英语'?Number(question.stem.match(/(?:no more than|at most|within)\s+(\d+)\s+words/i)?.[1]):0;
- if(wordLimit&&wordLimit<=30)return 70;
- if(['阅读','实验','简答','翻译'].includes(question.type)&&Number.isFinite(question.minutes)&&question.minutes>0)return question.minutes<=5?105:question.minutes<=8?145:180;
- return wordLimit&&wordLimit<=30?70:['选择','多选'].includes(question.type)?30:question.type==='填空'?65:question.type==='写作'?260:['阅读','实验','简答','翻译'].includes(question.type)?180:130;
+ // Objective answers belong in their option/blank, even if a model overestimates.
+ if(['选择','多选'].includes(question.type))return 6;
+ if(question.type==='填空')return 10;
+ const suggested=question.answerLines;
+ if(Number.isInteger(suggested)&&suggested>0&&suggested<=48)return suggested*18;
+ const answer=String(question.answer||''),words=subject==='英语'?Number(question.stem?.match(/(?:no more than|at most|within)\s+(\d+)\s+words/i)?.[1]):0;
+ if(words&&words<=30)return Math.max(2,Math.ceil(words/10))*18;
+ if(question.type==='写作')return Math.max(14,Math.min(36,Math.ceil((subject==='英语'?answer.split(/\s+/).length/10:answer.length/32)||18)))*18;
+ // Historical sheets have no model advice. Estimate from actual response parts
+ // and expected answer content rather than the length of the reading material.
+ const parts=[...String(question.stem||'').matchAll(/(?:^|\n)\s*[（(][0-9一二三四五六七八九十]+[）)]/g)].length;
+ const plain=answer.replace(/\\[a-zA-Z]+/g,'').replace(/[${}^_]/g,''),length=[...plain].reduce((sum,c)=>sum+(/[\u3400-\u9fff]/.test(c)?1:.5),0);
+ const lines=Math.max(3,Math.min(24,Math.max(parts*3,question.points?.length||0,Math.ceil(length/34)|| (question.minutes>8?8:question.minutes>5?6:4))));
+ return lines*18;
 }
+export function exerciseWritingRows(height){const rows=[];while(height>0){const part=Math.min(18,height);rows.push(part);height-=part;}return rows;}
 import {exerciseFigureParts} from './exercise-figure-layout.js';
 export {exerciseFigureParts};
 // A single terrain map is naturally taller than a two-panel diagram. Keep its

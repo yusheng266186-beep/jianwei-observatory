@@ -35,7 +35,7 @@ export async function exerciseParagraph(value,{limit=490,fontSize=11}={}){
   if(block.kind==='text'){if(block.text.trim())stack.push(await exerciseTextParagraph(block.text,{limit,fontSize}));continue;}
   const widths=exerciseTableWidths(block.header.length,limit-block.header.length*10-(block.header.length+1)*.5),body=[];
   for(const [r,row] of [block.header,...block.rows].entries())body.push(await Promise.all(row.map(async(text,i)=>({stack:[await exerciseTextParagraph(text,{limit:widths[i],fontSize:r===0?9.4:10.5})],bold:r===0,alignment:block.alignments[i],fillColor:r===0?'#f1f3f4':null,margin:[0,2,0,2]}))));
-  stack.push({table:{headerRows:1,widths,body,dontBreakRows:true},layout:'exerciseDataTable',margin:[0,8,0,9]});
+  stack.push({table:{headerRows:1,keepWithHeaderRows:1,widths,body,dontBreakRows:true},layout:'exerciseDataTable',margin:[0,8,0,9]});
  }return {stack};
 }
 async function exerciseTextParagraph(value,{limit=490,fontSize=11}={}){

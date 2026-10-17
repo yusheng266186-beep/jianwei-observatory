@@ -7,7 +7,7 @@ function releaseWorker(){clearTimeout(idleTimer);worker?.terminate();worker=null
 function ensureWorker(){
  if(leaving)throw abortError();
  if(worker)return worker;
- worker=new Worker(new URL('./pdf-worker.js?v=runtime-v54',import.meta.url),{type:'module'});const host=worker;
+ worker=new Worker(new URL('./pdf-worker.js?v=runtime-v55',import.meta.url),{type:'module'});const host=worker;
  host.onmessage=({data})=>{if(worker!==host||!active||data.id!==active.id)return;finish(data.error?new Error(data.error):null,data.blob);};
  host.onerror=event=>{event.preventDefault();if(worker!==host)return;releaseWorker();if(active)finish(new Error('PDF后台组件未能载入，请重试'));};
  return worker;

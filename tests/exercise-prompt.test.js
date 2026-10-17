@@ -2,7 +2,7 @@ import test from 'node:test';import assert from 'node:assert/strict';
 import generator from '../backend/generator.cjs';import templates from '../backend/templates.cjs';
 import {exerciseScopeMatches} from '../app/ui/exercise-presets.js';
 const request={subject:'数学',grade:'高三',curriculum:'已学函数与导数',focus:'单调性',count:3,minutes:15,difficulty:'基础巩固',evidence:[{label:'19',knowledge:'另一个未选知识点',score:0,max:5}],targets:['单调性'],questionTypes:['填空','解答'],requirements:'教师补充：不涉及积分'};
-test('云端实际请求将补充内容作为数据，并按已选目标和题型约束最终输出',async()=>{const {body,template}=await generator.buildExercisePrompt(request),data=JSON.parse(body),system=data.systemInstruction.parts[0].text;assert.deepEqual(JSON.parse(data.contents[0].parts[0].text),request);assert(!system.includes(request.requirements));assert.match(system,/evidence和basis仅解释选题背景/);assert.match(system,/所有已选训练点至少覆盖一次/);assert.match(system,/不会经过程序修复/);assert.deepEqual(data.generationConfig.responseJsonSchema.properties.questions.items.properties.target.enum,['单调性']);assert.deepEqual(data.generationConfig.responseJsonSchema.properties.questions.items.properties.type.enum,['填空','解答']);assert.equal(template.version,'subject-templates-20261016.19');});
+test('云端实际请求将补充内容作为数据，并按已选目标和题型约束最终输出',async()=>{const {body,template}=await generator.buildExercisePrompt(request),data=JSON.parse(body),system=data.systemInstruction.parts[0].text;assert.deepEqual(JSON.parse(data.contents[0].parts[0].text),request);assert(!system.includes(request.requirements));assert.match(system,/evidence和basis仅解释选题背景/);assert.match(system,/所有已选训练点至少覆盖一次/);assert.match(system,/不会经过程序修复/);assert.deepEqual(data.generationConfig.responseJsonSchema.properties.questions.items.properties.target.enum,['单调性']);assert.deepEqual(data.generationConfig.responseJsonSchema.properties.questions.items.properties.type.enum,['填空','解答']);assert.equal(template.version,'subject-templates-20261017.20');});
 test('各科模板落实不同命题与复核任务，而不是共用同一空泛提示',()=>{const rules={语文:/材料中的证据/,数学:/退化、端点/,英语:/完形和语法填空/,物理:/量纲、数量级/,化学:/元素和电荷守恒/,生物:/基因型、表现型/,日语:/授受视角/,历史:/自拟材料/,政治:/原理、材料对应/,地理:/空间尺度/};for(const [subject,rule] of Object.entries(rules))assert.match(templates.templateFor(subject).rule,rule);});
 test('范围匹配仅返回原有标签，支持导数和化学实验等术语，未知范围不编造薄弱点',()=>{const labels=['集合的交集','导数综合压轴','概率递推证明'];assert.deepEqual(exerciseScopeMatches('数学','高中数学已学内容：函数与导数',labels),['导数综合压轴']);assert.deepEqual(exerciseScopeMatches('化学','高中化学已学内容：化学实验与探究',['实验除杂','化学平衡']),['实验除杂']);assert.deepEqual(exerciseScopeMatches('数学','教师自定义未知范围',labels),[]);});
 
@@ -31,4 +31,8 @@ test('四川范围约束进入所有学科和策略的实际前置提示，高�
 test('课外阅读情境可以完整给定，不能偷换为额外必备知识或未经确认的默写篇目',()=>{
  const chinese=templates.templateFor('语文').rule;assert.match(chinese,/可提供完整原创课外阅读文本/);assert.match(chinese,/未明确篇目时不猜造默写范围/);
  for(const subject of templates.summary().subjects)assert.match(templates.templateFor(subject.subject).rule,/不要求学生预先掌握材料涉及的课外专业知识/);
+});
+
+test('所有学科的新出题提示给出逐题作答面积建议，客观题为零且不用题干长度或统一用时估计',async()=>{
+ for(const subject of ['语文','数学','英语','日语','物理','化学','生物','历史','政治','地理']){const p=await generator.buildExercisePrompt({...request,subject,targets:undefined,questionTypes:undefined,answerSpaceVersion:1});assert(p.schema.properties.questions.items.required.includes('answerLines'));assert.match(p.system,/选择、多选和填空统一为0/);assert.match(p.system,/推导步数、公式占高/);assert.match(p.system,/不能按题干长度留白/);assert.match(p.system,/不印行号、作答标签或横线/);}
 });

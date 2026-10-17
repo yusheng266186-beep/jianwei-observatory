@@ -28,3 +28,8 @@ test('逐题Schema区分作答类型，单选四项且答案为字母，简答�
 test('新建四川高考练习排除跨科题型，历史已存文档仍可打开',()=>{const r={...input,subject:'英语',examStyle:'sichuan-gaokao'},s=sheet();s.questions[0].type='翻译';assert.throws(()=>validateExerciseResult(s,r),/四川高考/);assert.throws(()=>validateExerciseRequest({...r,questionTypes:['简答']}),/四川高考/);assert.doesNotThrow(()=>validateExerciseResult(s,{...r,examStyle:undefined}));assert.throws(()=>validateExerciseRequest({...input,examStyle:'arbitrary'}));});
 
 test('四川高考客观题不能按主观解题过程拆分给分',()=>{const r={...input,examStyle:'sichuan-gaokao'},s=sheet();s.questions[0]={...s.questions[0],type:'选择',choices:['甲','乙','丙','丁'],answer:'A',points:['化简得3分','选择得2分']};assert.throws(()=>validateExerciseResult(s,r),/客观题评分/);s.questions[0].points=['选A得5分，错选或未选得0分。'];assert.doesNotThrow(()=>validateExerciseResult(s,r));});
+
+test('新任务请求模型建议作答行数，旧任务和旧前端不被新字段破坏',()=>{
+ const next={...input,answerSpaceVersion:1},schema=exerciseSchemaFor(next);assert(schema.properties.questions.items.required.includes('answerLines'));assert.equal(schema.properties.questions.items.properties.answerLines.maximum,48);assert(!exerciseSchemaFor(input).properties.questions.items.properties.answerLines);assert(!exerciseSchemaFor(input).properties.questions.items.required.includes('answerLines'));
+ const s=sheet();s.questions[1].answerLines=8;assert.doesNotThrow(()=>validateExerciseResult(s,next));assert.doesNotThrow(()=>validateExerciseResult(sheet(),input));for(const n of [-1,Infinity,1.5,'8',49]){s.questions[1].answerLines=n;assert.throws(()=>validateExerciseResult(s,next),/作答行数/);}
+});
