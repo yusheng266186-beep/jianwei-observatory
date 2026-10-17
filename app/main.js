@@ -1,3 +1,4 @@
+import {tableReadingPositions,restoreTableReadingPositions,disclosurePositions,restoreDisclosurePositions} from './ui/study-position.js';
 import {researchObservationList} from './engine/research-roster.js';
 import {syncPracticeFeedbackPlans} from './engine/exercise-feedback.js';
 import {recordPageTiming} from './engine/runtime-diagnostics.js';
@@ -121,14 +122,14 @@ function revealResults(root) {
   if(dialog){const scroller=dialog.id==='research-drawer'?drawerScroll():dialog;scroller.scrollTo({top:Math.max(0,scroller.scrollTop+target.getBoundingClientRect().top-scroller.getBoundingClientRect().top-24),behavior:'instant'});}
   else {const head=document.querySelector('.masthead').getBoundingClientRect(),outline=stage().querySelector('.study-outline'),offset=Math.max(head.bottom,outline?.getBoundingClientRect().bottom||0)+18;window.scrollTo({top:Math.max(0,scrollY+target.getBoundingClientRect().top-offset),behavior:'instant'});}
 }
-function drawerTablePositions(){return [...document.querySelectorAll('#drawer-content .table-frame')].map(el=>({key:el.dataset.tableKey,left:el.querySelector('.table-scroll')?.scrollLeft||0}));}
+function drawerTablePositions(){return tableReadingPositions(document.getElementById('drawer-content'));}
 function drawerScroll(){return document.querySelector('#drawer-content>.drawer-body')||document.getElementById('research-drawer');}
 function restoreDrawerScroll(top){
   const body=drawerScroll(),epoch=drawerEpoch;body.scrollTop=top;
   // WebKit can reset descendant scrolling after the modal's native focus settles.
   requestAnimationFrame(()=>{if(document.getElementById('research-drawer').open&&drawerEpoch===epoch&&drawerScroll()===body)body.scrollTop=top;});
 }
-function restoreDrawerPosition(state){restoreDrawerScroll(state.scrollTop||0);for(const item of state.tablePositions||[]){const frame=[...document.querySelectorAll('#drawer-content .table-frame')].find(el=>el.dataset.tableKey===item.key);if(frame)frame.querySelector('.table-scroll').scrollLeft=item.left;}enhance(document.getElementById('drawer-content'));}
+function restoreDrawerPosition(state){restoreDrawerScroll(state.scrollTop||0);restoreTableReadingPositions(document.getElementById('drawer-content'),state.tablePositions);enhance(document.getElementById('drawer-content'));}
 function comparisonContext() {
   if(drawerState?.type==='person'||drawerState?.type==='subject')return drawerState.exam||'latest';
   if(['question','knowledge'].includes(drawerState?.type))return drawerState.key.split('|')[1]||'latest';
@@ -142,8 +143,8 @@ function compactDrawer(state){if(!state||!['person','question','compare','subjec
 function studyNow() {
   if(!paintedStudy||!hasMaterials(atlas.data))return null;
   const study=structuredClone(paintedStudy),nodes=[...stage().querySelectorAll('[data-study-section]')],section=nodes.filter(node=>node.getBoundingClientRect().top<=140).at(-1);
-  study.position={top:window.scrollY,section:section?.id||'',offset:section?.getBoundingClientRect().top||0,details:[...stage().querySelectorAll('details')].map((el,index)=>({index,open:el.open})),tables:[...stage().querySelectorAll('.table-frame')].map(el=>({key:el.dataset.tableKey,left:el.querySelector('.table-scroll')?.scrollLeft||0}))};
-  if(document.getElementById('research-drawer').open){study.drawer=compactDrawer(drawerState);study.trail=drawerTrail.map(compactDrawer).filter(Boolean).slice(-6);study.drawerTop=drawerScroll().scrollTop;study.drawerTables=[...document.getElementById('drawer-content').querySelectorAll('.table-frame')].map(el=>({key:el.dataset.tableKey,left:el.querySelector('.table-scroll')?.scrollLeft||0}));study.comparePeople=[...session.comparePeople];}
+  study.position={top:window.scrollY,section:section?.id||'',offset:section?.getBoundingClientRect().top||0,details:disclosurePositions(stage()),tables:tableReadingPositions(stage())};
+  if(document.getElementById('research-drawer').open){study.drawer=compactDrawer(drawerState);study.trail=drawerTrail.map(compactDrawer).filter(Boolean).slice(-6);study.drawerTop=drawerScroll().scrollTop;study.drawerTables=drawerTablePositions();study.drawerDetails=disclosurePositions(document.getElementById('drawer-content'));study.comparePeople=[...session.comparePeople];}
   return study;
 }
 function archiveStudy(study=studyNow()) {
@@ -158,7 +159,7 @@ function leaveStudy() {
   if(study){archiveStudy(study);researchTrail.push(study);researchTrail=researchTrail.slice(-10);}return study;
 }
 function drawResearch(){const content=document.getElementById('research-content');prepareUpdate();renderInto(content,researchView(atlas,research,researchScope,studyNow()));enhance(content);}
-function openResearch(){if(!hasMaterials(atlas.data))return;archiveStudy();researchScope.rename='';drawResearch();showDialog(document.getElementById('research-dialog'));}
+function openResearch(){if(!hasMaterials(atlas.data))return;archiveStudy();researchScope.rename='';drawResearch();const dialog=document.getElementById('research-dialog');showDialog(dialog);dialog.scrollTop=0;}
 function pinStudy(study=studyNow()) {
   if(!study)return;
   const key=studyKey(study),existing=research.saved.find(entry=>studyKey(entry)===key),description=studyDescription(atlas,study),entry={...study,title:description.title,scope:description.scope,id:existing?.id||'s-'+crypto.randomUUID(),name:existing?.name||description.title,updated:new Date().toISOString()};
@@ -174,12 +175,11 @@ async function restoreStudy(study,{returning=false}={}) {
   for(const id of ['research-dialog','report-dialog']){const dialog=document.getElementById(id);if(dialog.open)await dismissDialog(id);}
   current=study.scene;books[current]={...structuredClone(defaults[current]),...structuredClone(study.values)};persistBooks();history.pushState(null,'',path());
   const render=paintId+1;await paint(true);if(navigation!==navigationEpoch||paintId!==render||current!==study.scene)return;
-  const details=[...stage().querySelectorAll('details')];for(const item of study.position?.details||[])if(details[item.index])details[item.index].open=item.open;
-  for(const item of study.position?.tables||[]){const frame=[...stage().querySelectorAll('.table-frame')].find(el=>el.dataset.tableKey===item.key);if(frame)frame.querySelector('.table-scroll').scrollLeft=item.left;}
+  restoreDisclosurePositions(stage(),study.position?.details);restoreTableReadingPositions(stage(),study.position?.tables);
   const section=study.position?.section&&document.getElementById(study.position.section),top=section?window.scrollY+section.getBoundingClientRect().top-(study.position.offset||0):study.position?.top||0;window.scrollTo({top:Math.max(0,top),behavior:'instant'});
   if(study.drawer){if(study.comparePeople&&(study.drawer.type==='compare'||study.trail?.some(d=>d.type==='compare'))){session.comparePeople=[...study.comparePeople];remember('comparePeople',session.comparePeople);}
     drawerState=study.trail?.at(-1)||null;const restored=structuredClone(study.drawer);if(restored.type==='person')Object.assign(restored,personQueue(restored.sid,restored.exam));drawerState=null;openDrawer(restored,{focusTitle:false});drawerTrail=structuredClone(study.trail||[]);drawDrawer();restoreDrawerScroll(study.drawerTop||0);
-    for(const item of study.drawerTables||[]){const frame=[...document.getElementById('drawer-content').querySelectorAll('.table-frame')].find(el=>el.dataset.tableKey===item.key);if(frame)frame.querySelector('.table-scroll').scrollLeft=item.left;}
+    restoreDisclosurePositions(document.getElementById('drawer-content'),study.drawerDetails);restoreTableReadingPositions(document.getElementById('drawer-content'),study.drawerTables);
   }
   enhance(stage());scheduleResearch();
 }
@@ -308,8 +308,8 @@ function update(key,value,toggle=false) {
     value=before.includes(value)?before.filter(v=>v!==value):[...before,value];
     if(key==='exams'&&!value.length){notify('请保留至少一个考次');return;}
   }
-  const openingExerciseCenter=current==='library'&&key==='tab'&&value==='exercises'&&state.tab!==value;
-  state[key]=value;state.page=1;if(openingExerciseCenter)scrollResets.add(sceneObject('library'));
+  const openingLibraryCollection=current==='library'&&key==='tab'&&['exercises','notebook'].includes(value)&&state.tab!==value;
+  state[key]=value;state.page=1;if(key.startsWith('notebook')&&key!=='notebookLimit')state.notebookLimit=24;if(openingLibraryCollection)scrollResets.add(sceneObject('library'));
   if(current==='people'&&['standing','scoreStatus','trend','records','focusSubject','focusStatus','savedOnly'].includes(key))state.lens='custom';
   if(current==='people'&&key==='track')state.classes=[];
   if(current==='papers'&&key==='classes')state.question=0;
@@ -340,7 +340,8 @@ async function installDataset(dataset,{fresh=false,prepared=false,index=null}={}
 async function store() {try{await save(workspaceSnapshot(),{prepared:true});return true;}catch{notify('修改已保留在当前页面，本机未保存，请下载完整备份。');return false;}}
 function workspaceSnapshot(){return structuredClone({...atlas.data,plans:session.plans,notebook:session.notebook,savedPeople:session.savedPeople,comparePeople:session.comparePeople,directoryViews:session.directoryViews,research});}
 function recordNoteDraft(note){if(!noteJournal.record(note))notify('判断仍在当前页面，本机草稿未保存，请下载材料保留记录。');}
-async function persistNotebook(){const snapshot=structuredClone(session.notebook),generation=revision;await saveNotebook(snapshot);if(generation===revision)noteJournal.persisted(snapshot);}
+function evidenceSaveState(note,value,error=false){for(const button of stage().querySelectorAll('[data-cmd=notebook-retry]'))if(button.dataset.id===note.id)button.hidden=!error;const count=stage().querySelector('[data-notebook-written]');if(count)count.textContent=session.notebook.filter(n=>n.note?.trim()).length+'份已有教师判断';for(const node of stage().querySelectorAll('[data-evidence-save]'))if(node.dataset.evidenceSave===note.id){node.textContent=value;node.dataset.state=error?'error':value==='已保存到本机'?'saved':'saving';}}
+async function persistNotebook(){const snapshot=structuredClone(session.notebook),generation=revision;try{await saveNotebook(snapshot);if(generation===revision){noteJournal.persisted(snapshot);for(const saved of snapshot){const current=session.notebook.find(n=>n.id===saved.id);if(current&&current.note===saved.note)evidenceSaveState(current,'已保存到本机');}}}catch(error){if(generation===revision)for(const saved of snapshot){const current=session.notebook.find(n=>n.id===saved.id);if(current&&current.note===saved.note)evidenceSaveState(current,'本机保存未完成，可重试或下载备份',true);}throw error;}}
 async function restoreContext(incoming) {
   if(incoming.plans||incoming.actions)session.plans=(incoming.plans||incoming.actions).map(normalizePlan);
   else session.plans=session.plans.filter(p=>incoming.students.some(person=>person.id===p.sid));
@@ -690,6 +691,7 @@ async function commands(event) {
       if(!hasMaterials(atlas.data))return;
       if(d.cmd==='research')openResearch();
       else if(d.cmd==='research-tab'){researchScope.tab=d.tab;researchScope.rename='';drawResearch();}
+      else if(d.cmd==='research-search-clear'){clearTimeout(researchSearchTimer);researchScope.search='';drawResearch();document.querySelector('[data-research-search]')?.focus({preventScroll:true});}
       else if(d.cmd==='research-pin')pinStudy();
       else if(d.cmd==='research-pin-entry'){const entry=research.recent.find(e=>e.id===d.id);if(entry)pinStudy(entry);}
       else if(d.cmd==='research-open'){const entry=research[d.collection]?.find(e=>e.id===d.id);if(entry)await restoreStudy(entry);}
@@ -856,9 +858,12 @@ async function commands(event) {
     else if(d.cmd==='follow-open'){if(!await closeDrawer())return;go('follow');}
     else if(d.cmd==='follow-remove'){const index=session.plans.findIndex(p=>p.id===d.id),plan=session.plans[index];if(plan){session.plans.splice(index,1);remember('plans',session.plans);await paint();notify('已移除跟进记录',{undo:async()=>{if(!session.plans.some(p=>p.id===plan.id))session.plans.splice(Math.min(index,session.plans.length),0,plan);remember('plans',session.plans);await paint();}});}}
     else if(d.cmd==='follow-status'){const plan=session.plans.find(p=>p.id===d.id);if(plan){plan.status=d.status;remember('plans',session.plans);paint();}}
+    else if(d.cmd==='notebook-retry'){const note=session.notebook.find(n=>n.id===d.id);if(note){evidenceSaveState(note,'正在保存判断…');await persistNotebook();}}
+    else if(d.cmd==='notebook-reset'){clearTimeout(searchTimer);state.notebookQuery='';state.notebookSource='all';state.notebookJudgment='all';state.notebookLimit=24;persistBooks();await paint();}
+    else if(d.cmd==='notebook-more'){await flushSearch();const before=Number(state.notebookLimit)||24;state.notebookLimit=before+24;persistBooks();await paint();const next=stage().querySelectorAll('[data-evidence-card]')[before]?.querySelector('h2');if(next){next.focus({preventScroll:true});next.scrollIntoView({block:'nearest',behavior:'instant'});}}
     else if(d.cmd==='notebook-open')openReport(session.notebook.find(note=>note.id===d.id));
     else if(d.cmd==='notebook-return'){const note=session.notebook.find(note=>note.id===d.id);if(note?.study)await restoreStudy(note.study);}
-    else if(d.cmd==='notebook-remove'){const index=session.notebook.findIndex(n=>n.id===d.id),note=session.notebook[index];if(note){session.notebook.splice(index,1);noteJournal.remove(note.id);await persistNotebook();await paint();notify('已移除证据摘录',{undo:async()=>{session.notebook.splice(Math.min(index,session.notebook.length),0,note);await persistNotebook();await paint();}});}}
+    else if(d.cmd==='notebook-remove'){const index=session.notebook.findIndex(n=>n.id===d.id),note=session.notebook[index];if(note){session.notebook.splice(index,1);noteJournal.remove(note.id);await persistNotebook();await paint();notify('已移除证据摘录',{undo:async()=>{if(!session.notebook.some(n=>n.id===note.id))session.notebook.splice(Math.min(index,session.notebook.length),0,note);await persistNotebook();await paint();}});}}
     else if(d.cmd==='notebook-export') {
       if(!session.notebook.length){notify('还没有保存的摘录');return;}
       const notes=session.notebook.map(note=>selectedReport(refreshSavedReport(note)));
@@ -940,14 +945,14 @@ export async function mount(boot=null) {
     if(target.dataset.reportOutputTitle!==undefined&&exportReport){updateReportSelection(s=>{s.title=target.value;},{render:false});return;}
     if(target.dataset.planField){setPlanValue(target.dataset.planField,target.value);if(target.dataset.planField==='ui.search'){clearTimeout(planSearchTimer);planSearchTimer=setTimeout(drawPlan,180);}return;}
     if(target.dataset.field) {
-      const scene=current,key=target.dataset.field,position=target.selectionStart,inDrawer=Boolean(target.closest('#research-drawer'));books[scene][key]=target.value;books[scene].page=1;if(scene==='people')books[scene].lens='custom';if(['minScore','maxScore'].includes(key))books[scene].maxExclusive=false;persistBooks();clearTimeout(searchTimer);
+      const scene=current,key=target.dataset.field,position=target.selectionStart,inDrawer=Boolean(target.closest('#research-drawer'));books[scene][key]=target.value;books[scene].page=1;if(key==='notebookQuery')books[scene].notebookLimit=24;if(scene==='people')books[scene].lens='custom';if(['minScore','maxScore'].includes(key))books[scene].maxExclusive=false;persistBooks();clearTimeout(searchTimer);
       searchTimer=setTimeout(()=>{searchTimer=null;if(current===scene){if(inDrawer)drawDrawer();searchPaint=paint(false,{key,position,inDrawer});}},130);
     }
     if(target.dataset.drawerField&&drawerState){drawerState[target.dataset.drawerField]=target.value;drawerState.page=1;clearTimeout(drawerTimer);drawerTimer=setTimeout(drawDrawer,130);}
     if(target.dataset.reportSearch&&exportReport){reportScope.search='';reportScope.page=1;const index=reportScope.section;updateReportSelection(s=>{s.filters[index]=target.value;},{render:false});return;}
     if(target.dataset.researchSearch){researchScope.search=target.value;clearTimeout(researchSearchTimer);researchSearchTimer=setTimeout(drawResearch,130);}
     if(target.dataset.planNote){const plan=session.plans.find(p=>p.id===target.dataset.planNote);if(plan){plan.note=target.value;remember('plans',session.plans);}}
-    if(target.dataset.evidenceNote){const note=session.notebook.find(n=>n.id===target.dataset.evidenceNote);if(note){note.note=target.value;recordNoteDraft(note);clearTimeout(noteTimer);noteTimer=setTimeout(()=>persistNotebook().catch(()=>notify('请下载备份以保留摘录')),400);}}
+    if(target.dataset.evidenceNote){const note=session.notebook.find(n=>n.id===target.dataset.evidenceNote);if(note){note.note=target.value;recordNoteDraft(note);evidenceSaveState(note,'正在保存判断…');clearTimeout(noteTimer);noteTimer=setTimeout(()=>persistNotebook().catch(()=>notify('请下载备份以保留摘录')),400);}}
     if(target.id==='report-note'&&exportReport){clearTimeout(reportTimer);reportTimer=setTimeout(drawReport,160);exportReport.note=target.value;reportReader?.invalidate(exportReport);if(!exportReport.id&&target.value.trim()){exportReport.id='e'+crypto.randomUUID();exportReport.autoSaved=true;session.notebook.unshift(structuredClone(exportReport));}if(exportReport.id){const note=session.notebook.find(n=>n.id===exportReport.id);if(note){note.note=target.value;recordNoteDraft(note);showNoteState('saving');clearTimeout(noteTimer);noteTimer=setTimeout(persistReportNote,400);}}else showNoteState('preview');}
   });
   document.addEventListener('keydown',async event=>{if((event.metaKey||event.ctrlKey)&&event.key.toLowerCase()==='k'){event.preventDefault();if(document.getElementById('inbox').open)return;if(!hasMaterials(atlas.data)){notify('导入成绩材料后即可查找学生');return;}if(document.getElementById('report-dialog').open&&!await finishReport())return;if(!await closeDrawer())return;for(const dialog of document.querySelectorAll('dialog[open]'))if(dialog.id!=='inbox')await dismissDialog(dialog.id);go('people',{sid:'',...directoryDefaults},true);setTimeout(()=>stage().querySelector('[data-field="search"]')?.focus(),100);}});
