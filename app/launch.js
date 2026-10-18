@@ -13,8 +13,8 @@
  const defaults={density:'comfortable',surface:'glass',motion:'system'};
  function applyReading(reading={}){for(const [key,fallback] of Object.entries(defaults))document.body.dataset[key]=reading[key]||fallback;}
  applyReading();source.then(storage=>applyReading(storage.preference('reading',{}))).catch(()=>{});
- function status(message,{error=false}={}){
-  const box=stage.querySelector('#launch-progress');if(!box)return;box.hidden=false;box.dataset.state=error?'error':'loading';box.querySelector('span').textContent=message;
+ function status(message,{error=false,notice=false}={}){
+  const box=stage.querySelector('#launch-progress');if(!box)return;box.hidden=false;box.dataset.state=error?'error':notice?'notice':'loading';box.querySelector('span').textContent=message;box.querySelector('i').hidden=notice;
   const retry=box.querySelector('button');retry.hidden=!error;retry.onclick=()=>location.reload();
  }
  function theme(){
@@ -57,8 +57,9 @@
   if(action.dataset.cmd==='import'){files.click();warmImporter();status('请选择成绩工作簿，材料将在本机读取。');start();}
   else{const data={...action.dataset};status('正在准备'+(action.dataset.cmd==='template'?'录入模板':'工作区')+'…');start().then(()=>[...document.querySelectorAll('[data-cmd]')].find(node=>Object.entries(data).every(([key,value])=>node.dataset[key]===value))?.click()).catch(()=>{});}
  },true);
- files.addEventListener('change',()=>{if(ready||!files.files.length)return;pendingFiles=[...files.files];warmImporter(pendingFiles.some(file=>!/\.json$/i.test(file.name)));status('已选择 '+pendingFiles.map(file=>file.name).join('、')+'，正在准备本机读取…');start();});
+ function queueFiles(list){const supported=list.filter(file=>/\.(xlsx|xls|csv|json)$/i.test(file.name));if(!supported.length){status('暂不支持这类文件，请选择 Excel（.xlsx、.xls）、CSV 或 JSON 备份。',{notice:true});files.value='';return;}pendingFiles=list;warmImporter(supported.some(file=>!/\.json$/i.test(file.name)));status('已收到 '+supported.map(file=>file.name).join('、')+'，正在准备本机读取…');start();}
+ files.addEventListener('change',()=>{if(ready||!files.files.length)return;queueFiles([...files.files]);});
  document.addEventListener('dragover',event=>{if(!ready&&event.target.closest('#drop-zone')){event.preventDefault();event.target.closest('#drop-zone').classList.add('dragover');}});
- document.addEventListener('drop',event=>{if(!ready&&event.target.closest('#drop-zone')){event.preventDefault();event.stopImmediatePropagation();pendingFiles=[...event.dataTransfer.files];warmImporter(pendingFiles.some(file=>!/\.json$/i.test(file.name)));status('已收到材料，正在准备本机读取…');start();}},true);
+ document.addEventListener('drop',event=>{if(!ready&&event.target.closest('#drop-zone')){event.preventDefault();event.stopImmediatePropagation();event.target.closest('#drop-zone').classList.remove('dragover');queueFiles([...event.dataTransfer.files]);}},true);
  window.addEventListener('hengji:ready',()=>{ready=true;},{once:true});
 })();

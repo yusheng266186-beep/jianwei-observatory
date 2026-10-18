@@ -60,10 +60,16 @@
     "test:exercise-picker-background": "node tests/exercise-picker-background.cjs",
     "test:exercise-mobile-word": "node tests/exercise-mobile-word.cjs",
     "test:exercise-center": "node tests/exercise-center.cjs",
-    "test:exercise-composer": "node tests/exercise-composer.cjs"
+    "test:exercise-composer": "node tests/exercise-composer.cjs",
+    "runtime:check": "node tools/runtime-assets.cjs",
+    "runtime:prune": "node tools/runtime-assets.cjs --apply",
+    "runtime:record": "node tools/runtime-assets.cjs record"
   },
   "devDependencies": {
     "esbuild": "0.25.11",
     "playwright": "1.62.1"
+  },
+  "engines": {
+    "node": ">=22.9.0"
   }
 }

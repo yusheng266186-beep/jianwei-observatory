@@ -177,6 +177,14 @@ function parseItems(data,workbook,XLSX,idFor,progress){
 }
 export const FLAT_FIELDS=[['name','姓名'],['studentId','学生识别码'],['classNo','班级'],['exam','考试'],['total','赋分总分'],['rawTotal','原始总分'],['track','类别'],['language','外语语种'],['cityRank','市排名'],['schoolRank','校排名'],['classRank','班级排名'],...SUBJECTS.map(s=>[s,s+'成绩'])];
 const ALIASES={studentId:identifierHeaders,name:['姓名','学生姓名','name'],classNo:['班级','班号','行政班','class','classno'],exam:['考次代码','考试代码','examid','考试','考试名称','考次','exam'],total:['赋分总分','总赋分','总分','total'],rawTotal:['原始总分','原分总分','原始分'],track:['类别','科类','track'],language:['外语语种','语种','language'],cityRank:['市赋名','市排名','市名次','全市名次','市原名','cityrank'],schoolRank:['校赋名','校排名','校名次','校排','校内排名','年级排名','年级名次','校原名','schoolrank'],classRank:['班赋名','班级排名','班排名','班排','班内排名','班原名','classrank']};
+function flatRankMapping(headers){
+ const scopes={全市:'cityRank',市级:'cityRank',市内:'cityRank',市:'cityRank',学校:'schoolRank',校内:'schoolRank',校:'schoolRank',年级:'schoolRank',班级:'classRank',班内:'classRank',班:'classRank'},selected={};
+ headers.forEach((label,column)=>{
+  const text=label.normalize('NFKC').replace(/[\s()]/g,''),match=text.match(/^(?:总分)?(?:原始分|原分|赋分)?(全市|市级|市内|市|学校|校内|校|年级|班级|班内|班)(?:原始分|原分|赋分|原|赋)?(?:排名|名次|排|名)(?:原始分|原分|赋分)?$/),scope=match?scopes[match[1]]:['cityRank','schoolRank','classRank'].find(key=>ALIASES[key].includes(text.toLowerCase()));
+  if(!scope)return;const priority=/赋/.test(text)?3:/原/.test(text)?1:2;
+  if(!selected[scope]||priority>selected[scope].priority)selected[scope]={column,label,priority};
+ });return selected;
+}
 export function detectFlat(rows){
  const headerRow=rows.findIndex(r=>r.some(c=>['姓名','学生姓名','name'].includes(txt(c).toLowerCase())));
  const rowIndex=headerRow<0?0:headerRow,headers=(rows[rowIndex]||[]).map(txt),mapping={};
@@ -184,6 +192,7 @@ export function detectFlat(rows){
   const aliases=ALIASES[key]||[key,key+'成绩',key+'赋分',key+'折合分',key+'折合成绩'];
   mapping[key]=['schoolRank','classRank','cityRank','exam'].includes(key)?aliases.map(alias=>headers.findIndex(h=>h.toLowerCase()===alias)).find(i=>i>=0)??-1:headers.findIndex(h=>aliases.includes(h.toLowerCase()));if(mapping[key]<0)mapping[key]=null;
  }
+ const rankCandidates=flatRankMapping(headers);for(const key of ['cityRank','schoolRank','classRank'])mapping[key]=rankCandidates[key]?.column??null;
  for(const subject of SUBJECTS){const column=headers.findIndex(header=>[subject+'原分',subject+'原始分',subject+'原始成绩'].includes(header));mapping['raw:'+subject]=column<0?null:column;}
  return {headers,mapping,headerRow:rowIndex,preview:rows.slice(rowIndex+1,rowIndex+6)};
 }
