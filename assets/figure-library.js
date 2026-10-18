@@ -1,3 +1,5 @@
+import {installDisclosures} from '../app/ui/disclosure-motion.js';
+installDisclosures();
 import {openSurface,closeSurface} from '../app/ui/surface-motion.js';
 import {scienceFigureSamples} from '../app/engine/exercise-figure-samples.js';
 import {exerciseDiagramSVG} from '../app/io/exercise-diagram.js';

@@ -1,10 +1,11 @@
+import {interfaceIcon} from './icons.js';
 export const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export const number=(value,digits=1)=>typeof value==='number'&&Number.isFinite(value)?value.toLocaleString('zh-CN',{minimumFractionDigits:digits,maximumFractionDigits:digits}):'—';
 export const integer=value=>number(value,0);
 export const percent=value=>typeof value==='number'&&Number.isFinite(value)?number(value*100,1)+'%':'—';
 export const signed=(value,digits=1)=>typeof value==='number'&&Number.isFinite(value)?(value>0?'+':'')+number(value,digits):'—';
 export const attrs=values=>Object.entries(values).map(([key,value])=>' data-'+key+'="'+esc(value)+'"').join('');
-export function button(label,cmd,values={},style='quiet',extra='') {return '<button type="button" class="button '+style+'" data-cmd="'+cmd+'"'+attrs(values)+' '+extra+'>'+label+'</button>';}
+export function button(label,cmd,values={},style='quiet',extra='') {if(style.split(' ').includes('icon-only')&&['×','✕','✖'].includes(label)){if(!extra.includes('aria-label='))extra+=' aria-label="'+(cmd.includes('remove')?'移除':'关闭')+'"';label=interfaceIcon('close');}return '<button type="button" class="button '+style+'" data-cmd="'+cmd+'"'+attrs(values)+' '+extra+'>'+label+'</button>';}
 export function chips(key,options,value,multi=false) {return '<div class="chips" role="group">'+options.map(option=>{const [id,label]=Array.isArray(option)?option:[option,option];const on=multi?value.includes(id):String(value)===String(id);return button(esc(label),multi?'toggle':'set',{key,value:id},on?'chip selected':'chip','aria-pressed="'+on+'"');}).join('')+'</div>';}
 export function examChips(atlas,key,exams,value) {
   const known=new Set(atlas.exams.map(exam=>exam.id));
@@ -17,7 +18,7 @@ export const badge=(label,style='')=>'<span class="badge '+style+'">'+esc(label)
 export const empty=(title,detail='')=>'<div class="empty"><span class="empty-symbol">＋</span><h3>'+esc(title)+'</h3><p>'+esc(detail)+'</p></div>';
 export function head(kicker,title,detail='',actions='') {return '<header class="scene-head"><div><div class="overline">'+esc(kicker)+'</div><h1>'+esc(title)+'</h1><p>'+esc(detail)+'</p></div><div class="head-actions">'+actions+'</div></header>';}
 export function table(headers,rows,{className='',label='分析明细'}={}) {
-  const key=(label+'|'+headers.join('|')).split('').reduce((h,c)=>Math.imul(h^c.charCodeAt(0),16777619),2166136261)>>>0,editable=rows.some(row=>row.some(cell=>/<(?:input|textarea|select)\b/i.test(String(cell)))),tools='<div class="table-tools"><span>'+rows.length+' 行 <i>·</i> '+headers.length+' 列</span><div><button class="table-shift" data-cmd="table-shift" data-direction="-1" aria-label="向左查看表格">←</button><button class="table-shift" data-cmd="table-shift" data-direction="1" aria-label="向右查看表格">→</button>'+(!editable?button('展开阅读 ↗','table-open',{},'table-expand'):'')+'</div></div>';
+  const key=(label+'|'+headers.join('|')).split('').reduce((h,c)=>Math.imul(h^c.charCodeAt(0),16777619),2166136261)>>>0,editable=rows.some(row=>row.some(cell=>/<(?:input|textarea|select)\b/i.test(String(cell)))),tools='<div class="table-tools"><span>'+rows.length+' 行 <i>·</i> '+headers.length+' 列</span><div><button class="table-shift" data-cmd="table-shift" data-direction="-1" aria-label="向左查看表格">'+interfaceIcon('left')+'</button><button class="table-shift" data-cmd="table-shift" data-direction="1" aria-label="向右查看表格">'+interfaceIcon('right')+'</button>'+(!editable?button('展开阅读 ↗','table-open',{},'table-expand'):'')+'</div></div>';
   return '<div class="table-frame" data-table-key="'+key+'" data-render-key="table-'+key+'">'+tools+'<div class="table-scroll '+className+'" tabindex="0" role="region" aria-label="'+esc(label)+'"><table aria-label="'+esc(label)+'"><thead><tr>'+headers.map(h=>'<th scope="col">'+esc(h)+'</th>').join('')+'</tr></thead><tbody>'+rows.map(row=>{const id=String(row[0]||'').match(/data-sid="([^"]+)"/);return '<tr'+(id?' data-motion-key="row-'+id[1]+'"':'')+'>'+row.map(cell=>'<td>'+String(cell??'—')+'</td>').join('')+'</tr>';}).join('')+'</tbody></table></div><div class="table-overflow-note" aria-hidden="true"><span>左右滚动，查看其余列</span><i></i></div></div>';
 }
 
