@@ -2,11 +2,23 @@ export const pendingJob=record=>['submitting','unconfirmed','queued','running'].
 export const pendingImages=record=>Object.values(record.imageJobs||{}).some(pendingJob);
 export function jobState(record){if(record.status==='prepared')return 'prepared';if(pendingJob(record))return 'pending';if(pendingImages(record))return 'pending';if(record.status==='ready'&&record.sheet)return record.reviewedAt?'reviewed':'ready';return 'failed';}
 export function jobStateLabel(record){if(record.status==='running'&&record.progress?.phase)return ({connecting:'正在连接模型',thinking:'模型正在推演',writing:'正在输出练习',validating:'正在校验成稿','figure-planning':'正在规划图示','figure-rendering':'正在绘制图示','figure-reviewing':'正在核对图题'}[record.progress.phase]||'模型生成中');if(pendingImages(record)&&!pendingJob(record))return '图示生成中';return {prepared:'等待提交',submitting:'正在确认提交',unconfirmed:'提交待确认',queued:'后台排队中',running:'模型生成中',failed:'生成未完成',ready:record.reviewedAt?'已审题':'待审题'}[record.status]||'等待查询';}
-export const jobSnapshotCurrent=(record,data)=>!Number.isFinite(record.groupRevision)||!Number.isFinite(data.groupRevision)||data.groupRevision>=record.groupRevision;
+const figureRevisionOf=value=>Number.isFinite(value?.figureRevision)?value.figureRevision:Number.isFinite(value?.progress?.figureRevision)?value.progress.figureRevision:undefined;
+export const jobSnapshotCurrent=(record,data)=>{
+ if(Number.isFinite(record.groupRevision)&&Number.isFinite(data.groupRevision)&&data.groupRevision<record.groupRevision)return false;
+ const current=figureRevisionOf(record),incoming=figureRevisionOf(data);
+ if(Number.isFinite(current)&&Number.isFinite(incoming)&&incoming<current)return false;
+ // A completed sheet never rolls back to a pending snapshot unless a newer
+ // figure revision explicitly says otherwise.
+ if(record.status==='ready'&&data.status&&data.status!=='ready'&&!(Number.isFinite(current)&&Number.isFinite(incoming)&&incoming>current))return false;
+ return true;
+};
 export function mergeJobSnapshot(record,data,at=Date.now()){
  if(!jobSnapshotCurrent(record,data))return false;
- const snapshot=()=>JSON.stringify([record.status,record.failure,record.syncIssue,record.startedAt,record.finishedAt,record.model,record.provider,record.reasoningEffort,record.resumeAvailable,record.completedQuestions,record.groupIndex,record.groupCount,record.groupRevision,record.figurePipeline,record.figureStage,record.figureRevision]),old=snapshot();
- record.figurePipeline=!!data.figurePipeline;for(const field of ['figureStage','figureQuestion','figureCompleted','figureTotal','figureRevision'])if(data[field]!==undefined)record[field]=data[field];record.status=data.status;record.resumeAvailable=!!data.resumeAvailable;for(const field of ['completedQuestions','groupIndex','groupCount','groupRevision'])if(Number.isFinite(data[field]))record[field]=data[field];record.lastCheckedAt=at;if(data.progress&&typeof data.progress==='object')record.progress=data.progress;record.syncIssue='';
+ const incomingRevision=figureRevisionOf(data),revision=Number.isFinite(incomingRevision)?incomingRevision:figureRevisionOf(record);
+ const snapshot=()=>JSON.stringify([record.status,record.failure,record.syncIssue,record.startedAt,record.finishedAt,record.model,record.provider,record.reasoningEffort,record.resumeAvailable,record.completedQuestions,record.groupIndex,record.groupCount,record.groupRevision,record.figurePipeline,record.figureStage,record.figureRevision,record.progress?.figureRevision]),old=snapshot();
+ record.figurePipeline=!!data.figurePipeline;for(const field of ['figureStage','figureQuestion','figureCompleted','figureTotal','figureRevision'])if(data[field]!==undefined)record[field]=data[field];record.status=data.status;record.resumeAvailable=!!data.resumeAvailable;for(const field of ['completedQuestions','groupIndex','groupCount','groupRevision'])if(Number.isFinite(data[field]))record[field]=data[field];record.lastCheckedAt=at;if(data.progress&&typeof data.progress==='object')record.progress=data.progress;
+ if(Number.isFinite(revision)){record.figureRevision=revision;if(!record.progress||typeof record.progress!=='object')record.progress={};record.progress.figureRevision=revision;}
+ record.syncIssue='';
  for(const field of ['startedAt','finishedAt','serverTime','deadlineAt'])if(Number.isFinite(data[field]))record[field]=data[field];
  for(const field of ['model','provider','reasoningEffort'])if(typeof data[field]==='string')record[field]=data[field];
  if(Number.isFinite(data.createdAt))record.serverCreatedAt=data.createdAt;

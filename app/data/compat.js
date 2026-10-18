@@ -1,5 +1,6 @@
 import {repairSourceRanks} from './rank-repair.js?v=runtime-v45';
 import {repairStudentIdentities} from './identity.js?v=runtime-v45';
+import {mergeDuplicateScores,mergeDuplicateAnswers} from './merge-policy.js?v=runtime-v45';
 // Workbook exchange format only. Research queries live in engine/atlas.js.
 export const SUBJECTS = ['语文','数学','英语','日语','物理','历史','化学','生物','政治','地理'];
 export const EXAM_ORDER = ['入口','1册','21','2册','33','3册','41','4半','4月','43','4册','51','52'];
@@ -11,8 +12,19 @@ export function normalizeDataset(data) {
   for(const key of ['students','scores','answers','lines','exams','sheets']) data[key] ||= [];
   data.profiles ||= {}; data.banks ||= {};
   repairStudentIdentities(data);
-  data.scores=[...new Map(data.scores.map(r=>[`${r.exam}|${r.classNo}|${r.sid}`,r])).values()];
-  data.answers=[...new Map(data.answers.map(r=>[`${r.exam}|${r.classNo}|${r.sid}|${r.subject}`,r])).values()];
+  // A duplicate key must never be decided by "last row wins": blanks
+  // supplement, real 0 updates, and disagreements are kept visible.
+  const scores=mergeDuplicateScores(data.scores),answers=mergeDuplicateAnswers(data.answers);
+  data.scores=scores.records;data.answers=answers.records;
+  const reviews=[...(scores.reviews||[]),...(answers.reviews||[])];
+  if(reviews.length)data.importConflicts=[...(data.importConflicts||[]),...reviews];
+  const conflicts=[...scores.conflicts,...answers.conflicts];
+  if(conflicts.length){
+    const names=new Map(data.students.map(person=>[person.id,person.name]));
+    const seen=new Set((data.mergeConflicts||[]).map(item=>item.key));
+    const added=conflicts.filter(item=>!seen.has(item.key)).map(item=>({...item,name:names.get(item.sid)||''}));
+    if(added.length)data.mergeConflicts=[...(data.mergeConflicts||[]),...added];
+  }
   data.exams.sort((a,b)=>(a.order??99)-(b.order??99)||String(a.id).localeCompare(String(b.id),'zh',{numeric:true}));
   for(const no of new Set(data.scores.map(r=>r.classNo))) data.profiles[no]={...classDefaults(no),...data.profiles[no]};
   return repairSourceRanks(data);

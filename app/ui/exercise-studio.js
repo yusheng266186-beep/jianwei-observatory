@@ -19,6 +19,9 @@ import {exerciseProgressHTML,visibleExerciseProgress,generationActivity,generati
 import {exerciseRoster} from '../engine/exercise-roster.js';
 import {createExerciseCenter} from './exercise-center.js';
 import {pendingJob,pendingImages,jobStateLabel,jobTiming,jobConnection,mergeJobSnapshot,jobSnapshotCurrent} from '../engine/exercise-jobs.js';
+import {createImageJob,imageJobBusy,imageReplayBody,applyImagePayload} from './exercise-image-jobs.js';
+import {createCenterTicker} from './center-ticker.js';
+import {hydrateJobArtifacts} from './job-artifacts.js';
 import {button,esc,number} from './html.js';
 import {renderInto} from './render.js';
 import {enhance} from './interactions.js';
@@ -38,7 +41,6 @@ import {clearExerciseFiles,removeExerciseFiles} from '../io/exercise-file-cache.
 import {warmPDFWorker} from '../io/pdf-runtime.js';
 const action=(label,id,style='outline',extra='')=>'<button type="button" class="button '+style+'" data-ai-action="'+id+'" '+extra+'>'+esc(label)+'</button>';
 const messages={MODEL_UPSTREAM_TIMEOUT:'中转站等待上游模型超时，未返回完整练习。可稍后重试，或在模型工作台选择其他服务',MODEL_CONNECTION_LOST:'上游模型连接中断，生成记录已保留。可在模型工作台测试连接或选择其他服务后重新生成',MODEL_OUTPUT_LIMIT:'模型返回内容过长，未形成可用的完整练习。可调整训练范围或思考强度后重新生成',MODEL_BAD_RESPONSE:'上游模型返回的数据格式异常，生成记录已保留，可重新生成或测试连接',USAGE_BUSY:'任务提交较多，正在核对本次提交，请稍后继续查询',MODEL_BALANCE_REQUIRED:'当前出题服务余额不足，请在模型工作台选择其他服务，或充值后重试',MODEL_SUBSCRIPTION_EXPIRED:'当前出题服务套餐已到期，请在模型工作台更换服务，或续订后重试',MODEL_AUTH_FAILED:'当前出题服务验证未通过，请在模型工作台检查连接或更换服务',AUTH_REQUIRED:'请输入动态码验证教师访问',AUTH_EXPIRED:'教师访问已到期，请重新验证',AUTH_INVALID:'动态码不正确或已过期，请输入认证器当前的6位数字',AUTH_REPLAY:'这组动态码已使用，请等待认证器更新后再验证',AUTH_RATE_LIMIT:'验证次数较多，请稍后再试',DAILY_LIMIT:'已达到今日出题上限，可在模型工作台调整次数或清零；已保存练习仍可使用',QUEUE_UNAVAILABLE:'任务尚未确认进入后台，点击继续查询会核对同一任务',MODEL_RATE_LIMIT:'模型暂时繁忙，请稍后新建训练',MODEL_INCOMPLETE:'模型未完成整份练习，请重新生成',MODEL_CONTENT_INVALID:'题目未通过完整性校验，请重新生成',JOB_EXPIRED:'本次生成未完成，请新建训练',JOB_NOT_FOUND:'后台任务已过保存期限，本地已有练习仍可查看',IMAGE_UNAVAILABLE:'复杂插图服务暂时不可用，可改用SVG图示重新出题',IMAGE_REQUEST_FAILED:'复杂插图未完成，已生成题目仍保留',IMAGE_RESPONSE_INVALID:'插图格式未通过校验，已生成题目仍保留',IMAGE_RATE_LIMIT:'生图服务暂时繁忙，请稍后继续查询',SERVICE_UNAVAILABLE:'出题服务暂时不可用，请稍后重试',TRAINING_INPUT_INVALID:'请核对训练目标、题数、时长与考试依据后重新提交',REQUEST_ID_CONFLICT:'这份任务的提交内容已变化，请新建训练',MODEL_REQUEST_FAILED:'模型服务未完成请求，可稍后新建训练',NETWORK_TIMEOUT:'本次生成超过服务等待时间，请稍后新建训练',GENERATION_FAILED:'本次练习未能完成，请稍后新建训练'};
-const figureSourceHash=q=>JSON.stringify([q.stem,q.choices,q.answer,q.analysis,q.points]);
 const phases={submitting:'正在确认提交',unconfirmed:'提交待确认',queued:'等待生成',running:'正在生成',ready:'待审题',failed:'生成未完成'};
 export function createExerciseStudio({notify,show,close,onAttach,onFeedback=()=>{},getAtlas}){
  const dialog=document.getElementById('exercise-dialog'),root=document.getElementById('exercise-content');let loading,records=[],context=null,current=null,loaded=false,epoch=0,request={},error='',fieldErrors={},busy=false,waitTicker=0,timer=0,drawing=0,saving=Promise.resolve(),saveTimer,polling;
@@ -51,7 +53,7 @@ export function createExerciseStudio({notify,show,close,onAttach,onFeedback=()=>
  function draftStatusText(value){draftStatus=value;const node=root.querySelector('[data-ai-draft-status]');if(node)node.textContent=value||'本次设置自动暂存';}
  function persistComposer(){clearTimeout(composerTimer);if(!loaded||!composerDirty.size)return composerSaving;const generation=epoch,changes=structuredClone([...composerDirty]);composerDirty.clear();composerSaving=composerSaving.catch(()=>{}).then(()=>generation===epoch?update('exerciseComposerDrafts',saved=>mergeExerciseComposer(saved,changes)):undefined);composerSaving.then(()=>{if(generation===epoch)draftStatusText(composerDirty.size?'正在暂存…':'已自动暂存');},()=>{if(generation===epoch){for(const [key,value] of changes)if(!composerDirty.has(key))composerDirty.set(key,value);draftStatusText('暂存未完成，请保存草稿后再离开');}});return composerSaving;}
  function scheduleComposer(){clearTimeout(composerTimer);draftStatusText('正在暂存…');composerTimer=setTimeout(()=>persistComposer().catch(()=>{}),500);}
- function rememberDraft({read=dialog.open}={}){if(context&&request.subject&&root.querySelector('[data-ai-field=focus]')){if(read)readInputs();const key=draftKey(request.subject);drafts.set(key,request);drafts.markApplied(key,appliedSetupKey===key);drafts.saveFocus(key,basisSelection(),request.focus);const value={request:structuredClone(request),basis:structuredClone(basisSelection()),applied:appliedSetupKey===key,focuses:drafts.serialize().focuses.filter(([focusKey])=>{try{return JSON.parse(focusKey)[0]===key;}catch{return false;}})},stamp=JSON.stringify(value);if(composerStamps.get(key)===stamp)return;composerStamps.delete(key);composerStamps.set(key,stamp);while(composerStamps.size>60)composerStamps.delete(composerStamps.keys().next().value);composerDirty.set(key,value);scheduleComposer();}}
+ function rememberDraft({read=dialog.open}={}){if(current?.sheet)return;if(context&&request.subject&&root.querySelector('[data-ai-field=focus]')){if(read)readInputs();const key=draftKey(request.subject);basisSelections.set(key,structuredClone(basisSelection()));drafts.set(key,request);drafts.markApplied(key,appliedSetupKey===key);drafts.saveFocus(key,basisSelection(),request.focus);const value={request:structuredClone(request),basis:structuredClone(basisSelection()),applied:appliedSetupKey===key,focuses:drafts.serialize().focuses.filter(([focusKey])=>{try{return JSON.parse(focusKey)[0]===key;}catch{return false;}})},stamp=JSON.stringify(value);if(composerStamps.get(key)===stamp)return;composerStamps.delete(key);composerStamps.set(key,stamp);while(composerStamps.size>60)composerStamps.delete(composerStamps.keys().next().value);composerDirty.set(key,value);scheduleComposer();}}
  function revealSetup(editing){
   const node=root.querySelector(editing?'[data-ai-setup-name]':'.exercise-setup-feedback');if(!node||!node.textContent.trim()&&!editing)return;
   for(let parent=node.parentElement;parent&&parent!==root;parent=parent.parentElement)if(parent.tagName==='DETAILS')parent.open=true;
@@ -79,7 +81,7 @@ export function createExerciseStudio({notify,show,close,onAttach,onFeedback=()=>
    const captured=snapshot();let changed=false;const saved=await update('exercises',latest=>{const value=mergeExerciseRecords(baseline,captured,latest||[],{removed:preference('exerciseRemoved',[])});changed=JSON.stringify(value)!==JSON.stringify(latest||[]);return value;});
    if(generation!==epoch)return saved;
    const settled=settleExerciseRecords(records,captured,saved);records=settled.rows;baseline=settled.baseline;if(current&&!records.includes(current)){current=null;context=null;selecting=true;renderedReview=null;}else if(current?.sheet)request=structuredClone(current.request);
-   saveConflict=null;externalChange=false;remember('exercisePending',records.some(r=>pendingJob(r)||pendingImages(r)));center.render();syncNotice();if(changed)signalSaved();return saved;
+   saveConflict=null;externalChange=false;remember('exercisePending',records.some(r=>pendingJob(r)||pendingImages(r)));center.render();syncCenterTicker();syncNotice();if(changed)signalSaved();return saved;
   });
   saving.catch(e=>{if(generation!==epoch)return;if(e.code==='EXERCISE_SAVE_CONFLICT'){saveConflict=e;syncNotice();notify(e.message);}else notify('练习的本机保存未完成，请先保留当前页面并重试。');});
   return saving;
@@ -91,8 +93,69 @@ export function createExerciseStudio({notify,show,close,onAttach,onFeedback=()=>
  const batchPicker=createExerciseBatchPicker({root,getAtlas,getRequest:()=>request,getContext:()=>context,readInputs:()=>readInputs(),create:async sids=>{if(!settings.token||settings.expires<Date.now())throw new Error('请先验证教师访问，再建立训练队列');validateDraft();const result=prepareExerciseBatch(getAtlas(),request,sids,{exam:context.exam,mode:basisSelection().mode,examCount:basisSelection().exams.length,exams:basisSelection().exams,service:settings.url});if(!result.records.length)throw new Error('所选学生缺少该训练模式所需依据，请更换考试或使用教师自定目标。');records.push(...result.records);await persist();const sent=await submitPrepared(result.records.map(r=>r.id));return '已建立'+result.records.length+'人队列，确认提交'+(sent||0)+'份'+(result.skipped.length?'；'+result.skipped.length+'人未加入：'+result.skipped.slice(0,5).map(r=>getAtlas().name(r.sid)+'（'+r.reason+'）').join('、')+(result.skipped.length>5?'等':''):'')+'。可在试题中心查看、继续提交或删除。';}});
  const wheels=installExerciseWheels(root,(field,value)=>{request[field]=value;delete fieldErrors[field];root.querySelector('#exercise-'+field+'-error')?.remove();root.querySelector('[data-exercise-wheel="'+field+'"]')?.removeAttribute('aria-invalid');updateSelectionSummary();rememberDraft();});
  const rememberSettings=()=>remember('exerciseConnection',settings);
- const api=async(path,{method='GET',body,id}={})=>{const generation=epoch,session=settings.token;if(navigator.onLine===false)throw Object.assign(new Error('当前离线，联网后将自动同步原任务'),{code:'OFFLINE'});const base=new URL(exerciseServiceURL);if(!['https:','http:'].includes(base.protocol)||base.username||base.password||base.search||base.hash||base.pathname!=='/'||base.protocol==='http:'&&!['127.0.0.1','localhost'].includes(base.hostname))throw new Error('出题服务配置无效，请联系维护人员');const response=await fetch(base.origin+path,{method,headers:{'Content-Type':'application/json',...(settings.token?{Authorization:'Bearer '+settings.token}:{}),...(id?{'X-Request-ID':id}:{})},...(body?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(20000)});let data;try{data=await response.json();}catch{throw new Error('出题服务返回了无效响应');}if(generation!==epoch||session!==settings.token)throw Object.assign(new Error('访问状态已更新'),{code:'SESSION_CHANGED'});if(!response.ok){if(response.status===401){settings.token='';rememberSettings();}throw Object.assign(new Error(messages[data.error]||'出题服务未能完成请求'),{code:data.error});}return data;};
+ const api=async(path,{method='GET',body,id}={})=>{const generation=epoch,session=settings.token;if(navigator.onLine===false)throw Object.assign(new Error('当前离线，联网后将自动同步原任务'),{code:'OFFLINE'});const base=new URL(exerciseServiceURL);if(!['https:','http:'].includes(base.protocol)||base.username||base.password||base.search||base.hash||base.pathname!=='/'||base.protocol==='http:'&&!['127.0.0.1','localhost'].includes(base.hostname))throw new Error('出题服务配置无效，请联系维护人员');const response=await fetch(base.origin+path,{method,headers:{'Content-Type':'application/json',...(settings.token?{Authorization:'Bearer '+settings.token}:{}),...(id?{'X-Request-ID':id}:{})},...(body?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(20000)});let data;try{data=await response.json();}catch{throw new Error('出题服务返回了无效响应');}if(generation!==epoch||session!==settings.token)throw Object.assign(new Error('访问状态已更新'),{code:'SESSION_CHANGED'});if(!response.ok){if(response.status===401){settings.token='';rememberSettings();}throw Object.assign(new Error(messages[data.error]||'出题服务未能完成请求'),{code:data.error});}return method==='GET'&&/^\/jobs\/[a-f0-9-]{36}$/.test(path)?hydrateJobArtifacts(data,suffix=>api(path+'/'+suffix)):data;};
  const eligible=()=>records.filter(r=>r.status!=='prepared'&&r.sid===context.sid&&r.exam===context.exam&&r.request?.subject===request.subject);
+const imageLocks=new Set();
+const imageLockKey=(record,qid)=>String(record.localCopyOf||record.id)+'|'+qid;
+function beginImageJob(record,question,{type}){
+ const key=imageLockKey(record,question.id);
+ if(imageLocks.has(key)||imageJobBusy(record,question.id))return null;
+ imageLocks.add(key);
+ let job;try{job=createImageJob(record,{questionId:question.id,type,question});}catch(error){imageLocks.delete(key);throw error;}
+ record.imageJobs||={};record.imageJobs[question.id]=job;record.reviewedAt=null;
+ return {job,key};
+}
+async function absorbImageJob(record,job){
+ const generation=epoch;
+ try{
+  const data=await api('/jobs/'+job.id);
+  if(generation!==epoch||!records.includes(record)||record.removed||!jobSnapshotCurrent(job,data))return false;
+  const changed=mergeJobSnapshot(job,data),applied=applyImagePayload(record,job,data);
+  if(data.error&&!job.stale)job.failure=data.failureDetail||messages[data.error]||'图示生成未完成';
+  return changed||applied.changed;
+ }catch(error){
+  if(generation!==epoch||!records.includes(record)||record.removed)return false;
+  const recovery=exerciseImageRecovery(job,error.code);
+  if(recovery==='failed'){job.status='failed';job.failure=error.code==='JOB_REMOVED'?'该插图任务已删除，可重新安排图示。':'插图任务已过保存期限，可重新安排图示。';return true;}
+  job.syncIssue=(error.code||'').startsWith('AUTH_')?'auth':error.code==='OFFLINE'?'offline':'network';
+  job.failure=error.message;return true;
+ }
+}
+const imageFailureCodes=new Set(['DAILY_LIMIT','TRAINING_INPUT_INVALID','IMAGE_SOURCE_INVALID','AUTH_REQUIRED','AUTH_INVALID','AUTH_EXPIRED','REQUEST_ID_CONFLICT','JOB_REMOVED','JOB_EXPIRED','IMAGE_RESPONSE_INVALID','MODEL_BALANCE_REQUIRED','MODEL_SUBSCRIPTION_EXPIRED','MODEL_AUTH_FAILED']);
+async function submitImageJob(record,{job,key},endpoint,{generation,source}){
+ try{
+  await persist();
+  if(generation!==epoch||!records.includes(record))return;
+  await draw();
+  const sent=await api(endpoint,{method:'POST',body:job.submission,id:job.id});
+  if(generation!==epoch||!records.includes(record))return;
+  if(sent?.id)job.id=sent.id;
+  mergeJobSnapshot(job,sent);
+  if(sent?.status==='ready'){
+   // A reused task can already be complete. Keep the local job pending until
+   // its payload is actually read, instead of showing a bare success state.
+   job.status='running';job.failure='图示已生成，正在读取结果…';
+   await persist();
+   if(await absorbImageJob(record,job))await persist();
+  }else{
+   if(sent?.status==='failed')job.failure=sent.failureDetail||messages[sent.error]||'图示生成未完成，请重新绘图。';
+   else if(sent?.error||sent?.failureDetail)job.failure=sent.failureDetail||messages[sent.error]||'图示生成未完成';
+   else delete job.failure;
+   await persist();
+  }
+ }catch(cause){
+  if(generation!==epoch)return;
+  if(imageFailureCodes.has(cause.code)){job.status='failed';job.failure=cause.message;delete job.syncIssue;}
+  else{job.status='unconfirmed';job.failure='提交结果尚未确认，正在自动核对同一任务。';job.syncIssue='network';}
+  await persist().catch(()=>{});
+  if(source===context)error=cause.message;
+  if(generation===epoch&&dialog.open&&!selecting&&current===record)await draw();
+  if(source===context)revealFeedback('error');
+ }finally{
+  imageLocks.delete(key);
+ }
+ if(generation===epoch&&records.includes(record))await poll().catch(()=>{});
+}
  const subjects=()=>{const available=exerciseSubjects(getAtlas(),context);return available.length?available:EXERCISE_SUBJECTS.map(s=>s.id);};
  const draftKey=subject=>exerciseDraftKey(context,subject);
  function makeRequest(subject){const plan=context.plan?.training?.key===subject+'|'+context.exam?context.plan:null,analysed=analyzeExerciseBasis(getAtlas(),{...context,subject,plan,mode:'latest'}),evidence=analysed.evidence,focus=plan?.training?.goal||[...new Set(evidence.flatMap(e=>e.knowledge.split(/[,，;；]/)).filter(Boolean))].slice(0,3).join('、');return {subject,grade:'高三',examStyle:'sichuan-gaokao',curriculum:'',focus,count:Math.min(12,Math.max(3,Number(plan?.training?.count)||6)),minutes:Math.min(90,Math.max(5,Number(plan?.schedule?.duration)||15)),difficulty:'基础巩固',evidence,basis:analysed.basis,visuals:'none',template:'targeted'};}
@@ -142,10 +205,11 @@ export function createExerciseStudio({notify,show,close,onAttach,onFeedback=()=>
  async function removeRecords(ids){await persist();removedIds.clear();for(const id of preference('exerciseRemoved',[]))removedIds.add(id);deletionQueue=[...new Set(preference('exerciseDeletionQueue',[]))];const chosen=new Set(ids),removed=records.filter(r=>chosen.has(r.id));if(!removed.length)return;removalDeadline=Date.now()+12000;remember('exerciseDeletionAfter',removalDeadline);clearTimeout(removalTimer);for(const r of removed){pendingRemovals.set(r.id,r);r.removed=true;removedIds.add(r.id);deletionQueue.push(...(r.localCopyOf?[]:[r.id]),...Object.values(r.imageJobs||{}).map(j=>j.id));}deletionQueue=[...new Set(deletionQueue)];remember('exerciseRemoved',[...removedIds]);remember('exerciseDeletionQueue',deletionQueue);records=records.filter(r=>!chosen.has(r.id));if(current&&chosen.has(current.id)){current=null;context=null;selecting=true;clearInterval(waitTicker);if(dialog.open)await close(dialog);}await persist();await removeExerciseFiles(removed);removalTimer=setTimeout(()=>{pendingRemovals.clear();center.render();poll().catch(()=>{});},Math.max(0,removalDeadline-Date.now()));}
  async function undoRemovals(){if(Date.now()>=removalDeadline)return false;clearTimeout(removalTimer);const ids=new Set();for(const record of pendingRemovals.values()){delete record.removed;removedIds.delete(record.id);ids.add(record.id);for(const job of Object.values(record.imageJobs||{}))ids.add(job.id);if(!records.some(r=>r.id===record.id))records.push(record);}pendingRemovals.clear();const freshRemoved=new Set(preference('exerciseRemoved',[]));for(const id of ids)freshRemoved.delete(id);removedIds.clear();for(const id of freshRemoved)removedIds.add(id);deletionQueue=preference('exerciseDeletionQueue',[]).filter(id=>!ids.has(id));remember('exerciseRemoved',[...removedIds]);remember('exerciseDeletionQueue',deletionQueue);await persist();poll().catch(()=>{});return true;}
  const center=createExerciseCenter({records:()=>records,getAtlas,authed:()=>settings.token&&settings.expires>Date.now(),onOpen:openRecord,onNew:async()=>{await loadRecords();selecting=true;context=null;current=null;const opening=show(dialog);await drawPicker();await opening;startAtTop();loadTemplates();},onRefresh:async()=>{await persist();return poll();},onLogin:login,onDelete:removeRecords,onClearCache:clearExerciseFiles,onUndo:undoRemovals,onSubmit:ids=>submitPrepared(ids),canUndo:()=>pendingRemovals.size>0&&Date.now()<removalDeadline});
- const centerTicker=setInterval(()=>center.times(),1000);
- const reconnect=()=>{center.render();updateWaiting();if(loaded)poll().catch(()=>{});};
+ const centerTicker=createCenterTicker({tick:()=>center.times(),needed:()=>records.some(r=>pendingJob(r)||pendingImages(r)),visible:()=>!document.hidden,mounted:()=>{const node=document.querySelector('#exercise-center [data-center-time]');return !!node&&node.getClientRects().length>0;}});
+ const syncCenterTicker=()=>centerTicker.sync();
+ const reconnect=()=>{center.render();syncCenterTicker();updateWaiting();if(loaded)poll().catch(()=>{});};
  window.addEventListener('storage',async event=>{if(!loaded||event.key!==workspaceStorage(location.pathname).prefix+'exerciseRevision')return;const generation=epoch;try{if(!dialog.open){await persist();return;}const latest=await access('exercises');if(generation!==epoch||!current)return;const saved=(latest||[]).find(r=>r.id===current.id),old=baseline.find(r=>r.id===current.id);if(old&&(!saved||exerciseDocumentVersion(saved)!==exerciseDocumentVersion(old)||JSON.stringify(saved.practiceFeedback)!==JSON.stringify(old.practiceFeedback))){externalChange=true;syncNotice();}}catch{}});
- window.addEventListener('online',reconnect);window.addEventListener('offline',()=>{center.render();updateWaiting();});document.addEventListener('visibilitychange',()=>{if(!document.hidden)reconnect();else if(loaded)persist().catch(()=>{});});
+ window.addEventListener('online',reconnect);window.addEventListener('offline',()=>{center.render();syncCenterTicker();updateWaiting();});document.addEventListener('visibilitychange',()=>{if(!document.hidden)reconnect();else if(loaded)persist().catch(()=>{});});
  function updateSelectionSummary(){
   setupShelf.refreshStatus(root);
   const labels=request.targets||[],types=request.questionTypes||[],amount=request.count+'题 · '+request.minutes+'分钟',level=difficultyProfile(request.difficulty)?.id||'基础巩固';
@@ -224,21 +288,21 @@ export function createExerciseStudio({notify,show,close,onAttach,onFeedback=()=>
   const images=authenticated&&navigator.onLine!==false?records.filter(r=>r.service===settings.url).flatMap(record=>Object.values(record.imageJobs||{}).filter(pendingJob).map(job=>({record,job}))):[];
   await syncExerciseTasks(images,async({record,job})=>{
    if(!live(record))return;
-   try{const data=await api('/jobs/'+job.id);if(!live(record))return;const figureProgressChanged=data.progress?.sequence!==job.progress?.sequence;changed=mergeJobSnapshot(job,data)||figureProgressChanged||changed;
-    if(data.diagram){const q=record.sheet?.questions.find(q=>q.id===data.questionId);if(q&&(!job.sourceHash||job.sourceHash===figureSourceHash(q))){q.diagram=data.diagram;record.figureReviewNotes=[...(record.figureReviewNotes||[]).filter(n=>n.questionId!==q.id),...(data.figureReviewNotes||[])];if(!q.figureLayout&&data.figureLayout)q.figureLayout=data.figureLayout;record.reviewedAt=null;changed=true;}else{job.failure='题干在绘图期间已修改，请按新题干重新绘图。';changed=true;}}
-    if(data.image){const q=record.sheet?.questions.find(q=>q.id===data.questionId);if(q?.diagram?.kind==='illustration'){q.diagram.image=data.image;record.reviewedAt=null;changed=true;}}
-    if(data.error){job.failure=data.failureDetail||messages[data.error]||'图示生成未完成';changed=true;}
+   try{const data=await api('/jobs/'+job.id);if(!live(record)||!jobSnapshotCurrent(job,data))return;const figureProgressChanged=data.progress?.sequence!==job.progress?.sequence;changed=mergeJobSnapshot(job,data)||figureProgressChanged||changed;
+    if(applyImagePayload(record,job,data).changed)changed=true;
+    if(data.error&&!job.stale){job.failure=data.failureDetail||messages[data.error]||'图示生成未完成';changed=true;}
    }catch(e){if(!live(record)||e.code==='SESSION_CHANGED')return;changed=true;
     const recovery=exerciseImageRecovery(job,e.code);if(recovery==='failed'){job.status='failed';job.failure=e.code==='JOB_REMOVED'?'该插图任务已删除，可重新安排图示。':'插图任务已过保存期限，可重新安排图示。';delete job.syncIssue;return;}
     job.syncIssue=(e.code||'').startsWith('AUTH_')?'auth':e.code==='OFFLINE'?'offline':'network';job.failure=e.message;
     if(recovery==='replay'){
-     try{const sent=await api(job.type==='figure'?'/figures':'/illustrations',{method:'POST',body:job.submission||{sourceId:record.id,questionId:job.questionId},id:job.id});if(!live(record))return;mergeJobSnapshot(job,sent);delete job.failure;}
-     catch(cause){if(!live(record)||cause.code==='SESSION_CHANGED')return;if(['TRAINING_INPUT_INVALID','DAILY_LIMIT','IMAGE_SOURCE_INVALID','JOB_REMOVED','JOB_EXPIRED'].includes(cause.code))job.status='failed';job.failure=cause.message;}
+     try{const sent=await api(job.type==='figure'?'/figures':'/illustrations',{method:'POST',body:imageReplayBody(job,record),id:job.id});if(!live(record))return;if(sent?.id)job.id=sent.id;mergeJobSnapshot(job,sent);if(sent?.status==='ready'){job.status='running';job.failure='图示已生成，正在读取结果…';if(await absorbImageJob(record,job))changed=true;}else delete job.failure;}
+     catch(cause){if(!live(record)||cause.code==='SESSION_CHANGED')return;if(imageFailureCodes.has(cause.code))job.status='failed';job.failure=cause.message;}
     }
    }
   },{active});
   if(generation!==epoch)return;
   if(changed)await persist();else center.times();
+  syncCenterTicker();
   if(dialog.open&&!selecting&&context){if(current?.failure)error=current.failure;if(!choices.isOpen()&&(changed||error!==previousError||current?.status!==previousStatus))await draw();else if(progressChanged){await updateLiveProgress();updateWaiting();}if(current===observed&&previousStatus!==current?.status&&['ready','failed'].includes(current?.status))revealFeedback('status');}
   const delay=exerciseSyncDelay({pending:records.some(r=>r.service===settings.url&&(pendingJob(r)||pendingImages(r))),deletions:deletionQueue.length>0,online:navigator.onLine!==false,authenticated:!!(settings.token&&settings.expires>Date.now()),hidden:document.hidden,sessionChanged:session!==settings.token});if(delay!==null)timer=setTimeout(()=>poll().catch(()=>{}),delay);
  }
@@ -279,8 +343,26 @@ export function createExerciseStudio({notify,show,close,onAttach,onFeedback=()=>
   if(cmd==='fit-count'){readInputs();request.count=Math.max(3,Math.min(12,Number(b.dataset.aiValue)||3));await draw();return;}
   if(cmd==='template'){readInputs();request.template=b.dataset.aiValue;await draw();return;}
   if(cmd==='vector-version'){request={...newExerciseDraft(current.request),visuals:'vector'};current=null;contentPicker.restore(request);await draw();startAtTop();return;}
-  if(cmd==='figure-redraw'){const record=current,q=record?.sheet?.questions.find(q=>q.id===Number(b.dataset.aiQuestion));if(!q)throw new Error('请先选择一道已有题目。');if(!settings.token||settings.expires<Date.now())throw Object.assign(new Error('请先验证教师访问，再单独绘图。'),{target:'code'});record.imageJobs||={};const question=structuredClone(q);if(question.figureLayout)delete question.figureLayout.widthPercent;if(question.diagram?.image)delete question.diagram.image;const submission={sourceId:record.localCopyOf||record.id,questionId:q.id,question},job={id:crypto.randomUUID(),type:'figure',questionId:q.id,status:'submitting',createdAt:Date.now(),sourceHash:figureSourceHash(q),submission};record.imageJobs[q.id]=job;record.reviewedAt=null;await persist();await draw();const sent=await api('/figures',{method:'POST',body:submission,id:job.id});mergeJobSnapshot(job,sent);await persist();await poll();return;}
-  if(cmd==='illustration'){const record=current,qid=Number(b.dataset.aiQuestion);if(!record?.sheet||record.request.visuals!=='hybrid')throw new Error('请先选择允许复杂插图的训练');record.imageJobs||={};const job={id:crypto.randomUUID(),questionId:qid,status:'submitting',createdAt:Date.now()};record.imageJobs[qid]=job;record.reviewedAt=null;await persist();await draw();const result=await api('/illustrations',{method:'POST',body:{sourceId:record.localCopyOf||record.id,questionId:qid},id:job.id});job.id=result.id;job.status=result.status;await persist();await poll();return;}
+  if(cmd==='figure-redraw'){
+   const record=current,q=record?.sheet?.questions.find(q=>q.id===Number(b.dataset.aiQuestion));
+   if(!q)throw new Error('请先选择一道已有题目。');if(!settings.token||settings.expires<Date.now())throw Object.assign(new Error('请先验证教师访问，再单独绘图。'),{target:'code'});
+   // The in-flight guard is taken before the first await so a rapid second
+   // click cannot replace this job or dispatch a second paid request.
+   const started=beginImageJob(record,q,{type:'figure'});
+   if(!started){error='这道题的图示正在提交或生成，完成后可再次重绘。';await draw();revealFeedback('error');return;}
+   b.disabled=true;b.textContent='正在提交…';
+   await submitImageJob(record,started,'/figures',{generation,source});return;
+  }
+  if(cmd==='illustration'){
+   const record=current,qid=Number(b.dataset.aiQuestion),q=record?.sheet?.questions.find(q=>q.id===qid);
+   if(!record?.sheet||record.request.visuals!=='hybrid')throw new Error('请先选择允许复杂插图的训练');if(!q)throw new Error('请先选择一道已有题目。');
+   // Re-plan from the current complete question. A sourceId-only illustration
+   // request would draw the old cloud stem when the teacher edited it first.
+   const started=beginImageJob(record,q,{type:'figure'});
+   if(!started){error='这道题的插图正在提交或生成，完成后可重新查看。';await draw();revealFeedback('error');return;}
+   b.disabled=true;b.textContent='正在提交…';
+   await submitImageJob(record,started,'/figures',{generation,source});return;
+  }
   if(cmd==='subject'){if(!subjects().includes(b.dataset.aiValue))return;rememberDraft();chooseSubject(b.dataset.aiValue);error='';await draw();poll().catch(e=>notify(e.message));return;}
   if(cmd==='difficulty'){readInputs();request.difficulty=b.dataset.aiValue;await draw();return;}
   if(cmd==='new'){readInputs();request=newExerciseDraft(request);current=null;if(!request.basis)applyBasis(basisSelection().mode);contentPicker.restore(request);await draw();startAtTop();return;}
@@ -292,7 +374,21 @@ export function createExerciseStudio({notify,show,close,onAttach,onFeedback=()=>
   if(['student-pdf','teacher-pdf','student-word','teacher-word'].includes(cmd)){b.disabled=true;b.textContent='正在准备文件…';const record=await exportRecord(),version=exerciseDocumentVersion(record),atlas=getAtlas(),{name:person,classNo}=exerciseIdentity(atlas,record);const isWord=cmd.endsWith('-word'),teacher=cmd.startsWith('teacher-'),builder=isWord?(await import('../io/exercise-word.js')).exerciseWord:(await import('../io/exercise-pdf.js')).exercisePDF,{download}=await import('../io/exports.js');if(generation!==epoch)return;const blob=await builder(record,{teacher,name:person,classNo});if(generation!==epoch)return;const latest=await exportRecord();if(latest.id!==record.id||exerciseDocumentVersion(latest)!==version)throw new Error('导出期间练习已有修改，请核对最新版本后再次导出。');download(blob,person+'-'+record.request.subject+'专项'+(teacher?'答案册':'练习')+(isWord?'.docx':'.pdf'));await draw();return;}
  }catch(e){if(generation!==epoch)return;busy=false;if(submittingJob){const rejected=['DAILY_LIMIT','TRAINING_INPUT_INVALID','REQUEST_ID_CONFLICT','JOB_EXPIRED','AUTH_REQUIRED','AUTH_INVALID','AUTH_EXPIRED'].includes(e.code);submittingJob.status=rejected?'failed':'unconfirmed';submittingJob.failure=rejected?e.message:'提交结果尚未确认，正在自动核对同一任务。';await persist().catch(()=>{});if(source===context)error=submittingJob.failure;if(!rejected)timer=setTimeout(()=>poll().catch(()=>{}),4000);}else if(source===context)error=e.message;if(cmd==='illustration'||cmd==='figure-redraw'||cmd==='resume')setTimeout(()=>poll().catch(()=>{}),1500);await draw();if(source===context)revealFeedback(e.target||((e.code||'').startsWith('AUTH_')?'code':submittingJob?'status':'error'));}});
  return {
-  async reset(){renderedReview=null;figureResize.finish();clearTimeout(composerTimer);await composerSaving.catch(()=>{});clearTimeout(removalTimer);pendingRemovals.clear();await clearExerciseFiles().catch(()=>{});epoch++;drawing++;busy=false;clearTimeout(timer);clearInterval(waitTicker);clearIssues();clearTimeout(saveTimer);await saving.catch(()=>{});context=null;current=null;records=[];baseline=[];saveConflict=null;externalChange=false;loaded=false;remember('exercisePending',false);center.render();drafts.clear();composerDirty.clear();composerStamps.clear();basisSelections.clear();contentPicker.clear();await write([['exerciseComposerDrafts',drafts.serialize()]]);if(dialog.open)await close(dialog);},
+  async backupSnapshot(){
+   if(!loaded)return null;
+   rememberDraft();await persistComposer().catch(()=>{});await persist().catch(()=>{});
+   return structuredClone({exercises:records,exerciseComposerDrafts:{...drafts.serialize(),bases:[...basisSelections]}});
+  },
+  async flush(){rememberDraft();await persistComposer();if(loaded)await persist();},
+  async reload(){
+   clearTimeout(composerTimer);await composerSaving.catch(()=>{});await saving.catch(()=>{});epoch++;drawing++;clearTimeout(timer);clearInterval(waitTicker);busy=false;imageLocks.clear();
+   const saved=await access(['exercises','exerciseSavedSetups','exerciseComposerDrafts']);
+   records=Array.isArray(saved.exercises)?saved.exercises.filter(row=>!removedIds.has(row.id)):[];baseline=exerciseRecordSnapshot(records);drafts.restore(saved.exerciseComposerDrafts);setupShelf.load(saved.exerciseSavedSetups);basisSelections.clear();
+   for(const [key,value] of saved.exerciseComposerDrafts?.bases||[])basisSelections.set(key,value);
+   composerDirty.clear();composerStamps.clear();loaded=true;context=null;current=null;selecting=true;renderedReview=null;saveConflict=null;externalChange=false;contentPicker.clear();center.render();syncCenterTicker();
+   if(dialog.open)await close(dialog);
+  },
+  async reset(){renderedReview=null;figureResize.finish();clearTimeout(composerTimer);await composerSaving.catch(()=>{});clearTimeout(removalTimer);pendingRemovals.clear();await clearExerciseFiles().catch(()=>{});epoch++;drawing++;busy=false;clearTimeout(timer);clearInterval(waitTicker);clearIssues();clearTimeout(saveTimer);await saving.catch(()=>{});context=null;current=null;records=[];baseline=[];saveConflict=null;externalChange=false;loaded=false;remember('exercisePending',false);center.render();centerTicker.stop();drafts.clear();composerDirty.clear();composerStamps.clear();basisSelections.clear();contentPicker.clear();await write([['exerciseComposerDrafts',drafts.serialize()]]);if(dialog.open)await close(dialog);},
   async open(value,{shouldOpen=()=>true}={}){
    await loadRecords();
    if(!shouldOpen())return;
@@ -303,6 +399,6 @@ export function createExerciseStudio({notify,show,close,onAttach,onFeedback=()=>
    const available=subjects(),preferred=value.subject||value.plan?.training?.key?.split('|')[0]||'数学';chooseSubject(available.includes(preferred)?preferred:available[0]);
    if(attached?.request?.subject===request.subject){current=records.find(r=>r.id===attached.id)||(removedIds.has(attached.id)?structuredClone(attached):current);if(current)request=structuredClone(current.request);}
    error='';const opening=show(dialog);await draw();await opening;startAtTop();loadTemplates();warmPDFWorker();warmExerciseMath().catch(()=>{});warmReportFonts().catch(()=>{});poll().catch(e=>notify(e.message));
-  },async mountCenter(host){await loadRecords();if(!host.isConnected)return;center.mount(host);poll().catch(()=>{});},async resume(){await loadRecords();poll().catch(()=>{});},openRecord,records:()=>records
+  },async mountCenter(host){await loadRecords();if(!host.isConnected)return;center.mount(host);syncCenterTicker();poll().catch(()=>{});},async resume(){await loadRecords();poll().catch(()=>{});},openRecord,records:()=>records
  };
 }

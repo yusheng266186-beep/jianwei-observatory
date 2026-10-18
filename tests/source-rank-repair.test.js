@@ -39,3 +39,10 @@ test('校赋名、市赋名、班赋名优先于原始分名次，与质量慧�
  const map=rankColumns([['市原名','市赋名','校原名','校赋名','班原名','班赋名']],0,5);
  assert.deepEqual(Object.fromEntries(Object.entries(map).map(([key,value])=>[key,value.column])),{cityRank:1,schoolRank:3,classRank:5});
 });
+
+test('原分或学科分数已变更的旧记录不再通过历史指纹复活失效名次',async()=>{
+ const {mergeScoreRecord}=await import('../app/data/merge-policy.js');
+ const old={...structuredClone(historical),subjects:{数学:{score:100,raw:100,rank:2}}},next=mergeScoreRecord(old,{subjects:{数学:{score:90,raw:90}}});
+ repairSourceRanks({scores:[next]});assert.equal(next.subjects.数学.rank,null);assert.equal(next.subjects.数学.schoolRank,null);assert.equal(next.subjects.数学.rankAuditInvalidated,true);
+ const totals=mergeScoreRecord(historical,{total:400});totals.total=historical.total;repairSourceRanks({scores:[totals]});assert.equal(totals.schoolRank,null);
+});

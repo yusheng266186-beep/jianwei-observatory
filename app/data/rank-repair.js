@@ -17,7 +17,7 @@ export function rankFingerprint(row){
 export function repairSourceRanks(data){
  for(const row of data.scores){
   const values=row.sourceRow&&sourceRankReference[rankFingerprint(row)];
-  if(!values||row.rankProvenance==='source-audit-v2')continue;
+  if(!values||row.rankAuditInvalidated||row.rankProvenance==='source-audit-v2')continue;
   // Explicit class/school headings in a newly mapped workbook remain authoritative.
   if(explicitRankHeadings(row))continue;
   row.originalRanks||={schoolRank:row.schoolRank??null,classRank:row.classRank??null,cityRank:row.cityRank??null};
@@ -25,6 +25,7 @@ export function repairSourceRanks(data){
   row.rankSources=Object.fromEntries(['schoolRank','classRank','cityRank'].filter(k=>validRank(row[k])).map(k=>[k,'原表对应名次列']));
   row.rankProvenance='source-audit-v2';
   for(const [subject,score] of Object.entries(row.subjects||{})){
+   if(score.rankAuditInvalidated)continue;
    if(explicitRanks(score))continue;
    if(['51','52','21','33','4册'].includes(row.exam)){
     score.rankSources={};score.rankProvenance='source-audit-v2';

@@ -1,0 +1,9 @@
+import {esc} from './html.js';
+const labels={total:'总分',rawTotal:'原始总分',score:'赋分',raw:'原分',track:'科类',language:'语种',schoolRank:'校排名',classRank:'班排名',cityRank:'市排名',rank:'原表名次'};
+const label=item=>item.field.startsWith('values.')?'第'+(Number(item.field.slice(7))+1)+'个得分项':(item.subject?item.subject+' · ':'')+(labels[item.field]||item.field);
+const choice=(index,value,text,selected)=>'<button type="button" class="button chip '+(selected?'selected':'')+'" data-inbox="resolve" data-index="'+index+'" data-value="'+value+'" aria-pressed="'+selected+'">'+text+'</button>';
+export function importConflictsHTML(data,choices){
+ const groups=data.importConflicts||[];if(!groups.length)return '';
+ const names=new Map(data.students.map(person=>[person.id,person.name]));
+ return '<section class="import-review" aria-labelledby="import-review-title"><h3 id="import-review-title">确认重复记录</h3><p>'+groups.length+'组同学生、同班、同考次记录存在数值差异。空白已自动补充，请确认每组采用哪份数值；不同学生同名时，请先补充学生识别码。</p><div class="chips">'+choice('all','previous','全部保留先出现的数值',false)+choice('all','incoming','全部采用后出现的数值',false)+'</div><p role="status">已确认 '+groups.filter((_,i)=>choices[i]).length+' / '+groups.length+' 组</p>'+groups.map((group,i)=>'<details class="import-review-record"><summary>'+esc(names.get(group.incoming.sid)||'学生记录')+' · '+esc(group.incoming.classNo)+'班 · '+esc(group.incoming.exam)+(group.incoming.subject?' · '+esc(group.incoming.subject):'')+'<span>'+group.conflicts.length+'处差异 · '+(choices[i]==='previous'?'保留先出现':choices[i]==='incoming'?'采用后出现':'请选择')+'</span></summary><div class="import-review-values"><div><b>字段</b><b>先出现</b><b>后出现</b></div>'+group.conflicts.map(item=>'<div><span>'+esc(label(item))+'</span><span>'+esc(item.previous)+'</span><span>'+esc(item.incoming)+'</span></div>').join('')+'</div><div class="chips">'+choice(i,'previous','保留先出现',choices[i]==='previous')+choice(i,'incoming','采用后出现',choices[i]==='incoming')+'</div></details>').join('')+'</section>';
+}

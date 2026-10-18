@@ -35,17 +35,20 @@ import {researchView,studyDescription,studyAvailable,studyKey} from './ui/resear
 import {Atlas} from './engine/atlas.js?v=runtime-v45';
 import {loadScene} from './scenes/load.js?v=runtime-v45';
 import {SUBJECTS} from './data/compat.js?v=runtime-v45';
-import {access,write,update as updateStored,STORAGE_SCOPE} from './data/storage.js';
-import {hydrate,save,saveWorkspace,restoreDataset,hasMaterials,preference,remember,previous,emptyDataset,loadNotebook,saveNotebook} from './data/workspace.js?v=runtime-v45';
+import {access,write,update as updateStored,savePreparedVersioned,STORAGE_SCOPE} from './data/storage.js';
+import {hydrate,save,saveWorkspace,restoreDataset,hasMaterials,preference,remember,previous,emptyDataset,loadNotebook,loadPlans} from './data/workspace.js?v=runtime-v45';
 import {prepareDataset,prepareMaterial} from './data/preparation.js?v=runtime-v45';
-import {remapScopedContext} from './data/identity.js?v=runtime-v45';
+import {remapScopedContext,mergeStudentIdentities} from './data/identity.js?v=runtime-v45';
+import {mergeNotebook,mergePlans,mergeNotebookRestore,mergePlansRestore,settleNotebook,settlePlans,mergeRestoredExerciseRecords,mergeRestoredComposerDrafts,recordPlanText,applyPlanText,clearPlanText,planDraftIdentity,planTextPaths} from './data/workspace-merge.js?v=runtime-v45';
+import {fourSheetBundle,fourSheetFilename} from './engine/export-scope.js?v=runtime-v45';
+import {tracksStudyScroll,createCheckpointScheduler} from './engine/checkpoint-policy.js?v=runtime-v45';
 import {Inbox} from './data/inbox.js?v=runtime-v45';
 import {NoteJournal} from './data/notes.js?v=runtime-v45';
 import {installViewportMetrics} from './ui/viewport.js?v=runtime-v45';
 import {repairKnowledgeReport} from './engine/knowledge.js?v=runtime-v45';
 import {motion,visualFrame,cancelOwnMotion,finishAnimation,enterCanvas,arrangeRows,prepareCanvasSlide,finishCanvasSlide,moveIndicator} from './ui/motion.js?v=runtime-v45';
 import {esc,button,empty,table} from './ui/html.js?v=runtime-v45';
-import {excel,word,pdf,print,download,chart,scoreRows,effectiveRows,subjectRows,answerRows,evidence} from './io/exports.js?v=runtime-v45';
+import {excel,word,pdf,print,download,chart,evidence} from './io/exports.js?v=runtime-v45';
 import {directoryDefaults,lensValues,queryDirectory,directoryViewValues,directoryViewName} from './engine/directory.js?v=runtime-v45';
 import {peekView,compareView,drawerEvidence} from './ui/explorer.js?v=runtime-v45';
 import {dockIcon} from './ui/icons.js?v=runtime-v45';
@@ -53,15 +56,17 @@ import {dockIcon} from './ui/icons.js?v=runtime-v45';
 const routes=[['board','年级总览','▦'],['class','班级研究','▥'],['papers','试卷研究','▧'],['people','学生研究','◎'],['follow','教学跟进','↗'],['library','资料与报告','⊞']];
 const defaults={board:{mode:'overview',metric:'underRate',historyMetric:'mean',search:'',page:1},class:{tab:'snapshot',value:'score',trendMetric:'mean',matrix:'total',search:'',page:1,matched:false},papers:{key:'',tab:'map',classes:[],question:0,order:'paper',questionSearch:'',questionFocus:'all',search:'',page:1},people:{sid:'',storyMetric:'total',...directoryDefaults,filtersOpen:innerWidth>760},follow:{tier:'under',band:20,side:'below',classes:[],search:'',page:1},library:{tab:'materials'}};
 const saved=preference('books',{}),books=Object.fromEntries(Object.entries(defaults).map(([key,value])=>[key,{...value,...saved[key]}]));
-const session={plans:preference('plans',[]).map(normalizePlan),recent:preference('recent',[]),savedPeople:preference('savedPeople',[]),comparePeople:preference('comparePeople',[]),directoryViews:preference('directoryViews',[]),notebook:[]};
+const preferredPlans=preference('plans',null);
+const session={plans:(Array.isArray(preferredPlans)?preferredPlans:[]).map(normalizePlan),recent:preference('recent',[]),savedPeople:preference('savedPeople',[]),comparePeople:preference('comparePeople',[]),directoryViews:preference('directoryViews',[]),notebook:[]};
 const savedResearch=preference('research',{}),research={saved:Array.isArray(savedResearch.saved)?savedResearch.saved:[],recent:Array.isArray(savedResearch.recent)?savedResearch.recent.slice(0,24):[]},researchScope={tab:'saved',search:'',rename:''};
 const reading={...readingDefaults,...preference('reading',{})};applyReading(reading);
 const noteJournal=new NoteJournal();
 if(preference('interfaceRevision','')!=='study-20261011b'){books.board.mode='overview';books.people.lens='all';books.people.view='cards';books.people.filtersOpen=true;remember('interfaceRevision','study-20261011b');}
 let atlas=new Atlas(emptyDataset()),current='board',activeReport=null,exportReport=null,reportScope={section:0,page:1,search:''},revision=0,paintId=0,searchTimer,searchPaint,drawerTimer,reportTimer,noteTimer,inbox;
+let notebookSaving=Promise.resolve(),notebookBase=[],plansBase=[],datasetStamp=null,planSaveTimer,planDraftSaveTimer,planTextDrafts=preference('planTextDrafts',{}),plansSaving=Promise.resolve(),datasetSaving=Promise.resolve(),storageNoticeState={key:'',at:0};
 let drawerState=null,drawerClosing=null,drawerMotion=null,drawerContentMotion=null,drawerContentFrame=null,drawerEpoch=0,observationRequest=0,drawerOpener=null,drawerTrail=[],paintedObject='',paintedScrolls=new Map(),pagePositions=new Map(),scrollResets=new Set(),pendingUndo=null;
-let paintedStudy=null,researchTrail=[],researchTimer,researchSearchTimer,closedStudy=null,reportOrigin=null,reportNoteState='preview',reportNoteRevision=0,modalOrder=[];
-let navigationScope=preference('navigationScope','')||crypto.randomUUID(),historyRestoring=false,historyTimer,lastHistoryURL='',historyRequest=0;remember('navigationScope',navigationScope);
+let paintedStudy=null,researchTrail=[],researchSearchTimer,closedStudy=null,reportOrigin=null,reportNoteState='preview',reportNoteRevision=0,modalOrder=[];
+let navigationScope=preference('navigationScope','')||crypto.randomUUID(),historyRestoring=false,lastHistoryURL='',historyRequest=0;remember('navigationScope',navigationScope);
 const reducedMotion=()=>reading.motion==='calm'||matchMedia('(prefers-reduced-motion: reduce)').matches;
 const reportJobs=new Set(),sceneViews=new Map();let paintedViewKey='',backgroundGeneration=0;
 function viewKey(scene){const context=scene==='people'?[session.savedPeople,session.comparePeople,session.directoryViews]:scene==='follow'?[session.plans,todayLocal()]:scene==='library'?[session.plans,session.notebook.map(n=>[n.id,n.title,n.note])]:[];return JSON.stringify([scene,books[scene],context,researchTrail.at(-1)?studyDescription(atlas,researchTrail.at(-1)).title:'']);}
@@ -116,7 +121,7 @@ function scenePending(serial,scene){
 function sceneReady(serial){if(serial!==paintId)return;clearTimeout(sceneLoadingTimer);document.getElementById('scene-status').hidden=true;stage().inert=false;stage().setAttribute('aria-busy','false');delete stage().dataset.loading;}
 function staleStage(target){return Boolean(target.closest('.scene-leaving-viewport'))||stage().contains(target)&&(stage().inert||sceneObject()!==paintedObject);}
 
-function persistBooks(){remember('books',books);checkpointConditions();}
+function persistBooks(){remember('books',books);researchCheckpoint.invalidate();checkpointConditions();}
 async function flushSearch(){if(searchTimer){clearTimeout(searchTimer);searchTimer=null;searchPaint=paint();}const pending=searchPaint;if(pending)await pending;if(searchPaint===pending)searchPaint=null;}
 function revealResults(root) {
   const target=root.querySelector('.directory-controls,.lens-roster-tools,.roster-bar,.report-query,.table-frame');if(!target)return;
@@ -165,7 +170,8 @@ function checkpointConditions(){
   // their debounced checkpoint, so typing never forces a layout measurement.
   try{const state=researchHistoryConditions(history.state,{scope:navigationScope,hash:location.hash,scene:current,values:books[current],painted:paintedStudy,trail:researchTrail});if(state)history.replaceState(state,'',location.href);}catch{/* Preserve typing and navigation when history storage is unavailable. */}
 }
-function scheduleResearch(){clearTimeout(researchTimer);researchTimer=setTimeout(()=>archiveStudy(),500);clearTimeout(historyTimer);historyTimer=setTimeout(checkpointNavigation,120);}
+const researchCheckpoint=createCheckpointScheduler({snapshot:()=>studyNow(),checkpoint:study=>checkpointNavigation(study),archive:study=>archiveStudy(study)});
+function scheduleResearch(){researchCheckpoint.schedule();}
 function leaveStudy() {
   const samePage=closedStudy&&closedStudy.study.scene===current&&studyKey({scene:current,values:books[current]})===studyKey({scene:closedStudy.study.scene,values:closedStudy.study.values});
   const study=samePage&&Date.now()-closedStudy.closedAt<1500?closedStudy.study:studyNow();closedStudy=null;
@@ -226,7 +232,7 @@ function readRoute() {
 }
 async function restoreNavigationEntry() {
   const request=++historyRequest,saved=researchHistoryStudy(history.state,{scope:navigationScope,hash:location.hash});
-  historyRestoring=true;clearTimeout(historyTimer);clearTimeout(searchTimer);searchTimer=null;searchPaint=null;clearTimeout(drawerTimer);
+  historyRestoring=true;researchCheckpoint.clear();clearTimeout(searchTimer);searchTimer=null;searchPaint=null;clearTimeout(drawerTimer);
   try{
     if(saved&&hasMaterials(atlas.data)&&studyAvailable(atlas,saved.study))await restoreStudy(saved.study,{returning:true,fromHistory:true,trail:saved.trail.filter(entry=>studyAvailable(atlas,entry))});
     else {
@@ -341,18 +347,20 @@ function update(key,value,toggle=false) {
   if(current==='class'&&key==='tab')history.replaceState(null,'',path());
   persistBooks();paint(['tab','mode','view','exam','directoryExam','key'].includes(key)).then(()=>{if(drawerState?.type==='filters')drawDrawer();});
 }
-async function installDataset(dataset,{fresh=false,prepared=false,index=null}={}) {
+async function installDataset(dataset,{fresh=false,prepared=false,index=null,stamp=null}={}) {
   invalidateViews();
-  if(fresh){navigationScope=crypto.randomUUID();remember('navigationScope',navigationScope);}historyRequest++;historyRestoring=false;clearTimeout(historyTimer);
+  if(stamp)datasetStamp=stamp;
+  if(fresh){navigationScope=crypto.randomUUID();remember('navigationScope',navigationScope);}historyRequest++;historyRestoring=false;researchCheckpoint.clear();
   navigationEpoch++;
   const planDialog=document.getElementById('plan-dialog');if(planDialog?.open){await dismissDialog('plan-dialog');planDraft=null;}
   await closeDrawer();const shelf=document.getElementById('research-dialog');if(shelf.open)await dismissDialog('research-dialog');
-  clearTimeout(researchTimer);paintedStudy=null;closedStudy=null;researchTrail=[];
+  researchCheckpoint.clear();paintedStudy=null;closedStudy=null;researchTrail=[];
   performance.mark('workspace-index-start');atlas=new Atlas(prepared?dataset:restoreDataset(dataset),{prepared:true,index});performance.measure('workspace-index','workspace-index-start');const available=hasMaterials(atlas.data);
   if(atlas.data.identityScopes){
    session.plans=remapScopedContext(session.plans,atlas.data).map(normalizePlan);session.notebook=remapScopedContext(session.notebook,atlas.data);
    session.directoryViews=remapScopedContext(session.directoryViews,atlas.data);
-   for(const key of ['plans','directoryViews'])remember(key,session[key]);
+   remember('directoryViews',session.directoryViews);
+   await persistPlansNow({quiet:true});
    const draft=preference('followDraft',null);if(draft)remember('followDraft',remapScopedContext(draft,atlas.data));
    Object.assign(books.people,remapScopedContext(books.people,atlas.data));
    Object.assign(research,remapScopedContext(research,atlas.data));
@@ -365,40 +373,169 @@ async function installDataset(dataset,{fresh=false,prepared=false,index=null}={}
   if(available&&savedNavigation&&studyAvailable(atlas,savedNavigation.study))await restoreNavigationEntry();else await paint(true);
   if(available)warmWorkspace();
 }
-async function store() {try{await save(workspaceSnapshot(),{prepared:true});return true;}catch{notify('修改已保留在当前页面，本机未保存，请下载完整备份。');return false;}}
+function storageNotice(key,message,action={label:'下载完整备份',cmd:'backup'}) {
+  const now=Date.now();
+  if(storageNoticeState.key===key&&now-storageNoticeState.at<45000)return;
+  storageNoticeState={key,at:now};notify(message,action);
+}
+function store({quiet=false}={}) {
+ const snapshot=structuredClone(atlas.data),operation=datasetSaving.catch(()=>{}).then(async()=>{try{
+    const {saved,stamp}=await savePreparedVersioned(snapshot,datasetStamp);
+    if(!saved){if(!quiet)storageNotice('dataset-conflict','其他页面已更新材料，本页修改尚未写入。请刷新后重试，或先下载完整备份。');return false;}
+    datasetStamp=stamp;return true;
+  }catch{
+    if(!quiet)storageNotice('dataset-error','修改已保留在当前页面，本机未保存。请下载完整备份后重试。');
+    return false;
+  }});datasetSaving=operation.catch(()=>{});return operation;
+}
 function workspaceSnapshot(){return structuredClone({...atlas.data,plans:session.plans,notebook:session.notebook,savedPeople:session.savedPeople,comparePeople:session.comparePeople,directoryViews:session.directoryViews,research});}
-function recordNoteDraft(note){if(!noteJournal.record(note))notify('判断仍在当前页面，本机草稿未保存，请下载材料保留记录。');}
+async function backupWorkspace(){
+ archiveStudy();flushWorkspaceInput();
+ await Promise.allSettled([datasetSaving,plansSaving,persistNotebook()]);
+ const live=exerciseStudioTask?await(await exerciseStudioTask).backupSnapshot():null;
+ const saved=await access(['exercises','exerciseSavedSetups','exerciseComposerDrafts']),{savedExerciseSetups}=await import('./engine/exercise-setups.js');
+ const source={...saved,...(live||{})};
+ download(JSON.stringify({...workspaceSnapshot(),exercises:source.exercises||[],exerciseSavedSetups:savedExerciseSetups(saved.exerciseSavedSetups),exerciseComposerDrafts:source.exerciseComposerDrafts?.version===1?source.exerciseComposerDrafts:{version:1,requests:[],focuses:[],bases:[],applied:[]}}),SITE_NAME+'-完整工作区-'+new Date().toLocaleDateString('sv-SE',{timeZone:'Asia/Shanghai'})+'.json','application/json');
+}
+function recordNoteDraft(note){if(!noteJournal.record(note))storageNotice('note-draft','判断仍在当前页面，本机草稿暂存空间不足。请下载完整备份保留记录。');}
 function evidenceSaveState(note,value,error=false){for(const button of stage().querySelectorAll('[data-cmd=notebook-retry]'))if(button.dataset.id===note.id)button.hidden=!error;const count=stage().querySelector('[data-notebook-written]');if(count)count.textContent=session.notebook.filter(n=>n.note?.trim()).length+'份已有教师判断';for(const node of stage().querySelectorAll('[data-evidence-save]'))if(node.dataset.evidenceSave===note.id){node.textContent=value;node.dataset.state=error?'error':value==='已保存到本机'?'saved':'saving';}}
-async function persistNotebook(){const snapshot=structuredClone(session.notebook),generation=revision;try{await saveNotebook(snapshot);if(generation===revision){noteJournal.persisted(snapshot);for(const saved of snapshot){const current=session.notebook.find(n=>n.id===saved.id);if(current&&current.note===saved.note)evidenceSaveState(current,'已保存到本机');}}}catch(error){if(generation===revision)for(const saved of snapshot){const current=session.notebook.find(n=>n.id===saved.id);if(current&&current.note===saved.note)evidenceSaveState(current,'本机保存未完成，可重试或下载备份',true);}throw error;}}
-async function restoreContext(incoming) {
-  if(incoming.plans||incoming.actions)session.plans=(incoming.plans||incoming.actions).map(normalizePlan);
-  else session.plans=session.plans.filter(p=>incoming.students.some(person=>person.id===p.sid));
-  remember('plans',session.plans);
+function persistNotebook(){
+ const generation=revision;
+ const operation=notebookSaving.catch(()=>{}).then(async()=>{
+  if(generation!==revision)return;
+  const snapshot=structuredClone(session.notebook);let merge=null;
+  try{
+    const saved=await updateStored('notebook',latest=>{
+      if(!Array.isArray(latest))return snapshot;
+      merge=mergeNotebook(notebookBase,snapshot,latest);
+      return merge.records;
+    });
+    if(generation===revision){
+      if(merge?.remaps?.length){
+        noteJournal.remap(merge.remaps);
+        for(const [from,to] of merge.remaps){
+          const local=session.notebook.find(note=>note.id===from),captured=snapshot.find(note=>note.id===from);if(local)local.id=to;if(captured)captured.id=to;
+          if(exportReport?.id===from)exportReport.id=to;
+          for(const card of stage().querySelectorAll('[data-evidence-card]'))if(card.dataset.evidenceCard===from){card.dataset.evidenceCard=to;card.dataset.motionKey='note-'+to;for(const node of card.querySelectorAll('[data-evidence-note],[data-evidence-save],[data-id]')){if(node.dataset.evidenceNote===from)node.dataset.evidenceNote=to;if(node.dataset.evidenceSave===from)node.dataset.evidenceSave=to;if(node.dataset.id===from)node.dataset.id=to;}}
+        }
+      }
+      noteJournal.persisted(saved);
+      notebookBase=structuredClone(saved);
+      session.notebook=settleNotebook(session.notebook,snapshot,saved);
+      if(merge?.conflicts?.length)storageNotice('notebook-conflict','其他页面同时修改了 '+merge.conflicts.length+' 份判断，本页修改已保留为副本，请核对后整理。','');
+      for(const savedNote of saved){const current=session.notebook.find(n=>n.id===savedNote.id);if(current&&current.note===savedNote.note)evidenceSaveState(current,'已保存到本机');}
+    }
+  }catch(error){
+    if(generation===revision)for(const saved of snapshot){const current=session.notebook.find(n=>n.id===saved.id);if(current&&current.note===saved.note)evidenceSaveState(current,'本机保存未完成，可重试或下载备份',true);}
+    throw error;
+  }
+ });notebookSaving=operation.catch(()=>{});return operation;
+}
+function flushWorkspaceInput(){
+  if(planDraftSaveTimer){clearTimeout(planDraftSaveTimer);planDraftSaveTimer=null;}
+  if(planDraft)savePlanDraftNow();
+  if(planSaveTimer){clearTimeout(planSaveTimer);planSaveTimer=null;remember('plans',session.plans);persistPlansNow({quiet:true}).catch(()=>{});}
+}
+function planPending(record){return ['submitting','unconfirmed','queued','running','prepared'].includes(record?.status)||Object.values(record?.imageJobs||{}).some(job=>['submitting','unconfirmed','queued','running'].includes(job?.status));}
+async function persistPlansNow({quiet=false}={}) {
+  const snapshot=structuredClone(session.plans),generation=revision;let merge=null;
+  const operation=plansSaving.catch(()=>{}).then(async()=>{
+    const base=structuredClone(plansBase);
+    let saved;
+    try{
+      saved=await updateStored('plans',latest=>{
+        if(!Array.isArray(latest))return snapshot;
+        merge=mergePlans(base,snapshot,latest);
+        return merge.records;
+      });
+    }catch{
+      if(!quiet)storageNotice('plans-error','训练计划暂存在当前页面，工作区数据库未能写入。请下载完整备份后重试。');
+      return false;
+    }
+    if(generation!==revision)return true;
+    for(const [from,to] of merge?.remaps||[]){
+      const local=session.plans.find(plan=>plan.id===from),captured=snapshot.find(plan=>plan.id===from);if(local)local.id=to;if(captured)captured.id=to;if(planDraft?.id===from)planDraft.id=to;
+      for(const node of stage().querySelectorAll('[data-plan-note],[data-id]')){if(node.dataset.planNote===from)node.dataset.planNote=to;if(node.dataset.id===from&&node.dataset.cmd?.startsWith('plan-'))node.dataset.id=to;}
+    }
+    session.plans=settlePlans(session.plans,snapshot,saved);
+    plansBase=structuredClone(saved);
+    const journal=preference('planTextDrafts',{});
+    for(const plan of saved){const id=planDraftIdentity(plan),entry=journal[id];if(!entry?.values)continue;for(const [path,value] of Object.entries(entry.values)){const current=path.split('.').reduce((object,key)=>object?.[key],plan);if(current===value)delete entry.values[path];}if(!Object.keys(entry.values).length)delete journal[id];}
+    planTextDrafts=journal;remember('planTextDrafts',journal);
+    if(!remember('plans',session.plans))storageNotice('plans-cache','浏览器快速缓存空间不足，训练计划已写入工作区数据库；仍建议下载完整备份。');
+    if(merge?.conflicts?.length)storageNotice('plans-conflict','其他页面同时修改了 '+merge.conflicts.length+' 条训练计划，本页修改已保留为副本，请核对。','');
+    return true;
+  });
+  plansSaving=operation.catch(()=>false);return operation;
+}
+async function reloadExerciseStudioPreservingDrafts() {
+  if(!exerciseStudioTask)return;
+  await(await exerciseStudioTask).reload();
+}
+async function restoreContext(incoming,{resetContext=false,notebook=null,composerDrafts=null,remap=new Map()}={}) {
+  const incomingPlans=incoming.plans||incoming.actions;
+  if(Array.isArray(incomingPlans))session.plans=resetContext?incomingPlans.map(normalizePlan):mergePlansRestore(session.plans,incomingPlans.map(normalizePlan)).records;
+  else if(resetContext)session.plans=[];
+  await persistPlansNow({quiet:true});
   for(const key of ['savedPeople','comparePeople','directoryViews'])if(Array.isArray(incoming[key])){session[key]=structuredClone(incoming[key]);remember(key,session[key]);}
   if(incoming.research){research.saved=structuredClone(Array.isArray(incoming.research.saved)?incoming.research.saved:[]);research.recent=structuredClone(Array.isArray(incoming.research.recent)?incoming.research.recent.slice(0,24):[]);persistResearch();}
-  if(Array.isArray(incoming.notebook))session.notebook=structuredClone(incoming.notebook);
+  if(Array.isArray(notebook))session.notebook=structuredClone(notebook);
+  else if(resetContext)session.notebook=[];
   if(Array.isArray(incoming.exerciseSavedSetups)){const {mergeExerciseSetupArchive}=await import('./engine/exercise-setups.js');await updateStored('exerciseSavedSetups',previous=>mergeExerciseSetupArchive(previous,incoming.exerciseSavedSetups));}
-  if(Array.isArray(incoming.exercises)){const previous=await access('exercises')||[],byId=new Map(previous.map(r=>[r.id,r]));for(const record of incoming.exercises)if(record?.id&&record.sid)byId.set(record.id,structuredClone(record));if(exerciseStudioTask)await(await exerciseStudioTask).reset();await write([['exercises',[...byId.values()]]]);remember('exercisePending',[...byId.values()].some(r=>['submitting','unconfirmed','queued','running'].includes(r.status)||Object.values(r.imageJobs||{}).some(j=>['submitting','unconfirmed','queued','running'].includes(j.status))));}
+  let exerciseStats=null;
+  if(Array.isArray(incoming.exercises)){
+    let records=null;
+    await updateStored('exercises',latest=>{const merged=mergeRestoredExerciseRecords(latest||[],incoming.exercises);exerciseStats=merged;records=merged.records;return merged.records;});
+    remember('exercisePending',(records||[]).some(planPending));
+  }
+  let composerStats=null;
+  if(composerDrafts?.version===1){
+    let merged=null;
+    await updateStored('exerciseComposerDrafts',latest=>{merged=mergeRestoredComposerDrafts(latest,composerDrafts,{remap});return merged;});
+    composerStats=merged?.restore||null;
+  }
+  if(exerciseStats||composerStats)await reloadExerciseStudioPreservingDrafts();
+  return {exerciseStats,composerStats};
 }
 async function changeMaterials(operation) {
   if(materialBusy)throw new Error('当前材料仍在更新，请完成后再操作');
   materialBusy=true;revision++;try{return await operation();}finally{materialBusy=false;}
 }
-async function applyMaterials(dataset,before,message,{undo=true,prepared=false,index=null}={}) {
+async function applyMaterials(dataset,before,message,{undo=true,prepared=false,index=null,resetContext=false,context=null}={}) {
+  await datasetSaving;await plansSaving;
   if(!prepared)dataset=await prepareDataset(dataset);
   await closeDrawer();inMemoryUndo=before;
-  let stored=false;
-  try{await saveWorkspace(dataset,before,Array.isArray(dataset.notebook)?dataset.notebook:session.notebook,{prepared:true});stored=true;}catch{}
-  await restoreContext(dataset);
-  if(stored)noteJournal.reset(session.notebook);
-  await installDataset(dataset,{fresh:true,prepared:true,index});
-  notify(stored?message+'，已保存到本机':message+'，本机未保存，请下载完整备份。',undo?{label:'撤回材料更新',cmd:'undo'}:{});
+  const incomingNotebook=Array.isArray(dataset.notebook)?dataset.notebook:null;
+  let notebook=resetContext?structuredClone(incomingNotebook||[]):(incomingNotebook?mergeNotebookRestore(session.notebook,incomingNotebook).records:session.notebook);
+  const base=structuredClone(notebookBase);
+  const receipt=await saveWorkspace(dataset,before,notebook,{prepared:true,expectedStamp:datasetStamp,reduceNotebook:latest=>mergeNotebook(base,notebook,Array.isArray(latest)?latest:base).records});
+  const stored=true,stamp=receipt.stamp;notebook=receipt.notebook;datasetStamp=stamp;
+  const restored=await restoreContext(dataset,{resetContext,notebook,composerDrafts:context?.exerciseComposerDrafts,remap:context?.remap});
+  if(stored){noteJournal.persisted(notebook);notebookBase=structuredClone(notebook);}
+  await installDataset(dataset,{fresh:true,prepared:true,index,stamp:stored?stamp:null});
+  const extras=[];
+  if(restored?.exerciseStats?.added)extras.push('恢复 '+restored.exerciseStats.added+' 份旧练习');
+  if(restored?.exerciseStats?.copies)extras.push('保留 '+restored.exerciseStats.copies+' 份旧练习副本');
+  if(restored?.composerStats?.added)extras.push('恢复 '+restored.composerStats.added+' 份训练草稿');
+  if(restored?.composerStats?.kept)extras.push('保留 '+restored.composerStats.kept+' 份本页较新草稿');
+  const detail=extras.length?'；'+extras.join('，'):'';
+  notify(stored?message+'，已保存到本机'+detail:message+'，本机未保存，请下载完整备份。'+detail,undo?{label:'撤回材料更新',cmd:'undo'}:{});
+}
+async function materialContext(incoming,mode,before) {
+  const drafts=incoming.exerciseComposerDrafts;
+  let remap=new Map();
+  if(drafts?.version===1&&mode!=='replace'){
+    try{remap=mergeStudentIdentities(structuredClone(before),structuredClone(incoming));}catch{remap=new Map();}
+  }
+  return {exerciseComposerDrafts:drafts,remap};
 }
 async function commitMaterial(incoming,mode) {
+  if(incoming.importConflicts?.length)throw new Error('请先在导入预览中确认重复记录。');
   return changeMaterials(async()=>{
     if(atlas.data.anonymous&&!incoming.anonymous&&!incoming.scores.length)throw new Error('请先导入真实姓名的成绩原表，再补充这份小题。');
-    archiveStudy();const before=workspaceSnapshot(),{dataset,index}=await prepareMaterial(before,incoming,mode);
-    await applyMaterials(dataset,before,'材料已加入工作区',{prepared:true,index});
+    if(exerciseStudioTask)await(await exerciseStudioTask).flush();
+    flushWorkspaceInput();await plansSaving;archiveStudy();const before=workspaceSnapshot(),context=await materialContext(incoming,mode,before),{dataset,index}=await prepareMaterial(before,incoming,mode);
+    await applyMaterials(dataset,before,'材料已加入工作区',{prepared:true,index,context});
   });
 }
 let reportRequest=0;
@@ -440,8 +577,10 @@ async function toggleReportSettings(){
  }else if(panel){
   await closeSurface(panel,{isOpen:()=>Boolean(reportScope.settingsOpen),reducedMotion,hide:()=>{if(reportSettingsIntent!==intent||exportReport!==intent.report)return;reportScope.settingsOpen=false;drawReport();}});
  }
- if(reportSettingsIntent===intent)reportSettingsIntent=null;
- document.querySelector('.report-head-actions [data-cmd=report-settings]')?.focus({preventScroll:true});
+ if(reportSettingsIntent===intent){
+  reportSettingsIntent=null;
+  if(!wanted)document.querySelector('.report-head-actions [data-cmd=report-settings]')?.focus({preventScroll:true});
+ }
 }
 function updateReportSelection(change,{render=true}={}){
  if(!exportReport)return;const selection=selectionFor(exportReport);change(selection);exportReport.outputSelection=selection;
@@ -585,14 +724,14 @@ function addFollow(sid,exam,tier) {
   const id=sid+'|'+exam+'|'+tier;
   if(session.plans.some(p=>p.id===id)){notify('这条跟进已在看板中');return;}
   const nearest=atlas.critical(exam,{tier,band:10000,side:'both'}).find(item=>item.row.sid===sid)?.nearest;
-  session.plans.unshift({id,sid,exam,tier,classNo:row.classNo,subject:nearest?.subject||'',status:'new',note:'',created:new Date().toISOString()});remember('plans',session.plans);notify('已加入跟进看板',{label:'查看跟进',cmd:'follow-open'});if(current==='follow')paint();
+  session.plans.unshift({id,sid,exam,tier,classNo:row.classNo,subject:nearest?.subject||'',status:'new',note:'',created:new Date().toISOString()});persistPlansNow().catch(()=>{});notify('已加入跟进看板',{label:'查看跟进',cmd:'follow-open'});if(current==='follow')paint();
 }
 let planDraft=null,planUI={},planSearchTimer,planControls,reportReader;
 let exerciseStudioTask,exerciseModuleTask,exerciseOpenRequest=0;
 function exerciseModule(){if(!exerciseModuleTask){const task=import('./ui/exercise-studio.js');exerciseModuleTask=task;task.catch(()=>{if(exerciseModuleTask===task)exerciseModuleTask=null;});}return exerciseModuleTask;}
 
 function exerciseStudio(){
- if(!exerciseStudioTask){const task=exerciseModule().then(({createExerciseStudio})=>createExerciseStudio({notify,show:showDialog,close:dialog=>dismissDialog(dialog.id),getAtlas:()=>atlas,onFeedback:async record=>{const synced=syncPracticeFeedbackPlans(session.plans,record);session.plans=synced.plans;if(planDraft){const draft=syncPracticeFeedbackPlans([planDraft],record);if(draft.linked){planDraft=draft.plans[0];rememberPlanDraft();if(document.getElementById('plan-dialog').open)drawPlan();}}if(synced.linked){remember('plans',session.plans);const saved=await store();if(current==='follow')await paint();notify(saved?'练后结果已同步至'+synced.linked+'条教学跟进。':'练后结果已保存，跟进记录暂留当前页面，请下载备份。');}else notify('练后结果已保存，可通过“加入教学跟进”关联训练安排。');},onAttach(record,source){
+ if(!exerciseStudioTask){const task=exerciseModule().then(({createExerciseStudio})=>createExerciseStudio({notify,show:showDialog,close:dialog=>dismissDialog(dialog.id),getAtlas:()=>atlas,onFeedback:async record=>{const synced=syncPracticeFeedbackPlans(session.plans,record);session.plans=synced.plans;if(planDraft){const draft=syncPracticeFeedbackPlans([planDraft],record);if(draft.linked){planDraft=draft.plans[0];rememberPlanDraft();if(document.getElementById('plan-dialog').open)drawPlan();}}if(synced.linked){const saved=await persistPlansNow();if(current==='follow')await paint();notify(saved?'练后结果已同步至'+synced.linked+'条教学跟进。':'练后结果已保存，跟进记录暂留当前页面，请下载备份。');}else notify('练后结果已保存，可通过“加入教学跟进”关联训练安排。');},onAttach(record,source){
   if(!atlas.materialAt(source.sid,source.exam)){notify('该学生材料已更换，练习仍保存在本机。');return;}
   const subject=record.request.subject,key=subject+'|'+source.exam;
   if(!planDraft||planDraft.sid!==source.sid||planDraft.exam!==source.exam||planDraft.id&&planDraft.training.key!==key)openPlan({sid:source.sid,exam:source.exam,id:source.plan?.training?.key===key?source.plan.id:undefined,key});
@@ -611,16 +750,32 @@ async function openExercises(context={}){
  }catch(error){if(attempt!==exerciseOpenRequest||!dialog.open)return;delete dialog.dataset.loading;content.innerHTML='<header class="exercise-heading"><h2 id="exercise-title">辅导中心暂时未能打开</h2><p role="alert">'+esc(runtimeFailureMessage(error))+'</p></header>'+button(isRuntimeLoadError(error)?'刷新并继续':'重新打开',isRuntimeLoadError(error)?'reload':'exercise-hub',{},'accent')+'<button class="button outline" data-cmd="exercise-loading-close">关闭</button>';}
 }
 const planPaths=new Set(['sid','exam','teacher','note','reviewDate','result','review.correct','review.total','training.key','training.tasks','training.method','training.count','training.targetRate','training.goal','schedule.date','schedule.slot','schedule.period','schedule.time','schedule.duration','ui.no','ui.search','ui.questionFilter','ui.knowledge']);
-function rememberPlanDraft(){if(!remember('followDraft',planDraft?{plan:planDraft,ui:planUI}:null))notify('训练草稿本机保存未完成，当前页面仍保留，请保存计划或下载备份');}
+function savePlanDraftNow(){
+ const saved=remember('followDraft',planDraft?{plan:planDraft,ui:planUI}:null);
+ if(saved&&planDraft){const cleared=clearPlanText(planTextDrafts,planDraftIdentity(planDraft));if(cleared.cleared){planTextDrafts=cleared.journal;remember('planTextDrafts',planTextDrafts);}}
+ if(!saved)storageNotice('plan-draft','训练草稿本机保存未完成，当前页面仍保留。请保存计划或下载完整备份。');
+ return saved;
+}
+function rememberPlanDraft({debounce=false}={}){
+ clearTimeout(planDraftSaveTimer);
+ if(debounce){planDraftSaveTimer=setTimeout(()=>{planDraftSaveTimer=null;savePlanDraftNow();},250);return;}
+ planDraftSaveTimer=null;savePlanDraftNow();
+}
+function rememberPlanText(path,value){
+ planTextDrafts=recordPlanText(planTextDrafts,planDraft,path,value);
+ if(!remember('planTextDrafts',planTextDrafts))storageNotice('plan-text','训练输入仍在当前页面，临时文字日志未能写入。请保存计划或下载完整备份。');
+}
 function drawPlan(){planControls?.close();const root=document.getElementById('plan-content');renderInto(root,followEditor(atlas,planDraft,planUI));enhance(root);notificationLayout.refresh();}
 function openPlan(context={}){
  clearTimeout(planSearchTimer);const existing=context.id?session.plans.find(p=>p.id===context.id):null,stored=planDraft?{plan:planDraft,ui:planUI}:preference('followDraft',null),resume=stored?.plan&&(context.id?stored.plan.id===context.id:!context.sid&&!stored.plan.id);
  if(resume&&atlas.materialAt(stored.plan.sid,stored.plan.exam)&&(!stored.plan.id||session.plans.some(p=>p.id===stored.plan.id))){planDraft=draftForPlan(atlas,{},stored.plan);planUI=stored.ui||{};}
  else {const exam=context.exam||atlas.latest,sid=context.sid||materialPeople(atlas,exam)[0]?.sid;planDraft=draftForPlan(atlas,{...context,exam,sid},existing);planUI={questionFilter:'weak',no:'all'};}
- if(!planDraft.sid){notify('请先导入学生材料');return;}drawPlan();rememberPlanDraft();const dialog=document.getElementById('plan-dialog');showDialog(dialog);dialog.scrollTop=0;
+ if(!planDraft.sid){notify('请先导入学生材料');return;}
+ applyPlanText(planTextDrafts,planDraft,planUI,{identity:planDraftIdentity(planDraft)});
+ drawPlan();rememberPlanDraft();const dialog=document.getElementById('plan-dialog');showDialog(dialog);dialog.scrollTop=0;
  if(existing&&existing.status!=='new')requestAnimationFrame(()=>dialog.querySelector('[data-plan-field="reviewDate"]')?.closest('.plan-editor-section')?.scrollIntoView({block:'start'}));
 }
-function setPlanValue(path,value){
+function setPlanValue(path,value,{debounce=false}={}){
  if(!planDraft||!planPaths.has(path))return;const [group,key]=path.split('.'),root=group==='ui'?planUI:planDraft;
  const previous=key?root[group]?.[key]:root[group];
  if(planDraft.id&&['sid','exam'].includes(path)&&String(planDraft[path])!==String(value)){notify('这条计划已关联学生与考试，其他对象请新建训练计划。');return;}
@@ -631,7 +786,7 @@ function setPlanValue(path,value){
   const qs=questionOptions(atlas,{...planDraft,key:planDraft.training.key});planDraft.training.questions=qs.filter(q=>q.weak).sort((a,b)=>a.rate-b.rate).slice(0,3).map(snapshotQuestion);planUI.knowledge='all';
  }
  if(path==='schedule.slot'&&!['lesson','break'].includes(value))planDraft.schedule.period='';
- rememberPlanDraft();
+ rememberPlanDraft({debounce});
 }
 async function saveTrainingPlan(){
  if(!planDraft||!atlas.materialAt(planDraft.sid,planDraft.exam))throw new Error('请选择有材料的学生与考试');
@@ -649,14 +804,11 @@ async function saveTrainingPlan(){
  if(p.reviewDate&&p.schedule.date&&p.reviewDate<p.schedule.date)throw new Error('复核日期不能早于训练日期');
  if(p.id&&!session.plans.some(item=>item.id===p.id))throw new Error('原计划已移除，请重新新建训练计划');
  p.id=p.id||'p'+crypto.randomUUID();p.created=p.created||new Date().toISOString();p.updated=new Date().toISOString();const index=session.plans.findIndex(item=>item.id===p.id);if(index>=0){p.status=session.plans[index].status;session.plans[index]=p;}else session.plans.unshift(p);
- const remembered=remember('plans',session.plans);planDraft=null;rememberPlanDraft();await dismissDialog('plan-dialog');const stored=await store();await paint();notify(stored?'训练计划已保存，可在教学跟进查看或导出':'计划保留在当前页面，请下载完整备份',{cmd:'follow-open',label:'查看计划'});
+ const identity=planDraftIdentity(planDraft);const cleared=clearPlanText(planTextDrafts,identity);if(cleared.cleared){planTextDrafts=cleared.journal;remember('planTextDrafts',planTextDrafts);}
+ planDraft=null;rememberPlanDraft();await dismissDialog('plan-dialog');const stored=await persistPlansNow();await paint();notify(stored?'训练计划已保存，可在教学跟进查看或导出':'计划保留在当前页面，请下载完整备份',{cmd:'follow-open',label:'查看计划'});
 }
-function fourSheets() {
-  const exam=atlas.latest,comparison=atlas.exams.at(-2)?.id||'';
-  const multi=[['班级','姓名',...atlas.exams.map(e=>e.label)]];
-  for(const no of atlas.classes)for(const sid of new Set(atlas.data.scores.filter(r=>r.classNo===no).map(r=>r.sid)))multi.push([no,atlas.name(sid),...atlas.exams.map(e=>atlas.classAt(no,e.id).find(r=>r.sid===sid)?.total??null)]);
-  const banks=[['学科','考试','题序','题号','满分','知识点'],...atlas.papers().flatMap(p=>p.questions.map((q,i)=>[p.subject,p.exam,i+1,q.label,q.max,q.knowledge]))];
-  return {'班级有效人':effectiveRows(atlas,exam,comparison),'个人学科小题得分':answerRows(atlas,atlas.data.answers),'班级多次考试对比':multi,'班级成绩分析单次':scoreRows(atlas,atlas.rows(exam)),'学科有效与双上线':subjectRows(atlas,exam),'题目目录':banks};
+function fourSheets(target={}) {
+  return fourSheetBundle(atlas,{exam:target.exam||books.board.exam,comparison:target.comparison});
 }
 async function template() {
   const headers=['考试(如53物/53历)','学校','班级','姓名','原始总分','赋分总分','原分市排名','赋分市排名','原分校排名','赋分校排名','语文','语文市排名','语文校排名','数学','数学市排名','数学校排名','外语','外语市排名','外语校排名','物理/历史','首选科市排名','首选科校排名','政治原分','政治赋分','政治原分排名','政治赋分排名','地理原分','地理赋分','地理原分排名','地理赋分排名','化学原分','化学赋分','化学原分排名','化学赋分排名','生物原分(9班为地理)','生物赋分(9班为地理)','生物原分排名','生物赋分排名','外语语种'];
@@ -676,8 +828,8 @@ async function commands(event) {
     if(d.cmd==='exercise-open'){await openExercises(d);return;}
     if(d.cmd.startsWith('plan-')){
       if(d.cmd==='plan-open')openPlan(d);
-      else if(d.cmd==='plan-discard'){planDraft=null;rememberPlanDraft();await dismissDialog('plan-dialog');notify('未保存草稿已清除');}
-      else if(d.cmd==='plan-close')await dismissDialog('plan-dialog');
+      else if(d.cmd==='plan-discard'){const identity=planDraftIdentity(planDraft),cleared=clearPlanText(planTextDrafts,identity);if(cleared.cleared){planTextDrafts=cleared.journal;remember('planTextDrafts',planTextDrafts);}planDraft=null;rememberPlanDraft();await dismissDialog('plan-dialog');notify('未保存草稿已清除');}
+      else if(d.cmd==='plan-close'){rememberPlanDraft();await dismissDialog('plan-dialog');}
       else if(d.cmd==='plan-set'){setPlanValue(d.key,d.value);drawPlan();}
       else if(d.cmd==='plan-toggle'){const tasks=planDraft.training.tasks;planDraft.training.tasks=tasks.includes(d.value)?tasks.filter(v=>v!==d.value):[...tasks,d.value];rememberPlanDraft();drawPlan();}
       else if(d.cmd==='plan-question'){const q=questionOptions(atlas,{...planDraft,key:planDraft.training.key}).find(q=>q.index===Number(d.index));if(q){const list=planDraft.training.questions;planDraft.training.questions=list.some(item=>String(item.label)===String(q.label))?list.filter(item=>String(item.label)!==String(q.label)):[...list,snapshotQuestion(q)];rememberPlanDraft();drawPlan();}}
@@ -878,16 +1030,16 @@ async function commands(event) {
       try{await chart(d.id,d.cmd==='png');}
       finally{if(b.isConnected&&b.getAttribute('aria-busy')==='true'){b.disabled=false;b.removeAttribute('aria-busy');b.textContent=label;if(description===null)b.removeAttribute('aria-label');else b.setAttribute('aria-label',description);}}
     }
-    else if(d.cmd==='backup'){archiveStudy();const saved=await access(['exercises','exerciseSavedSetups']),{savedExerciseSetups}=await import('./engine/exercise-setups.js');download(JSON.stringify({...workspaceSnapshot(),exercises:saved.exercises||[],exerciseSavedSetups:savedExerciseSetups(saved.exerciseSavedSetups)}),SITE_NAME+'-完整工作区-'+new Date().toLocaleDateString('sv-SE',{timeZone:'Asia/Shanghai'})+'.json','application/json');}
+    else if(d.cmd==='backup'){await backupWorkspace();}
     else if(d.cmd==='template')await template();
-    else if(d.cmd==='four-sheets')await excel(fourSheets(),SITE_NAME+'-四表分析包');
-    else if(d.cmd==='undo')await changeMaterials(async()=>{const dataset=inMemoryUndo||await previous();if(!dataset){notify('没有可撤回的材料替换');return;}await applyMaterials(dataset,workspaceSnapshot(),hasMaterials(dataset)?'已恢复上一次材料':'已恢复空白工作区',{undo:false});});
-    else if(d.cmd==='clear')await changeMaterials(async()=>{archiveStudy();await applyMaterials(emptyDataset(),workspaceSnapshot(),'当前工作区已清空');});
+    else if(d.cmd==='four-sheets'){const bundle=fourSheets({exam:d.exam,comparison:d.comparison});await excel(bundle.sheets,fourSheetFilename(SITE_NAME,bundle.scope));}
+    else if(d.cmd==='undo')await changeMaterials(async()=>{const dataset=inMemoryUndo||await previous();if(!dataset){notify('没有可撤回的材料替换');return;}await applyMaterials(dataset,workspaceSnapshot(),hasMaterials(dataset)?'已恢复上一次材料':'已恢复空白工作区',{undo:false,resetContext:true});});
+    else if(d.cmd==='clear')await changeMaterials(async()=>{archiveStudy();await applyMaterials(emptyDataset(),workspaceSnapshot(),'当前工作区已清空',{resetContext:true});});
     else if(d.cmd==='follow-add')addFollow(d.sid,d.exam,d.tier);
     else if(d.cmd==='follow-open'){if(!await closeDrawer())return;go('follow');}
-    else if(d.cmd==='follow-remove'){const index=session.plans.findIndex(p=>p.id===d.id),plan=session.plans[index];if(plan){session.plans.splice(index,1);remember('plans',session.plans);await paint();notify('已移除跟进记录',{undo:async()=>{if(!session.plans.some(p=>p.id===plan.id))session.plans.splice(Math.min(index,session.plans.length),0,plan);remember('plans',session.plans);await paint();}});}}
+    else if(d.cmd==='follow-remove'){const index=session.plans.findIndex(p=>p.id===d.id),plan=session.plans[index];if(plan){session.plans.splice(index,1);persistPlansNow().catch(()=>{});await paint();notify('已移除跟进记录',{undo:async()=>{if(!session.plans.some(p=>p.id===plan.id))session.plans.splice(Math.min(index,session.plans.length),0,plan);await persistPlansNow();await paint();}});}}
     else if(d.cmd==='follow-reset'){Object.assign(books.follow,{planSearch:'',planClass:'all',planStatus:'all',planTiming:'all'});persistBooks();paint();}
-    else if(d.cmd==='follow-status'){const plan=session.plans.find(p=>p.id===d.id);if(plan){plan.status=d.status;remember('plans',session.plans);paint();}}
+    else if(d.cmd==='follow-status'){const plan=session.plans.find(p=>p.id===d.id);if(plan){plan.status=d.status;persistPlansNow().catch(()=>{});paint();}}
     else if(d.cmd==='notebook-retry'){const note=session.notebook.find(n=>n.id===d.id);if(note){evidenceSaveState(note,'正在保存判断…');await persistNotebook();}}
     else if(d.cmd==='notebook-reset'){clearTimeout(searchTimer);state.notebookQuery='';state.notebookSource='all';state.notebookJudgment='all';state.notebookLimit=24;persistBooks();await paint();}
     else if(d.cmd==='notebook-more'){await flushSearch();const before=Number(state.notebookLimit)||24;state.notebookLimit=before+24;persistBooks();await paint();const next=stage().querySelectorAll('[data-evidence-card]')[before]?.querySelector('h2');if(next){next.focus({preventScroll:true});next.scrollIntoView({block:'nearest',behavior:'instant'});}}
@@ -961,8 +1113,9 @@ export async function mount(boot=null) {
   document.addEventListener('toggle',event=>{if(event.target.matches?.('.directory-filters')){books.people.filtersOpen=event.target.open;persistBooks();}},true);
   window.addEventListener('resize',positionDock);
   for(const type of ['pointerover','focusin','pointerdown'])document.getElementById('navigation').addEventListener(type,event=>{const button=event.target.closest?.('[data-scene]');if(button)warmScene(button.dataset.scene);},{passive:true});
-  document.addEventListener('scroll',()=>{if(hasMaterials(atlas.data))scheduleResearch();},{passive:true,capture:true});
-  window.addEventListener('pagehide',()=>{checkpointNavigation();archiveStudy();if(session.notebook.length)persistNotebook().catch(()=>{});});
+  document.addEventListener('scroll',event=>{if(hasMaterials(atlas.data)&&tracksStudyScroll(event.target))scheduleResearch();},{passive:true,capture:true});
+  window.addEventListener('pagehide',()=>{researchCheckpoint.flush();flushWorkspaceInput();if(session.notebook.length)persistNotebook().catch(()=>{});});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)flushWorkspaceInput();});
   document.getElementById('report-dialog').addEventListener('cancel',async event=>{event.preventDefault();if(reportScope.reading){reportScope.reading=false;drawReport();document.querySelector('[data-cmd=report-reading]')?.focus({preventScroll:true});}else await closeReport();});
   document.addEventListener('keydown',event=>{if(event.target.matches?.('.student-dot,[data-plot-action]')&&['Enter',' '].includes(event.key)){event.preventDefault();event.target.dispatchEvent(new MouseEvent('click',{bubbles:true}));}});
   document.addEventListener('keydown',event=>{if(event.defaultPrevented||event.target.closest?.('dialog')!==drawer||!drawer.open||event.altKey||event.ctrlKey||event.metaKey||!['ArrowLeft','ArrowRight'].includes(event.key)||event.target.closest?.('input,textarea,select,.table-scroll,.trajectory-scroll,.drawer-stages,.drawer-tabs,.drawer-section-nav'))return;const cmd=drawerState?.type==='person'?'drawer-person-step':drawerState?.type==='question'?'drawer-question-step':null,button=cmd&&drawer.querySelector('[data-cmd="'+cmd+'"][data-step="'+(event.key==='ArrowLeft'?-1:1)+'"]');if(button){event.preventDefault();if(!button.disabled)button.click();}});
@@ -976,7 +1129,7 @@ export async function mount(boot=null) {
     if(target.dataset.reportPersonSearch!==undefined){reportScope.personSearch=target.value;clearTimeout(reportTimer);reportTimer=setTimeout(drawReport,160);return;}
     if(target.dataset.reportOutputFilter!==undefined&&exportReport){const i=Number(target.dataset.reportOutputFilter);updateReportSelection(s=>{s.filters[i]=target.value;},{render:false});return;}
     if(target.dataset.reportOutputTitle!==undefined&&exportReport){updateReportSelection(s=>{s.title=target.value;},{render:false});return;}
-    if(target.dataset.planField){setPlanValue(target.dataset.planField,target.value);if(target.dataset.planField==='ui.search'){clearTimeout(planSearchTimer);planSearchTimer=setTimeout(drawPlan,180);}return;}
+    if(target.dataset.planField){const path=target.dataset.planField;if(planTextPaths.has(path))rememberPlanText(path,target.value);setPlanValue(path,target.value,{debounce:true});if(path==='ui.search'){clearTimeout(planSearchTimer);planSearchTimer=setTimeout(drawPlan,180);}return;}
     if(target.dataset.field) {
       const scene=current,key=target.dataset.field,position=target.selectionStart,inDrawer=Boolean(target.closest('#research-drawer'));books[scene][key]=target.value;books[scene].page=1;if(key==='notebookQuery')books[scene].notebookLimit=24;if(scene==='people')books[scene].lens='custom';if(['minScore','maxScore'].includes(key))books[scene].maxExclusive=false;persistBooks();clearTimeout(searchTimer);
       searchTimer=setTimeout(()=>{searchTimer=null;if(current===scene){if(inDrawer)drawDrawer();searchPaint=paint(false,{key,position,inDrawer});}},130);
@@ -984,7 +1137,7 @@ export async function mount(boot=null) {
     if(target.dataset.drawerField&&drawerState){drawerState[target.dataset.drawerField]=target.value;drawerState.page=1;clearTimeout(drawerTimer);drawerTimer=setTimeout(drawDrawer,130);}
     if(target.dataset.reportSearch&&exportReport){reportScope.search='';reportScope.page=1;const index=reportScope.section;updateReportSelection(s=>{s.filters[index]=target.value;},{render:false});return;}
     if(target.dataset.researchSearch){researchScope.search=target.value;clearTimeout(researchSearchTimer);researchSearchTimer=setTimeout(drawResearch,130);}
-    if(target.dataset.planNote){const plan=session.plans.find(p=>p.id===target.dataset.planNote);if(plan){plan.note=target.value;for(const input of stage().querySelectorAll('[data-plan-note]'))if(input!==target&&input.dataset.planNote===plan.id)input.value=target.value;remember('plans',session.plans);}}
+    if(target.dataset.planNote){const plan=session.plans.find(p=>p.id===target.dataset.planNote);if(plan){plan.note=target.value;for(const input of stage().querySelectorAll('[data-plan-note]'))if(input!==target&&input.dataset.planNote===plan.id)input.value=target.value;planTextDrafts=recordPlanText(planTextDrafts,plan,'note',target.value);if(!remember('planTextDrafts',planTextDrafts))storageNotice('plan-text','训练输入仍在当前页面，临时文字日志未能写入。请保存计划或下载完整备份。');clearTimeout(planSaveTimer);planSaveTimer=setTimeout(()=>{planSaveTimer=null;persistPlansNow().catch(()=>{});},500);}}
     if(target.dataset.evidenceNote){const note=session.notebook.find(n=>n.id===target.dataset.evidenceNote);if(note){note.note=target.value;recordNoteDraft(note);evidenceSaveState(note,'正在保存判断…');clearTimeout(noteTimer);noteTimer=setTimeout(()=>persistNotebook().catch(()=>notify('请下载备份以保留摘录')),400);}}
     if(target.id==='report-note'&&exportReport){clearTimeout(reportTimer);reportTimer=setTimeout(drawReport,160);exportReport.note=target.value;reportReader?.invalidate(exportReport);if(!exportReport.id&&target.value.trim()){exportReport.id='e'+crypto.randomUUID();exportReport.autoSaved=true;session.notebook.unshift(structuredClone(exportReport));}if(exportReport.id){const note=session.notebook.find(n=>n.id===exportReport.id);if(note){note.note=target.value;recordNoteDraft(note);showNoteState('saving');clearTimeout(noteTimer);noteTimer=setTimeout(persistReportNote,400);}}else showNoteState('preview');}
   });
@@ -996,7 +1149,7 @@ export async function mount(boot=null) {
   document.addEventListener('dragleave',event=>{const lane=event.target.closest?.('.follow-lane');if(lane&&!lane.contains(event.relatedTarget))lane.classList.remove('dragover');});
   document.addEventListener('drop',event=>{
     const lane=event.target.closest?.('.follow-lane');if(!lane)return;event.preventDefault();
-    const plan=session.plans.find(p=>p.id===event.dataTransfer.getData('text/plain'));if(plan){plan.status=lane.dataset.status;remember('plans',session.plans);paint();}
+    const plan=session.plans.find(p=>p.id===event.dataTransfer.getData('text/plain'));if(plan){plan.status=lane.dataset.status;persistPlansNow().catch(()=>{});paint();}
   });
   window.addEventListener('popstate',()=>{lastHistoryURL=location.href;restoreNavigationEntry();});
   window.addEventListener('hashchange',event=>{if(event.newURL!==location.href)return;if(lastHistoryURL===event.newURL){lastHistoryURL='';return;}lastHistoryURL='';restoreNavigationEntry();});
@@ -1004,13 +1157,21 @@ export async function mount(boot=null) {
   const startRevision=revision;
   stage().setAttribute('aria-busy','true');
   try {
-    const [materials,notebook]=await Promise.all([hydrate(boot),loadNotebook().catch(()=>[])]);
+    const [materials,notebook,storedPlans]=await Promise.all([hydrate(boot),loadNotebook().catch(()=>[]),loadPlans().catch(()=>null)]);
     if(startRevision!==revision)return;
-    session.notebook=noteJournal.restore(notebook||[]);
-    if(preference('plans',null)===null&&Array.isArray(materials.dataset?.plans))session.plans=materials.dataset.plans.map(normalizePlan);
+    const loadedNotebook=notebook||[];
+    notebookBase=structuredClone(loadedNotebook);session.notebook=noteJournal.restore(loadedNotebook);
+    datasetStamp=materials.stamp??await access('prepared').then(meta=>meta?.stamp??null).catch(()=>null);
+    if(Array.isArray(storedPlans))session.plans=storedPlans.map(normalizePlan);
+    else if(preferredPlans===null&&Array.isArray(materials.dataset?.plans))session.plans=materials.dataset.plans.map(normalizePlan);
     if(!STORAGE_SCOPE&&hasMaterials(materials.dataset)&&!session.plans.length){try{session.plans=(JSON.parse(localStorage.getItem('jianwei:actions'))||[]).map(p=>({...p,status:p.status==='done'?'done':'active'}));}catch{}}
-    if(materials.needsSave)save(materials.dataset,{prepared:true}).catch(()=>{});
-    await installDataset(materials.dataset,{prepared:true,index:materials.index});if(Object.keys(noteJournal.drafts).length){persistNotebook().catch(()=>notify('教师判断已从本机草稿恢复，请下载材料保留记录。'));}if(materials.origin==='migrated')notify('原工作区材料已恢复');
+    plansBase=structuredClone(session.plans);
+    let planJournalApplied=false;
+    for(const plan of session.plans){const applied=applyPlanText(planTextDrafts,plan,{});if(applied.applied)planJournalApplied=true;}
+    if(materials.needsSave)savePreparedVersioned(materials.dataset,datasetStamp).then(receipt=>{if(receipt.saved)datasetStamp=receipt.stamp;}).catch(()=>{});
+    await installDataset(materials.dataset,{prepared:true,index:materials.index,stamp:datasetStamp});
+    if(planJournalApplied||!Array.isArray(storedPlans))await persistPlansNow({quiet:true});
+    if(Object.keys(noteJournal.drafts).length||Object.keys(noteJournal.textDrafts).length){persistNotebook().catch(()=>storageNotice('note-draft','教师判断已从本机草稿恢复，请下载完整备份保留记录。'));}if(materials.origin==='migrated')notify('原工作区材料已恢复');
     window.dispatchEvent(new Event('hengji:workspace-ready'));
     if(preference('exercisePending',false))setTimeout(()=>exerciseStudio().then(studio=>studio.resume()).catch(()=>{}),0);
   }catch(error){if(startRevision!==revision)return;await paint();notify('材料尚未载入：'+error.message+'，可直接导入原表。');}

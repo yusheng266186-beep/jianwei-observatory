@@ -3,6 +3,9 @@ import {validateExerciseScene,exerciseSceneSchema} from './exercise-scene.mjs';
 import {validateScienceFigure,scienceFigureSchema} from './exercise-science.mjs';
 const kinds=['plot','geometry','forces','circuit','apparatus','flow','bars','illustration','drawing','science','scatter'];
 export const exerciseEquipment=['gas-bottle','round-flask','conical-flask','three-neck-flask','beaker'];
+// A single generated illustration is bounded here; the whole document keeps a
+// separate combined budget in exercise-contract.js.
+export const EXERCISE_IMAGE_MAX_CHARS=4000000;
 // Comparisons and chemical flow arrows are teaching text. The renderer escapes
 // every label; reject markup without treating "a -> b" or "x < 0" as HTML.
 const text=(s,n)=>typeof s==='string'&&s.length<=n&&!/<\s*\/?\s*[a-z!][^>]*>|javascript:/i.test(s);
@@ -15,7 +18,7 @@ export function validateExerciseDiagram(d){
  if(d.scene!==undefined)throw new Error('绘图元素须用于定制矢量图。');
  if(d.model){validateExerciseModel(d);return structuredClone(d);}
  if(d.kind==='illustration'){
-  if(Object.hasOwn(d,'image')&&(!keys(d.image,['mime','data'])||!['image/png','image/jpeg'].includes(d.image.mime)||typeof d.image.data!=='string'||d.image.data.length>4000000||!(/^[A-Za-z0-9+/=]+$/.test(d.image.data))))throw new Error('插图文件无效。');
+  if(Object.hasOwn(d,'image')&&(!keys(d.image,['mime','data'])||!['image/png','image/jpeg'].includes(d.image.mime)||typeof d.image.data!=='string'||d.image.data.length>EXERCISE_IMAGE_MAX_CHARS||!(/^[A-Za-z0-9+/=]+$/.test(d.image.data))))throw new Error('插图文件无效。');
   if(d.image){let raw;try{raw=atob(d.image.data);}catch{throw new Error('插图编码无效。');}if(d.image.mime==='image/jpeg'){if(raw.charCodeAt(0)!==255||raw.charCodeAt(1)!==216||raw.charCodeAt(2)!==255)throw new Error('插图编码无效。');return structuredClone(d);}const size=offset=>((raw.charCodeAt(offset)*16777216)+(raw.charCodeAt(offset+1)<<16)+(raw.charCodeAt(offset+2)<<8)+raw.charCodeAt(offset+3));if(raw.length<33||raw.slice(12,16)!=='IHDR'||size(16)<64||size(20)<64||size(16)>4096||size(20)>4096)throw new Error('插图尺寸无效。');}
   return structuredClone(d);
  }

@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {parseFlat,mergeDatasets,adaptJSON} from '../app/data/parser.js';
+import {importDecisionsComplete} from '../app/data/import-conflicts.js';
 import {normalizeDataset} from '../app/data/compat.js';
 import {remapScopedContext} from '../app/data/identity.js';
 import {Atlas} from '../app/engine/atlas.js';
@@ -43,7 +44,7 @@ test('分析表再次导入保留识别码与考次代码，考试名称可识�
 });
 test('姓名哈希碰撞也不合并不同学生',()=>{const data=flat([['costarring',4,'52',500],['liquid',4,'52',450]]);assert.equal(data.students.length,2);assert.notEqual(data.students[0].id,data.students[1].id);assert.equal(data.scores.length,2);});
 test('无法区分的同班同考次同名数值不静默覆盖，重复及互补行可整理',()=>{
- assert.throws(()=>flat([['同名',4,'52',500],['同名',4,'52',450]]),/识别码或整理重复行/);
+ const conflict=flat([['同名',4,'52',500],['同名',4,'52',450]]);assert.equal(importDecisionsComplete(conflict,[]),false);assert.equal(conflict.importConflicts.length,1);assert.equal(conflict.scores[0].total,500);
  const repeated=flat([['同名',4,'52',500],['同名',4,'52',500]]);assert.equal(repeated.scores.length,1);
  const partial=parseFlat([['姓名','班级','考试','总分','语文','数学'],['学生',4,'52',500,100,null],['学生',4,'52',null,null,90]],'补充.csv');assert.equal(partial.scores[0].total,500);assert.equal(partial.scores[0].subjects.语文.score,100);assert.equal(partial.scores[0].subjects.数学.score,90);
 });

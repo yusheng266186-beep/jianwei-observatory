@@ -83,7 +83,12 @@ export class Atlas {
     records.sort((a,b)=>(order.get(a.exam)??99)-(order.get(b.exam)??99));this.materialStories.set(sid,records);return records;
   }
   materialAt(sid,exam='latest'){const records=this.materialStory(sid);return exam==='latest'||!exam?records.at(-1):records.find(r=>r.exam===exam);}
-  subjectRank(row,subject){const score=this.subject(row,subject);return this.exam(row.exam).scope==='city'?score?.rank??null:score?.schoolRank??score?.rank??null;}
+  subjectRank(row,subject){
+    const score=this.subject(row,subject);
+    if(this.exam(row.exam).scope==='city')return validRank(score?.cityRank)?score.cityRank:validRank(score?.rank)?score.rank:null;
+    // A school-scope subject rank must never fall through to cityRank.
+    return validRank(score?.schoolRank)?score.schoolRank:validRank(score?.rank)?score.rank:null;
+  }
   gradeRank(row){return schoolRank(row);}
   classRank(row){
     if(!row)return null;

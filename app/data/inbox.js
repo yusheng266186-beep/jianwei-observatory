@@ -2,6 +2,8 @@ import {openSurface,closeSurface} from '../ui/surface-motion.js?v=runtime-v45';
 import {mergeDatasets,FLAT_FIELDS} from './parser.js?v=runtime-v45';
 import {esc,button,badge} from '../ui/html.js?v=runtime-v45';
 import {importerURL} from './importer-entry.js';
+import {importDecisionsComplete,resolveImportConflicts} from './import-conflicts.js';
+import {importConflictsHTML} from '../ui/import-conflicts.js';
 export class Inbox {
   constructor(commit,notify,current,prepare=()=>{},warmWorker=null) {
     this.warmWorker=warmWorker;
@@ -13,11 +15,14 @@ export class Inbox {
     this.dialog.addEventListener('click',async event=>{
       const target=event.target.closest('[data-inbox]');if(!target)return;
       if(target.dataset.inbox==='close'){this.cancel();return;}
+      if(target.dataset.inbox==='resolve'&&this.incoming){const index=target.dataset.index;if(index==='all')this.choices=this.incoming.importConflicts.map(()=>target.dataset.value);else this.choices[Number(index)]=target.dataset.value;this.preview();return;}
       if(target.dataset.inbox==='commit') {
         if(this.committing||this.busy||!this.incoming)return;
+        if(!importDecisionsComplete(this.incoming,this.choices||[])){this.notify('请先确认重复记录，再加入工作区。');return;}
+        const incoming=resolveImportConflicts(this.incoming,this.choices||[]);
         this.committing=true;for(const button of this.content.querySelectorAll('[data-inbox]'))button.disabled=true;
         this.progress(this.incoming.sourceName||'本次教学材料','正在建立分析索引并保存到本机',98);
-        try{await this.commit(this.incoming,target.dataset.mode);await closeSurface(this.dialog);this.incoming=null;}catch(error){this.error(error.message);}
+        try{await this.commit(incoming,target.dataset.mode);await closeSurface(this.dialog);this.incoming=null;}catch(error){this.error(error.message);}
         finally{this.committing=false;}
       }
     });
@@ -41,6 +46,7 @@ export class Inbox {
   cancel(){if(this.committing){this.notify('材料正在加入，完成后即可关闭');return;}this.cancelled=true;this.epoch++;this.pending?.worker.terminate();this.pending?.reject(new Error('已取消导入'));this.pending=null;this.busy=false;this.incoming=null;closeSurface(this.dialog);this.input.value='';}
   shell(body){if(!this.dialog.open)openSurface(this.dialog);this.content.innerHTML='<div class="inbox-top"><span class="overline">材料入口 / 本机读取</span><button class="button icon-only" data-inbox="close" aria-label="关闭导入">×</button></div>'+body;}
   progress(name,message,percent){this.shell('<h2>正在展开教学材料</h2><p>'+esc(name)+'</p><div class="import-meter" role="progressbar" aria-label="本机材料处理" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+percent+'" aria-valuetext="'+esc(message)+'"><i style="width:'+percent+'%"></i></div><p>'+esc(message)+'</p>');}
+  preview(){const slot=this.content.querySelector('[data-import-review]');if(slot){slot.innerHTML=importConflictsHTML(this.incoming,this.choices||[]);for(const button of this.content.querySelectorAll('[data-inbox="commit"]'))button.disabled=!importDecisionsComplete(this.incoming,this.choices||[]);}}
   error(message){this.shell('<h2>材料尚未加入工作区</h2><p>'+esc(message)+'</p><button class="button outline" data-inbox="close">回到工作区</button>');}
   mapping(meta,pending) {
     this.pending=pending;
@@ -77,7 +83,7 @@ export class Inbox {
     const skippedText=skipped.length?'已跳过 '+skipped.length+' 个不支持的文件：'+skipped.slice(0,3).map(f=>f.name).join('、')+(skipped.length>3?' 等':'')+'。支持 .xlsx、.xls、.csv、.json。':'';
     if(skippedText)this.notify(skippedText);
     this.prepare();
-    const epoch=++this.epoch;this.busy=true;this.cancelled=false;this.incoming=null;
+    const epoch=++this.epoch;this.busy=true;this.cancelled=false;this.incoming=null;this.choices=[];
     try {
       for(const file of files) {
         this.progress(file.name,'打开工作簿',3);const incoming=await this.file(file,epoch);
@@ -88,7 +94,8 @@ export class Inbox {
       const d=this.incoming,current=this.current(),first=!current.scores.length&&!current.answers.length&&!current.lines.length&&!Object.keys(current.banks).length,replace=current.anonymous&&!d.anonymous;
       const detail=first?'加入工作区后，开始查看这份材料的成绩与分析。':replace?'当前材料使用匿名姓名，导入真实成绩将建立真实工作区。':'合并优先匹配学生识别码，结合姓名、考次、班级与学科补充，空白保留旧值，实际0更新；小题按题号对应。需要清除旧数据时请选择替换，可在资料仓撤回。';
       const actions=first?'<button class="button accent" data-inbox="commit" data-mode="replace">加入工作区</button>':'<button class="button '+(replace?'outline':'accent')+'" data-inbox="commit" data-mode="merge">合并材料 / 补充考次</button><button class="button '+(replace?'accent':'outline')+'" data-inbox="commit" data-mode="replace">替换为这份材料</button>';
-      this.shell('<h2>材料已经展开</h2><p>'+files.map(f=>esc(f.name)).join('<br>')+'</p>'+(skippedText?'<p role="status">'+esc(skippedText)+'</p>':'')+'<div class="import-summary"><div><strong>'+d.students.length+'</strong><span>学生档案</span></div><div><strong>'+d.exams.length+'</strong><span>考试</span></div><div><strong>'+d.scores.length+'</strong><span>成绩记录</span></div><div><strong>'+d.answers.length+'</strong><span>小题学科记录</span></div></div><p>'+detail+'</p><div class="import-decisions">'+actions+'</div>');
+      const excluded=d.importReport?.school?.excludedRows||0;
+      this.shell('<h2>材料已经展开</h2><p>'+files.map(f=>esc(f.name)).join('<br>')+'</p>'+(skippedText?'<p role="status">'+esc(skippedText)+'</p>':'')+'<div class="import-summary"><div><strong>'+d.students.length+'</strong><span>学生档案</span></div><div><strong>'+d.exams.length+'</strong><span>考试</span></div><div><strong>'+d.scores.length+'</strong><span>成绩记录</span></div><div><strong>'+d.answers.length+'</strong><span>小题学科记录</span></div></div>'+(excluded?'<p>本次仅导入本校材料，已排除 '+excluded+' 条其他学校记录。</p>':'')+'<div data-import-review></div><p>'+detail+'</p><div class="import-decisions">'+actions+'</div>');this.preview();
     } catch(error) {if(epoch===this.epoch)this.error(error.message);}
     finally {if(epoch===this.epoch){this.warmWorker?.terminate();this.warmWorker=null;this.busy=false;this.input.value='';}}
   }

@@ -1,8 +1,11 @@
 import {exerciseFigureParts} from './exercise-figure-layout.mjs';
-import {validateExerciseDiagram,exerciseDiagramSchema,validateGeneratedExerciseFigures} from './exercise-diagrams.mjs';
+import {validateExerciseDiagram,exerciseDiagramSchema,validateGeneratedExerciseFigures,EXERCISE_IMAGE_MAX_CHARS} from './exercise-diagrams.mjs';
 export {validateGeneratedExerciseFigures};
 // Shared browser/server boundary. Student identity never belongs in this request.
 export const EXERCISE_VERSION=1;
+export const EXERCISE_DOCUMENT_TEXT_MAX_BYTES=2*1024*1024;
+export const EXERCISE_DOCUMENT_IMAGE_MAX_CHARS=EXERCISE_IMAGE_MAX_CHARS;
+export const minimumExerciseMinutes=count=>Math.max(5,Math.ceil(count/1.5));
 export const EXERCISE_SUBJECTS=[
  {id:'语文',hint:'阅读理解、语言运用与表达',rule:'阅读题须完整提供原创材料和作答依据，不伪造作者、出处或原文；开放题列出可接受答案和分点评分依据。语言运用题语境充分，写作题明确文体、字数和任务。'},
  {id:'数学',hint:'概念、方法与推理应用',rule:'检查定义域、参数范围、符号、边界和答案唯一性；计算与推导完整，不超出教师确认的教学范围。'},
@@ -44,6 +47,8 @@ const text=(v,max=Infinity)=>typeof v==='string'&&v.trim().length>0&&v.length<=m
 const keys=(o,allowed)=>o&&typeof o==='object'&&!Array.isArray(o)&&Object.keys(o).every(k=>allowed.includes(k));
 export function validateExerciseRequest(value){
  if(!keys(value,['subject','grade','curriculum','focus','count','minutes','difficulty','evidence','basis','visuals','template','targets','requirements','questionTypes','examStyle','answerSpaceVersion'])||!EXERCISE_SUBJECTS.some(s=>s.id===value.subject)||value.grade!=='高三'||!text(value.curriculum,160)||!text(value.focus,500)||!Number.isInteger(value.count)||value.count<3||value.count>12||!Number.isInteger(value.minutes)||value.minutes<5||value.minutes>90||!difficultyProfile(value.difficulty)||!Array.isArray(value.evidence)||value.evidence.length>24)throw new Error('请确认学科、训练重点、教材范围、3–12题及5–90分钟。');
+ const minimum=minimumExerciseMinutes(value.count);
+ if(value.minutes<minimum)throw new Error('所选'+value.count+'题与'+value.minutes+'分钟不匹配，请减少题数或将训练时长设为至少'+minimum+'分钟。');
  if(value.answerSpaceVersion!==undefined&&value.answerSpaceVersion!==1)throw new Error('作答版式版本无效。');
  if(value.examStyle!==undefined&&value.examStyle!=='sichuan-gaokao')throw new Error('命题规范无效。');
  if(value.examStyle==='sichuan-gaokao'&&value.questionTypes?.some(t=>!exerciseQuestionTypes(value.subject).includes(t)))throw new Error('请选择符合四川高考规范的学科题型。');
@@ -66,7 +71,11 @@ export function validateExerciseFigureRequest(v){if(!keys(v,['caption','requirem
 export function validateExerciseResult(value,request,{allowPendingFigures=false}={}){
  validateExerciseRequest(request);
  if(!keys(value,['title','objective','questions'])||!text(value.title,100)||!text(value.objective,500)||!Array.isArray(value.questions)||value.questions.length!==request.count)throw new Error('题目数量或训练目标不完整。');
- if(new TextEncoder().encode(JSON.stringify(value)).byteLength>2*1024*1024)throw new Error('整份练习超过文档处理容量，请分组生成。');
+ // A bounded illustration is stored inline; exclude its ASCII base64 bytes from
+ // the text budget but keep a separate whole-document image budget.
+ const images=value.questions.reduce((n,q)=>n+(q?.diagram?.kind==='illustration'&&typeof q.diagram.image?.data==='string'&&/^[A-Za-z0-9+/=]+$/.test(q.diagram.image.data)?q.diagram.image.data.length:0),0);
+ if(images>EXERCISE_DOCUMENT_IMAGE_MAX_CHARS)throw new Error('整份练习的插图总量超过文档处理容量，请减少插图或分组生成。');
+ if(new TextEncoder().encode(JSON.stringify(value)).byteLength-images>EXERCISE_DOCUMENT_TEXT_MAX_BYTES)throw new Error('整份练习超过文档处理容量，请分组生成。');
  const stems=new Set(),stemLimit=Infinity;
  for(const [i,q] of value.questions.entries()){
   if(q&&typeof q==='object')for(const [field,label,limit] of [['stem','题干'],['answer','答案'],['analysis','解析']])if(!text(q[field],limit))throw new Error('第'+(i+1)+'题的'+label+'未完整返回。');

@@ -19,3 +19,11 @@ body[data-motion=calm] :is(.plan-picker-trigger,.plan-picker-chevron,.picker-but
 @media(max-width:560px){.report-part-grid{grid-template-columns:1fr}.report-customizer{padding:14px}.report-customizer .block-head{display:block}.report-selection-count{display:block;margin-top:8px}.report-customizer input{font-size:16px}.report-paper-scroll{padding:10px;max-height:60dvh}.report-dialog .report-outlets>.button{font-size:11px;padding:9px 11px}.report-composer-grid{gap:20px}}
 .report-part-choice{justify-content:flex-start!important}.report-note-details{margin:20px 0;border:1px solid #88a9c12b;border-radius:14px;padding:12px 15px;background:#f6faff73}.report-note-details>summary{font-size:12px;color:#345f7e;cursor:pointer}.report-note-details .judgment-card{margin:15px 0 0;padding:18px}.report-note-details .judgment-card textarea{min-height:110px}.report-note-details .judgment-heading h3{font-size:15px}.report-note-details .judgment-heading p{font-size:11px}
 .picker-format-hint{display:block;font-size:10px;color:var(--muted);line-height:1.6;margin-top:6px}
+/* Import differences use the same quiet glass controls as the workspace. */
+.import-review{margin-block:24px;padding-block:20px;border-block:1px solid var(--line,rgba(84,127,151,.16));min-width:0}
+.import-review-record{padding-block:14px;border-bottom:1px solid rgba(84,127,151,.12);min-width:0}
+.import-review-record summary{cursor:pointer;overflow-wrap:anywhere;line-height:1.7}
+.import-review-record summary span{display:block;font-size:.85em;color:var(--muted,#60829a)}
+.import-review-values{font-size:.88em;margin-block:16px}
+.import-review-values>div{display:grid;grid-template-columns:minmax(0,1.6fr) repeat(2,minmax(0,1fr));gap:12px;padding-block:7px;overflow-wrap:anywhere}
+.import-review .chips{flex-wrap:wrap;margin-block:12px}
