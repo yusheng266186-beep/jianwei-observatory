@@ -15,7 +15,7 @@ import {fillSavedClassRanks} from './engine/report-ranks.js?v=runtime-v45';
 import {reportContext,normalizeReportScope} from './ui/report-context.js?v=runtime-v45';
 import {reportSpec} from './ui/report-studio.js?v=runtime-v45';
 import {followEditor} from './ui/follow-editor.js?v=runtime-v45';
-import {normalizePlan,draftForPlan,questionOptions,snapshotQuestion,materialPeople,validDate,validatePlanReview} from './engine/training.js?v=runtime-v45';
+import {normalizePlan,draftForPlan,questionOptions,snapshotQuestion,materialPeople,validDate,validTime,validatePlanReview,todayLocal,nextTeachingDayDelay} from './engine/training.js?v=runtime-v45';
 import {questionView,questionEvidence} from './ui/question.js?v=runtime-v45';
 import {queryQuestionMap,questionSequence} from './engine/question-map.js?v=runtime-v45';
 import {SITE_NAME} from './brand.js?v=runtime-v45';
@@ -63,7 +63,7 @@ let paintedStudy=null,researchTrail=[],researchTimer,researchSearchTimer,closedS
 let navigationScope=preference('navigationScope','')||crypto.randomUUID(),historyRestoring=false,historyTimer,lastHistoryURL='',historyRequest=0;remember('navigationScope',navigationScope);
 const reducedMotion=()=>reading.motion==='calm'||matchMedia('(prefers-reduced-motion: reduce)').matches;
 const reportJobs=new Set(),sceneViews=new Map();let paintedViewKey='',backgroundGeneration=0;
-function viewKey(scene){const context=scene==='people'?[session.savedPeople,session.comparePeople,session.directoryViews]:scene==='follow'?[session.plans,new Date().toDateString()]:scene==='library'?[session.plans,session.notebook.map(n=>[n.id,n.title,n.note])]:[];return JSON.stringify([scene,books[scene],context,researchTrail.at(-1)?studyDescription(atlas,researchTrail.at(-1)).title:'']);}
+function viewKey(scene){const context=scene==='people'?[session.savedPeople,session.comparePeople,session.directoryViews]:scene==='follow'?[session.plans,todayLocal()]:scene==='library'?[session.plans,session.notebook.map(n=>[n.id,n.title,n.note])]:[];return JSON.stringify([scene,books[scene],context,researchTrail.at(-1)?studyDescription(atlas,researchTrail.at(-1)).title:'']);}
 function invalidateViews(){sceneViews.clear();paintedViewKey='';backgroundGeneration++;}
 function retainView(key,view){sceneViews.delete(key);sceneViews.set(key,{view,nodes:null});while(sceneViews.size>8)sceneViews.delete(sceneViews.keys().next().value);return view;}
 function warmWorkspace(){
@@ -636,6 +636,7 @@ async function saveTrainingPlan(){
  validatePlanReview(p);
  if(p.schedule.date&&!p.schedule.slot)throw new Error('已选日期，请再选择课内、课间等时段');
  if(['lesson','break'].includes(p.schedule.slot)&&(!Number.isInteger(Number(p.schedule.period))||Number(p.schedule.period)<1||Number(p.schedule.period)>9))throw new Error('请选择第几节课');
+ if(p.schedule.time&&!validTime(p.schedule.time))throw new Error('请选择有效时刻（00:00至23:59）');
  if(p.schedule.slot==='custom'&&!p.schedule.time)throw new Error('自定时刻需要填写具体时间');
  if(p.reviewDate&&p.schedule.date&&p.reviewDate<p.schedule.date)throw new Error('复核日期不能早于训练日期');
  if(p.id&&!session.plans.some(item=>item.id===p.id))throw new Error('原计划已移除，请重新新建训练计划');
@@ -877,6 +878,7 @@ async function commands(event) {
     else if(d.cmd==='follow-add')addFollow(d.sid,d.exam,d.tier);
     else if(d.cmd==='follow-open'){if(!await closeDrawer())return;go('follow');}
     else if(d.cmd==='follow-remove'){const index=session.plans.findIndex(p=>p.id===d.id),plan=session.plans[index];if(plan){session.plans.splice(index,1);remember('plans',session.plans);await paint();notify('已移除跟进记录',{undo:async()=>{if(!session.plans.some(p=>p.id===plan.id))session.plans.splice(Math.min(index,session.plans.length),0,plan);remember('plans',session.plans);await paint();}});}}
+    else if(d.cmd==='follow-reset'){Object.assign(books.follow,{planSearch:'',planClass:'all',planStatus:'all',planTiming:'all'});persistBooks();paint();}
     else if(d.cmd==='follow-status'){const plan=session.plans.find(p=>p.id===d.id);if(plan){plan.status=d.status;remember('plans',session.plans);paint();}}
     else if(d.cmd==='notebook-retry'){const note=session.notebook.find(n=>n.id===d.id);if(note){evidenceSaveState(note,'正在保存判断…');await persistNotebook();}}
     else if(d.cmd==='notebook-reset'){clearTimeout(searchTimer);state.notebookQuery='';state.notebookSource='all';state.notebookJudgment='all';state.notebookLimit=24;persistBooks();await paint();}
@@ -929,6 +931,9 @@ async function forms(event) {
 }
 export async function mount(boot=null) {
   history.scrollRestoration='manual';
+  let teachingDay=todayLocal(),teachingDayTimer;
+  const refreshTeachingDay=()=>{clearTimeout(teachingDayTimer);const next=todayLocal();if(next!==teachingDay){teachingDay=next;invalidateViews();if(current==='follow'&&hasMaterials(atlas.data))paint(false);}teachingDayTimer=setTimeout(refreshTeachingDay,nextTeachingDayDelay());};
+  refreshTeachingDay();window.addEventListener('focus',refreshTeachingDay);document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshTeachingDay();});
   const shortcut=document.getElementById('find-shortcut');if(shortcut)shortcut.textContent=/Mac|iPhone|iPad/.test(navigator.platform)?'⌘ K':'Ctrl K';
   inbox=new Inbox(commitMaterial,notify,()=>atlas.data,()=>{loadScene(current).catch(()=>{});},boot?.importReader);
   window.addEventListener('hengji:import-files',event=>inbox.read(event.detail));
@@ -971,7 +976,7 @@ export async function mount(boot=null) {
     if(target.dataset.drawerField&&drawerState){drawerState[target.dataset.drawerField]=target.value;drawerState.page=1;clearTimeout(drawerTimer);drawerTimer=setTimeout(drawDrawer,130);}
     if(target.dataset.reportSearch&&exportReport){reportScope.search='';reportScope.page=1;const index=reportScope.section;updateReportSelection(s=>{s.filters[index]=target.value;},{render:false});return;}
     if(target.dataset.researchSearch){researchScope.search=target.value;clearTimeout(researchSearchTimer);researchSearchTimer=setTimeout(drawResearch,130);}
-    if(target.dataset.planNote){const plan=session.plans.find(p=>p.id===target.dataset.planNote);if(plan){plan.note=target.value;remember('plans',session.plans);}}
+    if(target.dataset.planNote){const plan=session.plans.find(p=>p.id===target.dataset.planNote);if(plan){plan.note=target.value;for(const input of stage().querySelectorAll('[data-plan-note]'))if(input!==target&&input.dataset.planNote===plan.id)input.value=target.value;remember('plans',session.plans);}}
     if(target.dataset.evidenceNote){const note=session.notebook.find(n=>n.id===target.dataset.evidenceNote);if(note){note.note=target.value;recordNoteDraft(note);evidenceSaveState(note,'正在保存判断…');clearTimeout(noteTimer);noteTimer=setTimeout(()=>persistNotebook().catch(()=>notify('请下载备份以保留摘录')),400);}}
     if(target.id==='report-note'&&exportReport){clearTimeout(reportTimer);reportTimer=setTimeout(drawReport,160);exportReport.note=target.value;reportReader?.invalidate(exportReport);if(!exportReport.id&&target.value.trim()){exportReport.id='e'+crypto.randomUUID();exportReport.autoSaved=true;session.notebook.unshift(structuredClone(exportReport));}if(exportReport.id){const note=session.notebook.find(n=>n.id===exportReport.id);if(note){note.note=target.value;recordNoteDraft(note);showNoteState('saving');clearTimeout(noteTimer);noteTimer=setTimeout(persistReportNote,400);}}else showNoteState('preview');}
   });
