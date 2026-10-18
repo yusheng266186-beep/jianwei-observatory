@@ -30,8 +30,11 @@ body .exercise-wheel:is(.is-scrolling,.is-dragging) .exercise-wheel-option>span{
 body{color:var(--ink);font-family:var(--sans)}
 /* A legible secondary tier, without inflating the primary data. */
 .scene-head p,.directory-head p{font-size:13px;line-height:1.85;max-width:66ch}
-.block-head{gap:12px 20px;align-items:flex-start}
+.block-head{gap:12px 20px;align-items:flex-start;flex-wrap:wrap}
 .block-head>div{min-width:0}.block-head p{max-width:72ch}
+.block-head>div:first-child:not(.chart-buttons){flex:1 1 220px}
+.block-head>.chart-buttons{flex:0 0 auto;flex-wrap:wrap;max-width:100%}
+.chart-buttons>button{flex:0 0 auto;white-space:nowrap}
 .number-ribbon :is(span,small),.metric-card :is(span,small){line-height:1.8}
 .number-ribbon>div>span,.metric-card>span{font-size:12px}
 .number-ribbon>div>small,.metric-card>small{font-size:11px}
@@ -122,6 +125,9 @@ body .figure-library-search input{font-family:var(--sans);border-radius:var(--ra
  body .table-scroll td:hover{background:inherit!important}
 }
 @media(max-width:760px){
+ .directory-exams>.exam-choices{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;align-items:stretch;gap:6px;max-width:100%;padding:3px 2px 7px;scroll-snap-type:x proximity;scrollbar-width:thin}
+ .directory-exams>.exam-choices>.exam-choice{flex:0 0 auto;max-width:100%;min-height:36px;scroll-snap-align:start}
+ .directory-exams:has(>.exam-choices)>span{align-self:center;padding-top:0}
  :is(#stage,.scene-leaving-canvas) .scene-head{position:relative}
  :is(#stage,.scene-leaving-canvas) .scene-head>.head-actions{position:absolute;top:0;right:0;gap:6px;flex-wrap:nowrap}
  :is(#stage,.scene-leaving-canvas) .scene-head .overline{min-height:40px;margin-bottom:5px;align-items:center}
@@ -157,6 +163,7 @@ body[data-surface=paper] .library-route.selected{background:#e0edf5}
 /* Settings fill their column while the numeric wheel stays compact. */
 body .settings>.glass{width:100%;min-width:0;align-self:stretch}
 body .usage-panel form{grid-template-columns:minmax(88px,110px) minmax(0,1fr);align-items:center}
+body .usage-presets{grid-template-columns:repeat(2,minmax(0,1fr))}
 body button:disabled{cursor:default;transform:none;box-shadow:none}
 @media(hover:hover) and (pointer:fine){body :is(.top,.login,.settings,.providers,.chooser,.diagnostics-panel,.figure-sample,.figure-detail) button:active:where(:not(:disabled)){transform:translateY(0) scale(.985);transition-duration:80ms}}
 @media(hover:none){body :is(.top,.login,.settings,.providers,.chooser,.diagnostics-panel,.figure-sample,.figure-detail) button:hover{transform:none}}

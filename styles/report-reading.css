@@ -68,13 +68,14 @@
 .report-selection-count{display:block;margin-top:6px;font-size:10px;white-space:normal}
 .report-part-grid{max-height:none;overflow:visible;padding:1px;grid-template-columns:1fr}
 .report-part.is-editing{background:linear-gradient(145deg,#edf5fa,#deebf466);box-shadow:inset 3px 0 #467294}
-.report-part-tools{display:flex;align-items:center;justify-content:space-between;gap:4px;padding:0 7px 6px 30px}
+.report-part-tools{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;width:100%;min-width:0;padding:0 10px 8px 30px}
 .report-part-tools>.button{font-size:10px;padding:3px 8px;min-height:24px;color:var(--school-blue);background:#ffffff8a}
 .report-part-tools>.button[aria-pressed=true]{font-weight:600;background:#d0e3ef90}
 .report-part-order{display:flex;flex-direction:row;gap:3px;margin-left:auto}
 .report-part-order .button{min-height:24px;width:24px;padding:3px}
-.report-part-choice{width:100%;flex:1}
-.report-part{flex-wrap:wrap;align-content:start}
+.report-part-choice{width:100%;min-width:0;max-width:100%}
+.report-part-choice>span{flex:1;min-width:0;overflow-wrap:anywhere}
+.report-part{display:grid;grid-template-columns:minmax(0,1fr);align-content:start}
 .report-settings-scroll .report-note-details{margin:14px 0}
 .report-origin{padding:9px 10px;margin:14px 0;font-size:10px}
 .report-origin>span{display:block}
@@ -93,7 +94,7 @@
  .report-dialog .report-heading h2{font-size:14px;line-height:1.5;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
  .report-dialog .report-heading p{font-size:9px;margin-top:3px}
  .report-head-actions{gap:3px}.report-head-actions .button{font-size:10px;min-height:27px;padding:4px 7px}
- .report-head-actions>.icon-only{width:25px;padding:3px}
+ .report-head-actions>.icon-only{padding:3px}
  .report-preview-switch>span{font-size:9px}
  .report-preview-switch .chip{padding:4px 7px;min-height:25px}
  .report-paper-tools{justify-content:start;gap:5px;margin-bottom:6px}
@@ -124,4 +125,14 @@
 .report-dialog .report-mode-switch{margin:0;gap:3px;flex-shrink:0}
 .report-mode-switch .button{font-size:10px;min-height:27px;padding:4px 8px}
 .report-dialog.is-reading .report-mode-switch{display:none}
-@media(max-width:560px){.report-head-actions{display:grid;grid-template-columns:minmax(0,1fr) 25px;width:145px;gap:3px}.report-head-actions .report-mode-switch{grid-column:1/-1;display:flex;gap:2px}.report-dialog.is-reading .report-mode-switch{display:none}.report-mode-switch .button{font-size:9px;min-height:24px;padding:3px 6px}.report-head-actions>[data-cmd=report-settings]{white-space:normal;font-size:9px;line-height:1.5}.report-dialog .report-heading p>span{display:none}}
+@media(max-width:560px){.report-head-actions .report-mode-switch{display:flex;gap:2px}.report-dialog.is-reading .report-mode-switch{display:none}.report-mode-switch .button{font-size:9px;min-height:24px;padding:3px 6px}.report-head-actions>[data-cmd=report-settings]{white-space:normal;line-height:1.5}.report-dialog .report-heading p>span{display:none}}
+/* Full title above the controls; closing always has a complete touch target. */
+@media(max-width:560px){
+ .report-workspace-head{display:block;position:relative}
+ .report-dialog .report-heading{padding-inline-end:48px}
+ .report-head-actions{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;width:100%;min-width:0;gap:6px;margin-top:8px}
+ .report-head-actions .report-mode-switch{min-width:0;max-width:100%}
+ .report-head-actions>[data-cmd=report-settings]{flex:0 1 auto;min-width:0;max-width:100%;font-size:10px;min-height:32px}
+ .report-dialog .report-head-actions>.icon-only{position:absolute;top:0;right:0;width:40px;min-width:40px;height:40px;min-height:40px;padding:0}
+ .report-head-actions .report-mode-switch>.button{min-height:32px}
+}
