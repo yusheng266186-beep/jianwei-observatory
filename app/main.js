@@ -1,5 +1,5 @@
 import {tableReadingPositions,restoreTableReadingPositions,disclosurePositions,restoreDisclosurePositions} from './ui/study-position.js';
-import {researchPath,researchHistoryState,researchHistoryStudy} from './engine/research-navigation.js';
+import {researchPath,researchStudySnapshot,researchHistoryState,researchHistoryStudy,researchHistoryConditions} from './engine/research-navigation.js';
 import {researchObservationList} from './engine/research-roster.js';
 import {syncPracticeFeedbackPlans} from './engine/exercise-feedback.js';
 import {recordPageTiming} from './engine/runtime-diagnostics.js';
@@ -115,7 +115,7 @@ function scenePending(serial,scene){
 function sceneReady(serial){if(serial!==paintId)return;clearTimeout(sceneLoadingTimer);document.getElementById('scene-status').hidden=true;stage().inert=false;stage().setAttribute('aria-busy','false');delete stage().dataset.loading;}
 function staleStage(target){return Boolean(target.closest('.scene-leaving-viewport'))||stage().contains(target)&&(stage().inert||sceneObject()!==paintedObject);}
 
-function persistBooks(){remember('books',books);}
+function persistBooks(){remember('books',books);checkpointConditions();}
 async function flushSearch(){if(searchTimer){clearTimeout(searchTimer);searchTimer=null;searchPaint=paint();}const pending=searchPaint;if(pending)await pending;if(searchPaint===pending)searchPaint=null;}
 function revealResults(root) {
   const target=root.querySelector('.directory-controls,.lens-roster-tools,.roster-bar,.report-query,.table-frame');if(!target)return;
@@ -144,7 +144,7 @@ function persistResearch(){remember('research',research);}
 function compactDrawer(state){if(!state||!['person','question','compare','subject','knowledge'].includes(state.type))return null;if(state.type==='question')return structuredClone(state);const {queue,cursor,queueLabel,...rest}=state;return structuredClone(rest);}
 function studyNow() {
   if(!paintedStudy||!hasMaterials(atlas.data))return null;
-  const study=structuredClone(paintedStudy),nodes=[...stage().querySelectorAll('[data-study-section]')],section=nodes.filter(node=>node.getBoundingClientRect().top<=140).at(-1);
+  const study=researchStudySnapshot(paintedStudy,{scene:current,values:books[current],hash:location.hash}),nodes=[...stage().querySelectorAll('[data-study-section]')],section=nodes.filter(node=>node.getBoundingClientRect().top<=140).at(-1);
   study.position={top:window.scrollY,section:section?.id||'',offset:section?.getBoundingClientRect().top||0,details:disclosurePositions(stage()),tables:tableReadingPositions(stage())};
   if(document.getElementById('research-drawer').open){study.drawer=compactDrawer(drawerState);study.trail=drawerTrail.map(compactDrawer).filter(Boolean).slice(-6);study.drawerTop=drawerScroll().scrollTop;study.drawerTables=drawerTablePositions();study.drawerDetails=disclosurePositions(document.getElementById('drawer-content'));study.comparePeople=[...session.comparePeople];}
   return study;
@@ -157,6 +157,12 @@ function archiveStudy(study=studyNow()) {
 function checkpointNavigation(study=studyNow()) {
   if(historyRestoring||!study||researchPath(study.scene,study.values)!==location.hash)return;
   try{history.replaceState(researchHistoryState(history.state,{scope:navigationScope,hash:location.hash,study,trail:researchTrail}),'',location.href);}catch{/* Browser history quotas must not interrupt research or local saves. */}
+}
+function checkpointConditions(){
+  if(historyRestoring||!paintedStudy)return;
+  // Save the small condition snapshot immediately; DOM reading positions keep
+  // their debounced checkpoint, so typing never forces a layout measurement.
+  try{const state=researchHistoryConditions(history.state,{scope:navigationScope,hash:location.hash,scene:current,values:books[current],painted:paintedStudy,trail:researchTrail});if(state)history.replaceState(state,'',location.href);}catch{/* Preserve typing and navigation when history storage is unavailable. */}
 }
 function scheduleResearch(){clearTimeout(researchTimer);researchTimer=setTimeout(()=>archiveStudy(),500);clearTimeout(historyTimer);historyTimer=setTimeout(checkpointNavigation,120);}
 function leaveStudy() {
