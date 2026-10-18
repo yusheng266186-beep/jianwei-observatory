@@ -1,8 +1,10 @@
+import {installDisclosures,openDisclosure} from './disclosure-motion.js';
+export {openDisclosure};
 import {motion,finishAnimation} from './motion.js?v=runtime-v45';
 import {positionSpreadLabels} from './plots.js?v=runtime-v45';
 import {paperMapLayout} from '../engine/paper-structure.js?v=runtime-v45';
 let motionPreference=()=>false,resizeObserver,plotObserver,railObserver,drawerHeaderObserver,revealObserver,tooltipTarget=null,tooltipOriginal=null,tooltipFrame=0,outlineFrame=0,drawerOutlineFrame=0,pointerFrame=0,outline=null,outlineEntries=[];
-const observedTables=new Set(),observedPlots=new Set(),observedReveals=new Set(),revealed=new WeakSet(),disclosures=new WeakMap();
+const observedTables=new Set(),observedPlots=new Set(),observedReveals=new Set(),revealed=new WeakSet();
 const selectionRails=new Set(),railStates=new WeakMap();
 const plotFrames=new WeakMap(),galleryOffsets=new Map();
 let layoutObserver;
@@ -200,18 +202,6 @@ function showTooltip(target,x,y) {
   tooltipTarget=target;tooltipOriginal={title:target.getAttribute('title'),svgTitle,svgText:svgTitle?.textContent,description:target.getAttribute('aria-describedby')};
   target.removeAttribute('title');if(svgTitle)svgTitle.textContent='';target.setAttribute('aria-describedby','chart-tooltip');tip.textContent=text;tip.hidden=false;if(tip.showPopover&&!tip.matches(':popover-open'))tip.showPopover();placeTooltip(x,y);
 }
-export function openDisclosure(details){if(!details)return;const previous=disclosures.get(details);disclosures.delete(details);previous?.animation.cancel();details.open=true;}
-async function toggleDetails(details) {
-  const previous=disclosures.get(details),wanted=!(previous?.wanted??details.open),body=[...details.children].find(el=>el.tagName!=='SUMMARY');
-  const from=body?.getBoundingClientRect().height||0;previous?.animation.cancel();
-  if(!body||motionPreference()){details.open=wanted;disclosures.delete(details);return;}
-  details.open=true;const to=wanted?body.scrollHeight:0,animation=body.animate([{height:(previous?from:wanted?0:from)+'px',opacity:wanted ? .85 : 1,overflow:'clip'},{height:to+'px',opacity:wanted?1:0,overflow:'clip'}],{...motion.disclose,fill:'both'}),record={wanted,animation};
-  disclosures.set(details,record);
-  await finishAnimation(animation,motion.disclose.duration);
-  if(disclosures.get(details)!==record)return;
-  if(!wanted&&body.contains(document.activeElement))details.querySelector('summary')?.focus({preventScroll:true});
-  details.open=wanted;animation.cancel();disclosures.delete(details);for(const frame of details.querySelectorAll('.table-frame'))refreshTable(frame);
-}
 export function installInteractions({reducedMotion}) {
   motionPreference=reducedMotion;
   const fontsReady=()=>{pruneInteractions();refreshPaperProfiles();for(const svg of observedPlots)prioritizeLayout(svg,'plot');for(const rail of selectionRails)selectionRail(rail);refreshOutline();refreshDrawerSections();};
@@ -224,7 +214,7 @@ export function installInteractions({reducedMotion}) {
   if('ResizeObserver' in window){drawerHeaderObserver=new ResizeObserver(refreshDrawerSections);const header=document.querySelector('#research-drawer .drawer-top');if(header)drawerHeaderObserver.observe(header);}
   if('IntersectionObserver' in window)revealObserver=new IntersectionObserver(entries=>{let order=0;for(const entry of entries)if(entry.isIntersecting){revealObserver.unobserve(entry.target);observedReveals.delete(entry.target);if(!motionPreference())entry.target.animate([{opacity:entry.target.matches('.block,.follow-workbench')?1:.94,translate:'0px 6px'},{opacity:1,translate:'0px 0px'}],{...motion.arrive,delay:Math.min(order++,3)*16,fill:'backwards'});}},{rootMargin:'0px 0px -25px 0px',threshold:.06});
   document.addEventListener('scroll',event=>{if(event.target?.matches?.('.goal-cards[data-scroll-key]')){galleryOffsets.set(event.target.dataset.scrollKey,event.target.scrollLeft);hideTooltip();}else if(event.target?.matches?.('.paper-profile-scroll')){refreshPaperProfiles();hideTooltip();}else if(event.target?.matches?.('.table-scroll'))refreshTable(event.target.closest?.('.table-frame'));else {hideTooltip();if(event.target?.matches?.('#research-drawer,.drawer-body')){cancelAnimationFrame(drawerOutlineFrame);drawerOutlineFrame=requestAnimationFrame(refreshDrawerSections);}else if(event.target===document||event.target===document.documentElement){cancelAnimationFrame(outlineFrame);outlineFrame=requestAnimationFrame(()=>{const scrolled=String(window.scrollY>18);if(document.body.dataset.scrolled!==scrolled)document.body.dataset.scrolled=scrolled;refreshOutline();});}}},{capture:true,passive:true});
-  document.addEventListener('click',event=>{const summary=event.target.closest?.('summary');if(!summary||event.target.closest?.('button,a,input'))return;const details=summary.parentElement;if(details.matches('.exercise-reading-tools,.card-scores,.card-meta,.record-accordion,.method-note,.class-profile,.report-context,.report-part-options,.report-field-options,.report-note-details')){event.preventDefault();toggleDetails(details);}});
+  installDisclosures(document,{reducedMotion:motionPreference,onSettled:details=>{for(const frame of details.querySelectorAll('.table-frame'))refreshTable(frame);}});
   document.addEventListener('keydown',event=>{const rail=event.target;if(event.defaultPrevented||event.altKey||event.ctrlKey||event.metaKey||!rail.matches?.('.trajectory-scroll')||!['ArrowLeft','ArrowRight'].includes(event.key))return;event.preventDefault();rail.scrollBy({left:(event.key==='ArrowLeft'?-1:1)*Math.max(120,rail.clientWidth*.7),behavior:motionPreference()?'instant':'smooth'});});
   document.addEventListener('pointerover',event=>{if(event.pointerType==='touch')return;const target=event.target.closest?.('[data-plot-action],.plot-item,.plot-point,.student-dot,.heat-cell[title],[data-tip]');if(target)showTooltip(target,event.clientX,event.clientY);});
   document.addEventListener('pointermove',event=>{if(!tooltipTarget)return;cancelAnimationFrame(tooltipFrame);tooltipFrame=requestAnimationFrame(()=>placeTooltip(event.clientX,event.clientY));});

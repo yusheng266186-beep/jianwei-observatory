@@ -1,3 +1,5 @@
+import {installDisclosures} from '../app/ui/disclosure-motion.js';
+installDisclosures();
 import {access} from '../app/data/storage.js';
 import {summarizePageTimings,clearPageTimings} from '../app/engine/runtime-diagnostics.js';
 import {modelDiagnosticsHTML} from '../app/ui/model-diagnostics.js';
