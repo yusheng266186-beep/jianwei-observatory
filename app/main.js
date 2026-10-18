@@ -1,4 +1,5 @@
 import {tableReadingPositions,restoreTableReadingPositions,disclosurePositions,restoreDisclosurePositions} from './ui/study-position.js';
+import {isRuntimeLoadError,runtimeFailureMessage} from './ui/runtime-recovery.js';
 import {researchPath,researchStudySnapshot,researchHistoryState,researchHistoryStudy,researchHistoryConditions} from './engine/research-navigation.js';
 import {researchObservationList} from './engine/research-roster.js';
 import {syncPracticeFeedbackPlans} from './engine/exercise-feedback.js';
@@ -319,7 +320,7 @@ async function paint(transition=false,focus=null) {
       }
     };
     apply();if(serial===paintId)recordPageTiming(scene,performance.now()-started);if(scene==='library'&&books.library.tab==='exercises')mountExerciseCenter();
-  }catch(error){if(serial!==paintId)return;recordPageTiming(scene,performance.now()-started,{failed:true});finishCanvasSlide();sceneReady(serial);stage().dataset.scene=scene;paintedObject=sceneObject(scene);stage().innerHTML=empty('这张研究画布暂时没有打开',error.message)+button('重新打开','reload',{},'outline')+button('导入材料','import',{},'accent');activeReport=null;}
+  }catch(error){if(serial!==paintId)return;recordPageTiming(scene,performance.now()-started,{failed:true});finishCanvasSlide();sceneReady(serial);stage().dataset.scene=scene;paintedObject=sceneObject(scene);stage().innerHTML=empty('这张研究画布暂时没有打开',runtimeFailureMessage(error))+button('刷新并继续','reload',{},'outline')+button('导入材料','import',{},'accent');activeReport=null;}
 }
 function update(key,value,toggle=false) {
   if(current==='library'&&key==='tab'&&value==='reports')prepareReports();
@@ -600,14 +601,14 @@ function exerciseStudio(){
  }}));exerciseStudioTask=task;task.catch(()=>{if(exerciseStudioTask===task)exerciseStudioTask=null;});}
  return exerciseStudioTask;
 }
-async function mountExerciseCenter(){const host=stage().querySelector('#exercise-center');if(!host)return;try{const studio=await exerciseStudio();if(host.isConnected)await studio.mountCenter(host);}catch(error){if(host.isConnected)host.innerHTML='<h2>试题中心暂时未能打开</h2><p>'+esc(error.message)+'</p>'+button('重新打开','exercise-center',{},'outline');}}
+async function mountExerciseCenter(){const host=stage().querySelector('#exercise-center');if(!host)return;try{const studio=await exerciseStudio();if(host.isConnected)await studio.mountCenter(host);}catch(error){if(host.isConnected)host.innerHTML='<h2>试题中心暂时未能打开</h2><p>'+esc(runtimeFailureMessage(error))+'</p>'+button(isRuntimeLoadError(error)?'刷新并继续':'重新打开',isRuntimeLoadError(error)?'reload':'exercise-center',{},'outline');}}
 
 async function openExercises(context={}){
  const attempt=++exerciseOpenRequest,dialog=document.getElementById('exercise-dialog'),content=document.getElementById('exercise-content');
  if(!dialog.open){dialog.dataset.loading='true';content.innerHTML='<header class="exercise-heading"><span class="overline">个性化辅导中心</span><h2 id="exercise-title">正在打开辅导中心</h2><p role="status">正在读取本机练习与学生列表…</p></header><button class="button outline" data-cmd="exercise-loading-close">关闭</button>';showDialog(dialog);}
  try{
  const studio=await exerciseStudio();if(attempt!==exerciseOpenRequest||!dialog.open)return;const sid=context.hub?null:context.sid||planDraft?.sid,exam=context.exam||planDraft?.exam||atlas.latest;await studio.open({sid,exam,subject:context.subject,plan:!context.hub&&planDraft?.sid===sid&&planDraft.exam===exam?planDraft:null},{shouldOpen:()=>attempt===exerciseOpenRequest&&dialog.open});delete dialog.dataset.loading;
- }catch(error){if(attempt!==exerciseOpenRequest||!dialog.open)return;delete dialog.dataset.loading;content.innerHTML='<header class="exercise-heading"><h2 id="exercise-title">辅导中心暂时未能打开</h2><p role="alert">'+esc(error.message)+'</p></header><button class="button accent" data-cmd="exercise-hub">重新打开</button><button class="button outline" data-cmd="exercise-loading-close">关闭</button>';}
+ }catch(error){if(attempt!==exerciseOpenRequest||!dialog.open)return;delete dialog.dataset.loading;content.innerHTML='<header class="exercise-heading"><h2 id="exercise-title">辅导中心暂时未能打开</h2><p role="alert">'+esc(runtimeFailureMessage(error))+'</p></header>'+button(isRuntimeLoadError(error)?'刷新并继续':'重新打开',isRuntimeLoadError(error)?'reload':'exercise-hub',{},'accent')+'<button class="button outline" data-cmd="exercise-loading-close">关闭</button>';}
 }
 const planPaths=new Set(['sid','exam','teacher','note','reviewDate','result','review.correct','review.total','training.key','training.tasks','training.method','training.count','training.targetRate','training.goal','schedule.date','schedule.slot','schedule.period','schedule.time','schedule.duration','ui.no','ui.search','ui.questionFilter','ui.knowledge']);
 function rememberPlanDraft(){if(!remember('followDraft',planDraft?{plan:planDraft,ui:planUI}:null))notify('训练草稿本机保存未完成，当前页面仍保留，请保存计划或下载备份');}
@@ -902,7 +903,7 @@ async function commands(event) {
       openReport(evidence(SITE_NAME+' · 教学证据摘录',atlas.data.school||'',sections,sheets));
     }
     else if(d.cmd==='reload')location.reload();
-  }catch(error){notify(error.message);}
+  }catch(error){notify(runtimeFailureMessage(error),isRuntimeLoadError(error)?{label:'刷新并继续',cmd:'reload'}:{});}
 }
 async function forms(event) {
   invalidateViews();

@@ -1,6 +1,7 @@
 // Reproducible release assets; source modules remain readable and testable.
 const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
 const esbuild=require(process.env.ESBUILD_LIB||'esbuild');
+const {maintain}=require('./runtime-assets.cjs');
 const root=path.resolve(__dirname,'..'),out=path.join(root,'app/runtime');
 const sourceURLs={name:'source-urls',setup(build){
  build.onResolve({filter:/\?v=runtime-v\d+$/},args=>({path:path.resolve(args.resolveDir,args.path.replace(/\?v=runtime-v\d+$/,''))}));
@@ -52,8 +53,19 @@ const sourceURLs={name:'source-urls',setup(build){
  const routes=[['board','年级总览'],['class','班级研究'],['papers','试卷研究'],['people','学生研究'],['follow','教学跟进'],['library','资料与报告']];
  html=html.replace(/(<nav class="navigation-dock"[^>]*>)[\s\S]*?(<\/nav>)/,(_,start,end)=>start+'<span class="dock-indicator" aria-hidden="true"></span>'+routes.map(([id,label])=>'<button data-cmd="nav" data-scene="'+id+'"><span class="dock-symbol">'+dockIcon(id)+'</span><span>'+label+'</span><i></i></button>').join('')+end);
  fs.writeFileSync(path.join(root,'index.html'),html);
- for(const [file,source] of [['figure-library.html','assets/figure-library.js'],['model-workbench.html','assets/model-workbench.js']]){const value=fs.readFileSync(path.join(root,file),'utf8');fs.writeFileSync(path.join(root,file),value.replace(/<script type="module" src="[^"]+"><\/script>/,'<script type="module" src="./app/'+entries[source]+'"></script>'));}
+ const styleSources={
+  'figure-library.html':['assets/model-workbench.css','assets/figure-library.css','styles/fields.css','styles/refinement.css','styles/reading-fonts.css','styles/visual-language.css'],
+  'model-workbench.html':['assets/model-workbench.css','styles/fields.css','styles/wheels.css','styles/refinement.css','styles/reading-fonts.css','styles/visual-language.css']
+ },styles=new Set();
+ for(const [file,source] of [['figure-library.html','assets/figure-library.js'],['model-workbench.html','assets/model-workbench.js']]){
+  let value=fs.readFileSync(path.join(root,file),'utf8').replace(/<script type="module" src="[^"]+"><\/script>/,'<script type="module" src="./app/'+entries[source]+'"></script>');
+  const links=styleSources[file].map(source=>{const content=fs.readFileSync(path.join(root,source)),hash=crypto.createHash('sha256').update(content).digest('hex').slice(0,12),name=source.replace(/\.css$/,'-'+hash+'.css');fs.writeFileSync(path.join(root,name),content);styles.add(name);return '<link rel="stylesheet" href="./'+name+'">';}).join('');
+  value=value.replace(/<link rel="stylesheet"[^>]*>/g,'').replace('</title>','</title>'+links);
+  if(!value.includes('rel="icon"'))value=value.replace('</title>','</title><link rel="icon" type="image/png" href="./assets/school-crest-192.png?v=entry-v1">');
+  fs.writeFileSync(path.join(root,file),value);
+ }
 
- fs.writeFileSync(path.join(out,'manifest.json'),JSON.stringify({main:entries['app/main.js'],storage:entries['app/data/storage.js'],prepare:entries['app/data/prepare-worker.js'],importer:importerName,preload:[...preload],css:cssName,landing:landingName,standalone:{figures:entries['assets/figure-library.js'],models:entries['assets/model-workbench.js']},files:Object.keys(result.metafile.outputs)},null,2)+'\n');
+ fs.writeFileSync(path.join(out,'manifest.json'),JSON.stringify({main:entries['app/main.js'],storage:entries['app/data/storage.js'],prepare:entries['app/data/prepare-worker.js'],importer:importerName,preload:[...preload],css:cssName,landing:landingName,styles:[...styles].sort(),standalone:{figures:entries['assets/figure-library.js'],models:entries['assets/model-workbench.js']},files:Object.keys(result.metafile.outputs)},null,2)+'\n');
+ const retention=maintain(root,{apply:true});console.log(JSON.stringify({retainedAssets:retention.keep.length,removedAssets:retention.remove.length,removedBytes:retention.bytes}));
  console.log(JSON.stringify({entries,css:cssName,bytes:Object.values(result.metafile.outputs).reduce((n,v)=>n+v.bytes,0)}));
 })().catch(e=>{console.error(e);process.exitCode=1});
