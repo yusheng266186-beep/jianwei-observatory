@@ -1,4 +1,5 @@
 import {tableReadingPositions,restoreTableReadingPositions,disclosurePositions,restoreDisclosurePositions} from './ui/study-position.js';
+import {researchPath,researchHistoryState,researchHistoryStudy} from './engine/research-navigation.js';
 import {researchObservationList} from './engine/research-roster.js';
 import {syncPracticeFeedbackPlans} from './engine/exercise-feedback.js';
 import {recordPageTiming} from './engine/runtime-diagnostics.js';
@@ -59,6 +60,7 @@ if(preference('interfaceRevision','')!=='study-20261011b'){books.board.mode='ove
 let atlas=new Atlas(emptyDataset()),current='board',activeReport=null,exportReport=null,reportScope={section:0,page:1,search:''},revision=0,paintId=0,searchTimer,searchPaint,drawerTimer,reportTimer,noteTimer,inbox;
 let drawerState=null,drawerClosing=null,drawerMotion=null,drawerContentMotion=null,drawerEpoch=0,observationRequest=0,drawerOpener=null,drawerTrail=[],paintedObject='',paintedScrolls=new Map(),pagePositions=new Map(),scrollResets=new Set(),pendingUndo=null;
 let paintedStudy=null,researchTrail=[],researchTimer,researchSearchTimer,closedStudy=null,reportOrigin=null,reportNoteState='preview',reportNoteRevision=0,modalOrder=[];
+let navigationScope=preference('navigationScope','')||crypto.randomUUID(),historyRestoring=false,historyTimer,lastHistoryURL='',historyRequest=0;remember('navigationScope',navigationScope);
 const reducedMotion=()=>reading.motion==='calm'||matchMedia('(prefers-reduced-motion: reduce)').matches;
 const reportJobs=new Set(),sceneViews=new Map();let paintedViewKey='',backgroundGeneration=0;
 function viewKey(scene){const context=scene==='people'?[session.savedPeople,session.comparePeople,session.directoryViews]:scene==='follow'?[session.plans,new Date().toDateString()]:scene==='library'?[session.plans,session.notebook.map(n=>[n.id,n.title,n.note])]:[];return JSON.stringify([scene,books[scene],context,researchTrail.at(-1)?studyDescription(atlas,researchTrail.at(-1)).title:'']);}
@@ -152,11 +154,15 @@ function archiveStudy(study=studyNow()) {
   const key=studyKey(study),old=research.recent.find(entry=>studyKey(entry)===key),{title,scope}=studyDescription(atlas,study),entry={...study,title,scope,id:old?.id||'r-'+crypto.randomUUID(),updated:new Date().toISOString()};
   research.recent=[entry,...research.recent.filter(e=>e.id!==entry.id)].slice(0,24);persistResearch();
 }
-function scheduleResearch(){clearTimeout(researchTimer);researchTimer=setTimeout(()=>archiveStudy(),500);}
+function checkpointNavigation(study=studyNow()) {
+  if(historyRestoring||!study||researchPath(study.scene,study.values)!==location.hash)return;
+  try{history.replaceState(researchHistoryState(history.state,{scope:navigationScope,hash:location.hash,study,trail:researchTrail}),'',location.href);}catch{/* Browser history quotas must not interrupt research or local saves. */}
+}
+function scheduleResearch(){clearTimeout(researchTimer);researchTimer=setTimeout(()=>archiveStudy(),500);clearTimeout(historyTimer);historyTimer=setTimeout(checkpointNavigation,120);}
 function leaveStudy() {
   const samePage=closedStudy&&closedStudy.study.scene===current&&studyKey({scene:current,values:books[current]})===studyKey({scene:closedStudy.study.scene,values:closedStudy.study.values});
   const study=samePage&&Date.now()-closedStudy.closedAt<1500?closedStudy.study:studyNow();closedStudy=null;
-  if(study){archiveStudy(study);researchTrail.push(study);researchTrail=researchTrail.slice(-10);}return study;
+  if(study){checkpointNavigation(study);archiveStudy(study);researchTrail.push(study);researchTrail=researchTrail.slice(-10);}return study;
 }
 function drawResearch(){const content=document.getElementById('research-content');prepareUpdate();renderInto(content,researchView(atlas,research,researchScope,studyNow()));enhance(content);}
 function openResearch(){if(!hasMaterials(atlas.data))return;archiveStudy();researchScope.rename='';drawResearch();const dialog=document.getElementById('research-dialog');showDialog(dialog);dialog.scrollTop=0;}
@@ -167,13 +173,16 @@ function pinStudy(study=studyNow()) {
   if(document.getElementById('research-dialog').open){researchScope.tab='saved';researchScope.search='';researchScope.rename=entry.id;drawResearch();document.querySelector('#research-content [name="study-name"]')?.focus({preventScroll:true});}
   else notify('已留在研究夹',{label:'查看线索',cmd:'research'});
 }
-async function restoreStudy(study,{returning=false}={}) {
+async function restoreStudy(study,{returning=false,fromHistory=false,trail=[]}={}) {
   if(!hasMaterials(atlas.data)||!studyAvailable(atlas,study)){notify('对应班级、考次、学生或试题尚未导入，保留这条线索，补齐材料后再打开。');return;}
   const navigation=++navigationEpoch;
+  if(!fromHistory){historyRequest++;historyRestoring=false;checkpointNavigation();}
   const present=studyNow();if(!returning&&(!present||studyKey(present)!==studyKey(study)))leaveStudy();else archiveStudy();
   if(!await closeDrawer()||navigation!==navigationEpoch)return;closedStudy=null;await closeReader();
   for(const id of ['research-dialog','report-dialog']){const dialog=document.getElementById(id);if(dialog.open)await dismissDialog(id);}
-  current=study.scene;books[current]={...structuredClone(defaults[current]),...structuredClone(study.values)};persistBooks();history.pushState(null,'',path());
+  if(navigation!==navigationEpoch)return;
+  current=study.scene;books[current]={...structuredClone(defaults[current]),...structuredClone(study.values)};persistBooks();
+  if(fromHistory){researchTrail=structuredClone(trail);scrollResets.delete(sceneObject());}else history.pushState(null,'',path());
   const render=paintId+1;await paint(true);if(navigation!==navigationEpoch||paintId!==render||current!==study.scene)return;
   restoreDisclosurePositions(stage(),study.position?.details);restoreTableReadingPositions(stage(),study.position?.tables);
   const section=study.position?.section&&document.getElementById(study.position.section),top=section?window.scrollY+section.getBoundingClientRect().top-(study.position.offset||0):study.position?.top||0;window.scrollTo({top:Math.max(0,top),behavior:'instant'});
@@ -181,7 +190,7 @@ async function restoreStudy(study,{returning=false}={}) {
     drawerState=study.trail?.at(-1)||null;const restored=structuredClone(study.drawer);if(restored.type==='person')Object.assign(restored,personQueue(restored.sid,restored.exam));drawerState=null;openDrawer(restored,{focusTitle:false});drawerTrail=structuredClone(study.trail||[]);drawDrawer();restoreDrawerScroll(study.drawerTop||0);
     restoreDisclosurePositions(document.getElementById('drawer-content'),study.drawerDetails);restoreTableReadingPositions(document.getElementById('drawer-content'),study.drawerTables);
   }
-  enhance(stage());scheduleResearch();
+  enhance(stage());checkpointNavigation();scheduleResearch();
 }
 function ensureBooks() {
   for(const key of ['board','follow'])if(!atlas.exams.some(e=>e.id===books[key].exam))books[key].exam=atlas.latest;
@@ -196,11 +205,7 @@ function ensureBooks() {
   session.savedPeople=session.savedPeople.filter(sid=>atlas.people.has(sid));
 }
 function path(scene=current) {
-  const state=books[scene];
-  if(scene==='class')return '#class/'+(state.no||'')+'/'+state.tab;
-  if(scene==='papers'&&state.key)return '#papers/'+encodeURIComponent(state.key);
-  if(scene==='people'&&state.sid)return '#people/'+encodeURIComponent(state.sid)+(state.exam?'/'+encodeURIComponent(state.exam):'');
-  return '#'+scene;
+  return researchPath(scene,books[scene]);
 }
 function readRoute() {
   try {
@@ -212,10 +217,22 @@ function readRoute() {
     if(current==='people'){books.people.sid=object||'';if(focus)books.people.exam=focus;}
   }catch{current='board';}
 }
+async function restoreNavigationEntry() {
+  const request=++historyRequest,saved=researchHistoryStudy(history.state,{scope:navigationScope,hash:location.hash});
+  historyRestoring=true;clearTimeout(historyTimer);clearTimeout(searchTimer);searchTimer=null;searchPaint=null;clearTimeout(drawerTimer);
+  try{
+    if(saved&&hasMaterials(atlas.data)&&studyAvailable(atlas,saved.study))await restoreStudy(saved.study,{returning:true,fromHistory:true,trail:saved.trail.filter(entry=>studyAvailable(atlas,entry))});
+    else {
+      const navigation=++navigationEpoch;archiveStudy();if(!await closeDrawer()||navigation!==navigationEpoch)return;
+      researchTrail=[];closedStudy=null;readRoute();if(hasMaterials(atlas.data))ensureBooks();persistBooks();await paint(true);
+    }
+  }finally{if(request===historyRequest){historyRestoring=false;checkpointNavigation();}}
+}
 function go(scene,values={},resetScroll=false,{root=false,recordTrail=true}={}) {
   if(scene===current&&!root&&!resetScroll&&!Object.keys(values).length&&sceneObject()===paintedObject&&stage().dataset.scene===scene)return;
   navigationEpoch++;clearTimeout(searchTimer);searchTimer=null;searchPaint=null;
   const before=studyNow(),nextValues={...books[scene],...values};
+  checkpointNavigation(before);historyRequest++;historyRestoring=false;
   if(root){archiveStudy(before);researchTrail=[];closedStudy=null;}
   else if(!recordTrail){archiveStudy(before);closedStudy=null;}
   else if(before&&(before.scene!==scene||studyKey({...before,values:nextValues,drawer:null})!==studyKey({...before,drawer:null})))leaveStudy();
@@ -287,7 +304,7 @@ async function paint(transition=false,focus=null) {
       for(const rail of stage().querySelectorAll('.exam-rail')){const selected=rail.querySelector('.selected');if(selected)rail.scrollLeft=selected.offsetLeft-rail.offsetLeft-rail.clientWidth/2+selected.clientWidth/2;}
       enhance(stage(),{reveal:!slide});
       if(changed||scrollResets.has(object))window.scrollTo({top:scrollResets.has(object)?0:pagePositions.get(object)||0,behavior:'instant'});else window.scrollTo({top:previousScroll,behavior:'instant'});scrollResets.delete(object);
-      paintedStudy=available?{scene,values:structuredClone(books[scene])}:null;scheduleResearch();
+      paintedStudy=available?{scene,values:structuredClone(books[scene])}:null;checkpointNavigation();scheduleResearch();
       if(!reducedMotion()) {
         if(slide)slide();
         else if(changed)enterCanvas(stage(),direction);
@@ -318,6 +335,7 @@ function update(key,value,toggle=false) {
 }
 async function installDataset(dataset,{fresh=false,prepared=false,index=null}={}) {
   invalidateViews();
+  if(fresh){navigationScope=crypto.randomUUID();remember('navigationScope',navigationScope);}historyRequest++;historyRestoring=false;clearTimeout(historyTimer);
   navigationEpoch++;
   const planDialog=document.getElementById('plan-dialog');if(planDialog?.open){await dismissDialog('plan-dialog');planDraft=null;}
   await closeDrawer();const shelf=document.getElementById('research-dialog');if(shelf.open)await dismissDialog('research-dialog');
@@ -335,7 +353,9 @@ async function installDataset(dataset,{fresh=false,prepared=false,index=null}={}
   if(fresh&&available){books.board.exam=atlas.latest;books.follow.exam=atlas.latest;books.class.exam=atlas.classExams(books.class.no).at(-1)?.id||atlas.latest;books.class.exams=atlas.classExams(books.class.no).map(e=>e.id);books.papers.key='';books.people.exam=atlas.materialAt(books.people.sid)?.exam;}
   if(!available){await closeDrawer();await closeReader();for(const id of ['report-dialog','research-dialog']){const dialog=document.getElementById(id);if(dialog.open)await dismissDialog(id);}exportReport=null;document.getElementById('report-content').replaceChildren();document.getElementById('research-content').replaceChildren();}
   document.getElementById('work-status').textContent=available?'本机教学资料':'等待导入材料';
-  persistBooks();await paint(true);if(available)warmWorkspace();
+  persistBooks();const savedNavigation=!fresh&&researchHistoryStudy(history.state,{scope:navigationScope,hash:location.hash});
+  if(available&&savedNavigation&&studyAvailable(atlas,savedNavigation.study))await restoreNavigationEntry();else await paint(true);
+  if(available)warmWorkspace();
 }
 async function store() {try{await save(workspaceSnapshot(),{prepared:true});return true;}catch{notify('修改已保留在当前页面，本机未保存，请下载完整备份。');return false;}}
 function workspaceSnapshot(){return structuredClone({...atlas.data,plans:session.plans,notebook:session.notebook,savedPeople:session.savedPeople,comparePeople:session.comparePeople,directoryViews:session.directoryViews,research});}
@@ -695,7 +715,7 @@ async function commands(event) {
       else if(d.cmd==='research-pin')pinStudy();
       else if(d.cmd==='research-pin-entry'){const entry=research.recent.find(e=>e.id===d.id);if(entry)pinStudy(entry);}
       else if(d.cmd==='research-open'){const entry=research[d.collection]?.find(e=>e.id===d.id);if(entry)await restoreStudy(entry);}
-      else if(d.cmd==='research-back'){const entry=researchTrail.at(-1);if(entry&&studyAvailable(atlas,entry)){researchTrail.pop();await restoreStudy(entry,{returning:true});}else notify('原研究范围的材料尚未导入');}
+      else if(d.cmd==='research-back'){const entry=researchTrail.at(-1);if(entry&&studyAvailable(atlas,entry)){checkpointNavigation();researchTrail.pop();await restoreStudy(entry,{returning:true});}else notify('原研究范围的材料尚未导入');}
       else if(d.cmd==='research-rename'){researchScope.rename=d.id;drawResearch();document.querySelector('#research-content [name="study-name"]')?.focus({preventScroll:true});}
       else if(d.cmd==='research-name-cancel'){researchScope.rename='';drawResearch();}
       else if(d.cmd==='research-remove'){const collection=research[d.collection],index=collection?.findIndex(e=>e.id===d.id),entry=collection?.[index];if(entry){collection.splice(index,1);persistResearch();drawResearch();notify('已移除研究记录',{undo:()=>{research[d.collection].splice(Math.min(index,research[d.collection].length),0,entry);persistResearch();if(document.getElementById('research-dialog').open)drawResearch();}});}}
@@ -929,7 +949,7 @@ export async function mount(boot=null) {
   window.addEventListener('resize',positionDock);
   for(const type of ['pointerover','focusin','pointerdown'])document.getElementById('navigation').addEventListener(type,event=>{const button=event.target.closest?.('[data-scene]');if(button)warmScene(button.dataset.scene);},{passive:true});
   document.addEventListener('scroll',()=>{if(hasMaterials(atlas.data))scheduleResearch();},{passive:true,capture:true});
-  window.addEventListener('pagehide',()=>{archiveStudy();if(session.notebook.length)persistNotebook().catch(()=>{});});
+  window.addEventListener('pagehide',()=>{checkpointNavigation();archiveStudy();if(session.notebook.length)persistNotebook().catch(()=>{});});
   document.getElementById('report-dialog').addEventListener('cancel',async event=>{event.preventDefault();if(reportScope.reading){reportScope.reading=false;drawReport();document.querySelector('[data-cmd=report-reading]')?.focus({preventScroll:true});}else await closeReport();});
   document.addEventListener('keydown',event=>{if(event.target.matches?.('.student-dot,[data-plot-action]')&&['Enter',' '].includes(event.key)){event.preventDefault();event.target.dispatchEvent(new MouseEvent('click',{bubbles:true}));}});
   document.addEventListener('keydown',event=>{if(event.defaultPrevented||event.target.closest?.('dialog')!==drawer||!drawer.open||event.altKey||event.ctrlKey||event.metaKey||!['ArrowLeft','ArrowRight'].includes(event.key)||event.target.closest?.('input,textarea,select,.table-scroll,.trajectory-scroll,.drawer-stages,.drawer-tabs,.drawer-section-nav'))return;const cmd=drawerState?.type==='person'?'drawer-person-step':drawerState?.type==='question'?'drawer-question-step':null,button=cmd&&drawer.querySelector('[data-cmd="'+cmd+'"][data-step="'+(event.key==='ArrowLeft'?-1:1)+'"]');if(button){event.preventDefault();if(!button.disabled)button.click();}});
@@ -965,7 +985,8 @@ export async function mount(boot=null) {
     const lane=event.target.closest?.('.follow-lane');if(!lane)return;event.preventDefault();
     const plan=session.plans.find(p=>p.id===event.dataTransfer.getData('text/plain'));if(plan){plan.status=lane.dataset.status;remember('plans',session.plans);paint();}
   });
-  window.addEventListener('hashchange',async()=>{const navigation=++navigationEpoch;archiveStudy();await closeDrawer();if(navigation!==navigationEpoch)return;readRoute();if(hasMaterials(atlas.data))ensureBooks();persistBooks();paint(true);});
+  window.addEventListener('popstate',()=>{lastHistoryURL=location.href;restoreNavigationEntry();});
+  window.addEventListener('hashchange',event=>{if(event.newURL!==location.href)return;if(lastHistoryURL===event.newURL){lastHistoryURL='';return;}lastHistoryURL='';restoreNavigationEntry();});
   readRoute();nav();window.dispatchEvent(new Event('hengji:ready'));
   const startRevision=revision;
   stage().setAttribute('aria-busy','true');
