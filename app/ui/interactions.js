@@ -47,10 +47,16 @@ function refreshPlot(svg) {
   const width=svg.getBoundingClientRect().width,viewWidth=svg.viewBox?.baseVal.width;if(!width||!viewWidth)return;
   const scale=viewWidth/width,size=Math.max(12,svg.classList.contains('spread')?12*scale:svg.classList.contains('bars')?11.5*scale:Math.min(34,11.5*scale));svg.style.setProperty('--plot-label-size',size+'px');
   const row=Math.max(37,32*scale),barHeight=Math.max(22,18*scale);
+  const unit=svg.querySelector(':scope > .plot-unit-label');
+  if(unit&&svg.classList.contains('trajectory')){
+    const extra=Math.max(0,size*1.45+12-39);unit.setAttribute('y',size*1.1+2);
+    svg.querySelector('.trajectory-content')?.setAttribute('transform','translate(0,'+extra+')');svg.viewBox.baseVal.height=275+extra;
+  }
   if(svg.classList.contains('bars')) {
-    const items=[...svg.querySelectorAll(':scope > .plot-item')];svg.viewBox.baseVal.height=Math.max(70,items.length*row+20);
+    const items=[...svg.querySelectorAll(':scope > .plot-item')],header=unit?Math.max(20,size+10):0;svg.viewBox.baseVal.height=Math.max(70,items.length*row+20+header);
+    if(unit)unit.setAttribute('y',size);
     items.forEach((item,index)=>{
-      item.setAttribute('transform','translate(0,'+index*(row-37)+')');
+      item.setAttribute('transform','translate(0,'+(index*(row-37)+(unit?header-20:0))+')');
       item.querySelector('rect:not(.plot-bar)')?.setAttribute('height',row-4);
       item.querySelector('.plot-bar')?.setAttribute('height',barHeight);
       item.querySelector('.plot-track')?.setAttribute('height',barHeight);
@@ -59,6 +65,7 @@ function refreshPlot(svg) {
   }
   for(const text of svg.querySelectorAll('text')) {
     if(svg.classList.contains('bars')) {
+      if(text===unit){text.setAttribute('dy',0);continue;}
       text.setAttribute('dy',Math.max(0,barHeight/2+size*.35-15));
       if(text.getAttribute('text-anchor')==='end') {
         const full=text.dataset.fullLabel||text.textContent; text.dataset.fullLabel=full;

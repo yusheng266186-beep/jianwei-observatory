@@ -1,3 +1,4 @@
+import {researchPlotOptions} from '../engine/plot-scale.js';
 import {researchRoster} from '../engine/research-roster.js';
 import {goalCards} from '../ui/evidence-visuals.js?v=runtime-v45';
 import {overview} from './overview.js?v=runtime-v45';
@@ -34,7 +35,7 @@ export function render(atlas,state) {
     body+=groups.map(group=>block(group.title,goalCards(atlas,group.classes,exam)+table(['班级','班主任','人数','均分 / 增量','特控 / 增量','外语有效','特控任务','本科 / 增量','外语有效','本科任务','线下10 / 20分'],group.classes.map(no=>{
       const snapshot=atlas.snapshot(no,exam),p=snapshot.profile,d=snapshot.summary,old=atlas.summary(atlas.classAt(no,previous));
       const foreignEffective=tier=>integer(atlas.summary(snapshot.rows,'外语')[tier]);
-      return [button(no+'班','class',{no},'person-link'),esc(p.lead||'—'),integer(d.count),number(d.mean)+'<small>'+delta(difference(d.mean,old.mean))+'</small>',integer(d.top)+'<small>'+delta(difference(d.top,old.top))+'</small>',foreignEffective('top'),target(d.top,p.targets?.top),integer(d.under)+'<small>'+delta(difference(d.under,old.under))+'</small>',foreignEffective('under'),target(d.under,p.targets?.under),'<small>特控 '+d.topNear10+' / '+d.topNear20+'</small><small>本科 '+d.underNear10+' / '+d.underNear20+'</small>'];
+      return [button(no+'班','class',{no},'person-link'),esc(p.lead||'—'),integer(d.count),number(d.mean)+'<small>'+delta(difference(d.mean,old.mean))+'</small>',integer(d.top)+'<small>'+delta(difference(d.top,old.top))+'</small>',foreignEffective('top'),target(d.top,p.targets?.top),integer(d.under)+'<small>'+delta(difference(d.under,old.under))+'</small>',foreignEffective('under'),target(d.under,p.targets?.under),'<small>特控 '+integer(d.topNear10)+' / '+integer(d.topNear20)+'</small><small>本科 '+integer(d.underNear10)+' / '+integer(d.underNear20)+'</small>'];
     })), '17班计入物理类，18班计入历史类。')).join('');
     reportData=()=>{let sections=[],sheets={};
     sheets={'班级有效人':effectiveRows(atlas,exam,previous),'学科有效与双上线':subjectRows(atlas,exam)};
@@ -53,9 +54,9 @@ export function render(atlas,state) {
   } else if(state.mode==='history') {
     const metric=state.historyMetric||'mean',labels={mean:'均分',topRate:'特控率',underRate:'本科率',top:'特控人数',under:'本科人数'};
     const series=groups.map(group=>({name:group.title,values:atlas.exams.map(e=>{const value=atlas.groups(e.id).find(g=>g.key===group.key).summary[metric];return value===null?null:metric.includes('Rate')?value*100:value;})}));
-    body=chips('historyMetric',Object.entries(labels),metric)+block('两类学生的纵向变化',trajectory('grade-story',atlas.exams.map(e=>e.id),series,{suffix:metric.includes('Rate')?'%':''}), '17班并入物理类，18班并入历史类。',chartButtons('grade-story'));
+    body=chips('historyMetric',Object.entries(labels),metric)+block('两类学生的纵向变化',trajectory('grade-story',atlas.exams.map(e=>e.id),series,researchPlotOptions(metric,{aggregate:true})), '17班并入物理类，18班并入历史类。',chartButtons('grade-story'));
     const historyRows=atlas.exams.flatMap(e=>atlas.groups(e.id).map(group=>[e.label,group.title,group.summary.count,group.summary.mean,group.summary.top,group.summary.under,group.summary.underRate]));
-    body+=table(['考试','教学组','人数','均分','特控人数','本科人数','本科率'],historyRows.map(row=>row.map((v,i)=>i===6?percent(v):i===3?number(v):esc(v))));
+    body+=table(['考试','教学组','人数','均分','特控人数','本科人数','本科率'],historyRows.map(row=>row.map((v,i)=>i===6?percent(v):i===3?number(v):i<2?esc(v):integer(v))));
     reportData=()=>{let sections=[],sheets={};
     sheets={'年级历次变化':[['考试','教学组','人数','均分','特控人数','本科人数','本科率'],...historyRows]};sections=[{title:'年级历次变化',headers:sheets['年级历次变化'][0],rows:historyRows.map(row=>row.map((v,i)=>i===6?percent(v):i===3?number(v):v))}];
     return {sections,sheets};};
@@ -69,7 +70,7 @@ export function render(atlas,state) {
   }
   const isOverview=!state.mode||state.mode==='overview',titles={map:'班级地图',targets:'班级有效与任务',subjects:'学科横向比较',history:'年级阶段对比',roster:'年级学生清册'};
   const toolbar='<div class="scene-toolbar board-toolbar"><div class="scene-tabs">'+chips('mode',[['overview','研究总览'],['map','班级地图'],['targets','有效账'],['subjects','学科横向'],['history','历次变化'],['roster','学生清册']],state.mode||'overview')+'</div>'+examRail(atlas,exam)+'</div>';
-  const html=head('01 / 年级总览',isOverview?'年级总览':titles[state.mode]||'年级研究',[atlas.data.grade,atlas.exam(exam).label].filter(Boolean).join(' · '),tools())+toolbar+(isOverview?'':ribbon([['成绩记录',integer(rows.length),'有总分 '+s.count+' 人 · 缺 '+s.missing+' 人'],['特控人数',integer(s.top),'按各生所属科类判断'],['本科人数',integer(s.under),'按各生所属科类判断'],['本科临界',integer(s.underNear20),'线下20分 · 含10分']]))+body+footnote('空缺成绩不补0；任务留空或为0时不计算完成率。10分临界带包含在20分临界带内。');
+  const html=head('01 / 年级总览',isOverview?'年级总览':titles[state.mode]||'年级研究',[atlas.data.grade,atlas.exam(exam).label].filter(Boolean).join(' · '),tools())+toolbar+(isOverview?'':ribbon([['成绩记录',integer(rows.length),'有总分 '+s.count+' 人 · 缺 '+s.missing+' 人'],['特控人数',integer(s.top),'按各生所属科类判断'],['本科人数',integer(s.under),'按各生所属科类判断'],['本科临界',integer(s.underNear20),'线下20分 · 含10分']]))+body+footnote('空缺成绩不补0；无法计算的临界人数以—保留，0表示实际无人；任务留空或为0时不计算完成率。10分临界带包含在20分临界带内。');
   let preparedReport;
   return {html,get report(){if(preparedReport)return preparedReport;const {sections,sheets}=reportData();return preparedReport=evidence('年级研究 · '+atlas.exam(exam).label,atlas.data.school||'荣县第一中学高三成绩分析',sections,sheets);}};
 }
