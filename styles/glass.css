@@ -634,7 +634,7 @@ button:disabled{cursor:not-allowed}
 
 /* The document keeps its vertical scroll; only the travelling planes clip. */
 .scene-viewport{overflow-x:clip;overflow-y:visible}
-.scene-leaving-viewport{position:fixed;inset:0;z-index:2;overflow:hidden;pointer-events:none;overscroll-behavior:none;scrollbar-width:none}
+.scene-leaving-viewport{position:fixed;inset:0;z-index:2;overflow:clip;contain:layout paint;pointer-events:none;overscroll-behavior:none;scrollbar-width:none}
 .scene-leaving-viewport::-webkit-scrollbar{display:none}
 .scene-leaving-canvas{pointer-events:none;will-change:transform,opacity}
 @media print{.scene-leaving-viewport{display:none}}
@@ -651,8 +651,4 @@ button:disabled{cursor:not-allowed}
 /* Travelling scenes share a composited plane; hover lifts do not fight navigation. */
 :is(#stage[data-sliding],.scene-leaving-canvas) .study-outline{scroll-behavior:auto}
 #stage[data-sliding] :is(.student-card,.paper-cover,.question-tile):hover{transform:none}
-@supports(animation-timing-function:linear(0,1)){.dock-indicator{transition-timing-function:linear(0,.035 2%,.14 5%,.36 12%,.63 24%,.82 40%,.94 62%,.985 82%,1),var(--ease)}}
-/* Keep the glass gradients while the two full-page layers move. Sampling a live
-   backdrop per card on both planes forces repeated blur rasterization. The real
-   backdrop returns as soon as the layer settles, including on interruption. */
-:is(#stage[data-sliding],.scene-leaving-canvas) *{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+/* The viewport clips composited travel; materials remain identical in motion. */

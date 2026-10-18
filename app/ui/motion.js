@@ -1,3 +1,6 @@
+import {animateSpring,springFrame,stopSpring} from './spring-motion.js';
+import {finishAnimation} from './animation-lifecycle.js';
+export {finishAnimation};
 // Native animations keep the live controls available throughout a transition.
 // CSS and native animations read the same tokens. Defaults also allow engine
 // tests and environments without a document to import this module.
@@ -10,37 +13,32 @@ const step=(name,ms,easing=settle)=>({duration:duration(name,ms),easing});
 export const motion={feedback:step('feedback',160),control:step('control',220),disclose:step('disclose',260),arrive:step('arrive',320),arrange:step('arrange',300),travel:step('travel',400,travel),leave:step('leave',180,token('exit-ease','cubic-bezier(.4,0,.8,.2)'))};
 export function visualFrame(element){const style=getComputedStyle(element);return {opacity:style.opacity,transform:style.transform};}
 export function cancelOwnMotion(element){try{for(const animation of element.getAnimations?.()||[])try{animation.cancel();}catch{}}catch{}}
-// Exit animations are optional: a paused or unavailable animation must never
-// keep a dialog modal. Cancel the visual effect before its caller closes it.
-export function finishAnimation(animation,duration) {
-  return new Promise(resolve=>{
-    let completed=false;
-    const complete=()=>{if(completed)return;completed=true;clearTimeout(timer);try{animation?.cancel();}catch{}resolve();};
-    const timer=setTimeout(complete,duration+60);
-    try{if(animation?.finished?.then)animation.finished.then(complete,complete);else complete();}catch{complete();}
-  });
-}
 let canvasSlide=null,slideSerial=0;
 function pinFixed(node,box,rect) {
   Object.assign(node.style,{position:'absolute',left:(box.left-rect.left)+'px',top:(box.top-rect.top)+'px',bottom:'auto',right:'auto',width:box.width+'px',height:box.height+'px',margin:'0',transform:'none'});
 }
 export function finishCanvasSlide() {
   const active=canvasSlide;if(!active)return;canvasSlide=null;
-  for(const animation of active.animations)animation.cancel();
+  stopSpring(active.canvas,'scene');
+  for(const plane of active.planes)stopSpring(plane.node,'scene');
   for(const {node,style} of active.fixed)node.style.cssText=style;
   active.host.remove();active.canvas.style.removeProperty('will-change');active.canvas.removeAttribute('data-sliding');clearTimeout(active.timer);active.onCleanup();
 }
 // Move the outgoing live DOM into a clipped, inert plane. The real main stays
 // interactive; no screenshot transition or delayed navigation is involved.
 export function prepareCanvasSlide(canvas,direction,{onCleanup=()=>{}}={}) {
-  const rect=canvas.getBoundingClientRect(),top=scrollY,style=getComputedStyle(canvas),opacity=style.opacity,x=style.transform==='none'?0:new DOMMatrixReadOnly(style.transform).m41;
+  const rect=canvas.getBoundingClientRect(),style=getComputedStyle(canvas),opacity=style.opacity,previous=canvasSlide,continuation=springFrame(canvas,'scene');
   const fixed=[...canvas.querySelectorAll('.compare-tray')].map(node=>({node,rect:node.getBoundingClientRect()}));
-  finishCanvasSlide();cancelOwnMotion(canvas);
-  const host=document.createElement('div'),leaving=document.createElement('div'),prefix='leaving-'+(++slideSerial)+'-';
+  // Retain every still-visible outgoing plane on rapid navigation. Removing the
+  // predecessor here exposes a blank half-screen and makes a reversal jump.
+  if(previous){clearTimeout(previous.timer);for(const item of previous.fixed)item.node.style.cssText=item.style;}
+  stopSpring(canvas,'scene');cancelOwnMotion(canvas);
+  const host=previous?.host||document.createElement('div'),leaving=document.createElement('div'),prefix='leaving-'+(++slideSerial)+'-';
+  const width=document.documentElement.clientWidth,planes=(previous?.planes||[]).filter(plane=>{const box=plane.node.getBoundingClientRect();if(box.right>0&&box.left<width)return true;stopSpring(plane.node,'scene');plane.node.remove();return false;});
   host.className='scene-leaving-viewport';host.inert=true;host.setAttribute('aria-hidden','true');
   leaving.className=canvas.className+' scene-leaving-canvas';Object.assign(leaving.dataset,canvas.dataset);delete leaving.dataset.loading;
   leaving.style.cssText=canvas.style.cssText;
-  Object.assign(leaving.style,{position:'absolute',left:rect.left+'px',top:(rect.top+top)+'px',width:rect.width+'px',height:rect.height+'px',maxWidth:'none',margin:'0',opacity});
+  Object.assign(leaving.style,{position:'absolute',left:rect.left+'px',top:rect.top+'px',width:rect.width+'px',height:rect.height+'px',maxWidth:'none',margin:'0',opacity,transform:'none'});
   leaving.append(...canvas.childNodes);
   // IDs belong exclusively to the active scene, including SVG paint servers.
   const ids=new Map([...leaving.querySelectorAll('[id]')].map(node=>[node.id,prefix+node.id]));
@@ -55,19 +53,28 @@ export function prepareCanvasSlide(canvas,direction,{onCleanup=()=>{}}={}) {
     if(value!==before)node.setAttribute(name,value);
   }
   for(const {node,rect:box} of fixed)pinFixed(node,box,rect);
-  host.append(leaving);document.body.append(host);host.scrollTop=top;
-  const active={host,canvas,animations:[],fixed:[],onCleanup};canvasSlide=active;
+  host.append(leaving);if(!host.isConnected)document.body.append(host);
+  planes.push({node:leaving,left:rect.left,width:rect.width,velocity:continuation?.velocity||{x:0}});
+  const active={host,canvas,planes,fixed:[],onCleanup};canvasSlide=active;
   return ()=>{
     if(canvasSlide!==active)return;
     if(typeof canvas.animate!=='function'||typeof leaving.animate!=='function'){finishCanvasSlide();return;}
-    const sign=direction==='backward'?-1:1,distance=document.documentElement.clientWidth+24,options=motion.travel;
+    const sign=direction==='backward'?-1:1,distance=document.documentElement.clientWidth+24;
     const base=canvas.getBoundingClientRect();
     for(const node of canvas.querySelectorAll('.compare-tray')){const box=node.getBoundingClientRect();active.fixed.push({node,style:node.style.cssText});pinFixed(node,box,base);}
     canvas.style.willChange='transform, opacity';canvas.dataset.sliding='true';
-    active.animations=[leaving.animate([{transform:'translateX(0px)',opacity},{transform:'translateX('+(-sign*distance-x)+'px)',opacity}],options),canvas.animate([{transform:'translateX('+(sign*distance+x)+'px)'},{transform:'translateX(0px)'}],options)];
-    active.timer=setTimeout(()=>{if(canvasSlide===active)finishCanvasSlide();},options.duration+100);
-    Promise.allSettled(active.animations.map(animation=>animation.finished)).then(()=>{if(canvasSlide===active)finishCanvasSlide();});
+    const map=value=>({transform:'translateX('+value.x+'px)'}),promises=[];
+    for(const plane of planes){const destination=sign>0?-plane.width-24:distance,x=destination-plane.left;plane.node.style.transform='translateX('+x+'px)';promises.push(animateSpring(plane.node,{x},{from:{x:0},velocity:plane.velocity,map,channel:'scene'}));}
+    promises.push(animateSpring(canvas,{x:0},{from:{x:sign*distance},map,channel:'scene'}));
+    active.timer=setTimeout(()=>{if(canvasSlide===active)finishCanvasSlide();},1000);
+    Promise.allSettled(promises).then(()=>{if(canvasSlide===active)finishCanvasSlide();});
   };
+}
+// The highlight is the only scaling layer; labels retain their native size.
+export function moveIndicator(element,target,{from,velocity,immediate=false}={}){
+ Object.assign(element.style,{width:target.width+'px',height:target.height+'px',transform:'translate('+target.x+'px,'+target.y+'px)',transformOrigin:'left top'});
+ element.dataset.motionOwned='indicator';
+ return animateSpring(element,target,{from:from||target,velocity,immediate,frequency:36,channel:'indicator',map:value=>({transform:'translate('+value.x+'px,'+value.y+'px) scale('+value.width/Math.max(1,target.width)+','+value.height/Math.max(1,target.height)+')'})});
 }
 export function enterCanvas(canvas,direction) {
   if(typeof canvas.animate!=='function')return;
