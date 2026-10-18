@@ -60,9 +60,31 @@ export async function inspectWorkspace(){
  return {stored:false,origin:'empty'};
 }
 // A concurrent import wins; background migration cannot overwrite newer data.
+export function writeWorkspaceIfCurrent(entries,expectedStamp,{reducers={}}={}){
+ const snapshot=structuredClone(entries),operation=writes.then(async()=>{
+  const db=await open();return new Promise((resolve,reject)=>{
+   let tx,done=false,reason,result={saved:false,stamp:null,values:{}};
+   const finish=error=>{if(done)return;done=true;clearTimeout(timer);db.close();error?reject(error):resolve(result);};
+   const timer=setTimeout(()=>{reason=new Error('工作区保存超时，原材料未替换');try{tx?.abort();}catch{}finish(reason);},4500);
+   try{
+    tx=db.transaction(TABLE,'readwrite');const store=tx.objectStore(TABLE),prepared=store.get('prepared');
+    prepared.onsuccess=()=>{try{
+     if((prepared.result?.stamp??null)!==(expectedStamp??null))return;
+     result.stamp=crypto.randomUUID();
+     for(const [key,value] of snapshot){
+      if(reducers[key]){const read=store.get(key);read.onsuccess=()=>{try{const next=reducers[key](read.result??null,value);if(next&&typeof next.then==='function')throw new Error('工作区更新须同步完成');store.put(next,key);result.values[key]=next;}catch(error){reason=error;tx.abort();}};}
+      else store.put(value,key);
+     }
+     store.put({version:PREPARED_VERSION,stamp:result.stamp},'prepared');result.saved=true;
+    }catch(error){reason=error;tx.abort();}};
+    tx.oncomplete=()=>{if(result.saved)savedHint(snapshot);finish();};tx.onerror=()=>finish(reason||tx.error||new Error('工作区未能保存'));tx.onabort=()=>finish(reason||tx.error||new Error('工作区保存已取消'));
+   }catch(error){try{tx?.abort();}catch{}finish(error);}
+  });
+ });writes=operation.catch(()=>{});return operation;
+}
+export function savePreparedVersioned(dataset,expectedStamp){
+ return writeWorkspaceIfCurrent([['dataset',dataset]],expectedStamp);
+}
 export async function savePreparedIfCurrent(dataset,expectedStamp){
- const db=await open();return new Promise((resolve,reject)=>{const tx=db.transaction(TABLE,'readwrite'),store=tx.objectStore(TABLE),r=store.get('prepared');let saved=false;
- r.onsuccess=()=>{if((r.result?.stamp??null)!==expectedStamp)return;store.put(dataset,'dataset');store.put({version:PREPARED_VERSION,stamp:crypto.randomUUID()},'prepared');saved=true;};
- tx.oncomplete=()=>{db.close();resolve(saved)};tx.onerror=()=>{db.close();reject(tx.error)};
- });
+ return (await savePreparedVersioned(dataset,expectedStamp)).saved;
 }

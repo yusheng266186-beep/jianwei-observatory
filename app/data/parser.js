@@ -2,12 +2,15 @@ import { SUBJECTS, EXAM_ORDER, EXAM_NAMES, classDefaults, finite, normalizeDatas
 import {mergeContext} from './context.js?v=runtime-v45';
 import {identityHash,mergeStudentIdentities} from './identity.js?v=runtime-v45';
 import {explicitRanks,rankColumns,ranksFrom} from '../engine/ranking.js?v=runtime-v45';
+import {mergeDuplicateScore,mergeDuplicateAnswer,mergeScoreRecord,supplement,supplementAnswerValues} from './merge-policy.js?v=runtime-v45';
+import {collectImportConflict} from './import-conflicts.js';
 const txt=v=>String(v??'').trim();
 const identifierHeaders=['学生识别码','学生编号','学号','识别码','studentid','queryid'];
 const num=v=>v==null||txt(v)===''?null:Number.isFinite(Number(v))?Number(v):null;
 const code=v=>{const raw=txt(v).replace(/[物历]$/,'');return Object.keys(EXAM_NAMES).find(id=>EXAM_NAMES[id]===raw)||raw;};
 const track=(raw,n)=>/[历]$/.test(txt(raw))?'history':/[物]$/.test(txt(raw))?'physics':classDefaults(n).track;
 const cityExam=e=>['入口','1册','2册','3册','4册'].includes(e);
+const SCHOOL='荣县一中',SCHOOL_ALIASES=new Set(['荣县一中','荣县第一中学']),schoolKey=v=>txt(v).replace(/\s/g,''),isOurSchool=v=>SCHOOL_ALIASES.has(schoolKey(v));
 // The supplied multi-exam worksheet reuses four total-rank headings even
 // when historical blocks contain class ranks in its last column. This exact
 // template profile was checked against preserved source rows; flat files and
@@ -56,6 +59,21 @@ export function flatWorkbookSheet(XLSX,workbook){
  const sheets=Object.entries(workbook.Sheets).map(([name,sheet])=>({name,rows:rowsOf(XLSX,sheet)}));
  return sheets.find(s=>{const {mapping:m}=detectFlat(s.rows);return m.name!=null&&m.classNo!=null&&m.exam!=null&&(m.total!=null||SUBJECTS.some(subject=>m[subject]!=null));})||sheets.find(s=>s.rows.slice(0,15).some(row=>row.some(c=>/^(姓名|学生姓名)$/.test(txt(c)))))||sheets[0];
 }
+// Merged cells are blank in every row except their anchor. A merged school
+// cell therefore looks like an empty school on continuation rows; fill only
+// that declared range so the scope filter still sees the real school.
+function rowsWithMergedColumn(XLSX,sheet,rows,column){
+ const range=XLSX.utils.decode_range(sheet['!ref']||'A1'),rowOffset=range.s.r||0,columnOffset=range.s.c||0,local=column-columnOffset;
+ if(local<0)return rows.map(row=>row?[...row]:row);
+ const result=rows.map(row=>row?[...row]:row);
+ for(const merge of sheet['!merges']||[]){
+  if(merge.s.c>column||merge.e.c<column)continue;
+  const anchor=result[merge.s.r-rowOffset]?.[local];
+  if(anchor==null||txt(anchor)==='')continue;
+  for(let r=merge.s.r-rowOffset;r<=merge.e.r-rowOffset;r++)if(result[r]&&(result[r][local]==null||txt(result[r][local])===''))result[r][local]=anchor;
+ }
+ return result;
+}
 export function parseWorkbook(XLSX,buffer,source,progress=()=>{},mapping=null,catalog=null){
  progress('读取工作表目录',8);
  const meta=catalog||XLSX.read(buffer,{type:'array',bookSheets:true});
@@ -75,8 +93,8 @@ export function parseWorkbook(XLSX,buffer,source,progress=()=>{},mapping=null,ca
   return result;
  }
  progress('提取历次成绩与两类有效线',22);
- const rows=rowsOf(XLSX,basic);
- const firstScore=rows.findIndex(r=>/[物历]$/.test(txt(r[0]))&&num(r[2])>0&&txt(r[3])&&txt(r[1]));
+ const rows=rowsWithMergedColumn(XLSX,basic,rowsOf(XLSX,basic),1);
+ const firstScore=rows.findIndex(r=>/[物历]$/.test(txt(r[0]))&&num(r[2])>0&&txt(r[3]));
  const rankHeaders=rows.slice(Math.max(0,firstScore-5),Math.max(0,firstScore));
  const identifierColumn=rankHeaders.reduce((found,row)=>found>=0?found:row.findIndex(v=>identifierHeaders.includes(txt(v).toLowerCase())),-1);
  for(let i=0;i<Math.min(rows.length,50);i++){
@@ -87,23 +105,39 @@ export function parseWorkbook(XLSX,buffer,source,progress=()=>{},mapping=null,ca
   if(t==='physics')subjects['地理']={...subjects['生物'],source:'物化地对应原表生物列'};
   data.lines.push({exam:e,track:t,top:num(r[2]),under:num(r[11]),subjects});
  }
+ const scorePositions=new Map(),schools=new Set(),excludedIdentities=new Set();
+ let lastSchool='',acceptedRows=0,excludedRows=0,mergedRows=0;
  for(let i=0;i<rows.length;i++){
   const r=rows[i],n=num(r[2]),name=txt(r[3]);
-  if(!/[物历]$/.test(txt(r[0]))||!n||!name||!txt(r[1])||!Number.isInteger(n)||n>99)continue;
-  if(txt(r[1])==='荣县一中')data.school=txt(r[1]);else if(data.scores.length)continue;else data.school=txt(r[1]);
-  const t=track(r[0],n),e=code(r[0]),language=txt(r[38]).includes('日语')||n===7?'日语':'英语',subjects={};
+  if(!/[物历]$/.test(txt(r[0]))||!n||!name||!Number.isInteger(n)||n>99)continue;
+  const e=code(r[0]),sourceSchool=txt(r[1]);
+  if(sourceSchool){lastSchool=sourceSchool;schools.add(sourceSchool);}
+  const school=sourceSchool||lastSchool;
+  // The school column is scope, not a data-row requirement. Explicit other
+  // schools are excluded; blank merged continuations inherit the last school.
+  if(school&&!isOurSchool(school)){excludedRows++;excludedIdentities.add(e+'|'+n+'|'+name);continue;}
+  acceptedRows++;
+  if(school&&isOurSchool(school))data.school=SCHOOL;
+  const t=track(r[0],n),language=txt(r[38]).includes('日语')||n===7?'日语':'英语',subjects={};
   const totalRanks=Object.fromEntries(Object.entries(sourceTotalColumns(rankHeaders,e)).filter(([,v])=>v));
   const fields=[['语文',10,10,11,12],['数学',13,13,14,15],[language,16,16,17,18],[t==='physics'?'物理':'历史',19,19,20,21],['政治',22,23,25,null],['地理',26,27,29,null],['化学',30,31,33,null],['生物',34,35,37,null]];
-  for(const [fieldIndex,[s,raw,assigned,ranking,school]] of fields.entries()){
-   if(num(r[assigned])==null)continue;
+  for(const [fieldIndex,[s,raw,assigned,ranking,schoolRank]] of fields.entries()){
+   // Raw and assigned scores are independent columns. Keep the subject when
+   // either one exists; an absent assigned score stays null, never copied.
+   const rawValue=num(r[raw]),assignedValue=num(r[assigned]);
+   if(rawValue==null&&assignedValue==null)continue;
    const subject=n===9&&s==='生物'?'地理':s;
-   const columns=sourceSubjectColumns(rankHeaders,e,raw,(fields[fieldIndex+1]?.[1]??38)-1,ranking,school);
-   subjects[subject]={score:num(r[assigned]),raw:num(r[raw]),rank:Object.values(columns).some(c=>c.column===ranking)?null:num(r[ranking]),...ranksFrom(r,columns)};
+   const columns=sourceSubjectColumns(rankHeaders,e,raw,(fields[fieldIndex+1]?.[1]??38)-1,ranking,schoolRank);
+   subjects[subject]={score:assignedValue,raw:rawValue,rank:Object.values(columns).some(c=>c.column===ranking)?null:num(r[ranking]),...ranksFrom(r,columns)};
   }
   // Scope comes from the source heading, never the exam type or column order.
-  data.scores.push({exam:e,rawExam:txt(r[0]),sid:idFor(name,identifierColumn>=0?r[identifierColumn]:'',e,n),classNo:n,track:t,total:num(r[5]),rawTotal:num(r[4]),rank:Object.values(totalRanks).some(c=>c.column===7)?null:num(r[7]),...ranksFrom(r,totalRanks),subjects,language,sourceRow:i+1});
+  const record={exam:e,rawExam:txt(r[0]),sid:idFor(name,identifierColumn>=0?r[identifierColumn]:'',e,n),classNo:n,track:t,total:num(r[5]),rawTotal:num(r[4]),rank:Object.values(totalRanks).some(c=>c.column===7)?null:num(r[7]),...ranksFrom(r,totalRanks),subjects,language,sourceRow:i+1};
+  const key=e+'|'+n+'|'+record.sid,index=scorePositions.get(key);
+  if(index===undefined){scorePositions.set(key,data.scores.length);data.scores.push(record);}
+  else{const prior=data.scores[index],merged=mergeDuplicateScore(prior,record,{onConflict:'collect'});collectImportConflict(data,'score',prior,record,merged.conflicts);data.scores[index]=merged.record;mergedRows++;}
   data.profiles[n]||={...classDefaults(n),track:t};
  }
+ data.importReport={...(data.importReport||{}),school:{acceptedRows,excludedRows,names:[...schools]},duplicates:{mergedScores:mergedRows}};
  progress('提取班级目标与任课信息',35);
  for(const name of chosen.filter(n=>/^班级有效人/.test(n))){
   for(const r of rowsOf(XLSX,workbook.Sheets[name])){
@@ -121,7 +155,7 @@ export function parseWorkbook(XLSX,buffer,source,progress=()=>{},mapping=null,ca
    if(txt(r[20])&&n<17)p.combination=txt(r[20]);
   }
  }
- parseItems(data,workbook,XLSX,idFor,progress);
+ parseItems(data,workbook,XLSX,idFor,progress,excludedIdentities);
  const answerSubjects=new Map();
  for(const a of data.answers){const k=a.sid+'|'+a.exam;if(!answerSubjects.has(k))answerSubjects.set(k,new Set());answerSubjects.get(k).add(a.subject);}
  for(const r of data.scores){
@@ -132,9 +166,11 @@ export function parseWorkbook(XLSX,buffer,source,progress=()=>{},mapping=null,ca
  progress('整理独立分析工作区',95);
  return examsFrom(data);
 }
-function parseItems(data,workbook,XLSX,idFor,progress){
+function parseItems(data,workbook,XLSX,idFor,progress,excludedIdentities=null){
  const subjects=SUBJECTS.filter(s=>workbook.Sheets[s]),known=new Set(data.scores.map(r=>r.exam));
  const scored=new Map(data.scores.map(r=>[r.exam+'|'+r.classNo+'|'+r.sid,r]));
+ const answerPositions=new Map(data.answers.map((a,index)=>[a.exam+'|'+a.classNo+'|'+a.sid+'|'+a.subject,index]));
+ let mergedAnswers=0;
  subjects.forEach((subject,si)=>{
   progress('读取 '+subject+' 小题、满分与知识点',40+Math.round(si/subjects.length*48));
   const rows=rowsOf(XLSX,workbook.Sheets[subject]),columns={};
@@ -166,14 +202,23 @@ function parseItems(data,workbook,XLSX,idFor,progress){
   }
   for(const r of rows){
    const n=num(r[1]),name=txt(r[2]),e=code(r[0]);if(!/[物历]$/.test(txt(r[0]))||!n||!name||!columns[e])continue;
+   if(excludedIdentities?.has(e+'|'+n+'|'+name))continue;
    const sid=idFor(name,'',e,n),score=scored.get(e+'|'+n+'|'+sid);
    if(data.scores.length&&!score)continue;
    if(subject==='英语'&&score?.language==='日语')continue;
    const values=columns[e].map(c=>num(r[c]));if(!values.some(finite))continue;
-   data.answers.push({exam:e,sid,classNo:n,track:score?.track||track(r[0],n),subject,values});
+   const answer={exam:e,sid,classNo:n,track:score?.track||track(r[0],n),subject,values};
+   const key=e+'|'+n+'|'+sid+'|'+subject,index=answerPositions.get(key);
+   if(index===undefined){answerPositions.set(key,data.answers.length);data.answers.push(answer);}
+   else{const prior=data.answers[index],merged=mergeDuplicateAnswer(prior,answer,{onConflict:'collect'});collectImportConflict(data,'answer',prior,answer,merged.conflicts);data.answers[index]=merged.record;mergedAnswers++;}
    data.profiles[n]||=classDefaults(n);
   }
  });
+ if(mergedAnswers){
+  const report=data.importReport||{};
+  report.duplicates={...(report.duplicates||{}),mergedAnswers};
+  data.importReport=report;
+ }
 }
 export const FLAT_FIELDS=[['name','姓名'],['studentId','学生识别码'],['classNo','班级'],['exam','考试'],['total','赋分总分'],['rawTotal','原始总分'],['track','类别'],['language','外语语种'],['cityRank','市排名'],['schoolRank','校排名'],['classRank','班级排名'],...SUBJECTS.map(s=>[s,s+'成绩'])];
 const ALIASES={studentId:identifierHeaders,name:['姓名','学生姓名','name'],classNo:['班级','班号','行政班','class','classno'],exam:['考次代码','考试代码','examid','考试','考试名称','考次','exam'],total:['赋分总分','总赋分','总分','total'],rawTotal:['原始总分','原分总分','原始分'],track:['类别','科类','track'],language:['外语语种','语种','language'],cityRank:['市赋名','市排名','市名次','全市名次','市原名','cityrank'],schoolRank:['校赋名','校排名','校名次','校排','校内排名','年级排名','年级名次','校原名','schoolrank'],classRank:['班赋名','班级排名','班排名','班排','班内排名','班原名','classrank']};
@@ -197,7 +242,7 @@ export function detectFlat(rows){
  return {headers,mapping,headerRow:rowIndex,preview:rows.slice(rowIndex+1,rowIndex+6)};
 }
 export function parseFlat(rows,source,mapping=null){
- const data=fresh(source),idFor=people(data),auto=detectFlat(rows),positions=new Map();mapping||=auto.mapping;
+ const data=fresh(source),idFor=people(data),auto=detectFlat(rows),positions=new Map();let mergedRows=0;mapping||=auto.mapping;
  const ranks=Object.fromEntries(['schoolRank','classRank','cityRank'].filter(key=>mapping[key]!=null&&mapping[key]!==''&&Number.isInteger(Number(mapping[key]))&&Number(mapping[key])>=0).map(key=>[key,{column:Number(mapping[key]),label:auto.headers[Number(mapping[key])]||FLAT_FIELDS.find(([field])=>field===key)[1]}]));
  for(const row of rows.slice(auto.headerRow+1)){
   const val=k=>mapping[k]==null||mapping[k]===''?null:row[Number(mapping[k])];
@@ -210,10 +255,11 @@ export function parseFlat(rows,source,mapping=null){
   if(basisColumn>=0&&ranks.classRank?.label==='班排名'&&txt(row[basisColumn]).includes('班排按同班同考次有效总分降序，同分并列')){rankValues.classRank=null;delete rankValues.rankSources.classRank;}
   const record={exam:e,rawExam:txt(val('exam')),sid:idFor(name,val('studentId'),e,n),classNo:n,track:t,total:num(val('total')),rawTotal:num(val('rawTotal')),...rankValues,subjects,language:txt(val('language'))|| (subjects['日语']?'日语':subjects['英语']?'英语':'')};
   const key=e+'|'+n+'|'+record.sid,index=positions.get(key),previous=index===undefined?null:data.scores[index];
-  if(previous&&!txt(val('studentId'))){const different=(a,b)=>finite(a)&&finite(b)&&a!==b;if(different(previous.total,record.total)||different(previous.rawTotal,record.rawTotal)||SUBJECTS.some(subject=>different(previous.subjects[subject]?.score,record.subjects[subject]?.score)))throw new Error('同班同考次的同名记录数值不一致，请提供学生识别码或整理重复行。');}
-  if(previous)data.scores[index]=mergeScore(previous,record);else{positions.set(key,data.scores.length);data.scores.push(record);}
+  if(previous){const merged=mergeDuplicateScore(previous,record,{onConflict:'collect'});collectImportConflict(data,'score',previous,record,merged.conflicts);data.scores[index]=merged.record;mergedRows++;}
+  else{positions.set(key,data.scores.length);data.scores.push(record);}
   data.profiles[n]||={...classDefaults(n),track:t};
  }
+ if(mergedRows)data.importReport={...(data.importReport||{}),duplicates:{mergedScores:mergedRows}};
  return examsFrom(data);
 }
 export function adaptJSON(json,source){
@@ -229,20 +275,10 @@ export function adaptJSON(json,source){
  return examsFrom(data);
 }
 // Merge means supplement: blank input does not erase existing measurements.
-function supplement(previous={},incoming={}) {
- const result={...previous};
- for(const [key,value] of Object.entries(incoming)) {
-  if(value==null||value===''||typeof value==='number'&&!finite(value))continue;
-  result[key]=typeof value==='object'&&!Array.isArray(value)?supplement(previous[key],value):value;
- }
- return result;
-}
+// Rank invalidation is handled by merge-policy so raw-score corrections only
+// clear ranks recorded against raw scores.
 function mergeScore(previous,incoming) {
- const result=supplement(previous,incoming);if(!previous)return result;
- // A changed score invalidates its old rank unless the new material provides one.
- const changed=(a,b)=>finite(a)&&finite(b)&&a!==b;
- if(changed(previous.total,incoming.total))for(const key of ['rank','cityRank','schoolRank','classRank'])if(!finite(incoming[key]))result[key]=null;
- for(const [subject,record] of Object.entries(incoming.subjects||{}))if(changed(previous.subjects?.[subject]?.score,record.score))for(const key of ['rank','schoolRank','classRank','cityRank'])if(!finite(record[key]))result.subjects[subject][key]=null;
+ const result=mergeScoreRecord(previous,incoming);if(!previous)return result;
  // An explicit new column scope repairs old positional assumptions, even when
  // the total score itself has not changed.
  if(Object.keys(incoming.rankSources||{}).length&&!Object.keys(previous.rankSources||{}).length){for(const key of ['schoolRank','classRank','cityRank'])result[key]=incoming[key]??null;}
@@ -251,6 +287,20 @@ function mergeScore(previous,incoming) {
  }
  return result;
 }
+const examDefault=id=>({label:EXAM_NAMES[id]||id,scope:cityExam(id)?'city':'school',order:EXAM_ORDER.includes(id)?EXAM_ORDER.indexOf(id):99});
+function mergeExamMetadata(current,incoming) {
+ const defaults=examDefault(current.id),result={...current};
+ for(const key of ['label','scope','order']) {
+  const value=current[key],configured=current.manuallyConfigured===true||(value!=null&&value!==''&&value!==defaults[key]);
+  // Teacher-maintained exam labels, order and city/school scope survive a
+  // routine merge. An import may still update a field that is only default.
+  if(configured)continue;
+  if(incoming[key]!=null&&incoming[key]!=='')result[key]=incoming[key];
+  else if(result[key]==null)result[key]=defaults[key];
+ }
+ return result;
+}
+function mergeLine(previous,incoming){return previous?supplement(previous,incoming):structuredClone(incoming);}
 function mergePapers(data,incoming,usable) {
  const alignments=new Map();
  for(const [key,newBank] of Object.entries(incoming.banks)) {
@@ -267,7 +317,7 @@ function mergePapers(data,incoming,usable) {
  const answers=new Map(data.answers.map(a=>{const row=aligned(a,'old');return [identity(row),row];}));
  for(const answer of incoming.answers) {
   const row=aligned(usable(answer),'incoming'),old=answers.get(identity(row));
-  if(old)row.values=Array.from({length:Math.max(old.values.length,row.values.length)},(_,i)=>finite(row.values[i])?row.values[i]:old.values[i]??null);
+  if(old)row.values=supplementAnswerValues(old.values,row.values);
   answers.set(identity(row),row);
  }
  data.answers=[...answers.values()];
@@ -276,13 +326,18 @@ export function mergeDatasets(current,incoming){
  if(current.anonymous&&!incoming.anonymous&&incoming.scores.length)return normalizeDataset(incoming);
  const data=normalizeDataset(structuredClone(current));incoming=normalizeDataset(structuredClone(incoming));
  const remap=mergeStudentIdentities(data,incoming);
+ if(incoming.importConflicts?.length)data.importConflicts=[...(data.importConflicts||[]),...incoming.importConflicts.map(group=>({...group,previous:{...group.previous,sid:remap.get(group.previous.sid)||group.previous.sid},incoming:{...group.incoming,sid:remap.get(group.incoming.sid)||group.incoming.sid},conflicts:group.conflicts.map(item=>({...item,sid:remap.get(item.sid)||item.sid}))}))];
  const usable=p=>({...p,sid:remap.get(p.sid)||p.sid});
  const identity=r=>r.exam+'|'+r.classNo+'|'+r.sid,scores=new Map(data.scores.map(r=>[identity(r),r]));
  for(const score of incoming.scores){const row=usable(score);scores.set(identity(row),mergeScore(scores.get(identity(row)),row));}data.scores=[...scores.values()];
  mergePapers(data,incoming,usable);
  data.profiles={...data.profiles,...Object.fromEntries(Object.entries(incoming.profiles).map(([n,p])=>{const old=data.profiles[n];if(old?.manuallyConfigured||old&&!incoming.scores.length)return [n,old];return [n,{...old,...p,lead:p.lead||old?.lead||'',teachers:{...old?.teachers,...Object.fromEntries(Object.entries(p.teachers||{}).filter(([,v])=>v))},targets:p.targets?.top==null&&p.targets?.under==null?old?.targets:p.targets}];}))};
- data.lines=[...new Map([...data.lines,...incoming.lines].map(l=>[l.exam+'|'+l.track,l])).values()];
- data.exams=[...new Map([...data.exams,...incoming.exams].map(e=>[e.id,e])).values()];
+ const lines=new Map(data.lines.map(line=>[line.exam+'|'+line.track,line]));
+ for(const line of incoming.lines){const key=line.exam+'|'+line.track;lines.set(key,lines.has(key)?mergeLine(lines.get(key),line):structuredClone(line));}
+ data.lines=[...lines.values()];
+ const exams=new Map(data.exams.map(exam=>[exam.id,exam]));
+ for(const exam of incoming.exams){const old=exams.get(exam.id);exams.set(exam.id,old?mergeExamMetadata(old,exam):structuredClone(exam));}
+ data.exams=[...exams.values()];
  data.sheets=[...new Set([...data.sheets,...incoming.sheets])];data.sourceName=incoming.sourceName;data.importedAt=incoming.importedAt;data.anonymous=current.anonymous&&incoming.anonymous;
  Object.assign(data,mergeContext(current,incoming,remap));
  return normalizeDataset(data);

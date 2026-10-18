@@ -2,10 +2,25 @@ import {pdfBlob,pdfKey,idlePDFWorker} from '../io/exports.js?v=runtime-v45';
 import {selectedReport} from '../engine/report-selection.js?v=runtime-v45';
 import {pdfLibrary} from '../io/pdf-viewer-library.js?v=runtime-v45';
 import {pendingReportBrief} from './report-brief.js?v=runtime-v45';
+import {reportOverlayMode,createReportOverlayController} from './report-overlay.js?v=runtime-v45';
 // A real PDF owns this managed island; form changes never reconcile its canvases.
 export function installReportReading(dialog){
  let pane=null,state=null,wanted=null,key='',doc=null,task=null,timer=0,frame=0,epoch=0,busy=null,base=null,scale=1,restore=null,suspended=false,previewAbort=null,pinnedEnd=false;
  const renders=new Map(),pages=new Map();let visibleObserver,loadingTask,pendingChapter='',chapterEpoch=0;
+ let overlayState=null;
+ const overlay=createReportOverlayController({
+  setInert(value){const preview=dialog.querySelector('.report-preview');if(preview&&preview.inert!==value)preview.inert=value;},
+  isOpen:()=>dialog.open,
+  isPanelFocused:()=>{const panel=dialog.querySelector('#report-settings');return !!panel&&panel.contains(document.activeElement);},
+  focusPanel(){const panel=dialog.querySelector('#report-settings');if(!panel)return;const first=panel.querySelector('button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),summary');(first||(panel.tabIndex=-1,panel)).focus({preventScroll:true});},
+  focusTrigger(){dialog.querySelector('.report-head-actions [data-cmd=report-settings]')?.focus({preventScroll:true});}
+ });
+ const narrowReport=matchMedia('(max-width:1000px)');
+ const syncOverlay=nextState=>{
+  if(nextState)overlayState=nextState;
+  overlay.sync(reportOverlayMode(overlayState,innerWidth),{restoreFocus:!overlayState?.reading});
+ };
+ narrowReport.addEventListener('change',()=>{if(dialog.open&&overlayState)syncOverlay(overlayState);else overlay.reset();});
  const resize=new ResizeObserver(()=>{cancelAnimationFrame(frame);frame=requestAnimationFrame(()=>{if(doc&&pane?.clientWidth&&pane?.clientHeight)layout(snapshot());});});
  const message=(text,error=false)=>{let el=pane?.querySelector('.pdf-status');if(!pane)return;const keep=doc?snapshot():null;if(!el){el=document.createElement('div');el.className='pdf-status';el.setAttribute('role','status');pane.prepend(el);}el.replaceChildren(document.createTextNode(text));if(error){const b=document.createElement('button');b.className='button outline';b.textContent='重新生成纸面';b.dataset.cmd='report-paper-retry';el.append(b);}el.hidden=!text;if(keep){if(keep.end)pane.scrollTop=pane.scrollHeight;else if(keep.top<=3)pane.scrollTop=0;else {const anchor=pages.get(keep.page)?.node;if(anchor)pane.scrollTop=anchor.offsetTop+(keep.ratio||0)*anchor.offsetHeight;}}};
  function cancelRenders(){for(const job of renders.values())job.cancel();renders.clear();visibleObserver?.disconnect();}
@@ -94,7 +109,7 @@ export function installReportReading(dialog){
  for(const type of ['wheel','touchstart','pointerdown'])dialog.addEventListener(type,event=>{if(pane?.contains(event.target))pinnedEnd=false;},{capture:true,passive:true});
  dialog.addEventListener('keydown',event=>{if(event.target===pane&&['Home','PageUp','PageDown','ArrowUp','ArrowDown'].includes(event.key))pinnedEnd=false;if(event.target.matches('[data-report-page-target]')&&event.key==='Enter'){event.preventDefault();jump(event.target.value);}else if(event.target===pane&&event.key==='Home'){event.preventDefault();pane.scrollTop=0;position();}else if(event.target===pane&&event.key==='End'){event.preventDefault();pinnedEnd=true;pane.scrollTop=pane.scrollHeight;position();}});
  dialog.addEventListener('change',event=>{if(event.target.matches('[data-report-page-target]'))jump(event.target.value);});
- const closed=()=>{if(dialog.open)return;dispose();wanted=null;pane=null;resize.disconnect();};
+ const closed=()=>{if(dialog.open)return;overlay.reset();overlayState=null;dispose();wanted=null;pane=null;resize.disconnect();};
  dialog.addEventListener('close',closed);dialog.addEventListener('surfaceclosed',closed);
  function suspend(){previewAbort?.abort();previewAbort=null;busy=null;idlePDFWorker();suspended=true;epoch++;chapterEpoch++;clearTimeout(timer);cancelRenders();loadingTask?.destroy().catch(()=>{});loadingTask=null;}
  function resume(){suspended=false;if(!pane||!dialog.open)return;if(wanted&&wanted.key!==key)queue();else if(doc)layout(snapshot());}
@@ -114,6 +129,7 @@ export function installReportReading(dialog){
    if(!dialog.open||dialog.dataset.surfacePhase==='leaving'){suspend();return;}
    suspended=false;
    state=nextState;dialog.classList.toggle('is-reading',Boolean(state.reading));dialog.classList.toggle('is-configuring',Boolean(state.settingsOpen&&!state.reading));
+   syncOverlay(nextState);
    const next=dialog.querySelector('.report-paper-scroll');if(pane!==next){dispose();wanted=null;resize.disconnect();pane=next;if(pane){pane.replaceChildren();pane.scrollTop=0;resize.observe(pane);}}
    if(!pane){wanted=null;return;}
    const output=selectedReport(report),nextKey=pdfKey(output),previousWanted=wanted?.key;wanted={report:output,key:nextKey};if(!output.sections.length&&!output.note?.trim()){dispose();wanted=null;pane.innerHTML='<div class="pdf-empty">勾选要导出的章节，开始纸面预览。</div>';pane.dataset.pdfState='empty';state.pdfPage=1;pane.dataset.currentPage='1';position();return;}

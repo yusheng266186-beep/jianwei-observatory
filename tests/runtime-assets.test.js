@@ -33,3 +33,6 @@ test('发布登记核验成功回执和提交树，拒绝未发布构建且重�
  assert.equal(record(f.root,receipt),true);const file=path.join(f.root,'tools/runtime-releases.json'),saved=fs.readFileSync(file,'utf8');assert.equal(record(f.root,receipt),false);assert.equal(fs.readFileSync(file,'utf8'),saved);assert.deepEqual(JSON.parse(saved).releases[0].files,[main]);
  }finally{f.close();}
 });
+
+test('裸import依赖也必须在保留图中，单次失败不清理旧资源',()=>{const f=fixture();try{f.put('app/runtime/main-CURRENT.js',`import './shared-MISSING.js';`);f.put('app/runtime/shared-DEAD.js');assert.throws(()=>plan(f.root,{files:['app/runtime/main-CURRENT.js']},{releases:[]}),/Unlisted retained import/);assert(fs.existsSync(path.join(f.root,'app/runtime/shared-DEAD.js')));}finally{f.close();}});
+test('遗漏登记只保留上代主图，不累积全部祖先，重复构建及提交后构建稳定',()=>{const {compatibilityFiles}=createRequire(import.meta.url)('../tools/runtime-assets.cjs'),m=n=>({files:['app/runtime/main-'+n+'.js']}),old=m('OLD'),head={...m('HEAD'),compatibility:old.files},next=m('NEXT'),registry={releases:[]};const fallback=compatibilityFiles(next,head,null,registry);assert.deepEqual(fallback,head.files);assert.deepEqual(compatibilityFiles(next,head,null,registry),fallback);assert.deepEqual(compatibilityFiles(next,{...next,compatibility:fallback},null,registry),fallback);});

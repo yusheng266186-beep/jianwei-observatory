@@ -12,9 +12,11 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
+      - run: npm run package:training -- --check
       - run: npm test
       - run: npm run build
       - run: npm run runtime:check
+      - run: node tools/check-release.cjs
       - name: Ensure generated assets match the submitted sources
         run: |
           git diff --exit-code

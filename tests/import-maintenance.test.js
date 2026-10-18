@@ -17,7 +17,7 @@ test('同一范围优先赋分、其次通用、最后原分；学科排名和�
 test('教师手动对应列覆盖自动优先级，空白赋分名次不暗中取另一口径的原分名次',()=>{
  const rows=[['姓名','班级','考试','原分校排名','赋分校排名'],['匿名',4,'52',19,null]],m=detectFlat(rows).mapping;assert.equal(parseFlat(rows,'核对.csv').scores[0].schoolRank,null);assert.equal(parseFlat(rows,'核对.csv',{...m,schoolRank:3}).scores[0].schoolRank,19);
 });
-function inbox(){const notices=[],html=[],read=[];const data={students:[{}],exams:[{}],scores:[{}],answers:[],lines:[],banks:{}};return {notices,html,read,target:{notify:m=>notices.push(m),input:{value:'file'},epoch:0,prepare(){},current:()=>({scores:[],answers:[],lines:[],banks:{}}),progress(){},file:async f=>{read.push(f.name);return data;},shell:s=>html.push(s),error:m=>{throw Error(m);}}};}
+function inbox(){const notices=[],html=[],read=[];const data={students:[{}],exams:[{}],scores:[{}],answers:[],lines:[],banks:{}};return {notices,html,read,target:{notify:m=>notices.push(m),input:{value:'file'},epoch:0,prepare(){},preview(){},current:()=>({scores:[],answers:[],lines:[],banks:{}}),progress(){},file:async f=>{read.push(f.name);return data;},shell:s=>html.push(s),error:m=>{throw Error(m);}}};}
 test('全部不支持的文件明确通知并复位输入，不启动读取；空文件列表保持安静',async()=>{
  const t=inbox();await Inbox.prototype.read.call(t.target,[{name:'旧材料.xlsm'}]);assert.equal(t.read.length,0);assert.equal(t.notices.length,1);assert.match(t.notices[0],/xlsx/);assert.equal(t.target.input.value,'');await Inbox.prototype.read.call(t.target,[]);assert.equal(t.notices.length,1);
 });
