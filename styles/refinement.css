@@ -166,3 +166,17 @@ body[data-surface=paper] #exercise-dialog .exercise-footer{background:#f6fafd;ba
 .brand:has(>.brand-crest)>span{font-family:'Songti SC',SimSun,serif;font-size:18px;font-weight:600;letter-spacing:.8px;line-height:1.4}
 .brand:has(>.brand-crest) small{font-family:'PingFang SC','Microsoft YaHei',sans-serif;font-size:10px;font-weight:400;letter-spacing:1px}
 @media(max-width:600px){.brand-crest{width:34px;height:34px}.brand:has(>.brand-crest)>span{font-size:16px}.brand:has(>.brand-crest) small{font-size:9px}}
+
+/* Training and review appointments share one quiet, readable calendar language. */
+.follow-timing-chips>.button{display:inline-flex;align-items:center;gap:7px}
+.follow-timing-chips>.button>span{font-size:10px;opacity:.72;font-variant-numeric:tabular-nums}
+.follow-timing-labels{display:flex;flex-wrap:wrap;gap:5px;margin:9px 0}
+.follow-timing-labels>span{display:inline-block;font-size:10px;line-height:1.7;padding:2px 7px;border-radius:6px;background:#bfd6e733;color:var(--muted)}
+.follow-timing-labels>[data-tone=today]{background:#adcddd50;color:var(--ink)}
+.follow-timing-labels>[data-tone=overdue]{background:#adc2d149;color:#3e6078}
+.follow-card .plan-card-detail>small{display:block;margin-top:5px;line-height:1.8;overflow-wrap:anywhere}
+.follow-agenda-order{font-size:11px;line-height:1.9;color:var(--muted);margin:10px 0}
+.follow-agenda>section>header{gap:8px}
+.follow-agenda>section>header>h3{font-size:18px;line-height:1.7;min-width:0;overflow-wrap:anywhere}
+.follow-agenda>section>header>span{flex:none}
+@media(max-width:600px){.follow-timing-chips{gap:5px}.follow-timing-chips>.button{min-height:44px;padding:8px 10px;gap:5px}.follow-agenda>section>header>h3{font-size:16px}.follow-agenda-order{font-size:10px}}

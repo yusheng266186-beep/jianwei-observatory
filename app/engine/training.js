@@ -5,14 +5,17 @@ export const trainingTasks=[['concept','概念梳理'],['worked','例题讲解']
 export const trainingMethods=[['individual','个别指导'],['group','小组互助'],['independent','独立训练'],['lesson','课堂专题']];
 export const scheduleSlots=[['lesson','课内'],['break','课间'],['morning','早读'],['lunch','午间'],['evening','自习'],['custom','自定时刻']];
 export const planStatuses=[['new','待开始'],['active','跟进中'],['done','已完成']];
-export const todayLocal=()=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Shanghai'}).format(new Date());
+const teachingDateFormat=new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Shanghai'});
+export const todayLocal=(now=new Date())=>teachingDateFormat.format(now);
+export const nextTeachingDayDelay=(now=new Date())=>Math.max(100,Date.parse(todayLocal(now)+'T16:00:00Z')-now.getTime()+100);
 export function validDate(date){return /^\d{4}-\d{2}-\d{2}$/.test(date||'')&&Number.isFinite(new Date(date+'T12:00:00Z').getTime())&&new Date(date+'T12:00:00Z').toISOString().slice(0,10)===date;}
 export function dateLabel(date){if(!validDate(date))return '日期待安排';const d=new Date(date+'T12:00:00Z');return date+' · 周'+['日','一','二','三','四','五','六'][d.getUTCDay()];}
 export function dateChoices(base=todayLocal(),count=14){const start=new Date(base+'T12:00:00Z');return Array.from({length:count},(_,i)=>{const d=new Date(start);d.setUTCDate(d.getUTCDate()+i);const value=d.toISOString().slice(0,10);return {value,label:dateLabel(value)};});}
-export function scheduleLabel(schedule={}){
+export function scheduleTimeLabel(schedule={}){
  const slot=scheduleSlots.find(([id])=>id===schedule.slot)?.[1]||'时段待安排',period=['lesson','break'].includes(schedule.slot)&&schedule.period?'第'+schedule.period+'节'+(schedule.slot==='break'?'课后课间':'课'):slot;
- return [dateLabel(schedule.date),period,schedule.time||'',schedule.duration?schedule.duration+'分钟':''].filter(Boolean).join(' · ');
+ return [period,schedule.time||'',schedule.duration?schedule.duration+'分钟':''].filter(Boolean).join(' · ');
 }
+export function scheduleLabel(schedule={}){return dateLabel(schedule.date)+' · '+scheduleTimeLabel(schedule);}
 export function normalizePlan(plan){return {...plan,status:plan.status==='doing'?'active':planStatuses.some(([id])=>id===plan.status)?plan.status:'new',schedule:{...plan.schedule},review:{...plan.review},training:{...plan.training,questions:Array.isArray(plan.training?.questions)?plan.training.questions:[],tasks:Array.isArray(plan.training?.tasks)?plan.training.tasks:[]}};}
 const measured=v=>v!==null&&v!==undefined&&String(v).trim()!==''?Number(v):null;
 export function reviewMetrics(plan){
@@ -28,9 +31,46 @@ export function validatePlanReview(plan){
  plan.review={...plan.review,correct,total};
 }
 export function reviewSummary(plan){const m=reviewMetrics(plan);return m?'实测 '+m.correct+' / '+m.total+'题 · 正确率 '+(m.rate*100).toLocaleString('zh-CN',{maximumFractionDigits:1})+'%':plan.result?.trim()?'复核结论已记录':'';}
-export function planMatchesTime(plan,filter='all',today=todayLocal()){
- const date=validDate(plan.schedule?.date)?plan.schedule.date:'';if(filter==='unscheduled')return !date;if(filter==='today')return date===today;if(filter==='overdue'){const due=validDate(plan.reviewDate)?plan.reviewDate:date;return !!due&&due<today&&plan.status!=='done';}
- if(filter==='week'){const d=new Date(today+'T12:00:00Z'),weekday=(d.getUTCDay()+6)%7;d.setUTCDate(d.getUTCDate()-weekday);const start=d.toISOString().slice(0,10);d.setUTCDate(d.getUTCDate()+6);return !!date&&date>=start&&date<=d.toISOString().slice(0,10);}return true;
+export function planAppointments(plan){
+ const status=plan.status==='doing'?'active':plan.status||'new',done=status==='done',date=validDate(plan.schedule?.date)?plan.schedule.date:'',reviewDate=validDate(plan.reviewDate)?plan.reviewDate:'',reviewed=Boolean(reviewMetrics(plan)||String(plan.result||'').trim());
+ const events=[{kind:'training',date,pending:status==='new',needsDate:!done}];
+ if(reviewDate||status==='active'&&!reviewed)events.push({kind:'review',date:reviewDate,pending:!done&&!reviewed,needsDate:!done&&!reviewed,reviewed});
+ return events;
+}
+function appointmentMatches(event,filter,today){
+ if(filter==='unscheduled')return !event.date&&event.needsDate;
+ if(filter==='today')return event.date===today;
+ if(filter==='overdue')return !!event.date&&event.date<today&&event.pending;
+ if(filter==='week'){const d=new Date(today+'T12:00:00Z'),weekday=(d.getUTCDay()+6)%7;d.setUTCDate(d.getUTCDate()-weekday);const start=d.toISOString().slice(0,10);d.setUTCDate(d.getUTCDate()+6);return !!event.date&&event.date>=start&&event.date<=d.toISOString().slice(0,10);}
+ return true;
+}
+export function planMatchesTime(plan,filter='all',today=todayLocal()){return planAppointments(plan).some(event=>appointmentMatches(event,filter,today));}
+export function planTimingLabels(plan,today=todayLocal()){
+ return planAppointments(plan).flatMap(event=>{
+  const noun=event.kind==='review'?'复核':'训练';
+  if(appointmentMatches(event,'overdue',today))return [{label:noun+'逾期',tone:'overdue'}];
+  if(event.date===today)return [{label:'今日'+noun,tone:'today'}];
+  if(!event.date&&event.needsDate)return [{label:noun+'待安排',tone:'pending'}];
+  return [];
+ });
+}
+const timeMinutes=value=>{const m=String(value||'').match(/^(\d{1,2}):(\d{2})$/);return m&&Number(m[1])<24&&Number(m[2])<60?Number(m[1])*60+Number(m[2]):null;};
+export const validTime=value=>timeMinutes(value)!==null;
+export function comparePlanSchedules(a,b){
+ const x=a.schedule||{},y=b.schedule||{},date=(validDate(x.date)?x.date:'9999').localeCompare(validDate(y.date)?y.date:'9999');if(date)return date;
+ const xt=timeMinutes(x.time),yt=timeMinutes(y.time);if(xt!==null||yt!==null)return xt===null?1:yt===null?-1:xt-yt;
+ const slot=s=>({morning:0,lesson:1,break:1,lunch:2,evening:3,custom:4}[s.slot]??5),group=slot(x)-slot(y);if(group)return group;
+ if(['lesson','break'].includes(x.slot)&&['lesson','break'].includes(y.slot))return (Number(x.period)||99)-(Number(y.period)||99)||(x.slot==='break'?1:0)-(y.slot==='break'?1:0);
+ return 0;
+}
+export function planAgenda(plans,{filter='all',today=todayLocal()}={}){
+ const dates=new Map();
+ for(const plan of plans){const own=new Map();for(const event of planAppointments(plan)){if(!appointmentMatches(event,filter,today))continue;if(!own.has(event.date))own.set(event.date,{plan,date:event.date,kinds:[],reviewed:false});const entry=own.get(event.date);entry.kinds.push(event.kind);entry.reviewed||=Boolean(event.reviewed);}
+  for(const entry of own.values()){if(!dates.has(entry.date))dates.set(entry.date,[]);dates.get(entry.date).push(entry);}}
+ return [...dates].sort(([a],[b])=>a?b?a.localeCompare(b):-1:1).map(([date,entries])=>({date,entries:entries.sort((a,b)=>{
+  const aTraining=a.kinds.includes('training'),bTraining=b.kinds.includes('training');if(aTraining!==bTraining)return aTraining?-1:1;
+  return aTraining?comparePlanSchedules(a.plan,b.plan):0;
+ })}));
 }
 export function questionOptions(atlas,{sid,exam,key}){
  const row=atlas.materialAt(sid,exam);if(!row||!key||key.split('|')[1]!==row.exam)return [];
@@ -51,6 +91,6 @@ export function draftForPlan(atlas,context={},existing=null){
 export const snapshotQuestion=q=>({label:q.label,index:q.index,knowledge:q.knowledge,max:q.max,score:q.score,rate:q.rate});
 export function trainingQuestionLabel(value){const label=String(value??'').trim(),number=label.replace(/^第\s*/,'').replace(/\s*题$/,'');return /^\d+(?:[.．—–\-~～()（）\d]+)?$/.test(number)?'第'+number+'题':label;}
 export function trainingSummary(plan){const t=plan.training||{},qs=t.questions||[],tasks=(t.tasks||[]).map(id=>trainingTasks.find(([key])=>id===key)?.[1]).filter(Boolean),goals=new Set(String(t.goal||'').split(/[、,，;；\n]/).map(v=>v.trim()));return [qs.length?'原题：'+qs.map(q=>trainingQuestionLabel(q.label)).join('、'):t.goal?'专项训练':'题目待选择',t.goal?'重点：'+t.goal:'',...new Set(qs.flatMap(q=>knowledgeLabels(q.knowledge)).filter(k=>!goals.has(k))),tasks.join('、')||'任务待设置'].filter(Boolean).join(' · ');}
-export function selectedPlans(plans,state={},atlas){const query=(state.planSearch||'').trim();return plans.filter(p=>(!state.planClass||state.planClass==='all'||Number(p.classNo)===Number(state.planClass))&&(!state.planStatus||state.planStatus==='all'||p.status===state.planStatus)&&planMatchesTime(p,state.planTiming)&&(!query||[atlas?.name(p.sid),p.subject,p.note,trainingSummary(p)].some(v=>String(v||'').includes(query))));}
+export function selectedPlans(plans,state={},atlas,today=todayLocal()){const query=(state.planSearch||'').trim();return plans.filter(p=>(!state.planClass||state.planClass==='all'||Number(p.classNo)===Number(state.planClass))&&(!state.planStatus||state.planStatus==='all'||p.status===state.planStatus)&&planMatchesTime(p,state.planTiming,today)&&(!query||[atlas?.name(p.sid),p.subject,p.note,trainingSummary(p)].some(v=>String(v||'').includes(query))));}
 
 export function materialPeople(atlas,exam){return [...new Set([...atlas.rows(exam),...atlas.data.answers.filter(a=>a.exam===exam)].map(r=>r.sid))].map(sid=>atlas.materialAt(sid,exam)).filter(Boolean).sort((a,b)=>a.classNo-b.classNo||atlas.name(a.sid).localeCompare(atlas.name(b.sid),'zh-CN'));}
