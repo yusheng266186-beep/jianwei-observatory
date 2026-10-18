@@ -46,9 +46,9 @@ export class Atlas {
       result[tier+'DoubleBase']=dualEligible.length;
       result[tier+'Double']=dualEligible.length?dualEligible.filter(r=>this.gap(r,tier,subject)>=0&&this.gap(r,tier)>=0).length:null;
       result[tier+'Line']=average(eligible.map(r=>this.line(r,tier,subject)));
-      result[tier+'Near10']=eligible.filter(r=>this.gap(r,tier,subject)<0&&this.gap(r,tier,subject)>=-10).length;
-      result[tier+'Near20']=eligible.filter(r=>this.gap(r,tier,subject)<0&&this.gap(r,tier,subject)>=-20).length;
-      result[tier+'Safe10']=eligible.filter(r=>this.gap(r,tier,subject)>=0&&this.gap(r,tier,subject)<=10).length;
+      result[tier+'Near10']=eligible.length?eligible.filter(r=>this.gap(r,tier,subject)<0&&this.gap(r,tier,subject)>=-10).length:null;
+      result[tier+'Near20']=eligible.length?eligible.filter(r=>this.gap(r,tier,subject)<0&&this.gap(r,tier,subject)>=-20).length:null;
+      result[tier+'Safe10']=eligible.length?eligible.filter(r=>this.gap(r,tier,subject)>=0&&this.gap(r,tier,subject)<=10).length:null;
     }
     if(!cached){cached=new Map();this.summaryCache.set(rows,cached);}cached.set(subject,result);return result;
   }

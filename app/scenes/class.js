@@ -1,3 +1,4 @@
+import {researchPlotOptions} from '../engine/plot-scale.js';
 import {classMatrixRows,matrixOrder,rankMetric} from '../engine/research-history.js';
 import {researchRoster} from '../engine/research-roster.js';
 import {researchChangeHTML,researchChangeText} from '../ui/research-change.js';
@@ -18,9 +19,9 @@ export function render(atlas,state) {
     const labels={mean:'总分均分',topRate:'特控率',underRate:'本科率',top:'特控人数',under:'本科人数',topGap:'特控分差',underGap:'本科分差'};
     const value=t=>{const result=metric==='topGap'||metric==='underGap'?average(t.rows.map(r=>atlas.gap(r,metric==='topGap'?'top':'under'))):metric in labels?t.summary[metric]:atlas.summary(t.rows,metric).mean;return result===null?null:metric.includes('Rate')?result*100:result;};
     content='<div class="history-tools"><span>点亮要对比的考次</span>'+button(state.matched?'共同参考 ✓':'全部参考','set',{key:'matched',value:!state.matched},state.matched?'accent':'outline')+'</div>'+examRail(atlas,ids,'exams',available,true)+chips('trendMetric',[...Object.entries(labels),...subjectNames.map(s=>[s,s+'均分'])],metric);
-    content+=block(labels[metric]||metric+'均分',trajectory('class-trajectory',timeline.map(t=>t.exam.id),[{name:no+'班',values:timeline.map(value),points:timeline.map(t=>({cmd:'class-exam',data:{exam:t.exam.id}}))}],{zero:metric.includes('Gap'),suffix:metric.includes('Rate')?'%':''}),'共同参考使用选定考次的学生交集。缺考保留断点。',chartButtons('class-trajectory'));
+    content+=block(labels[metric]||metric+'均分',trajectory('class-trajectory',timeline.map(t=>t.exam.id),[{name:no+'班',values:timeline.map(value),points:timeline.map(t=>({cmd:'class-exam',data:{exam:t.exam.id}}))}],researchPlotOptions(metric,{aggregate:true})),'共同参考使用选定考次的学生交集。缺考保留断点。',chartButtons('class-trajectory'));
     const summaryRows=timeline.map(t=>[t.exam.label,t.summary.count,t.summary.mean,t.summary.median,t.summary.sd,t.summary.top,t.summary.topRate,t.summary.under,t.summary.underRate]);
-    content+=block('每个考次的参照面',table(['考试','人数','均分','中位数','标准差','特控人数','特控率','本科人数','本科率'],summaryRows.map(row=>row.map((v,i)=>i===6||i===8?percent(v):i>=2&&i<=4?number(v):esc(v)))));
+    content+=block('每个考次的参照面',table(['考试','人数','均分','中位数','标准差','特控人数','特控率','本科人数','本科率'],summaryRows.map(row=>row.map((v,i)=>i===6||i===8?percent(v):i>=2&&i<=4?number(v):i===0?esc(v):integer(v)))));
     const matrix=state.matrix||'total',matrixNames=[['total','赋分总分'],['percentile','同科类相对位置'],['rank','原考试排名'],['top','特控分差'],['under','本科分差'],...subjectNames],matrixRows=classMatrixRows(atlas,timeline,state),comparable=matrixRows.filter(r=>r.change!==null).length;
     const matrixPage=Math.min(state.page||1,Math.max(1,Math.ceil(matrixRows.length/40))),displayed=matrixRows.slice((matrixPage-1)*40,matrixPage*40);
     const matrixMetrics='<div class="research-matrix-metrics" data-render-key="research-matrix-metrics"><span>观察指标 <b>'+esc(matrixNames.find(item=>Array.isArray(item)&&item[0]===matrix)?.[1]||matrix)+'</b></span>'+chips('matrix',matrixNames,matrix)+'</div>';
@@ -35,7 +36,7 @@ export function render(atlas,state) {
     const tier=state.tier||'under',lineName=tier==='top'?'特控':'本科',near=atlas.critical(exam,{tier,band:20,classes:[Number(no)]});
     const targetRows=['top','under'].map(t=>{const target=profile.targets?.[t];return [t==='top'?'特控':'本科',summary[t],summary[t+'Rate'],target,target>0&&summary[t]!==null?summary[t]/target:null,summary[t+'Near10'],summary[t+'Near20'],summary[t+'Safe10']];});
     calendar=examRail(atlas,exam,'exam',available);
-    content=block('人数任务与临界带',goalCards(atlas,[no],exam)+table(['层次','有效人数','有效率','人数任务','完成率','线下10分','线下20分','线上10分'],targetRows.map(row=>row.map((v,i)=>i===2||i===4?percent(v):esc(v??'—')))));
+    content=block('人数任务与临界带',goalCards(atlas,[no],exam)+table(['层次','有效人数','有效率','人数任务','完成率','线下10分','线下20分','线上10分'],targetRows.map(row=>row.map((v,i)=>i===2||i===4?percent(v):esc(v??'—')))),'人数按本班本场可判定记录计算；—表示缺少成绩或有效线，0表示范围内实际无人。');
     const subjectRows=subjects.map(s=>[s.subject,atlas.teacher(no,s.subject)||'',s.own.topLine,s.own.top,s.own.topDouble,s.own.topRate,s.own.underLine,s.own.under,s.own.underDouble,s.own.underRate]);
     content+=block('有效、双上线，落到每个学科',table(['学科','教师','特控线','特控有效','双上线','有效率','本科线','本科有效','双上线','有效率'],subjectRows.map(row=>row.map((v,i)=>i===0?button(esc(v),'class-subject',{subject:v,no,exam},'person-link'):i===5||i===9?percent(v):i===2||i===6?number(v):esc(v??'—')))),'双上线要求同一个人的总分和学科同时达线；点击学科查看本班学生证据。');
     const quadrantRows=subjects.map(({subject})=>{

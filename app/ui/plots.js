@@ -2,6 +2,7 @@ import {esc,number,percent,attrs} from './html.js?v=runtime-v45';
 import {valid} from '../engine/metrics.js?v=runtime-v45';
 import {plotPalette as palette} from './palette.js?v=runtime-v45';
 import {scoreTone,scoreLegend} from './score-tones.js?v=runtime-v45';
+import {trajectoryScale} from '../engine/plot-scale.js';
 export const seriesColors=palette.series;
 const colors=seriesColors;
 const action=item=>item?.cmd?' data-plot-action="true" data-cmd="'+esc(item.cmd)+'"'+attrs(item.data||{})+' role="button" tabindex="0"':'';
@@ -9,17 +10,15 @@ const key=id=>'glass-'+[...String(id)].map(char=>char.codePointAt(0).toString(16
 const gradient=(id,from,to,vertical=false)=>'<linearGradient id="'+id+'" x1="0" y1="0" x2="'+(vertical?'0':'1')+'" y2="'+(vertical?'1':'0')+'"><stop stop-color="'+from+'"/><stop offset="1" stop-color="'+to+'"/></linearGradient>';
 // Each segment stays within its two values; missing records break the curve and area.
 function curve(points){return points.map((p,i)=>i?'C'+(points[i-1].x+p.x)/2+','+points[i-1].y+' '+(points[i-1].x+p.x)/2+','+p.y+' '+p.x+','+p.y:'M'+p.x+','+p.y).join(' ');}
-export function trajectory(id,labels,series,{suffix='',zero=false,inverse=false,floor=null,integerTicks=false}={}) {
-  const values=series.flatMap(s=>s.values).filter(valid);if(!values.length)return '<div class="plot-empty">暂无可绘制的成绩</div>';
-  let low=Math.min(...values),high=Math.max(...values);if(zero){low=Math.min(0,low);high=Math.max(0,high);}if(high===low){low-=1;high+=1;}
-  const padding=(high-low)*.15;low-=padding;high+=padding;if(valid(floor))low=Math.max(floor,low);
+export function trajectory(id,labels,series,{suffix='',unit=suffix,zero=false,inverse=false,floor=null,ceiling=null,integerTicks=false}={}) {
+  const scale=trajectoryScale(series.flatMap(s=>s.values),{zero,floor,ceiling,integerTicks});if(!scale)return '<div class="plot-empty">暂无可绘制的成绩</div>';
+  const {low,high,ticks:axis,digits}=scale,pointDigits=integerTicks?0:Math.max(1,digits);
   // Preserve every stage and readable axes; narrow containers scroll the full plot.
   const labelWidth=Math.max(54,...labels.map(label=>[...String(label)].reduce((width,char)=>width+(/[^\x00-\xff]/.test(char)?12:7),24))),minimumWidth=Math.max(390,labels.length*labelWidth+130);
-  const digits=Math.max(String(Math.round(low)).length,String(Math.round(high)).length)+suffix.length;
-  const w=Math.max(940,minimumWidth),h=275,labelEdge=(labelWidth/2+12)*w/minimumWidth,left=Math.max(64,digits*20+25,labelEdge),right=Math.max(30,labelEdge),top=25,bottom=55,x=i=>left+i*(w-left-right)/Math.max(1,labels.length-1),y=v=>top+(inverse?v-low:high-v)/(high-low)*(h-top-bottom),prefix=key(id);
+  const axisWidth=Math.max(...axis.map(v=>number(v,digits).length+suffix.length));
+  const w=Math.max(940,minimumWidth),h=275,labelEdge=(labelWidth/2+12)*w/minimumWidth,left=Math.max(64,axisWidth*16+25,labelEdge),right=Math.max(30,labelEdge),top=unit?39:25,bottom=55,x=i=>left+i*(w-left-right)/Math.max(1,labels.length-1),y=v=>top+(inverse?v-low:high-v)/(high-low)*(h-top-bottom),prefix=key(id);
   let defs='',areas='',curves='',passivePoints='',activePoints='';
-  const ticks=Array.from({length:5},(_,i)=>low+(high-low)*i/4),axis=integerTicks?[...new Set(ticks.map(Math.round))].filter(v=>v>=low&&v<=high):ticks;
-  let content=axis.map(value=>'<line class="plot-grid" x1="'+left+'" x2="'+(w-right)+'" y1="'+y(value)+'" y2="'+y(value)+'" stroke="'+palette.grid+'" stroke-dasharray="2 6"/><text x="'+(left-10)+'" y="'+(y(value)+4)+'" text-anchor="end">'+number(value,0)+esc(suffix)+'</text>').join('');
+  let content=axis.map(value=>'<line class="plot-grid" x1="'+left+'" x2="'+(w-right)+'" y1="'+y(value)+'" y2="'+y(value)+'" stroke="'+palette.grid+'" stroke-dasharray="2 6"/><text class="plot-axis-label" data-axis-value="'+value+'" x="'+(left-10)+'" y="'+(y(value)+4)+'" text-anchor="end">'+number(value,digits)+esc(suffix)+'</text>').join('');
   content+=labels.map((label,i)=>'<text class="trajectory-exam-label" x="'+x(i)+'" y="'+(h-19)+'" text-anchor="middle">'+esc(label)+'</text>').join('');
   for(const [index,item] of series.entries()) {
     const color=item.color||colors[index%colors.length],segments=[];let points=[];
@@ -32,21 +31,22 @@ export function trajectory(id,labels,series,{suffix='',zero=false,inverse=false,
     curves+='<path class="plot-line" pathLength="1000" d="'+segments.map(curve).join(' ')+'" fill="none" stroke="'+color+'" stroke-width="'+(index===0?'3':'2.4')+'" stroke-linejoin="round" stroke-linecap="round"/>';
     item.values.forEach((value,i)=>{
       if(!valid(value))return;
-      const title=series.filter(s=>s.values[i]===value).map(s=>s.name+' · '+labels[i]+'：'+number(value)+suffix).join('\n');
+      const title=series.filter(s=>s.values[i]===value).map(s=>s.name+' · '+labels[i]+'：'+number(value,pointDigits)+unit).join('\n');
       const point='<circle class="plot-point" cx="'+x(i)+'" cy="'+y(value)+'" r="4" fill="'+palette.point+'" stroke="'+color+'" stroke-width="2"'+action(item.points?.[i])+'><title>'+esc(title)+'</title></circle>';
       if(item.points?.[i]?.cmd)activePoints+=point;else passivePoints+=point;
     });
   }
   content+=areas+curves+passivePoints+activePoints;
-  return '<div class="plot-legend">'+series.map((s,i)=>'<span><i style="background:'+(s.color||colors[i%colors.length])+'"></i>'+esc(s.name)+'</span>').join('')+'</div><div class="trajectory-frame"><div class="trajectory-scroll" tabindex="0" role="region" aria-label="阶段变化图，可左右滚动查看全部考次"><svg id="'+esc(id)+'" class="trajectory" style="--trajectory-min-width:'+minimumWidth+'px" viewBox="0 0 '+w+' '+h+'" role="'+(series.some(s=>s.points?.some(p=>p?.cmd))?'group':'img')+'" aria-label="成绩趋势"><defs>'+defs+'</defs>'+content+'</svg></div><p class="trajectory-scroll-note">左右滑动，查看完整阶段</p></div>';
+  return '<div class="plot-legend">'+series.map((s,i)=>'<span><i style="background:'+(s.color||colors[i%colors.length])+'"></i>'+esc(s.name)+'</span>').join('')+'</div><div class="trajectory-frame"><div class="trajectory-scroll" tabindex="0" role="region" aria-label="阶段变化图，可左右滚动查看全部考次"><svg id="'+esc(id)+'" class="trajectory" data-unit="'+esc(unit)+'" style="--trajectory-min-width:'+minimumWidth+'px" viewBox="0 0 '+w+' '+h+'" role="'+(series.some(s=>s.points?.some(p=>p?.cmd))?'group':'img')+'" aria-label="阶段变化'+(unit?'，单位'+esc(unit):'')+'"><desc>纵轴按当前有效数据范围显示；缺失记录保留断点。'+(inverse?'名次数值越小越靠上。':'')+'</desc><defs>'+defs+'</defs>'+(unit?'<text class="plot-unit-label" x="'+left+'" y="17">单位：'+esc(unit)+'</text>':'')+'<g class="trajectory-content">'+content+'</g></svg></div><p class="trajectory-scroll-note">左右滑动，查看完整阶段</p></div>';
 }
-export function bars(id,items,{percentages=false,signed=false}={}) {
-  const measured=items.map(r=>r.value).filter(valid),max=Math.max(1,...measured.map(Math.abs)),w=1060,h=Math.max(70,items.length*37+20),base=signed?490:190,prefix=key(id);
+export function bars(id,items,{percentages=false,signed=false,unit='分'}={}) {
+  const measured=items.map(r=>r.value).filter(valid),max=Math.max(1,...measured.map(Math.abs)),w=1060,h=Math.max(90,items.length*37+40),base=signed?490:190,prefix=key(id),labelUnit=percentages?'%':unit;
+  const displayValue=value=>!valid(value)?'—':percentages?percent(value):(signed&&value>0&&Number(value.toFixed(1))!==0?'+':'')+number(Number(value.toFixed(1))===0?0:value)+labelUnit;
   const defs=gradient(prefix+'-positive',palette.positiveLight,palette.positive)+gradient(prefix+'-negative',palette.negativeLight,palette.negative);
-  return '<svg id="'+esc(id)+'" class="bars" viewBox="0 0 '+w+' '+h+'" role="group" aria-label="横向比较"><defs>'+defs+'</defs>'+items.map((item,i)=>{
-    const y=15+i*37,value=item.value,width=valid(value)?Math.abs(value)/max*(signed?260:540):0,start=signed&&value<0?base-width:base,label=String(item.label),display=label.length>14?label.slice(0,13)+'…':label;
+  return '<svg id="'+esc(id)+'" class="bars" data-unit="'+esc(labelUnit)+'" viewBox="0 0 '+w+' '+h+'" role="group" aria-label="横向比较，单位'+esc(labelUnit)+'"><defs>'+defs+'</defs><text class="plot-unit-label" x="'+base+'" y="16">单位：'+esc(labelUnit)+'</text>'+items.map((item,i)=>{
+    const y=35+i*37,value=item.value,width=valid(value)?Math.abs(value)/max*(signed?260:540):0,start=signed&&value<0?base-width:base,label=String(item.label),display=label.length>14?label.slice(0,13)+'…':label;
     const track=!signed&&valid(value)?'<rect class="plot-track" x="'+base+'" y="'+y+'" width="540" height="22" rx="6" fill="'+palette.well+'"/>':'';
-    return '<g class="plot-item"'+action(item)+'><title>'+esc(label)+'：'+(percentages?percent(value):number(value))+'</title><rect x="0" y="'+(y-4)+'" width="'+w+'" height="33" fill="transparent"/><text x="174" y="'+(y+15)+'" text-anchor="end">'+esc(display)+'</text>'+track+'<line class="plot-axis" x1="'+base+'" x2="'+base+'" y1="'+y+'" y2="'+(y+22)+'" stroke="'+palette.axis+'"/><rect class="plot-bar" x="'+start+'" y="'+y+'" width="'+width+'" height="22" rx="6" fill="url(#'+prefix+(value<0?'-negative':'-positive')+')"/><text class="plot-value" x="790" y="'+(y+15)+'">'+(percentages?percent(value):number(value))+'</text></g>';
+    return '<g class="plot-item"'+action(item)+'><title>'+esc(label)+'：'+esc(displayValue(value))+'</title><rect x="0" y="'+(y-4)+'" width="'+w+'" height="33" fill="transparent"/><text x="174" y="'+(y+15)+'" text-anchor="end">'+esc(display)+'</text>'+track+'<line class="plot-axis" x1="'+base+'" x2="'+base+'" y1="'+y+'" y2="'+(y+22)+'" stroke="'+palette.axis+'"/><rect class="plot-bar" x="'+start+'" y="'+y+'" width="'+width+'" height="22" rx="6" fill="url(#'+prefix+(value<0?'-negative':'-positive')+')"/><text class="plot-value" x="790" y="'+(y+15)+'">'+esc(displayValue(value))+'</text></g>';
   }).join('')+'</svg>';
 }
 export function positionSpreadLabels(items,{left=40,right=760,gap=16}={}) {
