@@ -39,10 +39,11 @@ function selectionRail(rail){
   const x=selected.offsetLeft,y=selected.offsetTop,width=selected.offsetWidth,height=selected.offsetHeight;
   if(!width)return;
   if(state.indicator?.isConnected&&state.target===selected&&state.targetX===x&&state.targetY===y&&state.targetWidth===width&&state.targetHeight===height)return;
+  const layoutChanged=state.target===selected&&(state.targetX!==x||state.targetY!==y||state.targetWidth!==width||state.targetHeight!==height);
   if(state.indicator?.isConnected){const rect=state.indicator.getBoundingClientRect(),host=rail.getBoundingClientRect();Object.assign(state,{x:rect.left-host.left+rail.scrollLeft,y:rect.top-host.top+rail.scrollTop,width:rect.width,height:rect.height,velocity:springFrame(state.indicator,'indicator')?.velocity});}
   let indicator=rail.querySelector(':scope > .selection-indicator');if(!indicator){indicator=document.createElement('span');indicator.className='selection-indicator';indicator.setAttribute('aria-hidden','true');rail.prepend(indicator);}
   indicator.style.borderRadius=getComputedStyle(selected).borderRadius;
-  moveIndicator(indicator,{x,y,width,height},{from:state.x===null?undefined:{x:state.x,y:state.y,width:state.width,height:state.height},velocity:state.velocity,immediate:motionPreference()});
+  moveIndicator(indicator,{x,y,width,height},{from:state.x===null?undefined:{x:state.x,y:state.y,width:state.width,height:state.height},velocity:state.velocity,immediate:motionPreference()||layoutChanged});
   Object.assign(state,{indicator,x,y,width,height,target:selected,targetX:x,targetY:y,targetWidth:width,targetHeight:height});
 }
 function refreshPlot(svg) {
@@ -123,7 +124,7 @@ function refreshTable(frame) {
   for(const b of frame.querySelectorAll('.table-shift'))b.disabled=!overflow||(Number(b.dataset.direction)<0?left:right);
   const track=frame.querySelector('.table-overflow-note i');if(track){track.style.setProperty('--scroll-progress',overflow?Math.max(0,Math.min(100,scroll.scrollLeft/extent*100))+'%':'0%');track.style.setProperty('--scroll-thumb',Math.max(12,Math.min(100,scroll.clientWidth/Math.max(1,scroll.scrollWidth)*100))+'%');}
 }
-function revealSelectedClasses(root=document){for(const rail of root.querySelectorAll('.class-picker section>div,.audience-strip>.chips,.exam-rail')){const active=document.activeElement?.closest('.selected'),selected=active&&rail.contains(active)?active:rail.querySelector('.class-key.selected,.chip.selected,.exam-stop.selected');if(!selected||rail.scrollWidth<=rail.clientWidth+1)continue;const target=selected.getBoundingClientRect(),host=rail.getBoundingClientRect();if(target.left<host.left||target.right>host.right)rail.scrollTo({left:rail.scrollLeft+target.left-host.left-(host.width-target.width)/2,behavior:'instant'});}}
+function revealSelectedClasses(root=document){for(const rail of root.querySelectorAll('.class-picker section>div,.audience-strip>.chips,.exam-rail,.exam-choices,.plan-editor-section>.chips[aria-label="exam"]')){const active=document.activeElement?.closest('.selected'),selected=active&&rail.contains(active)?active:rail.querySelector('.class-key.selected,.chip.selected,.exam-stop.selected');if(!selected||rail.scrollWidth<=rail.clientWidth+1)continue;const target=selected.getBoundingClientRect(),host=rail.getBoundingClientRect();if(target.left<host.left||target.right>host.right)rail.scrollTo({left:rail.scrollLeft+target.left-host.left-(host.width-target.width)/2,behavior:'instant'});}}
 export function prepareUpdate({replacing=false}={}){hideTooltip();if(!replacing){sampleRails();samplePlots();}for(const rail of document.querySelectorAll('.goal-cards[data-scroll-key]'))if(!rail.closest('.scene-leaving-viewport'))galleryOffsets.set(rail.dataset.scrollKey,rail.scrollLeft);}
 export function pruneInteractions() {
   for(const node of pendingLayouts.keys())if(!node.isConnected||node.closest('.scene-leaving-viewport')){layoutObserver?.unobserve(node);pendingLayouts.delete(node);}

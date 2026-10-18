@@ -260,7 +260,8 @@ function nav() {
   document.querySelector('.masthead [data-cmd="research"]').hidden=!available;
   breadcrumb.textContent=(routes.find(r=>r[0]===current)?.[1]||'研究台')+(available?(current==='class'?' / '+(state.no||'')+'班':current==='papers'&&state.key?' / '+state.key.split('|').join(' · '):current==='people'&&state.sid?' / '+atlas.name(state.sid):''):'');
 }
-function positionDock(){const dock=document.getElementById('navigation'),selected=dock.querySelector('[aria-current="page"]'),indicator=dock.querySelector('.dock-indicator');if(selected&&indicator){const style=getComputedStyle(indicator);moveIndicator(indicator,{x:selected.offsetLeft,y:0,width:selected.offsetWidth,height:Math.max(1,dock.clientHeight-(parseFloat(style.top)||0)-(parseFloat(style.bottom)||0))},{immediate:reducedMotion()});}}
+let dockLayoutWidth=0;
+function positionDock(){const dock=document.getElementById('navigation'),selected=dock.querySelector('[aria-current="page"]'),indicator=dock.querySelector('.dock-indicator');if(selected&&indicator){const style=getComputedStyle(indicator),layoutChanged=dockLayoutWidth>0&&dockLayoutWidth!==dock.clientWidth;dockLayoutWidth=dock.clientWidth;moveIndicator(indicator,{x:selected.offsetLeft,y:0,width:selected.offsetWidth,height:Math.max(1,dock.clientHeight-(parseFloat(style.top)||0)-(parseFloat(style.bottom)||0))},{immediate:reducedMotion()||layoutChanged});}}
 async function paint(transition=false,focus=null) {
   const started=performance.now(),serial=++paintId,scene=current;nav();scenePending(serial,scene);
   try {
