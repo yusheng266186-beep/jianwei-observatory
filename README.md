@@ -15,6 +15,8 @@
 | 学科图示库 | [查看类型与示例](https://yusheng266186-beep.github.io/jianwei-observatory/figure-library.html) |
 | 独立预览 | [后续开发验收入口](https://yusheng266186-beep.github.io/jianwei-observatory-preview/)，本机数据与正式站隔离 |
 
+整页切换、Dock与标签采用可连续接续的非线性阻尼动画；弹窗、折叠与微交互共用缓动，滑轮随滚动位置连续缩放，移动中保留玻璃。详见[动画连续性与非线性缓动](docs/MOTION-CONTINUITY-2026-10-18.md)。
+
 ## 开始使用
 
 1. 首页导入 Excel 成绩表、小题表、CSV 或完整 JSON 备份。首次加入工作区；已有材料可合并或替换。通用表格可手动对应列，替换前保留一次可撤回快照。
@@ -93,7 +95,7 @@ npm run build
 python3 -m http.server 4175 --bind 127.0.0.1
 ```
 
-打开 `http://127.0.0.1:4175/`。前端为原生 ES Modules + 静态资源，Node 用于构建/测试，不需常驻前端应用服务器。`npm test` 当前基线484项，覆盖数据、导入、排名、训练、存储、模型适配与云端任务。`tests/*.cjs` 另保留需静态服务器和浏览器的专项流程；本次发布另用原生浏览器进行匿名验收。
+打开 `http://127.0.0.1:4175/`。前端为原生 ES Modules + 静态资源，Node 用于构建/测试，不需常驻前端应用服务器。`npm test` 当前基线490项，覆盖数据、导入、排名、训练、存储、模型适配与云端任务。`tests/*.cjs` 另保留需静态服务器和浏览器的专项流程；本次发布另用原生浏览器进行匿名验收。
 
 修改源码后重建并提交源码、入口 HTML、运行清单和新哈希资源。旧缓存资源保留兼容，不手工改内容哈希文件。`npm run package:training` 仅同步前后端契约，不部署云函数；后端修改按[部署手册](docs/DEPLOYMENT.md)单独执行。
 

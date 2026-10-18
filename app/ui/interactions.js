@@ -1,6 +1,7 @@
 import {installDisclosures,openDisclosure} from './disclosure-motion.js';
 export {openDisclosure};
-import {motion,finishAnimation} from './motion.js?v=runtime-v45';
+import {motion,finishAnimation,moveIndicator} from './motion.js?v=runtime-v45';
+import {springFrame} from './spring-motion.js';
 import {positionSpreadLabels} from './plots.js?v=runtime-v45';
 import {paperMapLayout} from '../engine/paper-structure.js?v=runtime-v45';
 let motionPreference=()=>false,resizeObserver,plotObserver,railObserver,drawerHeaderObserver,revealObserver,tooltipTarget=null,tooltipOriginal=null,tooltipFrame=0,outlineFrame=0,drawerOutlineFrame=0,pointerFrame=0,outline=null,outlineEntries=[];
@@ -31,17 +32,17 @@ function animatePlot(svg){
     shape.animate([{transform:'translate('+dx+'px,'+dy+'px) scale('+sx+','+sy+')'},{transform:'translate(0,0) scale(1)'}],motion.arrange);
   }
 }
-function sampleRails(){for(const rail of selectionRails){const state=railStates.get(rail);if(state?.indicator?.isConnected){const rect=state.indicator.getBoundingClientRect(),host=rail.getBoundingClientRect();Object.assign(state,{x:rect.left-host.left+rail.scrollLeft,y:rect.top-host.top+rail.scrollTop,width:rect.width,height:rect.height});}}}
+function sampleRails(){for(const rail of selectionRails){const state=railStates.get(rail);if(state?.indicator?.isConnected){const rect=state.indicator.getBoundingClientRect(),host=rail.getBoundingClientRect();Object.assign(state,{x:rect.left-host.left+rail.scrollLeft,y:rect.top-host.top+rail.scrollTop,width:rect.width,height:rect.height,velocity:springFrame(state.indicator,'indicator')?.velocity});}}}
 function selectionRail(rail){
   const selected=rail.querySelector('.chip.selected');if(!selected)return;
   let state=railStates.get(rail);if(!state){state={x:null,y:0,width:0,height:0};railStates.set(rail,state);selectionRails.add(rail);railObserver?.observe(rail);}
   const x=selected.offsetLeft,y=selected.offsetTop,width=selected.offsetWidth,height=selected.offsetHeight;
   if(!width)return;
   if(state.indicator?.isConnected&&state.target===selected&&state.targetX===x&&state.targetY===y&&state.targetWidth===width&&state.targetHeight===height)return;
-  if(state.indicator?.isConnected){const rect=state.indicator.getBoundingClientRect(),host=rail.getBoundingClientRect();Object.assign(state,{x:rect.left-host.left+rail.scrollLeft,y:rect.top-host.top+rail.scrollTop,width:rect.width,height:rect.height});for(const animation of state.indicator.getAnimations())animation.cancel();}
+  if(state.indicator?.isConnected){const rect=state.indicator.getBoundingClientRect(),host=rail.getBoundingClientRect();Object.assign(state,{x:rect.left-host.left+rail.scrollLeft,y:rect.top-host.top+rail.scrollTop,width:rect.width,height:rect.height,velocity:springFrame(state.indicator,'indicator')?.velocity});}
   let indicator=rail.querySelector(':scope > .selection-indicator');if(!indicator){indicator=document.createElement('span');indicator.className='selection-indicator';indicator.setAttribute('aria-hidden','true');rail.prepend(indicator);}
-  indicator.style.width=width+'px';indicator.style.height=height+'px';indicator.style.transform='translate('+x+'px,'+y+'px)';indicator.style.transformOrigin='left top';indicator.style.borderRadius=getComputedStyle(selected).borderRadius;
-  if(!motionPreference()&&state.x!==null&&(Math.abs(state.x-x)>1||Math.abs(state.y-y)>1||Math.abs(state.width-width)>1||Math.abs(state.height-height)>1))indicator.animate([{transform:'translate('+state.x+'px,'+state.y+'px) scale('+state.width/Math.max(1,width)+','+state.height/Math.max(1,height)+')'},{transform:'translate('+x+'px,'+y+'px) scale(1,1)'}],motion.arrange);
+  indicator.style.borderRadius=getComputedStyle(selected).borderRadius;
+  moveIndicator(indicator,{x,y,width,height},{from:state.x===null?undefined:{x:state.x,y:state.y,width:state.width,height:state.height},velocity:state.velocity,immediate:motionPreference()});
   Object.assign(state,{indicator,x,y,width,height,target:selected,targetX:x,targetY:y,targetWidth:width,targetHeight:height});
 }
 function refreshPlot(svg) {
