@@ -2,6 +2,7 @@
 // Return only fixed teaching-facing messages. Never expose raw JSON, credentials,
 // upstream diagnostics or model text through a parsing error.
 function validationSummary(message=''){
+ if(/(?:Bad escaped character|Bad escape character|Bad control character|Invalid escape|Unterminated string|Unexpected (?:token|end)|Expected .*JSON|JSON at position)/i.test(message))return '模型已返回内容，但文档编码不符合要求（公式转义或JSON结构错误），未通过格式校验。请重新生成本组。';
  const match=/^第(\d{1,2})题(?:的(题干|答案|解析|选项|评分点))?未按约定输出公式或正文格式。$/.exec(message);
  if(match)return '第'+match[1]+'题'+(match[2]?'的'+match[2]:'')+'存在公式格式问题：排版指令须放在公式标记内。请重新生成。';
  const field=/^第(\d{1,2})题的(题干|答案|解析)(?:未完整返回|为空或超过\d+字符)。$/.exec(message);
@@ -16,4 +17,9 @@ function validationSummary(message=''){
  if(message.includes('训练点')||message.includes('题型'))return (number||'题组')+'未符合所选训练点或题型，请重新生成。';
  return '模型返回的题目结构或格式不完整，请重新生成。';
 }
-module.exports={validationSummary};
+async function withValidationDetail(store,key,result){
+ if(result?.error!=='MODEL_CONTENT_INVALID')return result;
+ const diagnostic=(await store.get(key+'/diagnostic.json'))?.value;
+ return diagnostic?.validation?{...result,failureDetail:validationSummary(diagnostic.validation)}:result;
+}
+module.exports={validationSummary,withValidationDetail};
