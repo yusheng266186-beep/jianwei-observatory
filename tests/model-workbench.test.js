@@ -2,7 +2,7 @@ import test from 'node:test';import assert from 'node:assert/strict';import cryp
 import control from '../backend/model-control.cjs';import stores from '../backend/store.cjs';import server from '../backend/server.cjs';import worker from '../backend/worker.cjs';import totp from '../backend/totp.cjs';import adapter from '../backend/model-adapter.cjs';import completion from '../backend/model-completion.cjs';
 const configured=Object.keys(control.routes),env={TRAINING_PROVIDER:'kimi-code',TRAINING_MODEL_CONTROL:'true',TRAINING_CONFIGURED_PROVIDERS:JSON.stringify(configured),TRAINING_SESSION_SECRET:'test-only-'+crypto.randomBytes(32).toString('hex'),TRAINING_TOTP_SECRET:totp.encodeSecret(Buffer.from('12345678901234567890'))},pick={provider:'bytecat-gpt',model:'gpt-6-sol',effort:'deep'};
 test('全部北辰模型有协议适配，公开目录不含凭据，选择拒绝任意地址和未知模型',()=>{
- let imported=0;for(const [id,route]of Object.entries(control.routes)){for(const model of route.catalog){const g=control.snapshot({provider:id,model,effort:'deep'},env);assert(!Object.hasOwn(g,'key'));if(!['kimi','gemini'].includes(g.protocol)){imported++;const body=adapter.adaptModelBody({messages:[{role:'system',content:'格式要求'},{role:'user',content:'目标'}],max_tokens:32768,effort:'deep'},{name:id,model},'deep',{profile:g.adapterProfile});assert.equal(body.model,model);assert.equal(body.stream,true);}}}assert.equal(imported,140);assert.equal(control.publicCatalog({...env,KIMI_API_KEY:'secret-never-return'}).length,13);assert(!JSON.stringify(control.publicCatalog({...env,KIMI_API_KEY:'secret-never-return'})).includes('secret-never-return'));assert.throws(()=>control.snapshot({...pick,base:'https://evil.test'},env));assert.throws(()=>control.snapshot({...pick,model:'unknown'},env));
+ let imported=0;for(const [id,route]of Object.entries(control.routes)){for(const model of route.catalog){const g=control.snapshot({provider:id,model,effort:'deep'},env);assert(!Object.hasOwn(g,'key'));if(!['kimi','gemini'].includes(g.protocol)){imported++;const body=adapter.adaptModelBody({messages:[{role:'system',content:'格式要求'},{role:'user',content:'目标'}],max_tokens:32768,effort:'deep'},{name:id,model},'deep',{profile:g.adapterProfile});assert.equal(body.model,model);assert.equal(body.stream,true);}}}assert.equal(imported,139);assert.equal(control.publicCatalog({...env,KIMI_API_KEY:'secret-never-return'}).length,13);assert(!JSON.stringify(control.publicCatalog({...env,KIMI_API_KEY:'secret-never-return'})).includes('secret-never-return'));assert.throws(()=>control.snapshot({...pick,base:'https://evil.test'},env));assert.throws(()=>control.snapshot({...pick,model:'unknown'},env));
 });
 test('切换记录按版本原子保存，并发更改只接受一次，重开仍可恢复全部历史',async()=>{
  const store=new stores.MemoryStore(),a=control.createModelControl({store,env}),b=control.createModelControl({store,env});const results=await Promise.allSettled([a.apply({expectedRevision:0,selection:pick}),b.apply({expectedRevision:0,selection:{provider:'deepseek',model:'deepseek-flash',effort:'standard'}})]);assert.equal(results.filter(x=>x.status==='fulfilled').length,1);assert.equal(results.find(x=>x.status==='rejected').reason.status,409);const c=control.createModelControl({store,env});assert.equal((await c.state()).current.revision,1);for(let n=1;n<10;n++)await c.apply({expectedRevision:n,selection:pick});assert.equal((await b.state()).current.revision,10);assert.equal((await b.state()).history.length,8);assert.equal(store.data.size,10);
@@ -26,17 +26,25 @@ test('协议请求使用真实身份和服务白名单，上游诊断会移除�
  const g=control.snapshot(pick,env);let captured;await completion.completeRemote({system:'格式',input:{}},g,{key:'private-test',transport:async(url,opts)=>{captured={url,opts};return {status:200,body:sse([{type:'response.completed',response:{status:'completed',output:[{type:'message',content:[{type:'output_text',text:'{}'}]}]}}])};}});assert.equal(captured.url,'https://bytecat.lamclod.cn/v1/responses');assert.match(captured.opts.headers['User-Agent'],/Jianwei/);assert.equal(captured.opts.timeout,captured.opts.deadlineMs);assert.equal(captured.opts.deadlineMs,840000);assert.equal(JSON.parse(captured.opts.body).reasoning.effort,'max');await assert.rejects(()=>completion.completeRemote({system:'',input:{}},{...g,base:'https://evil.test'},{key:'private-test'}));await assert.rejects(()=>completion.completeRemote({system:'',input:{}},g,{key:'private-test',transport:async()=>({status:500,body:'private-test'})}),e=>!JSON.stringify(e.diagnostic).includes('private-test'));
 });
 
-test('猎豹Gemini凭据与旧线路隔离，请求使用白名单流式协议',async()=>{
- const selection={provider:'cheetah-gemini',model:'gemini-3.8-flash',effort:'deep'};
- assert.throws(()=>control.snapshot(selection,{GEMINI_API_KEY:'old-route',WEFUCKE_API_KEY:'glm-route'}),/MODEL_NOT_CONFIGURED/);
- const g=control.snapshot(selection,{CHEETAH_GEMINI_API_KEY:'private-new-route'});
- assert.equal(g.credentialRef,'CHEETAH_GEMINI_API_KEY');assert.equal(g.reasoningEffort,'high');
- let captured;
- await completion.completeRemote({system:'格式',input:{}},g,{key:'private-new-route',transport:async(url,opts)=>{captured={url,opts};return {status:200,body:sse([{choices:[{delta:{content:'{}'},finish_reason:'stop'}]}])+'data: [DONE]\n\n'};}});
- const body=JSON.parse(captured.opts.body);
- assert.equal(captured.url,'https://www.wefucke.top/v1/chat/completions');assert.equal(captured.opts.headers.Authorization,'Bearer private-new-route');
- assert.equal(body.model,'gemini-3.8-flash');assert.equal(body.reasoning_effort,'high');assert.equal(body.stream,true);
- assert.equal(control.snapshot({...selection,effort:'eco'},{CHEETAH_GEMINI_API_KEY:'private-new-route'}).reasoningEffort,'low');
- const publicRoute=control.publicCatalog({CHEETAH_GEMINI_API_KEY:'private-new-route'}).find(p=>p.id===selection.provider);assert(publicRoute.configured);assert(!JSON.stringify(publicRoute).includes('private-new-route'));
- assert.deepEqual(publicRoute.models.map(m=>m.id),['gemini-3.8-flash']);
+test('猎豹原生Gemini使用独立凭据、完整Schema和原生流式事件',async()=>{
+ const selected={provider:'cheetah-gemini',model:'gemini-3.8-flash',effort:'deep'};
+ assert.throws(()=>control.snapshot(selected,{GEMINI_API_KEY:'old-route',WEFUCKE_API_KEY:'glm-route'}),/MODEL_NOT_CONFIGURED/);
+ const g=control.snapshot(selected,{CHEETAH_GEMINI_API_KEY:'private-new-route'}),events=[];let captured;
+ const prompt={system:'格式',input:{value:1},schema:{type:'object',required:['value'],properties:{value:{type:'integer'}}}};
+ const result=await completion.completeGemini(prompt,g,{key:'private-new-route',onProgress:event=>events.push(event),transport:async(url,opts)=>{captured={url,opts};opts.onChunk(Buffer.from(sse([{candidates:[{content:{parts:[{thought:true,text:'公开思考摘要'}]}}]},{candidates:[{content:{parts:[{text:'{"value":703}'}]},finishReason:'STOP'}]}])));return {status:200,body:''};}});
+ const body=JSON.parse(captured.opts.body);assert.equal(captured.url,'https://www.wefucke.top/v1beta/models/gemini-3.8-flash:streamGenerateContent?alt=sse');assert.equal(captured.opts.headers['x-goog-api-key'],'private-new-route');
+ assert.equal(body.generationConfig.thinkingConfig.thinkingLevel,'high');assert.equal(body.generationConfig.thinkingConfig.includeThoughts,true);assert.deepEqual(body.generationConfig.responseJsonSchema,prompt.schema);assert.match(body.contents.at(-1).parts.at(-1).text,/不得添加Markdown代码围栏/);assert.equal(result.output,'{"value":703}');assert(events.some(e=>e.summary==='公开思考摘要'));
+ assert.equal(g.credentialRef,'CHEETAH_GEMINI_API_KEY');assert.equal(control.snapshot({...selected,effort:'eco'},{CHEETAH_GEMINI_API_KEY:'private-new-route'}).reasoningEffort,'low');
+ const publicRoute=control.publicCatalog({CHEETAH_GEMINI_API_KEY:'private-new-route'}).find(p=>p.id===selected.provider);assert(publicRoute.configured);assert(!JSON.stringify(publicRoute).includes('private-new-route'));
+ await assert.rejects(()=>completion.completeGemini(prompt,{...g,base:'https://evil.test'},{key:'private-new-route'}),/MODEL_NOT_CONFIGURED/);
+});
+test('既有猎豹兼容协议任务保留冻结地址与参数，不静默改成原生协议',async()=>{
+ const g={...control.snapshot({provider:'cheetah-gemini',model:'gemini-3.8-flash',effort:'deep'},env),protocol:'chat-completions',base:'https://www.wefucke.top/v1'};let captured;
+ await completion.completeRemote({system:'格式',input:{}},g,{key:'private-old-route',transport:async(url,opts)=>{captured={url,opts};return {status:200,body:sse([{choices:[{delta:{content:'{}'},finish_reason:'stop'}]}])+'data: [DONE]\n\n'};}});
+ assert.equal(captured.url,'https://www.wefucke.top/v1/chat/completions');assert.equal(JSON.parse(captured.opts.body).reasoning_effort,'high');
+ await assert.rejects(()=>completion.completeRemote({system:'格式',input:{}},{...g,base:'https://www.wefucke.top/arbitrary'},{key:'private-old-route'}),/MODEL_NOT_CONFIGURED/);
+});
+test('中转524失败保留具体原因，不反复自动生成或泄露上游正文',async()=>{
+ const store=new stores.MemoryStore(),key='jobs/'+'a'.repeat(32)+'/'+crypto.randomUUID();await store.create(key+'/meta.json',{type:'exercise',deadline:Date.now()+60000,input:{count:3},generation:{provider:'gemini'}});let calls=0;
+ await worker.run({key},{store,generator:async()=>{calls++;throw completion.upstreamError({status:524,body:'error code: 524 private-credential'},'private-credential');}});const result=(await store.get(key+'/result.json')).value;assert.equal(calls,1);assert.equal(result.error,'MODEL_UPSTREAM_TIMEOUT');assert.match(result.failureDetail,/HTTP 524/);assert(!JSON.stringify(result).includes('private-credential'));
 });

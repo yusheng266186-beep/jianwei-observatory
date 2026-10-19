@@ -1,4 +1,6 @@
 import {exerciseFigureParts} from './exercise-figure-layout.mjs';
+import {exerciseTableFormatIssues} from './exercise-rich-blocks.mjs';
+import {hasExerciseDraft} from './exercise-quality.mjs';
 import {validateExerciseDiagram,exerciseDiagramSchema,validateGeneratedExerciseFigures,EXERCISE_IMAGE_MAX_CHARS} from './exercise-diagrams.mjs';
 export {validateGeneratedExerciseFigures};
 // Shared browser/server boundary. Student identity never belongs in this request.
@@ -68,7 +70,7 @@ const validPlacement=p=>keys(p,['after','width','aspect'])&&text(p.after,600)&&[
 // Teacher-only sizing does not change the model's placement contract.
 const validFigureLayout=p=>{if(!keys(p,['after','width','aspect','widthPercent']))return false;const {widthPercent,...base}=p;return validPlacement(base)&&(widthPercent===undefined||Number.isFinite(widthPercent)&&widthPercent>=20&&widthPercent<=100);};
 export function validateExerciseFigureRequest(v){if(!keys(v,['caption','requirements','knownData','labels','precision','placement'])||!validPlacement(v.placement)||!text(v.caption,160)||!text(v.requirements,2400)||typeof v.knownData!=='string'||v.knownData.length>3000||!Array.isArray(v.labels)||v.labels.length>24||v.labels.some(s=>!text(s,40))||!['exact','illustrative'].includes(v.precision))throw new Error('图示委托的条件、标签或精度要求不完整。');return v;}
-export function validateExerciseResult(value,request,{allowPendingFigures=false}={}){
+export function validateExerciseResult(value,request,{allowPendingFigures=false,requireStructuredTables=false,requireFinalAnalysis=false}={}){
  validateExerciseRequest(request);
  if(!keys(value,['title','objective','questions'])||!text(value.title,100)||!text(value.objective,500)||!Array.isArray(value.questions)||value.questions.length!==request.count)throw new Error('题目数量或训练目标不完整。');
  // A bounded illustration is stored inline; exclude its ASCII base64 bytes from
@@ -79,6 +81,7 @@ export function validateExerciseResult(value,request,{allowPendingFigures=false}
  const stems=new Set(),stemLimit=Infinity;
  for(const [i,q] of value.questions.entries()){
   if(q&&typeof q==='object')for(const [field,label,limit] of [['stem','题干'],['answer','答案'],['analysis','解析']])if(!text(q[field],limit))throw new Error('第'+(i+1)+'题的'+label+'未完整返回。');
+  if(q&&typeof q==='object'&&!Array.isArray(q.choices))throw new Error('第'+(i+1)+'题的选项字段未完整返回，非选择题也须返回空数组。');
   if(!keys(q,['id','level','type','stem','choices','answer','analysis','points','maxScore','minutes','diagram','target','figureRequest','figureLayout','answerLines'])||q.id!==i+1||!levels.includes(q.level)||!types.includes(q.type)||!text(q.stem,stemLimit)||!text(q.answer)||!text(q.analysis)||!Array.isArray(q.choices)||!Array.isArray(q.points)||!q.points.length||q.points.length>8||q.points.some(p=>!text(p))||!Number.isInteger(q.maxScore)||q.maxScore<1||q.maxScore>25||!Number.isInteger(q.minutes)||q.minutes<1||q.minutes>30)throw new Error('第'+(i+1)+'题的题干、答案、解析或评分点不完整。');
   if(q.answerLines!==undefined&&(!Number.isInteger(q.answerLines)||q.answerLines<0||q.answerLines>48))throw new Error('第'+(i+1)+'题的建议作答行数无效。');
   if(q.target!==undefined&&!text(q.target,200)||request.targets?.length&&!request.targets.includes(q.target))throw new Error('第'+(i+1)+'题未对应已选训练点。');
@@ -88,6 +91,8 @@ export function validateExerciseResult(value,request,{allowPendingFigures=false}
   if(q.figureLayout&&!validFigureLayout(q.figureLayout))throw new Error('第'+(i+1)+'题图示版位无效。');if(q.figureRequest||q.figureLayout)exerciseFigureParts(q);
   if(q.figureRequest){validateExerciseFigureRequest(q.figureRequest);if(!allowPendingFigures&&!q.diagram)throw new Error('第'+(i+1)+'题的必要图示尚未完成。');}
   for(const [label,values] of [['题干',[q.stem]],['答案',[q.answer]],['解析',[q.analysis]],['选项',q.choices],['评分点',q.points]])if(values.some(s=>typeof s==='string'&&!formatted(s)))throw new Error('第'+(i+1)+'题的'+label+'未按约定输出公式或正文格式。');
+  if(requireStructuredTables&&[q.stem,q.answer,q.analysis,...q.choices,...q.points].some(s=>exerciseTableFormatIssues(s).length))throw new Error('第'+(i+1)+'题的数据表列数不一致，请重新生成。');
+  if(requireFinalAnalysis&&[q.answer,q.analysis,...q.points].some(hasExerciseDraft))throw new Error('第'+(i+1)+'题的解析仍含未完成改题草稿，请重新生成。');
   const choice=['选择','多选'].includes(q.type);
   if(request.examStyle==='sichuan-gaokao'&&choice&&q.points.length!==1)throw new Error('第'+(i+1)+'题的客观题评分须按选项计分，不拆分解题过程。');
   if(choice&&(q.choices.length!==4||q.choices.some(c=>!text(c))||new Set(q.choices).size!==4||!(q.type==='选择'?/^[ABCD]$/:/^(?:AB|AC|AD|BC|BD|CD|ABC|ABD|ACD|BCD|ABCD)$/).test(q.answer)))throw new Error('第'+(i+1)+'题的选项或答案不符合题型要求。');

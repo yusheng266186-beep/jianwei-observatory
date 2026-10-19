@@ -8,6 +8,7 @@ const extras={
 const routes={...extras,...providers},revisionKey=n=>'models/revisions/'+String(n).padStart(10,'0')+'.json';
 const fail=code=>Object.assign(new Error(code),{status:code==='MODEL_REVISION_CONFLICT'?409:400});
 function modelProfile(provider,model){return profiles.providers?.[provider]?.[model]||(provider==='deepseek'?profiles.models[model]:null);}
+function connectionMatches(generation){const route=routes[generation?.provider];return !!route&&route.catalog.includes(generation.model)&&[{url:route.url,protocol:route.protocol},...(route.legacyConnections||[])].some(c=>c.url===generation.base&&c.protocol===generation.protocol);}
 function configured(provider,env=process.env){let declared=[];try{declared=JSON.parse(env.TRAINING_CONFIGURED_PROVIDERS||'[]');}catch{}return !!env[routes[provider]?.key]||declared.includes(provider);}
 function snapshot(selection,env=process.env){
  if(!selection||Object.keys(selection).some(k=>!['provider','model','effort'].includes(k)))throw fail('MODEL_SELECTION_INVALID');
@@ -36,4 +37,4 @@ function createModelControl({store,env=process.env,now=Date.now}){
  return {state,apply,generation,generations};
 }
 const selectionId=g=>hash(JSON.stringify({provider:g.provider,model:g.model,effort:g.effort})).slice(0,24);
-module.exports={routes,modelProfile,snapshot,configured,publicCatalog,publicGeneration,createModelControl,defaultSelection,selectionId,recordCheck,latestChecks};
+module.exports={routes,modelProfile,connectionMatches,snapshot,configured,publicCatalog,publicGeneration,createModelControl,defaultSelection,selectionId,recordCheck,latestChecks};

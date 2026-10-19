@@ -1,5 +1,7 @@
 # 文档总索引
 
+- [猎豹Gemini多学科实测与稳定性修复（2026-10-19）](CHEETAH-CROSS-SUBJECT-2026-10-19.md)
+
 - [猎豹词元工厂Gemini独立线路（2026-10-19）](CHEETAH-GEMINI-2026-10-19.md)
 
 - [实际工作簿跨学科生成与导出校检（2026-10-19）](CROSS-SUBJECT-GENERATION-2026-10-19.md)

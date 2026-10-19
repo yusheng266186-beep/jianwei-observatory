@@ -3,14 +3,14 @@ import {createPDFDefinitionJob} from './pdf-runtime.js';
 import {exerciseParagraph,exerciseLineWidth} from './exercise-math.js';
 import {validateExerciseResult,difficultyProfile,exerciseTypeLabel} from '../engine/exercise-contract.js';
 import {exerciseDiagramSVG} from './exercise-diagram.js';
-import {exercisePrintSections,exerciseAnswerSpaceHeight,exerciseWritingRows,exerciseObjectiveQuestion,exercisePrintFigureParts,exerciseKeepPromptTogether} from '../engine/exercise-print.js';
+import {exercisePrintSections,exerciseAnswerSpaceHeight,exerciseWritingRows,exerciseObjectiveQuestion,exercisePrintFigureParts,exerciseKeepPromptTogether,exerciseKeepWritingTogether} from '../engine/exercise-print.js';
 import {exerciseFile} from './exercise-file-cache.js';
 // A zero-padding row keeps short blocks together without clipping the first glyph
 // when pdfmake moves a block to the next page. The worker owns this named layout.
 const together=stack=>({table:{widths:['*'],body:[[{stack}]],dontBreakRows:true},layout:'exerciseKeepTogether'});
 export async function exercisePDF(record,{teacher=false,name=record.student?.name||'',classNo=record.student?.classNo??''}={}){
  if(!record.reviewedAt)throw new Error('请完成审题确认后输出正式练习。');requireExerciseQualityReview(record);
- const sheet=validateExerciseResult(record.sheet,record.request),key=JSON.stringify(['pdf-v26-safe-prompt-flow',record.request,sheet,teacher,name,classNo,{exerciseId:record.id}]);
+ const sheet=validateExerciseResult(record.sheet,record.request),key=JSON.stringify(['pdf-v29-font-run-continuity',record.request,sheet,teacher,name,classNo,{exerciseId:record.id}]);
  const snapshot=structuredClone(record);return exerciseFile(key,()=>buildExercisePDF(snapshot,{teacher,name,classNo}));
 }
 async function buildExercisePDF(record,{teacher,name,classNo}){
@@ -33,8 +33,9 @@ async function buildExercisePDF(record,{teacher,name,classNo}){
   // A page-break callback inside an unbreakable pdfmake cell can discard
   // that cell when it moves. Kept prompts already handle their own breaks.
   if(compact||exerciseKeepPromptTogether(q)||q.diagram&&figure.before.length<500||teacher&&q.stem.length+q.answer.length+q.choices.join('').length<650)delete heading.id;
-  content.push({...(compact?together(stack):{stack}),margin:[0,0,0,teacher?between:objective?space+between:2]});
-  if(!teacher&&!objective){const rows=exerciseWritingRows(space);content.push({table:{widths:['*'],heights:rows,body:rows.map(()=>[{text:' ',fontSize:1}]),dontBreakRows:true},layout:'exerciseKeepTogether',margin:[0,0,0,between]});}
+  const rows=!teacher&&!objective?exerciseWritingRows(space):[],writing=rows.length?{table:{widths:['*'],heights:rows,body:rows.map(()=>[{text:' ',fontSize:1}]),dontBreakRows:true},layout:'exerciseKeepTogether',margin:[0,0,0,between]}:null;
+  if(writing&&exerciseKeepWritingTogether(q,subject))content.push(together([...stack,writing]));
+  else{content.push({...(compact?together(stack):{stack}),margin:[0,0,0,teacher?between:objective?space+between:2]});if(writing)content.push(writing);}
  }}
  const definition={exercisePrint:true,exerciseFooter:teacher?'练后按逐题结果记录复核，保留原考试成绩。':'',pageSize:'A4',pageMargins:[44,38,44,44],defaultStyle:{font:'Report',fontSize:11,color:'#111111'},content,info:{title:subject+(teacher?'专项练习教师答案册':'专项练习')}};
  return createPDFDefinitionJob(definition).claim();

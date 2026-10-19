@@ -60,7 +60,7 @@ export function prepareReportFonts(definition,manifest) {
       delete result.svgTextFonts;
     }
     if(value.font==='Report')result.font='Report-core';
-    if(Object.hasOwn(value,'text'))result.text=Array.isArray(value.text)?value.text.map(v=>node(v,bold)):runs(value.text,bold);
+    if(Object.hasOwn(value,'text'))result.text=Array.isArray(value.text)?value.text.map(v=>node(v,bold)):runs(value.text,bold).map((run,index,list)=>value.noWrap?{...run,noWrap:true,...(index<list.length-1?{noNewLine:true}:{})}:run);
     for(const key of ['content','stack','columns'])if(value[key])result[key]=value[key].map(v=>node(v,bold));
     if(value.table)result.table={...value.table,body:value.table.body.map(row=>row.map(v=>node(v,bold)))};
     return result;

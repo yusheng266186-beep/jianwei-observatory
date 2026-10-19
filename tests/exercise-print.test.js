@@ -20,3 +20,5 @@ test('不同材料、短通用提示和不完整段落不合并；仅合并连�
  const sections=exercisePrintSections([{id:1,stem:material+'甲问'},{id:2,stem:material+'乙问'},{id:3,stem:other+'丙问'},{id:4,stem:other+'丁问'},{id:5,stem:material+'戊问'}]);assert.deepEqual(sections.map(s=>s.questions.map(q=>q.id)),[[1,2],[3,4],[5]]);
  for(const prefix of ['阅读下面的文字。\n','同样的前缀'.repeat(80)])assert.equal(exercisePrintSections([{stem:prefix+'甲'},{stem:prefix+'乙'}]).length,2);
 });
+
+test('Word短解答的适量留白随题干，不产生只有作答空行的末页；长留白仍可分页',async()=>{const {wordAnswerSpaceParagraphs}=await import('../app/io/exercise-word.js');const q={type:'解答',stem:'求通项并证明结论。',choices:[],answerLines:14};const short=wordAnswerSpaceParagraphs(q,'数学');assert.equal((short.match(/w:keepNext/g)||[]).length,13);assert.equal([...short.matchAll(/w:line="(\d+)"/g)].reduce((n,m)=>n+Number(m[1]),0),14*18*20);const long=wordAnswerSpaceParagraphs({...q,answerLines:48},'数学');assert(!long.includes('w:keepNext'));assert.equal((long.match(/w:pStyle/g)||[]).length,48);assert(!wordAnswerSpaceParagraphs({...q,stem:'完整长材料。'.repeat(300)},'数学').includes('w:keepNext'));});

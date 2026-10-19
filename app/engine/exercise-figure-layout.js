@@ -8,7 +8,9 @@ export function exerciseFigureParts(question){
  const anchor=typeof placement.after==='string'?placement.after:'',index=stem.indexOf(anchor),end=index+anchor.length;
  // A unique, complete sentence is also a safe insertion boundary. The model
  // may keep the next condition in the same paragraph; preserve all its text.
- const boundary=end===stem.length||/^\s*\n/.test(stem.slice(end))||/[。！？][”’」』）)]?$/.test(anchor);
+ // The anchor may include its paragraph-ending newline, so the remaining
+ // stem can already start with the next question rather than another newline.
+ const boundary=end===stem.length||/^\s*\n/.test(stem.slice(end))||/\n[\t ]*$/.test(anchor)||/[。！？][”’」』）)]?[\t ]*$/.test(anchor);
  if(typeof anchor!=='string'||!anchor||index<0||stem.indexOf(anchor,index+anchor.length)>=0||!boundary||[...stem.matchAll(/\$\$[\s\S]*?\$\$|\$[^$\n]+\$/g)].some(m=>end>m.index&&end<m.index+m[0].length))throw new Error('第'+question.id+'题的图示插入位置与题干不一致，请重新确认图示位置。');
  const [width,height]={compact:[320,230],standard:[400,300],wide:[480,320]}[placement.width]||[400,300];
  const custom=Number.isFinite(placement.widthPercent);

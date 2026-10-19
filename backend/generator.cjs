@@ -36,7 +36,10 @@ async function generate(input,{provider=process.env.TRAINING_PROVIDER||'gemini',
  if(!generation&&!['gemini','kimi-platform','kimi-code'].includes(provider))throw new Error('MODEL_NOT_CONFIGURED');
  const prompt=await buildExercisePrompt(input,{separateFigures}),{body,template}=prompt;let output,usage,metadata={};
  if(generation){provider=generation.provider;model=generation.model;}
- if(generation&&['chat-completions','anthropic','responses'].includes(generation.protocol)){
+ if(generation?.protocol==='gemini'){
+  const result=await require('./model-completion.cjs').completeGemini(prompt,generation,{key:key||process.env[generation.credentialRef],transport,onProgress,signal});
+  ({output,usage,model}=result);metadata={provider,reasoningEffort:generation.reasoningEffort};
+ }else if(generation&&['chat-completions','anthropic','responses'].includes(generation.protocol)){
   const result=await require('./model-completion.cjs').completeRemote(prompt,generation,{key:key||process.env[generation.credentialRef],transport,onProgress,signal});({output,usage,model}=result);metadata={provider,reasoningEffort:generation.reasoningEffort};
  }else if(provider.startsWith('kimi-')){
   const result=await require('./kimi.cjs').completeKimi(prompt,{key:key||process.env.KIMI_API_KEY,kind:provider.slice(5),effort:generation?.reasoningEffort||'max',transport,onProgress,signal});
@@ -56,7 +59,7 @@ async function generate(input,{provider=process.env.TRAINING_PROVIDER||'gemini',
  }
  if(generation)metadata={provider:generation.provider,reasoningEffort:generation.reasoningEffort};
  onProgress?.({phase:'validating',responseChars:output.length,draftSource:output.slice(0,256000)});if(inspect)inspect(output);
- let sheet;try{sheet=validateExerciseResult(parseExerciseJSON(output),input,{allowPendingFigures:separateFigures});validateGeneratedExerciseFigures(sheet,input,{allowRequests:separateFigures});if(input.visuals==='none'&&sheet.questions.some(q=>q.figureRequest))throw new Error('本次不配图，不能返回图示委托。');if(separateFigures&&sheet.questions.some(q=>q.diagram))throw new Error('出题阶段只能返回图示委托，不能直接绘图。');}catch(cause){throw Object.assign(new Error('MODEL_CONTENT_INVALID'),{cause,output,diagnostic:{kind:'document',completeSignal:true,outputChars:output.length,usage}});}
+ let sheet;try{sheet=validateExerciseResult(parseExerciseJSON(output),input,{allowPendingFigures:separateFigures,requireStructuredTables:true,requireFinalAnalysis:true});validateGeneratedExerciseFigures(sheet,input,{allowRequests:separateFigures});if(input.visuals==='none'&&sheet.questions.some(q=>q.figureRequest))throw new Error('本次不配图，不能返回图示委托。');if(separateFigures&&sheet.questions.some(q=>q.diagram))throw new Error('出题阶段只能返回图示委托，不能直接绘图。');}catch(cause){throw Object.assign(new Error('MODEL_CONTENT_INVALID'),{cause,output,diagnostic:{kind:'document',completeSignal:true,outputChars:output.length,usage}});}
  if(sheet.questions.some(q=>q.diagram?.kind==='illustration')&&input.visuals!=='hybrid'||sheet.questions.filter(q=>q.diagram?.kind==='illustration').length>1||input.visuals==='none'&&sheet.questions.some(q=>q.diagram))throw Object.assign(new Error('MODEL_CONTENT_INVALID'),{cause:new Error('图示数量或类型不符合所选策略。'),output,diagnostic:{kind:'document',completeSignal:true,outputChars:output.length,usage}});
  return {sheet,model,...metadata,templateVersion:template.version,templateId:template.id,usage,generatedAt:new Date().toISOString()};
 }
