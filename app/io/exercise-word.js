@@ -1,6 +1,6 @@
 import {requireExerciseQualityReview} from '../engine/exercise-quality.js';
 import {validateExerciseResult,difficultyProfile,exerciseTypeLabel} from '../engine/exercise-contract.js';
-import {exercisePrintSections,exerciseAnswerSpaceHeight,exerciseWritingRows,exercisePrintFigureParts} from '../engine/exercise-print.js';
+import {exercisePrintSections,exerciseAnswerSpaceHeight,exerciseWritingRows,exercisePrintFigureParts,exerciseKeepPromptTogether} from '../engine/exercise-print.js';
 import {mathParts,mathSVG,warmExerciseMath,exerciseLineWidth} from './exercise-math.js';
 import {exerciseDiagramSVG} from './exercise-diagram.js';
 import {mathMLToOffice,mathMLTableToWord,wordMathNeedsVector} from './exercise-word-math.js';
@@ -14,7 +14,7 @@ let zipTask;
 async function zipLibrary(){if(!zipTask){const task=import('../../vendor/jszip.min.js').then(()=>{if(!window.JSZip)throw new Error('Word组件未能载入，请重试');return window.JSZip;});zipTask=task;task.catch(()=>{if(zipTask===task)zipTask=null;});}return zipTask;}
 export async function exerciseWord(record,{teacher=false,name=record.student?.name||'',classNo=record.student?.classNo??''}={}){
  if(!record.reviewedAt)throw new Error('请完成审题确认后输出正式练习。');requireExerciseQualityReview(record);
- const sheet=validateExerciseResult(record.sheet,record.request),key=JSON.stringify(['docx-v23-model-answer-space',record.request,sheet,teacher,name,classNo,{exerciseId:record.id}]);
+ const sheet=validateExerciseResult(record.sheet,record.request),key=JSON.stringify(['docx-v25-objective-tail',record.request,sheet,teacher,name,classNo,{exerciseId:record.id}]);
  const snapshot=structuredClone(record);return exerciseFile(key,()=>buildExerciseWord(snapshot,{teacher,name,classNo}));
 }
 async function buildExerciseWord(record,{teacher,name,classNo}){
@@ -39,17 +39,19 @@ async function buildExerciseWord(record,{teacher,name,classNo}){
  for(const section of exercisePrintSections(sheet.questions)){
   if(section.material)body+=await p('共同材料 第'+section.questions.map(q=>q.id).join('、')+'题','Heading1')+await lines(section.material);
   for(const [index,q] of section.questions.entries()){
-   const figure=q.diagram?exercisePrintFigureParts(q):{before:q.stem,after:''},keepStudentQuestion=!teacher&&!q.diagram&&q.stem.length+q.choices.join('').length<220;
+   const figure=q.diagram?exercisePrintFigureParts(q):{before:q.stem,after:''},keepStudentQuestion=exerciseKeepPromptTogether(q);
    body+=await p('第'+q.id+'题  '+q.level+' / '+exerciseTypeLabel(q.type)+' / '+q.maxScore+'分','Heading1',index===0&&section.material?.length>1200?'<w:pageBreakBefore/>':'');
    if(q.target)body+=await p('训练点：'+q.target,'Meta');body+=await lines(figure.before,'Normal',keepStudentQuestion||q.diagram&&figure.before.length<650?'<w:keepNext/>':'');
    if(q.diagram){let src,svg=false;if(q.diagram.kind==='illustration'){if(!q.diagram.image)throw new Error('复杂插图尚未生成，请先补充图示。');src='data:'+q.diagram.image.mime+';base64,'+q.diagram.image.data;}else{src=exerciseDiagramSVG(q.diagram);svg=true;}body+='<w:p><w:pPr><w:jc w:val="center"/><w:keepNext/><w:spacing w:before="80" w:after="80" w:line="240" w:lineRule="auto"/></w:pPr>'+await image(src,{svg,width:figure.width,height:figure.height,upscale:figure.widthPercent!==undefined,alt:q.diagram.description||q.diagram.caption})+'</w:p>'+await p(q.diagram.caption,'Caption',keepStudentQuestion||figure.after&&figure.after.length<350?'<w:keepNext/>':'');}
    if(figure.after)body+=await lines(figure.after,'Normal',keepStudentQuestion?'<w:keepNext/>':'');
    if(q.choices.length===4&&(await Promise.all(q.choices.map(c=>exerciseLineWidth(c)))).every(width=>width<=220)){
-    const cells=await Promise.all(q.choices.map((c,i)=>p('ABCD'[i]+'. '+c,'Choice')));
+    const cells=await Promise.all(q.choices.map((c,i)=>p('ABCD'[i]+'. '+c,'Choice',keepStudentQuestion&&i<2?'<w:keepNext/>':'')));
     body+='<w:tbl><w:tblPr><w:tblW w:w="10146" w:type="dxa"/><w:tblLayout w:type="fixed"/><w:tblBorders>'+['top','left','bottom','right','insideH','insideV'].map(side=>'<w:'+side+' w:val="nil"/>').join('')+'</w:tblBorders><w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="0" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="80" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="5073"/><w:gridCol w:w="5073"/></w:tblGrid>'+[0,2].map(i=>'<w:tr><w:trPr><w:cantSplit/></w:trPr>'+[i,i+1].map(n=>'<w:tc><w:tcPr><w:tcW w:w="5073" w:type="dxa"/></w:tcPr>'+cells[n]+'</w:tc>').join('')+'</w:tr>').join('')+'</w:tbl>';
-   }else for(const [i,c] of q.choices.entries())body+=await p('ABCD'[i]+'. '+c,'Normal',keepStudentQuestion?'<w:keepNext/>':'');
+   }else for(const [i,c] of q.choices.entries())body+=await p('ABCD'[i]+'. '+c,'Normal',keepStudentQuestion&&i<q.choices.length-1?'<w:keepNext/>':'');
    if(teacher){body+=await p('参考答案','Heading2')+await lines(q.answer)+await p('第'+q.id+'题 解析与评分要点','Heading2')+await lines(q.analysis,'Normal',q.analysis.length<1000?'<w:keepLines/>':'')+await p('评分要点','Heading2');for(const point of q.points)body+=await p('• '+point);}
-   else{for(const height of exerciseWritingRows(exerciseAnswerSpaceHeight(q,subject)))body+='<w:p><w:pPr><w:pStyle w:val="AnswerSpace"/><w:spacing w:before="0" w:after="0" w:line="'+Math.round(height*20)+'" w:lineRule="exact"/></w:pPr><w:r><w:rPr><w:sz w:val="2"/></w:rPr><w:t xml:space="preserve"> </w:t></w:r></w:p>';}
+   // Choices are answered in their existing brackets. An extra empty paragraph
+   // can spill past the last option and create a page containing only a footer.
+   else if(!['选择','多选'].includes(q.type)){for(const height of exerciseWritingRows(exerciseAnswerSpaceHeight(q,subject)))body+='<w:p><w:pPr><w:pStyle w:val="AnswerSpace"/><w:spacing w:before="0" w:after="0" w:line="'+Math.round(height*20)+'" w:lineRule="exact"/></w:pPr><w:r><w:rPr><w:sz w:val="2"/></w:rPr><w:t xml:space="preserve"> </w:t></w:r></w:p>';}
   }
  }
  const ns='xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"';

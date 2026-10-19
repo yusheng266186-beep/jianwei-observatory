@@ -1,5 +1,8 @@
 // Physical handwriting space in points, shared by PDF and editable Word.
 export const exerciseObjectiveQuestion=q=>['选择','多选','填空'].includes(q.type);
+// Keep a readable prompt and its choices together, independently of answer
+// space or lengthy teacher explanations. Long passages can still flow.
+export const exerciseKeepPromptTogether=q=>!q.diagram&&String(q.stem||'').length+(q.choices||[]).join('').length<650&&String(q.stem||'').split('\n').length<18;
 export function exerciseAnswerSpaceHeight(question,subject){
  // Objective answers belong in their option/blank, even if a model overestimates.
  if(['选择','多选'].includes(question.type))return 6;
