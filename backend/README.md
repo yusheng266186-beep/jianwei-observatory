@@ -66,6 +66,8 @@
 
 `providers.json`、`model-profiles.json`、`model-adapter.cjs` 管理已授权的服务目录和协议；工作台分别选择题文与图示模型、思考档位。目录数量和可用性会变化，配置存在不代表余额或实测通过。新任务冻结提供方、模型、适配、凭据引用和时限；旧任务不随工作台切换变化，也不自动换服务。
 
+猎豹词元工厂使用独立提供方`cheetah-gemini`、`gemini-3.8-flash`及Chat Completions流式协议。`CHEETAH_GEMINI_API_KEY`仅注入Worker，HTTP函数只声明提供方已配置。私有部署目录需有`cheetah-gemini.key`供后续维护复用；不能借用GLM或旧ByteCat密钥。详情见[线路接入记录](../docs/CHEETAH-GEMINI-2026-10-19.md)。
+
 `figure-pipeline.cjs`、`figure-generation.cjs` 管理题图分离，`*-guidance.cjs` 组织各类图示指导。浏览器/后端共享 `exercise-*.mjs` 结构，模型只提供受限数据，不执行任意代码。复杂插图使用用户指定中转的 `gpt-image-2` Web逆向聊天协议，不能按原生图片API假定；图片来源和大小受限，结果进入私有任务及本机备份。SVG优先/允许复杂插图/无图示策略均保留，非必要图示不是必选。
 
 ## 认证、存储与限额
