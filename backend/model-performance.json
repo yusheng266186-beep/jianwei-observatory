@@ -662,6 +662,21 @@
         ],
         "observedAt": "2026-10-19",
         "sourceUrl": "https://www.wefucke.top/pricing/gpt-5.6"
+      },
+      "gpt-6-astra": {
+        "tps": 39.8,
+        "groups": [
+          {
+            "name": "gpt-pro-企业级专线",
+            "tps": 46.4
+          },
+          {
+            "name": "gpt不定时优惠组",
+            "tps": 33.1
+          }
+        ],
+        "observedAt": "2026-10-20",
+        "sourceUrl": "https://www.wefucke.top/pricing/gpt-6-astra"
       }
     }
   }

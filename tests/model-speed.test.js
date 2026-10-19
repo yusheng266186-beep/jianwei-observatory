@@ -5,11 +5,11 @@ import completion from '../backend/model-completion.cjs';
 import {modelSpeedLabel,modelPerformanceHTML} from '../app/ui/model-performance.js';
 
 test('猎豹新增型号使用明确白名单及独立凭据，轻快/深入档位按各自协议发送',async()=>{
- for(const [provider,model,key] of [['wefucke-gpt','gpt-6.1-sol','WEFUCKE_GPT_API_KEY'],['cheetah-deepseek','deepseek-v4.1-flash','CHEETAH_DEEPSEEK_API_KEY']]){
+ for(const [provider,model,key] of [['wefucke-gpt','gpt-6.1-sol','WEFUCKE_GPT_API_KEY'],['wefucke-gpt','gpt-6-astra','WEFUCKE_GPT_API_KEY'],['cheetah-deepseek','deepseek-v4.1-flash','CHEETAH_DEEPSEEK_API_KEY']]){
   assert.throws(()=>control.snapshot({provider,model,effort:'deep'},{CHEETAH_GEMINI_API_KEY:'unrelated'}),/MODEL_NOT_CONFIGURED/);
-  for(const effort of ['eco','deep']){
+  for(const effort of ['eco','standard','deep']){
    const generation=control.snapshot({provider,model,effort},{[key]:'private-test-key'});
-   assert.equal(generation.credentialRef,key);assert.equal(generation.reasoningEffort,effort==='eco'?'low':'max');
+   assert.equal(generation.credentialRef,key);assert.equal(generation.reasoningEffort,{eco:'low',standard:'high',deep:'max'}[effort]);
    let captured;
    const result=await completion.probeModel(generation,{env:{[key]:'private-test-key'},transport:async(url,options)=>{captured={url,options};return {status:200,body:'data: '+JSON.stringify({choices:[{delta:{content:'{"value":703}'},finish_reason:'stop'}]})+'\n\ndata: [DONE]\n\n'};}});
    const body=JSON.parse(captured.options.body);
@@ -26,6 +26,11 @@ test('目录中的TPS按中转站隔离，不流入冻结请求；空数据不�
  const catalog=control.publicCatalog({TRAINING_CONFIGURED_PROVIDERS:'["cheetah-deepseek","wefucke-gpt"]'});
  const find=(provider,model)=>catalog.find(p=>p.id===provider)?.models.find(m=>m.id===model);
  const cheetah=find('wefucke-gpt','gpt-6.1-sol'),bytecat=find('bytecat-gpt','gpt-6.1-sol');
+ const astra=find('wefucke-gpt','gpt-6-astra');
+ assert.equal(astra.name,'GPT-6 Astra');assert.deepEqual(astra.efforts,{eco:'low',standard:'high',deep:'max'});
+ assert.equal(astra.performance.tps,39.8);assert.equal(astra.performance.observedAt,'2026-10-20');
+ assert(astra.performance.groups.some(g=>g.name==='gpt-pro-企业级专线'&&g.tps===46.4));
+ assert.equal(find('bytecat-gpt','gpt-6-astra').performance.tps,45.3);
  assert.equal(cheetah.performance.tps,29.8);assert.equal(bytecat.performance.tps,51.7);
  assert(cheetah.performance.groups.some(g=>g.name==='gpt 福利公益组'&&g.tps===35.9));
  assert.equal(find('cheetah-deepseek','deepseek-v4.1-flash').performance.tps,175.3);
