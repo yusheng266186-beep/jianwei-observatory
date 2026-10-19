@@ -2,7 +2,7 @@
 // are one unit: an approval must never migrate onto a different sheet.
 const transient=new Set(['progress','generationLog']);
 const documentFields=new Set(['sheet','request','reviewedAt','qualityReview','figureReviewNotes']);
-const taskFields=new Set(['status','acceptedAt','serverCreatedAt','startedAt','finishedAt','serverTime','deadlineAt','model','provider','reasoningEffort','resumeAvailable','requiresTextRegeneration','completedQuestions','groupIndex','groupCount','groupRevision','figurePipeline','figureStage','figureQuestion','figureCompleted','figureTotal','figureRevision','lastCheckedAt','syncIssue','failure','validationCheckedAt','usage','templateVersion','templateId','generatedAt','queueFailure']);
+const taskFields=new Set(['status','acceptedAt','serverCreatedAt','startedAt','finishedAt','serverTime','deadlineAt','model','provider','reasoningEffort','resumeAvailable','requiresTextRegeneration','requiresImageRegeneration','completedQuestions','groupIndex','groupCount','groupRevision','figurePipeline','figureStage','figureQuestion','figureCompleted','figureTotal','figureRevision','lastCheckedAt','syncIssue','failure','validationCheckedAt','usage','templateVersion','templateId','generatedAt','queueFailure']);
 const equal=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
 const fields=(row,keys)=>Object.fromEntries([...keys].sort().filter(k=>Object.hasOwn(row||{},k)).map(k=>[k,row[k]]));
 export const exerciseRecordSnapshot=rows=>structuredClone(rows.map(row=>Object.fromEntries(Object.entries(row).filter(([k])=>!transient.has(k)))));

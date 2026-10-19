@@ -145,3 +145,76 @@ test('围栏或尾部说明仅提取比对参考，不能绕过原稿保真检�
 test('关闭自动修复仍允许教师明确继续原稿，且只新增一次人工修复',async()=>{
  const s=await setup({repairAttempts:0});await worker.run({key:s.key},{...s,generator:async()=>{throw invalid(request);}});assert.equal(s.queue.length,0);await repair.resume(s.store,s.key,s);assert.equal(s.queue.length,1);await worker.run({key:s.queue.shift()},{...s,repairer:async input=>output(input)});assert.equal((await repair.snapshot(s.store,s.key,s)).status,'ready');assert.equal(s.queue.length,0);
 });
+test('可解析但缺字段的原稿仍比对可读字段，修复不得删除角度条件',async()=>{
+ const original=output(request);original.sheet.questions[0].stem+='已知夹角为 $60^\\circ$。';
+ const source=structuredClone(original.sheet);for(const q of source.questions)delete q.choices;
+ const damaged=output(request),kept=structuredClone(damaged.sheet);kept.questions[0].stem+='已知夹角为 $60^\\circ$。';
+ await assert.rejects(generator.validateRepairFidelity(JSON.stringify(source),damaged.sheet,request),e=>e.cause?.message.includes('questions[0].stem'));
+ const report=await generator.validateRepairFidelity(JSON.stringify(source),kept,request);
+ assert.equal(report.verified,false);assert.equal(report.mode,'partial');assert(report.fields>0);
+});
+test('连续两轮修复固定最初原稿为基准，失败候选不能洗掉角度条件',async()=>{
+ const s=await setup({repairAttempts:2}),original=output(request);original.sheet.questions[0].stem+='已知夹角为 $60^\\circ$。';
+ const source=structuredClone(original.sheet);for(const q of source.questions)delete q.choices;
+ const bad=Object.assign(invalid(request),{output:'说明。'+JSON.stringify(source)});
+ await worker.run({key:s.key},{...s,generator:async()=>{throw bad;}});
+ const damaged=structuredClone(original.sheet);damaged.questions[0].stem=damaged.questions[0].stem.replace('已知夹角为 $60^\\circ$。','');for(const q of damaged.questions)delete q.choices;
+ await worker.run({key:s.queue.shift()},{...s,repairer:async(_,options)=>{assert.equal(options.repair.output,bad.output);assert.equal(options.repair.candidate,undefined);return {sheet:damaged};}});
+ assert.equal(s.queue.length,1);
+ const saved=(await s.store.get(s.key+'/format-repair-candidates/00000.json')).value;
+ assert.equal(saved.output,JSON.stringify(damaged));assert.match(saved.validation,/选项字段未完整返回/);
+ const washed=output(request);
+ await worker.run({key:s.queue.shift()},{...s,repairer:async(_,options)=>{assert.equal(options.repair.output,bad.output);assert.equal(options.repair.candidate,saved.output);return washed;}});
+ let state=await repair.snapshot(s.store,s.key,s);
+ assert.equal(state.status,'failed');assert.match(state.failureDetail,/保真/);assert.equal(await s.store.get(s.key+'/result.json'),null);
+ await repair.resume(s.store,s.key,s);assert.equal(s.queue.length,1);
+ await worker.run({key:s.queue.shift()},{...s,repairer:async(_,options)=>{assert.equal(options.repair.output,bad.output);assert.equal(options.repair.candidate,JSON.stringify(washed.sheet));return original;}});
+ state=await repair.snapshot(s.store,s.key,s);assert.equal(state.status,'ready');assert.equal(state.repairFidelity.verified,false);assert.equal(state.repairFidelity.mode,'partial');
+});
+test('原稿无法解析时严格校验仍执行，但结果明确标记保真未验证',async()=>{
+ const s=await setup(),bad=Object.assign(Error('MODEL_CONTENT_INVALID'),{cause:new SyntaxError('Unexpected end of JSON input'),output:'{"title":"坏稿"',diagnostic:{kind:'document',completeSignal:true}});
+ await worker.run({key:s.key},{...s,generator:async()=>{throw bad;}});
+ await worker.run({key:s.queue.shift()},{...s,repairer:async input=>output(input)});
+ const ready=await repair.snapshot(s.store,s.key,s);assert.equal(ready.status,'ready');assert.equal(ready.repairFidelity.verified,false);assert.equal(ready.repairFidelity.mode,'unparseable');assert.equal(ready.formatRepair.fidelity.mode,'unparseable');
+});
+test('保真比较接受公式分隔与表格列修复，仍拒绝数字和条件变化',async()=>{
+ const source=output(request).sheet;source.questions[0].answer='\\sqrt{2}';
+ const fixed=structuredClone(source);fixed.questions[0].answer='$\\sqrt{2}$';
+ assert.equal((await generator.validateRepairFidelity(JSON.stringify(source),fixed,request)).verified,true);
+ source.questions[1].stem='| A | B |\n| - | - | - |\n| 1 | 2 |';
+ const tableFixed=structuredClone(source);tableFixed.questions[1].stem='| A | B |\n| - | - |\n| 1 | 2 |';
+ assert.equal((await generator.validateRepairFidelity(JSON.stringify(source),tableFixed,request)).verified,true);
+ const changed=structuredClone(tableFixed);changed.questions[1].stem=changed.questions[1].stem.replace('| 1 |','| 3 |');
+ await assert.rejects(generator.validateRepairFidelity(JSON.stringify(source),changed,request));
+ for(const mutate of [s=>s.questions[0].maxScore=6,s=>s.questions[0].answer='$9$',s=>s.questions[0].points=['正确得9分。'],s=>s.questions[0].target='其他训练点']){const draft=structuredClone(tableFixed);mutate(draft);await assert.rejects(generator.validateRepairFidelity(JSON.stringify(source),draft,request));}
+});
+test('老任务缺少独立source文件时仍从第0轮原稿恢复基准',async()=>{
+ const s=await setup(),source=output(request).sheet;source.questions[0].stem+='原有条件。';
+ const baseline=JSON.stringify(source),damaged=JSON.stringify(output(request).sheet),base=s.key.slice(0,s.key.lastIndexOf('/')+1),first='00000000-0000-4000-a000-000000000001',second='00000000-0000-4000-a000-000000000002';
+ await s.store.create(s.key+'/format-repair.json',{version:1,input:request,generation:profile,repairGeneration:profile,limit:2,pipeline:2,createdAt:s.now(),originalValidation:'初始格式错误'});
+ await s.store.create(s.key+'/format-repair-attempts/00000.json',{id:first,createdAt:s.now()});
+ await s.store.create(base+first+'/meta.json',{id:first,type:'format-repair',input:request,generation:profile,repair:{parentId:s.key.split('/').at(-1),attempt:0,output:baseline,validation:'初始格式错误'},status:'queued',createdAt:s.now(),deadline:s.now()+600000});
+ await s.store.create(base+first+'/result.json',{status:'failed',error:'MODEL_CONTENT_INVALID'});
+ await s.store.create(s.key+'/format-repair-attempts/00001.json',{id:second,createdAt:s.now()+1});
+ await s.store.create(base+second+'/meta.json',{id:second,type:'format-repair',input:request,generation:profile,repair:{parentId:s.key.split('/').at(-1),attempt:1,output:damaged,validation:'选项字段未完整返回'},status:'queued',createdAt:s.now()+1,deadline:s.now()+600001});
+ await s.store.create(base+second+'/result.json',{status:'failed',error:'MODEL_CONTENT_INVALID'});
+ await s.store.create(base+second+'/diagnostic.json',{raw:damaged,validation:'选项字段未完整返回'});
+ assert.equal((await repair.snapshot(s.store,s.key,s)).status,'failed');
+ await repair.resume(s.store,s.key,s);assert.equal(s.queue.length,1);
+ const child=s.queue.shift(),meta=(await s.store.get(child+'/meta.json')).value;
+ assert.equal(meta.repair.output,baseline);assert.match(meta.repair.candidateKey,/00001/);assert.equal((await s.store.get(meta.repair.candidateKey)).value.output,damaged);
+});
+test('图示委托的条件、数据和标签属于保真内容',async()=>{
+ const source=output(request).sheet,figureRequest={caption:'长方体模型',requirements:'画出八个顶点和棱，遮挡棱用虚线。',knownData:'长3、宽2、高2',labels:['A','B','C','D'],precision:'exact',placement:{after:'长方体模型如图所示。',width:'standard',aspect:'wide'}};
+ source.questions[0].figureRequest=figureRequest;
+ const changed=structuredClone(source);changed.questions[0].figureRequest.knownData='长4、宽2、高2';
+ await assert.rejects(generator.validateRepairFidelity(JSON.stringify(source),changed,request),e=>e.cause?.message.includes('figureRequest.knownData'));
+ const before=JSON.stringify(source);assert.equal((await generator.validateRepairFidelity(JSON.stringify(source),source,request)).verified,true);assert.equal(JSON.stringify(source),before);
+});
+
+test('格式保真不能通过重排行列或丢空单元格改变原有数据对应关系',async()=>{
+ const source=output(request).sheet;source.questions[0].stem='| 处理 | 得分 |\n| -- | -- |\n| CK | 12 |\n| S | 8 |';
+ const changed=structuredClone(source);changed.questions[0].stem='| 处理 | 得分 | CK | 12 | S | 8 |\n| -- | -- | -- | -- | -- | -- |';
+ await assert.rejects(generator.validateRepairFidelity(JSON.stringify(source),changed,request));
+ source.questions[0].stem='| A | B | C |\n| -- | -- | -- |\n| 1 | | 2 |';changed.questions[0].stem='| A | B | C |\n| -- | -- | -- |\n| 1 | 2 | |';await assert.rejects(generator.validateRepairFidelity(JSON.stringify(source),changed,request));
+});

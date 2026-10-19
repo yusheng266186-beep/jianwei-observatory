@@ -19,6 +19,7 @@ function kimiExerciseSchema(schema){
  return compatible;
 }
 function readCompletion(source){
+ if(String(source).trimStart().startsWith('{')){let data;try{data=JSON.parse(source);}catch{throw Error('MODEL_BAD_RESPONSE');}if(data.error)throw Error('MODEL_REQUEST_FAILED');const choice=data.choices?.find(c=>c.index===0)||data.choices?.[0],output=choice?.message?.content;const usage=data.usage||{};if(choice?.finish_reason!=='stop'||typeof output!=='string'||!output.trim())throw Object.assign(Error('MODEL_INCOMPLETE'),{diagnostic:{kind:'completion',finishReason:choice?.finish_reason||'missing',streamComplete:!!choice?.finish_reason,usage}});return {output,usage:{input:usage.prompt_tokens||0,output:usage.completion_tokens||0,thinking:usage.completion_tokens_details?.reasoning_tokens||0}};}
  let output='',finish='',done=false,usage={};
  for(const event of String(source).split(/\r?\n\r?\n/)){
   const data=event.split(/\r?\n/).filter(line=>line.startsWith('data:')).map(line=>line.slice(5).trimStart()).join('\n');

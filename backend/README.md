@@ -1,5 +1,8 @@
 # 个性化辅导后端
 
+生成恢复与校检保真已加固：多轮固定最初原稿，成稿保存失败与原图下载可独立恢复，支持实际位图核对并保留教师审题。见[本轮维护说明](../docs/GENERATION-RECOVERY-2026-10-19.md)。
+
+
 生图服务独立选择并在提交时冻结，分组与恢复沿用原服务；新增环境声明和私有启用名单见[生图工作台维护说明](../docs/IMAGE-SERVICE-WORKBENCH-2026-10-19.md)。
 
 ByteCat新分组的图片链接、精确存储主机放行及高清PNG容量修复见[生图接收维护记录](../docs/BYTECAT-IMAGE-RESPONSE-2026-10-19.md)。
@@ -76,7 +79,7 @@ ByteCat新分组的图片链接、精确存储主机放行及高清PNG容量修�
 
 猎豹词元工厂使用独立提供方`cheetah-gemini`、`gemini-3.8-flash`及Chat Completions流式协议。`CHEETAH_GEMINI_API_KEY`仅注入Worker，HTTP函数只声明提供方已配置。私有部署目录需有`cheetah-gemini.key`供后续维护复用；不能借用GLM或旧ByteCat密钥。详情见[线路接入记录](../docs/CHEETAH-GEMINI-2026-10-19.md)。
 
-`figure-pipeline.cjs`、`figure-generation.cjs` 管理题图分离，`*-guidance.cjs` 组织各类图示指导。浏览器/后端共享 `exercise-*.mjs` 结构，模型只提供受限数据，不执行任意代码。复杂插图使用用户指定中转的 `gpt-image-2` Web逆向聊天协议，不能按原生图片API假定；图片来源和大小受限，结果进入私有任务及本机备份。SVG优先/允许复杂插图/无图示策略均保留，非必要图示不是必选。
+`figure-pipeline.cjs`、`figure-generation.cjs` 管理题图分离，`*-guidance.cjs` 组织各类图示指导。浏览器/后端共享 `exercise-*.mjs` 结构，模型只提供受限数据，不执行任意代码。复杂插图沿用已冻结的服务协议：ByteCat/旧猎豹使用 `gpt-image-2` 聊天包装，猎豹 Image 2.5 使用单独的原生 Images 包装；图片来源和大小受限，结果进入私有任务及本机备份。SVG优先/允许复杂插图/无图示策略均保留，非必要图示不是必选。
 
 ## 认证、存储与限额
 
