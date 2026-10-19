@@ -25,3 +25,15 @@ test('猎豹Image2.5采用画布相同的原生包装，不携带被拒绝的res
  const result=await illustration.generateIllustration({caption:'图',description:'细胞结构'},{generation,key:'unit',layout:{width:'wide',aspect:'wide'},transport:async(url,o)=>{assert.equal(url,'https://www.wefucke.top/v1/images/generations');const body=JSON.parse(o.body);assert.equal(body.model,'gpt-image-2.5');assert.equal(body.output_format,'png');assert.equal(body.response_format,undefined);assert.equal(body.size,'1536x1024');assert.equal(body.n,1);return {status:200,body:JSON.stringify({data:[{b64_json:data}]})};}});
  assert.equal(result.data,data);assert.equal(images.snapshot(selection).protocol,'chat-image');assert.equal(images.catalog({CHEETAH_IMAGE25_API_KEY:'unit'}).find(p=>p.id==='cheetah-image25').configured,true);assert.equal(images.catalog({CHEETAH_IMAGE25_API_KEY:'unit'}).find(p=>p.id==='cheetah-image').configured,false);
 });
+
+
+test('猎豹Image2原生入口与Image2.5独立选择，保留旧聊天快照和ByteCat默认值',async()=>{
+ const g=images.snapshot({provider:'cheetah-image2-native',model:'gpt-image-2'}),data=fs.readFileSync(new URL('../assets/school-crest-192.png',import.meta.url)).toString('base64');
+ assert.equal(g.credentialRef,'CHEETAH_IMAGE2_API_KEY');assert.equal(g.protocol,'native-image');
+ assert.throws(()=>images.snapshot({provider:'cheetah-image2-native',model:'gpt-image-2.5'}),/MODEL_SELECTION_INVALID/);
+ let calls=0;const result=await illustration.generateIllustration({caption:'图',description:'细胞结构'},{generation:g,key:'unit-native2',transport:async(url,o)=>{calls++;assert.equal(url,'https://www.wefucke.top/v1/images/generations');assert.equal(o.headers.Authorization,'Bearer unit-native2');const b=JSON.parse(o.body);assert.equal(b.model,'gpt-image-2');assert.equal(b.output_format,'png');assert.equal(b.response_format,undefined);return {status:200,body:JSON.stringify({data:[{b64_json:data}]})};}});assert.equal(calls,1);assert.equal(result.data,data);
+ const store=new MemoryStore(),control=models.createModelControl({store,env:{...env,CHEETAH_IMAGE2_API_KEY:'unit2',CHEETAH_IMAGE25_API_KEY:'unit25'}});
+ await control.apply({role:'image',expectedRevision:0,selection:{provider:g.provider,model:g.model}});assert.equal((await control.generations()).imageGeneration.provider,g.provider);
+ await control.apply({role:'image',expectedRevision:1,selection:{provider:'cheetah-image25',model:'gpt-image-2.5'}});assert.equal(g.model,'gpt-image-2');assert.equal(images.connectionMatches(g),true);assert.equal((await control.generations()).imageGeneration.model,'gpt-image-2.5');
+ assert.equal(images.defaultSelection.provider,'bytecat-image');assert.equal(images.snapshot(selection).protocol,'chat-image');
+});

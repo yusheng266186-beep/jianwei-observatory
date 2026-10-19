@@ -4,6 +4,7 @@
 
 
 - [猎豹 Image 2.5 调用复核](CHEETAH-IMAGE25-2026-10-19.md)
+- [猎豹 Image 2 原生接口](CHEETAH-IMAGE2-2026-10-20.md)
 
 - [独立生图服务切换与猎豹权限实测（2026-10-19）](IMAGE-SERVICE-WORKBENCH-2026-10-19.md)
 
