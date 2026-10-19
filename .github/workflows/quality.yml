@@ -47,4 +47,5 @@ jobs:
             .audit-output/hengji-audit-results.json
             .audit-output/hengji-*.png
           if-no-files-found: ignore
+          include-hidden-files: true
           retention-days: 7
