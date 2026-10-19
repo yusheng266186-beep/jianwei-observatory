@@ -20,3 +20,8 @@ test('HTTP提交时冻结生图配置，切换只影响新任务，原ID重放�
 });
 
 test('生图分组权限403单独说明，不当作格式错误或自动重发',async()=>{let calls=0;await assert.rejects(illustration.generateIllustration({caption:'图',description:'结构'},{generation:images.snapshot(selection),key:'test',transport:async()=>{calls++;return{status:403,body:JSON.stringify({error:{message:'private access denied'}})};}}),e=>e.message==='IMAGE_AUTH_FAILED'&&e.diagnostic.status===403&&!JSON.stringify(e).includes('private access'));assert.equal(calls,1);});
+test('猎豹Image2.5采用画布相同的原生包装，不携带被拒绝的response_format，旧服务快照保持原协议',async()=>{
+ const generation=images.snapshot({provider:'cheetah-image25',model:'gpt-image-2.5'}),data=fs.readFileSync(new URL('../assets/school-crest-192.png',import.meta.url)).toString('base64');
+ const result=await illustration.generateIllustration({caption:'图',description:'细胞结构'},{generation,key:'unit',layout:{width:'wide',aspect:'wide'},transport:async(url,o)=>{assert.equal(url,'https://www.wefucke.top/v1/images/generations');const body=JSON.parse(o.body);assert.equal(body.model,'gpt-image-2.5');assert.equal(body.output_format,'png');assert.equal(body.response_format,undefined);assert.equal(body.size,'1536x1024');assert.equal(body.n,1);return {status:200,body:JSON.stringify({data:[{b64_json:data}]})};}});
+ assert.equal(result.data,data);assert.equal(images.snapshot(selection).protocol,'chat-image');assert.equal(images.catalog({CHEETAH_IMAGE25_API_KEY:'unit'}).find(p=>p.id==='cheetah-image25').configured,true);assert.equal(images.catalog({CHEETAH_IMAGE25_API_KEY:'unit'}).find(p=>p.id==='cheetah-image').configured,false);
+});

@@ -23,7 +23,7 @@ test('实时思考和正文源文本真实显示并转义，不能把模型文�
 test('长思考有明确上限，完成状态发布前先保存最终思考与输出，快速生成也不丢记录',async()=>{
  let packet;progress.streamProgress('chat-completions',e=>packet=e)(Buffer.from('data: '+JSON.stringify({choices:[{delta:{reasoning_content:'推'.repeat(160010)}}]})+'\n\n'));assert.equal(packet.thinkingText.length,160000);assert.equal(packet.thinkingTruncated,true);
  const store=new storeModule.MemoryStore(),key='jobs/'+'b'.repeat(32)+'/'+crypto.randomUUID();await store.create(key+'/meta.json',{deadline:Date.now()+60000,input:{count:3},generation:{provider:'gemini'}});
- const original=store.create.bind(store);store.create=async(k,v)=>{if(k.endsWith('/result.json')){const p=(await store.get(key+'/progress.json')).value;assert.equal(p.phase,'ready');assert.equal(p.thinkingText,'核对定义域。');assert.equal(p.outputText,'{"questions":[]}');}return original(k,v);};
+ const original=store.create.bind(store);store.create=async(k,v)=>{if(k.endsWith('/result.json')){const p=(await store.get(key+'/progress.json')).value;assert.equal(p.phase,'saving');assert.equal(p.thinkingText,'核对定义域。');assert.equal(p.outputText,'{"questions":[]}');}return original(k,v);};
  await worker.run({key},{store,generator:async(_input,{onProgress})=>{onProgress({phase:'writing',thinkingText:'核对定义域。',thinkingChars:6,draftSource:'{"questions":[]}',responseChars:16});return {sheet:{questions:[]}};}});
  assert.equal((await store.get(key+'/result.json')).value.status,'ready');
 });

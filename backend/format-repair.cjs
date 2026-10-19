@@ -1,9 +1,11 @@
 'use strict';
 const crypto=require('node:crypto');
 const {createProgressWriter}=require('./progress.cjs');
+const delivery=require('./result-delivery.cjs');
 const {validationSummary}=require('./validation-summary.cjs');
 const parentKey=(key,id)=>key.slice(0,key.lastIndexOf('/')+1)+id;
 const attemptPath=(key,n)=>key+'/format-repair-attempts/'+String(n).padStart(5,'0')+'.json';
+const candidatePath=(key,n)=>key+'/format-repair-candidates/'+String(n).padStart(5,'0')+'.json';
 const uuid=text=>{const h=crypto.createHash('sha256').update(text).digest('hex');return h.slice(0,8)+'-'+h.slice(8,12)+'-4'+h.slice(13,16)+'-a'+h.slice(17,20)+'-'+h.slice(20,32);};
 const repairReason=manifest=>validationSummary(manifest.originalValidation).replace(/。?请重新生成(?:本组)?。?$/,'。');
 function repairFailure(error){
@@ -18,11 +20,30 @@ function eligible(error){
 }
 async function removed(store,key,manifest){return !!(await store.get(key+'/removed.json')||manifest.group&&await store.get(parentKey(key,manifest.group.parentId)+'/removed.json'));}
 async function latest(store,key){let low=0,high=1;const first=await store.get(attemptPath(key,0));if(!first)return null;while(await store.get(attemptPath(key,high))){low=high;high=high*2+1;}while(high-low>1){const n=Math.floor((low+high)/2);if(await store.get(attemptPath(key,n)))low=n;else high=n;}return {attempt:low,...(low?(await store.get(attemptPath(key,low))).value:first.value)};}
-async function ensure(store,key,manifest,n,source,{now=Date.now,dispatch=async()=>{}}={}){
+// The first immutable source is the only fidelity baseline. A failed candidate
+// is stored per attempt and may be shown to the repair model as diagnostic
+// context, but it is never promoted to the next round's source.
+async function initialSource(store,key){
+ const saved=await store.get(key+'/format-repair-source.json');
+ if(saved?.value&&typeof saved.value.output==='string'&&saved.value.output.trim())return {output:saved.value.output,validation:saved.value.validation||''};
+ const first=await store.get(attemptPath(key,0));
+ if(first?.value?.id){
+  const meta=(await store.get(parentKey(key,first.value.id)+'/meta.json'))?.value;
+  if(meta?.repair&&typeof meta.repair.output==='string'&&meta.repair.output.trim())return {output:meta.repair.output,validation:meta.repair.validation||meta.repair.originalValidation||''};
+ }
+ return null;
+}
+async function recordCandidate(store,key,n,{output,validation,at}){
+ if(typeof output!=='string'||!output.trim())return null;
+ const path=candidatePath(key,n),value={attempt:n+1,output,validation:validation||'',at};
+ await store.create(path,value);return path;
+}
+async function ensure(store,key,manifest,n,round,{now=Date.now,dispatch=async()=>{}}={}){
  if(await removed(store,key,manifest))return null;
- const id=uuid(key+'|format-repair|'+n),child=parentKey(key,id),createdAt=now();
+ const id=uuid(key+'|format-repair|'+n),child=parentKey(key,id),createdAt=now(),source=round.baseline||{output:round.output,validation:round.validation};
  await store.create(attemptPath(key,n),{id,createdAt});const entry=(await store.get(attemptPath(key,n))).value;
- if(await store.create(child+'/meta.json',{id,type:'format-repair',input:manifest.input,generation:manifest.repairGeneration,repair:{parentId:key.split('/').at(-1),attempt:n,output:source.output,validation:source.validation},status:'queued',createdAt:entry.createdAt,deadline:entry.createdAt+600000}))await dispatch(child);
+ const repair={parentId:key.split('/').at(-1),attempt:n,output:source.output,validation:round.validation||source.validation,originalValidation:source.validation,...(round.candidateKey?{candidateKey:round.candidateKey}:{})};
+ if(await store.create(child+'/meta.json',{id,type:'format-repair',input:manifest.input,generation:manifest.repairGeneration,repair,status:'queued',createdAt:entry.createdAt,deadline:entry.createdAt+600000}))await dispatch(child);
  return child;
 }
 async function begin(store,key,job,error,{now=Date.now,dispatch}={}){
@@ -33,7 +54,7 @@ async function begin(store,key,job,error,{now=Date.now,dispatch}={}){
  const originalValidation=!/^\s*\{/.test(error.output)&&error.output.includes('{')?'模型在JSON正文前夹带说明文字。':String(error.cause.message).slice(0,1200);
  const manifest={version:1,input:job.input,generation,imageGeneration:job.imageGeneration,repairGeneration:job.repairGeneration||generation,limit:Math.min(limit,5),pipeline:job.pipeline,figureGeneration:job.figureGeneration||generation,...(job.group?{group:job.group}:{}),createdAt:now(),originalUsage:error.diagnostic?.usage||{},originalValidation};
  if(await removed(store,key,manifest))return false;
- await store.create(key+'/format-repair-source.json',{output:error.output,validation:manifest.originalValidation});
+ await store.create(key+'/format-repair-source.json',{output:error.output,validation:manifest.originalValidation,createdAt:now()});
  await store.create(key+'/format-repair-progress.json',(await store.get(key+'/progress.json'))?.value||{});
  await store.create(key+'/format-repair.json',manifest);
  const saved=(await store.get(key+'/format-repair.json')).value;
@@ -52,7 +73,7 @@ async function publish(store,key,manifest,list,now){
 async function deliver(store,key,manifest,list,{now,dispatch}){
  const active=list.at(-1),repaired=active.result;if(!repaired?.sheet||await removed(store,key,manifest))return null;
  const usage={...manifest.originalUsage};for(const field of ['input','output','thinking'])usage[field]=(usage[field]||0)+list.reduce((n,row)=>n+(row.result?.usage?.[field]||0),0);
- const result={...repaired,model:manifest.generation.model,provider:manifest.generation.provider,reasoningEffort:manifest.generation.reasoningEffort,usage,formatRepair:{attempts:active.attempt+1,model:manifest.repairGeneration.model,provider:manifest.repairGeneration.provider,reasoningEffort:manifest.repairGeneration.reasoningEffort}};
+ const result={...repaired,model:manifest.generation.model,provider:manifest.generation.provider,reasoningEffort:manifest.generation.reasoningEffort,usage,formatRepair:{attempts:active.attempt+1,model:manifest.repairGeneration.model,provider:manifest.repairGeneration.provider,reasoningEffort:manifest.repairGeneration.reasoningEffort,...(active.result?.repairFidelity?{fidelity:active.result.repairFidelity}:{})}};
  if(manifest.pipeline===2&&result.sheet.questions.some(q=>q.figureRequest)){
   const figures=require('./figure-pipeline.cjs');await figures.begin(store,key,{input:manifest.input,generation:manifest.generation,imageGeneration:manifest.imageGeneration,figureGeneration:manifest.figureGeneration,pipeline:2,group:manifest.group},result,{now,dispatch});return figures.snapshot(store,key,{now,dispatch});
  }
@@ -61,6 +82,11 @@ async function deliver(store,key,manifest,list,{now,dispatch}){
 async function snapshot(store,key,{now=Date.now,dispatch=async()=>{}}={}){
  const manifest=(await store.get(key+'/format-repair.json'))?.value;if(!manifest||await removed(store,key,manifest)||await store.get(key+'/figure-manifest.json'))return null;
  const existing=(await store.get(key+'/recovered.json'))?.value||(await store.get(key+'/result.json'))?.value;if(existing?.status==='ready')return existing;
+ const entry=await latest(store,key);
+ if(entry?.id){
+  const child=parentKey(key,entry.id),meta=(await store.get(child+'/meta.json'))?.value;
+  if(meta)try{await delivery.recover(store,child,meta,{now,dispatch});}catch(error){if(error.message==='JOB_CANCELLED')return null;if(error.message!=='RESULT_SAVE_PENDING'&&error.message!=='JOB_RESULT_CONFLICT')throw error;}
+ }
  const list=await states(store,key,manifest,now);if(!list.length)return null;const active=list.at(-1);await publish(store,key,manifest,list,now);
  if(active.status==='ready')return await deliver(store,key,manifest,list,{now,dispatch})||{status:'failed',error:'GENERATION_FAILED',resumeAvailable:true,failureDetail:'修正稿尚未完整保存，原稿保留，可继续本次修复。'};
  return {status:active.status==='failed'?'failed':'running',formatRepair:true,repairRevision:(active.attempt+1)*3+(active.status==='failed'?1:0),deadlineAt:active.deadlineAt,...(active.status==='failed'?{error:active.error||'MODEL_CONTENT_INVALID',resumeAvailable:true,failureDetail:'第'+(active.attempt+1)+'次成稿格式修复未完成，原稿与已完成题组保留。'+(active.result?.failureDetail||'可以继续修复当前成稿。')}:{})};
@@ -70,18 +96,29 @@ async function runStep(store,key,job,{now=Date.now,dispatch=async()=>{},generato
  if(!manifest||await removed(store,parent,manifest)||await store.get(key+'/removed.json'))return {cancelled:true};
  if(!await store.create(key+'/run.json',{startedAt:now(),deadlineAt:now()+Math.min(job.generation.timeoutMs||885000,885000)}))return {skipped:true};
  const controller=new AbortController(),proxy={get:name=>name===key+'/removed.json'?removed(store,parent,manifest).then(r=>r?{value:{}}:store.get(name)):store.get(name),async progress(name,value){await store.progress(name,value);await publish(store,parent,manifest,await states(store,parent,manifest,now),now);if(manifest.group)await require('./exercise-groups.cjs').advance(store,parentKey(parent,manifest.group.parentId),{now,dispatch});}},progress=createProgressWriter({store:proxy,key,total:manifest.input.count,now,controller});await progress.flush();
+ const attempt=Number.isInteger(job.repair.attempt)?job.repair.attempt:0,baseline=await initialSource(store,parent),fallback=baseline||(attempt===0?{output:job.repair.output,validation:job.repair.validation||manifest.originalValidation}:null);
  try{
-  const repaired=await generator(manifest.input,{provider:job.generation.provider,generation:job.generation,repair:{output:job.repair.output,validation:job.repair.validation,attempt:job.repair.attempt+1},onProgress:progress.update,signal:controller.signal,separateFigures:manifest.pipeline===2});
+  if(!fallback)throw Object.assign(Error('MODEL_CONTENT_INVALID'),{cause:Error('缺少最初原稿保真基准，不能把后续修正稿当作原题继续修复。'),diagnostic:{kind:'document',completeSignal:true}});
+  let candidate;
+  if(job.repair.candidateKey){const saved=await store.get(job.repair.candidateKey);if(saved?.value&&typeof saved.value.output==='string')candidate=saved.value.output;}
+  if(candidate===undefined&&typeof job.repair.candidate==='string')candidate=job.repair.candidate;
+  if(candidate===undefined&&attempt>0&&job.repair.output!==fallback.output)candidate=job.repair.output;
+  const validation=job.repair.validation||fallback.validation,repaired=await generator(manifest.input,{provider:job.generation.provider,generation:job.generation,repair:{output:fallback.output,validation,attempt:attempt+1,originalValidation:fallback.validation,...(candidate!==undefined?{candidate}:{})},onProgress:progress.update,signal:controller.signal,separateFigures:manifest.pipeline===2});
   // Re-check the repair result using the exact same contract, even for injected adapters.
-  const {validateOutput,validateRepairFidelity}=require('./generator.cjs'),options={separateFigures:manifest.pipeline===2,usage:repaired.usage};await validateOutput(JSON.stringify(repaired.sheet),manifest.input,options);await validateRepairFidelity(job.repair.output,repaired.sheet,manifest.input,options);
+  const {validateOutput,validateRepairFidelity}=require('./generator.cjs'),options={separateFigures:manifest.pipeline===2,usage:repaired.usage};await validateOutput(JSON.stringify(repaired.sheet),manifest.input,options);const fidelity=await validateRepairFidelity(fallback.output,repaired.sheet,manifest.input,options);
   if(controller.signal.aborted||await removed(store,parent,manifest))throw Error('JOB_CANCELLED');
-  await store.create(key+'/result.json',{...repaired,status:'ready',finishedAt:now()});await progress.close('ready');
+  await progress.update({phase:'saving'});await progress.flush();
+  await delivery.save(store,key,job,{...repaired,status:'ready',finishedAt:now(),repairFidelity:fidelity},{now,dispatch});await progress.close('ready');
   await snapshot(store,parent,{now,dispatch});
  }catch(error){
-  await progress.close(error.message==='JOB_CANCELLED'?'removed':'failed');if(error.message==='JOB_CANCELLED')return {cancelled:true};
+  if(error.message==='JOB_CANCELLED'){await progress.close('removed');return {cancelled:true};}
+  let pendingSave=error.message==='RESULT_SAVE_PENDING';if(!pendingSave&&delivery.storageFailure(error))try{pendingSave=!!await store.get(key+'/delivery-candidate.json')}catch{pendingSave=true;}
+  if(pendingSave){await progress.close('saving');throw error.message==='RESULT_SAVE_PENDING'?error:Object.assign(Error('RESULT_SAVE_PENDING'),{cause:error});}
+  await progress.close('failed');
+  const candidateKey=await recordCandidate(store,parent,attempt,{output:typeof error.output==='string'?error.output:null,validation:error.cause?.message||error.message,at:now()}).catch(()=>null);
   await store.create(key+'/diagnostic.json',{at:now(),category:error.message,validation:error.cause?.message,...(error.repairSource?{repairSource:error.repairSource}:{}),...(error.output?{raw:error.output.slice(0,256000)}:{}),...(error.diagnostic?{upstream:error.diagnostic}:{})});
   await store.create(key+'/result.json',{status:'failed',...repairFailure(error),...(error.diagnostic?.usage?{usage:error.diagnostic.usage}:{}),finishedAt:now()});
-  if(eligible(error)&&job.repair.attempt+1<manifest.limit&&!await removed(store,parent,manifest))await ensure(store,parent,manifest,job.repair.attempt+1,{output:error.repairSource||error.output,validation:error.cause.message},{now,dispatch});
+  if(eligible(error)&&attempt+1<manifest.limit&&!await removed(store,parent,manifest))await ensure(store,parent,manifest,attempt+1,{baseline:fallback||{output:job.repair.output,validation:job.repair.validation||manifest.originalValidation},validation:error.cause.message,candidateKey},{now,dispatch});
  }
  if(!await removed(store,parent,manifest)){
   await snapshot(store,parent,{now,dispatch});
@@ -106,7 +143,14 @@ async function resume(store,key,{now=Date.now,dispatch=async()=>{}}={}){
  }
  if(await removed(store,key,manifest))throw Object.assign(Error('JOB_REMOVED'),{status:410});
  const state=await snapshot(store,key,{now,dispatch});if(!state||state.status!=='failed')return state;
- const entry=await latest(store,key),source=(await store.get(parentKey(key,entry.id)+'/meta.json')).value.repair,d=(await store.get(parentKey(key,entry.id)+'/diagnostic.json'))?.value;
- await ensure(store,key,manifest,entry.attempt+1,{output:d?.repairSource||d?.raw||source.output,validation:d?.validation||source.validation},{now,dispatch});return snapshot(store,key,{now,dispatch});
+ const entry=await latest(store,key);if(!entry)return state;
+ const child=parentKey(key,entry.id),source=(await store.get(child+'/meta.json'))?.value?.repair||{},d=(await store.get(child+'/diagnostic.json'))?.value,baseline=await initialSource(store,key);
+ if(!baseline)return {status:'failed',error:'GENERATION_FAILED',resumeAvailable:false,failureDetail:'缺少最初原稿保真基准，不能把后续修正稿当作原题继续修复。'};
+ const saved=await store.get(candidatePath(key,entry.attempt));let candidate=saved?.value?.output;
+ if(candidate===undefined&&typeof d?.raw==='string'&&d.raw!==baseline.output)candidate=d.raw;
+ if(candidate===undefined&&entry.attempt>0&&typeof source.output==='string'&&source.output!==baseline.output)candidate=source.output;
+ const validation=d?.validation||saved?.value?.validation||source.validation||baseline.validation||manifest.originalValidation;
+ const candidateKey=candidate!==undefined?await recordCandidate(store,key,entry.attempt,{output:candidate,validation,at:now()}):undefined;
+ await ensure(store,key,manifest,entry.attempt+1,{baseline,validation,candidateKey},{now,dispatch});return snapshot(store,key,{now,dispatch});
 }
 module.exports={eligible,begin,snapshot,resume,runStep};

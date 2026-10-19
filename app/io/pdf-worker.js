@@ -1,5 +1,6 @@
 import {pdfDefinition} from './print-document.js?v=runtime-v45';
 import {reportFontManifest,cachedFontFile,prepareReportFonts} from './report-fonts.js?v=runtime-v54';
+import {exercisePageBreakBefore} from '../engine/exercise-print.js';
 let engineReady;
 async function engine(){
  if(!engineReady){const attempt=(async()=>{
@@ -30,7 +31,7 @@ self.onmessage=async({data:{id,report,warm,definition}})=>{
  try{
   const [pdfMake,manifest]=await Promise.all([engine(),reportFontManifest()]);
   if(warm){await fonts(pdfMake,manifest.parts.filter(part=>part.id==='core'));return;}
-  if(definition?.exercisePrint){const footer=definition.exerciseFooter;definition.pageBreakBefore=current=>/^exercise-question-/.test(current.id||'')&&current.startPosition?.top>700;delete definition.exercisePrint;delete definition.exerciseFooter;definition.footer=(page,total)=>({stack:[...(footer?[{text:footer,fontSize:9,alignment:'left',margin:[44,0,0,3]}]:[]),{text:'第 '+page+' 页 / 共 '+total+' 页',alignment:'center',fontSize:9}],margin:[0,9,0,0],color:'#555555'});}
+  if(definition?.exercisePrint){const footer=definition.exerciseFooter;definition.pageBreakBefore=exercisePageBreakBefore;delete definition.exercisePrint;delete definition.exerciseFooter;definition.footer=(page,total)=>({stack:[...(footer?[{text:footer,fontSize:9,alignment:'left',margin:[44,0,0,3]}]:[]),{text:'第 '+page+' 页 / 共 '+total+' 页',alignment:'center',fontSize:9}],margin:[0,9,0,0],color:'#555555'});}
   pdfMake.tableLayouts={...pdfMake.tableLayouts,exerciseKeepTogether:{hLineWidth:()=>0,vLineWidth:()=>0,paddingLeft:()=>0,paddingRight:()=>0,paddingTop:()=>0,paddingBottom:()=>0},exerciseDataTable:{hLineWidth:()=>.5,vLineWidth:()=>.5,hLineColor:()=>'#aaaaaa',vLineColor:()=>'#aaaaaa',paddingLeft:()=>5,paddingRight:()=>5,paddingTop:()=>4,paddingBottom:()=>4}};
   const prepared=prepareReportFonts(definition||pdfDefinition(report),manifest);await fonts(pdfMake,prepared.parts);
   const blob=await new Promise((resolve,reject)=>{
