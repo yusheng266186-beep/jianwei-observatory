@@ -4,8 +4,19 @@ import {solidModelGeometry} from '../app/engine/exercise-models.js';
 import {exerciseDiagramSVG} from '../app/io/exercise-diagram.js';
 import {apparatusSVG} from '../app/io/exercise-apparatus.js';
 import guidance from '../backend/figure-guidance.cjs';
+import generation from '../backend/figure-generation.cjs';
 import {laboratory,changePlot,solidFigures,physicsFigures} from './fixtures/exercise-figures.js';
 const question=diagram=>({id:1,stem:'实验气路如图所示，观察导管及液位。',choices:[],diagram});
+test('自由绘图明确文字安全区与中心定位，越界反馈给出具体范围且不移动原图',async()=>{
+ const d={kind:'drawing',caption:'反应历程',description:'已知反应历程示意',scene:[{type:'path',d:'M 50 350 L 600 350'},{type:'text',x:570,y:366,text:'反应历程'}]};
+ assert.doesNotThrow(()=>validateExerciseDiagram(d));
+ const invalid=structuredClone(d);invalid.scene[1].y=372;
+ assert.throws(()=>validateExerciseDiagram(invalid),/y坐标须在18–366/);assert.equal(invalid.scene[1].y,372);
+ invalid.scene[1]={type:'text',x:630,y:100,text:'反应历程'};assert.throws(()=>validateExerciseDiagram(invalid),/按中心定位.*安全区域/);
+ let system='';await generation.planFigure({id:1,stem:'如图所示。',choices:[]},{subject:'化学',visuals:'vector'},{complete:async prompt=>{system=prompt.system;return {output:JSON.stringify({diagram:d})};}});
+ assert.match(system,/文字基线y必须在18–366/);assert.match(system,/不能只保证中心点未超界/);
+ const backend=await import('../backend/exercise-diagrams.mjs');assert.throws(()=>backend.validateExerciseDiagram(invalid),/按中心定位/);
+});
 test('排空气法空集气瓶允许长管，原样绘制空瓶及长短导管，不为适配校验伪造液体',async()=>{
  const d=structuredClone(laboratory);d.nodes[1].inlet='long';
  assert.doesNotThrow(()=>validateExerciseDiagram(d));
