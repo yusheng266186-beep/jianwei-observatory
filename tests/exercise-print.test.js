@@ -22,3 +22,11 @@ test('不同材料、短通用提示和不完整段落不合并；仅合并连�
 });
 
 test('Word短解答的适量留白随题干，不产生只有作答空行的末页；长留白仍可分页',async()=>{const {wordAnswerSpaceParagraphs}=await import('../app/io/exercise-word.js');const q={type:'解答',stem:'求通项并证明结论。',choices:[],answerLines:14};const short=wordAnswerSpaceParagraphs(q,'数学');assert.equal((short.match(/w:keepNext/g)||[]).length,13);assert.equal([...short.matchAll(/w:line="(\d+)"/g)].reduce((n,m)=>n+Number(m[1]),0),14*18*20);const long=wordAnswerSpaceParagraphs({...q,answerLines:48},'数学');assert(!long.includes('w:keepNext'));assert.equal((long.match(/w:pStyle/g)||[]).length,48);assert(!wordAnswerSpaceParagraphs({...q,stem:'完整长材料。'.repeat(300)},'数学').includes('w:keepNext'));});
+
+
+test('教师解析和评分标题在页尾先换页，普通正文仍可自由流动，短题不引入强制分页',async()=>{
+ const {exercisePageBreakBefore}=await import('../app/engine/exercise-print.js');
+ for(const id of ['exercise-question-2','exercise-section-analysis-1','exercise-section-points-1']){assert.equal(exercisePageBreakBefore({id,startPosition:{top:760}}),true);assert.equal(exercisePageBreakBefore({id,startPosition:{top:80}}),false);}
+ assert.equal(exercisePageBreakBefore({text:'继续的正文',startPosition:{top:760}}),false);
+ assert.equal(exercisePageBreakBefore({id:'exercise-section-analysis-1'}),false);
+});

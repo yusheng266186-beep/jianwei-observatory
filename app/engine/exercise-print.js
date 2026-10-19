@@ -43,3 +43,6 @@ export function exercisePrintSections(questions){
  }
  return sections;
 }
+// Free-flowing teacher explanations need room for their first lines. Short
+// unbreakable prompts handle their own pagination and do not receive these IDs.
+export function exercisePageBreakBefore(node){return /^exercise-(?:question|section)-/.test(node.id||'')&&node.startPosition?.top>700;}
