@@ -9,7 +9,7 @@ export function validateExerciseScene(scene){
    const tokens=s.d.replace(/([MLCQZ])/g,' $1 ').trim().split(/[\s,]+/);if(tokens.some(t=>!/^[MLCQZ]$|^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/.test(t)))throw new Error('矢量路径分隔无效。');let at=0;while(at<tokens.length){const cmd=tokens[at++],size={M:2,L:2,Q:4,C:6,Z:0}[cmd];if(size===undefined)throw new Error('矢量路径指令无效。');let count=0;while(at<tokens.length&&!/^[MLCQZ]$/.test(tokens[at])){const n=Number(tokens[at++]);if(!Number.isFinite(n)||n<0||n>(count%2?380:640))throw new Error('矢量路径超出画布。');count++;}if(size===0?count!==0:count<size||count%size!==0)throw new Error('矢量路径坐标不完整。');}
   }else{
    if(![s.x,s.y].every(Number.isFinite))throw new Error('矢量图坐标缺失。');
-   if(s.type==='text'){const width=[...(s.text||'')].reduce((n,c)=>n+(/[^\x00-\xff]/.test(c)?13:6.5),0);if(typeof s.text!=='string'||!s.text||s.text.length>40||/[<>$\\]/.test(s.text)||s.x-width/2<2||s.x+width/2>638||s.y<18||s.y>366)throw new Error('矢量图文字或位置无效。');}
+   if(s.type==='text'){const width=[...(s.text||'')].reduce((n,c)=>n+(/[^\x00-\xff]/.test(c)?13:6.5),0);if(typeof s.text!=='string'||!s.text||s.text.length>40||/[<>$\\]/.test(s.text))throw new Error('矢量图文字须为1至40字的纯文本，不能包含公式指令。');if(s.y<18||s.y>366)throw new Error('矢量图文字的y坐标须在18–366之间，请将上下边缘的标签移入安全区域。');if(s.x-width/2<2||s.x+width/2>638)throw new Error('矢量图文字按中心定位，须将整段文字放入x=2–638的安全区域；长标签应分行。');}
    else if(s.type==='rect'){if(![s.width,s.height].every(n=>Number.isFinite(n)&&n>0)||s.x<0||s.y<0||s.x+s.width>640||s.y+s.height>380)throw new Error('矩形超出画布。');}
    else if(![s.rx,s.ry].every(n=>Number.isFinite(n)&&n>0)||s.x-s.rx<0||s.x+s.rx>640||s.y-s.ry<0||s.y+s.ry>380)throw new Error('椭圆超出画布。');
   }

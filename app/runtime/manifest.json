@@ -1,5 +1,5 @@
 {
-  "main": "runtime/main-5IFLG3XG.js",
+  "main": "runtime/main-6GNVSDAG.js",
   "storage": "runtime/storage-67JB4RUQ.js",
   "prepare": "runtime/prepare-NOKZSWUW.js",
   "importer": "app/runtime/importer-B4QXMGYP.js",
@@ -38,7 +38,7 @@
     "styles/wheels-907315f6eddb.css"
   ],
   "standalone": {
-    "figures": "runtime/figure-library-LV2UKGEW.js",
+    "figures": "runtime/figure-library-K3JAAIR6.js",
     "models": "runtime/model-workbench-UHV52UT7.js"
   },
   "files": [
@@ -46,15 +46,15 @@
     "app/runtime/importer-B4QXMGYP.js",
     "app/runtime/storage-67JB4RUQ.js",
     "app/runtime/shared-H6X4V3UG.js",
-    "app/runtime/shared-PHQPINHO.js",
-    "app/runtime/shared-UGJ4JOEH.js",
+    "app/runtime/shared-IABMKCOD.js",
+    "app/runtime/shared-B4NG3ZTB.js",
     "app/runtime/shared-56FKJIV7.js",
-    "app/runtime/shared-LQIUAL5Q.js",
-    "app/runtime/shared-3FCRS3XB.js",
-    "app/runtime/shared-LQCKNNT7.js",
-    "app/runtime/shared-PLUOHTI4.js",
-    "app/runtime/shared-LJMUJ7NC.js",
-    "app/runtime/main-5IFLG3XG.js",
+    "app/runtime/shared-NUIE3BV3.js",
+    "app/runtime/shared-JID64ZPX.js",
+    "app/runtime/shared-E7UBMFR2.js",
+    "app/runtime/shared-PLCBC7GV.js",
+    "app/runtime/shared-2JMCWT24.js",
+    "app/runtime/main-6GNVSDAG.js",
     "app/runtime/shared-ANF6O23H.js",
     "app/runtime/shared-2AJDHVQ7.js",
     "app/runtime/shared-DWYDM43R.js",
@@ -85,7 +85,18 @@
     "app/runtime/shared-OIY7F67X.js",
     "app/runtime/shared-RMTIRWQZ.js",
     "app/runtime/shared-XT7OAR7V.js",
-    "app/runtime/figure-library-LV2UKGEW.js",
+    "app/runtime/figure-library-K3JAAIR6.js",
     "app/runtime/model-workbench-UHV52UT7.js"
+  ],
+  "compatibility": [
+    "app/runtime/figure-library-HVXDMR2A.js",
+    "app/runtime/main-PPXYIJG4.js",
+    "app/runtime/shared-G7X57K5K.js",
+    "app/runtime/shared-JFNAUBY3.js",
+    "app/runtime/shared-L4UHVO6I.js",
+    "app/runtime/shared-LIUK3KC6.js",
+    "app/runtime/shared-PUC2RTHU.js",
+    "app/runtime/shared-XC2VGGMM.js",
+    "app/runtime/shared-Z5KTJKBQ.js"
   ]
 }
