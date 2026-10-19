@@ -6,7 +6,10 @@ export function exerciseFigureParts(question){
  const placement=question.figureLayout||question.figureRequest?.placement,stem=String(question.stem||'');
  if(!placement)return {before:stem,after:'',width:400,height:300,size:'standard',aspect:'wide'};
  const anchor=typeof placement.after==='string'?placement.after:'',index=stem.indexOf(anchor),end=index+anchor.length;
- if(typeof anchor!=='string'||!anchor||index<0||stem.indexOf(anchor,index+anchor.length)>=0||stem.slice(end).length&&!/^\s*\n/.test(stem.slice(end))||[...stem.matchAll(/\$\$[\s\S]*?\$\$|\$[^$\n]+\$/g)].some(m=>end>m.index&&end<m.index+m[0].length))throw new Error('第'+question.id+'题的图示插入位置与题干不一致，请重新确认图示位置。');
+ // A unique, complete sentence is also a safe insertion boundary. The model
+ // may keep the next condition in the same paragraph; preserve all its text.
+ const boundary=end===stem.length||/^\s*\n/.test(stem.slice(end))||/[。！？][”’」』）)]?$/.test(anchor);
+ if(typeof anchor!=='string'||!anchor||index<0||stem.indexOf(anchor,index+anchor.length)>=0||!boundary||[...stem.matchAll(/\$\$[\s\S]*?\$\$|\$[^$\n]+\$/g)].some(m=>end>m.index&&end<m.index+m[0].length))throw new Error('第'+question.id+'题的图示插入位置与题干不一致，请重新确认图示位置。');
  const [width,height]={compact:[320,230],standard:[400,300],wide:[480,320]}[placement.width]||[400,300];
  const custom=Number.isFinite(placement.widthPercent);
  return {before:stem.slice(0,end),after:stem.slice(end).replace(/^\s*\n/,''),width:custom?exerciseFigurePageWidth*placement.widthPercent/100:width,height:custom?exerciseFigureMaxHeight:height,size:placement.width,aspect:placement.aspect||'wide',...(custom?{widthPercent:placement.widthPercent}:{})};

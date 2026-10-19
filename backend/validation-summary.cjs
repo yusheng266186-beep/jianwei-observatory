@@ -8,6 +8,7 @@ function validationSummary(message=''){
  const field=/^第(\d{1,2})题的(题干|答案|解析)(?:未完整返回|为空或超过\d+字符)。$/.exec(message);
  if(field)return '第'+field[1]+'题的'+field[2]+'未完整返回，请重新生成。';
  const question=/^第(\d{1,2})题/.exec(message),number=question?'第'+question[1]+'题':'';
+ if(message.includes('图示插入位置'))return number+'的配图位置与题干不匹配，请重新生成本组。';
  if(message.includes('客观题评分'))return number+'的客观题评分规则不符合高考作答方式，请重新生成。';
  if(message.includes('选项或答案不符合题型'))return number+'的选项数量或答案标记不符合题型，请重新生成。';
  if(message.includes('题目数量'))return '模型返回的题数与所选题量不一致，或缺少训练目标。请重新生成。';
