@@ -1,5 +1,5 @@
 {
-  "main": "runtime/main-54MVNPSI.js",
+  "main": "runtime/main-5H5AH6IV.js",
   "storage": "runtime/storage-67JB4RUQ.js",
   "prepare": "runtime/prepare-NOKZSWUW.js",
   "importer": "app/runtime/importer-B4QXMGYP.js",
@@ -30,7 +30,7 @@
   "landing": "assets/landing-8e0095cb7b55.css",
   "styles": [
     "assets/figure-library-20349b898c28.css",
-    "assets/model-workbench-ca6c47110c5f.css",
+    "assets/model-workbench-d6fae8e5cf7a.css",
     "styles/fields-a6e6da17cff4.css",
     "styles/reading-fonts-daadf771f13d.css",
     "styles/refinement-642e4c4ecaec.css",
@@ -39,7 +39,7 @@
   ],
   "standalone": {
     "figures": "runtime/figure-library-K3JAAIR6.js",
-    "models": "runtime/model-workbench-HAZUOXNP.js"
+    "models": "runtime/model-workbench-WWGAE3V4.js"
   },
   "files": [
     "app/runtime/prepare-NOKZSWUW.js",
@@ -50,11 +50,11 @@
     "app/runtime/shared-WWG6T5J3.js",
     "app/runtime/shared-56FKJIV7.js",
     "app/runtime/shared-Z5KWE7AR.js",
-    "app/runtime/shared-7NIQ6GP5.js",
+    "app/runtime/shared-3PZPPLYR.js",
     "app/runtime/shared-QKR3S5LZ.js",
     "app/runtime/shared-ICYL6I2W.js",
     "app/runtime/shared-5HWJK3FR.js",
-    "app/runtime/main-54MVNPSI.js",
+    "app/runtime/main-5H5AH6IV.js",
     "app/runtime/shared-ANF6O23H.js",
     "app/runtime/shared-2AJDHVQ7.js",
     "app/runtime/shared-RMULY4GS.js",
@@ -86,6 +86,10 @@
     "app/runtime/shared-RMTIRWQZ.js",
     "app/runtime/shared-XT7OAR7V.js",
     "app/runtime/figure-library-K3JAAIR6.js",
-    "app/runtime/model-workbench-HAZUOXNP.js"
+    "app/runtime/model-workbench-WWGAE3V4.js"
+  ],
+  "compatibility": [
+    "app/runtime/main-SU5G2KZL.js",
+    "app/runtime/shared-TZK6DNU6.js"
   ]
 }
