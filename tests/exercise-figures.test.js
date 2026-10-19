@@ -2,16 +2,30 @@ import test from 'node:test';import assert from 'node:assert/strict';
 import {validateExerciseDiagram,validateGeneratedExerciseFigures} from '../app/engine/exercise-diagrams.js';
 import {solidModelGeometry} from '../app/engine/exercise-models.js';
 import {exerciseDiagramSVG} from '../app/io/exercise-diagram.js';
+import {apparatusSVG} from '../app/io/exercise-apparatus.js';
+import guidance from '../backend/figure-guidance.cjs';
 import {laboratory,changePlot,solidFigures,physicsFigures} from './fixtures/exercise-figures.js';
 const question=diagram=>({id:1,stem:'实验气路如图所示，观察导管及液位。',choices:[],diagram});
+test('排空气法空集气瓶允许长管，原样绘制空瓶及长短导管，不为适配校验伪造液体',async()=>{
+ const d=structuredClone(laboratory);d.nodes[1].inlet='long';
+ assert.doesNotThrow(()=>validateExerciseDiagram(d));
+ const svg=apparatusSVG({...d.nodes[1],x:320,y:200},0,'dry-collection');
+ assert(svg.includes('M -8 -78 V 50'));
+ assert(svg.includes('M 8 -78 V -22'));
+ assert(!svg.includes('<rect x="-48"'));
+ assert.equal(d.nodes[1].liquidLevel,0);
+ const backend=await import('../backend/exercise-diagrams.mjs');assert.deepEqual(backend.validateExerciseDiagram(d),d);
+ assert.match(guidance.diagramGuide('化学'),/排空气法的空集气瓶.*liquidLevel:0/);
+ assert.match(guidance.diagramGuide('化学'),/严禁为了满足模板而添加液体/);
+});
 test('具体仪器、液位及端口生成完整矢量气路，旧示意图可阅读但不能作为新装置题通过',()=>{
  assert.deepEqual(validateExerciseDiagram(laboratory),laboratory);assert.doesNotThrow(()=>validateGeneratedExerciseFigures({questions:[question(laboratory)]},{subject:'化学'}));
  const svg=exerciseDiagramSVG(laboratory);assert(svg.includes('data-equipment="three-neck-flask"'));assert.equal((svg.match(/data-equipment=/g)||[]).length,4);assert(svg.includes('clipPath'));assert(!svg.includes('undefined'));
  const second=exerciseDiagramSVG(laboratory),id=svg.match(/clipPath id="([^"]+)/)[1];assert(!second.includes('id="'+id+'"'));
  const legacy={...laboratory,nodes:laboratory.nodes.map(({equipment,liquidLevel,inlet,outlet,additionFunnel,...n})=>n),edges:laboratory.edges.map(e=>({...e,type:'arrow'}))};assert.doesNotThrow(()=>validateExerciseDiagram(legacy));assert.throws(()=>validateGeneratedExerciseFigures({questions:[question(legacy)]},{subject:'化学'}),/具体仪器/);
 });
-test('装置气路拒绝空瓶长导管、重复端口、重叠仪器及不支持的仪器，不猜测补图',()=>{
- for(const mutate of [d=>d.nodes[1].inlet='long',d=>d.edges.push({...d.edges[0]}),d=>d.nodes[1].x=23,d=>d.nodes[0].equipment='condenser',d=>d.edges[0].type='line']){const d=structuredClone(laboratory);mutate(d);assert.throws(()=>validateExerciseDiagram(d));}
+test('装置气路拒绝不足液位的浸液导管、重复端口、重叠仪器及不支持的仪器，不猜测补图',()=>{
+ for(const mutate of [d=>{d.nodes[1].inlet='long';d.nodes[1].liquidLevel=10;},d=>d.edges.push({...d.edges[0]}),d=>d.nodes[1].x=23,d=>d.nodes[0].equipment='condenser',d=>d.edges[0].type='line']){const d=structuredClone(laboratory);mutate(d);assert.throws(()=>validateExerciseDiagram(d));}
 });
 test('新题引用缺图、流程框冒充结构图或化学曲线横坐标倒序时不能通过，完整数据表与绘图任务可不附图',()=>{
  assert.throws(()=>validateGeneratedExerciseFigures({questions:[question(undefined)]},{subject:'化学'}),/未提供/);
