@@ -2,6 +2,8 @@
 // Return only fixed teaching-facing messages. Never expose raw JSON, credentials,
 // upstream diagnostics or model text through a parsing error.
 function validationSummary(message=''){
+ if(message.startsWith('格式修复改动了有效原稿'))return '修正稿改变了原题内容，未通过保真校验；原稿保留。';
+ if(message==='模型在JSON正文前夹带说明文字。')return '模型在JSON成稿前添加了说明文字，未按要求直接输出成稿。';
  if(/Unexpected token ['\"]?`/.test(message))return '模型返回了Markdown代码围栏，未按要求直接输出JSON成稿。请重新生成本组。';
  if(message.includes('引用了未提供的图示'))return (message.match(/^第\d{1,2}题/)?.[0]||'题目')+'提及配图但未提供图示委托，无法完整作答。请重新生成本组。';
  if(/(?:Bad escaped character|Bad escape character|Bad control character|Invalid escape|Unterminated string|Unexpected (?:token|end)|Expected .*JSON|JSON at position)/i.test(message))return '模型已返回内容，但文档编码不符合要求（公式转义或JSON结构错误），未通过格式校验。请重新生成本组。';

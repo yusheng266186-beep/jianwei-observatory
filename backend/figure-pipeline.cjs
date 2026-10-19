@@ -63,7 +63,7 @@ async function begin(store,key,job,text,{now=Date.now,dispatch=async()=>{}}={}){
 }
 async function snapshot(store,key,{now=Date.now,dispatch=async()=>{}}={}){
  const manifest=(await store.get(key+'/figure-manifest.json'))?.value;if(!manifest||await removed(store,key,manifest))return null;
- const existing=await store.get(key+'/result.json');if(existing?.value.status==='ready')return existing.value;
+ const existing=await store.get(key+'/recovered.json')||await store.get(key+'/result.json');if(existing?.value.status==='ready')return existing.value;
  const list=await states(store,key,manifest,{now,dispatch}),active=list.find(s=>s.status!=='ready');await publish(store,key,manifest,list,now);
  let textReview=active?.status==='failed'?(await store.get(key+'/text-review.json'))?.value:null;
  if(active?.status==='failed'&&!textReview){const prior=await store.get(jobKey(key,uuid(key+'|figure|'+active.questionId+'|0|review'))+'/result.json');if(prior?.value.approved===false&&prior.value.contentIssues?.length)textReview={questionId:active.questionId,issues:prior.value.contentIssues};}
@@ -71,7 +71,7 @@ async function snapshot(store,key,{now=Date.now,dispatch=async()=>{}}={}){
  const text=(await store.get(key+'/text-result.json')).value,sheet=structuredClone(text.sheet);for(const item of list){const q=sheet.questions.find(q=>q.id===item.questionId);q.diagram=item.diagram;}
  const figureReviewNotes=list.filter(item=>item.contentIssues?.length).map(item=>({questionId:item.questionId,issues:item.contentIssues}));
  let result;if(manifest.refresh)result={diagram:sheet.questions.find(q=>q.id===manifest.questions[0]).diagram,sourceId:manifest.sourceId,questionId:manifest.questions[0],figureLayout:sheet.questions.find(q=>q.id===manifest.questions[0]).figureLayout||sheet.questions.find(q=>q.id===manifest.questions[0]).figureRequest?.placement};else{const {validateExerciseResult,validateGeneratedExerciseFigures}=await import('./exercise-contract.mjs');validateExerciseResult(sheet,manifest.input);validateGeneratedExerciseFigures(sheet,manifest.input);result={...text,sheet,figureModels:{exercise:manifest.generation.model,diagram:manifest.figureGeneration.model},figurePipeline:true};}
- result={...result,figureReviewNotes,status:'ready',finishedAt:now()};await store.create(key+'/result.json',result);return (await store.get(key+'/result.json')).value;
+ result={...result,figureReviewNotes,status:'ready',finishedAt:now()};const resultPath=await store.get(key+'/result.json')&&await store.get(key+'/format-repair.json')?'/recovered.json':'/result.json';await store.create(key+resultPath,result);return (await store.get(key+resultPath)).value;
 }
 async function resume(store,key,{now=Date.now,dispatch=async()=>{}}={}){
  const manifest=(await store.get(key+'/figure-manifest.json'))?.value;if(!manifest)return null;

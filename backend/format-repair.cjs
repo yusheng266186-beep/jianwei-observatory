@@ -1,0 +1,112 @@
+'use strict';
+const crypto=require('node:crypto');
+const {createProgressWriter}=require('./progress.cjs');
+const {validationSummary}=require('./validation-summary.cjs');
+const parentKey=(key,id)=>key.slice(0,key.lastIndexOf('/')+1)+id;
+const attemptPath=(key,n)=>key+'/format-repair-attempts/'+String(n).padStart(5,'0')+'.json';
+const uuid=text=>{const h=crypto.createHash('sha256').update(text).digest('hex');return h.slice(0,8)+'-'+h.slice(8,12)+'-4'+h.slice(13,16)+'-a'+h.slice(17,20)+'-'+h.slice(20,32);};
+const repairReason=manifest=>validationSummary(manifest.originalValidation).replace(/。?请重新生成(?:本组)?。?$/,'。');
+function repairFailure(error){
+ const raw=error.code||error.message;
+ if(['ECONNRESET','EPIPE','ETIMEDOUT','NETWORK_INTERRUPTED','MODEL_CONNECTION_LOST'].includes(raw))return {error:'MODEL_CONNECTION_LOST',failureDetail:'校检服务连接中断，未收到完整修正稿。原稿保留，可继续本次修复。'};
+ if(['NETWORK_TIMEOUT','MODEL_UPSTREAM_TIMEOUT'].includes(raw))return {error:raw,failureDetail:'校检服务等待模型响应超时。原稿保留，可稍后继续本次修复。'};
+ return {error:/^[A-Z_]+$/.test(raw)?raw:'GENERATION_FAILED',failureDetail:error.cause?validationSummary(error.cause.message):'校检模型未能返回通过校验的成稿，请稍后继续修复。'};
+}
+function eligible(error){
+ return error?.message==='MODEL_CONTENT_INVALID'&&error.diagnostic?.completeSignal===true&&typeof error.output==='string'&&error.output.trim().length>0&&error.output.length<=256000&&
+  (error.cause instanceof SyntaxError||/格式修复改动了有效原稿|JSON正文前|JSON|转义|选项字段未完整返回|未按约定输出公式或正文格式|数据表列数不一致|建议作答行数无效/.test(error.cause?.message||''));
+}
+async function removed(store,key,manifest){return !!(await store.get(key+'/removed.json')||manifest.group&&await store.get(parentKey(key,manifest.group.parentId)+'/removed.json'));}
+async function latest(store,key){let low=0,high=1;const first=await store.get(attemptPath(key,0));if(!first)return null;while(await store.get(attemptPath(key,high))){low=high;high=high*2+1;}while(high-low>1){const n=Math.floor((low+high)/2);if(await store.get(attemptPath(key,n)))low=n;else high=n;}return {attempt:low,...(low?(await store.get(attemptPath(key,low))).value:first.value)};}
+async function ensure(store,key,manifest,n,source,{now=Date.now,dispatch=async()=>{}}={}){
+ if(await removed(store,key,manifest))return null;
+ const id=uuid(key+'|format-repair|'+n),child=parentKey(key,id),createdAt=now();
+ await store.create(attemptPath(key,n),{id,createdAt});const entry=(await store.get(attemptPath(key,n))).value;
+ if(await store.create(child+'/meta.json',{id,type:'format-repair',input:manifest.input,generation:manifest.repairGeneration,repair:{parentId:key.split('/').at(-1),attempt:n,output:source.output,validation:source.validation},status:'queued',createdAt:entry.createdAt,deadline:entry.createdAt+600000}))await dispatch(child);
+ return child;
+}
+async function begin(store,key,job,error,{now=Date.now,dispatch}={}){
+ const limit=Number.isInteger(job.repairAttempts)?job.repairAttempts:1;
+ const existing=(await store.get(key+'/result.json'))?.value;
+ if(!['exercise','exercise-part'].includes(job.type)||!eligible(error)||limit<1||existing&&existing.error!=='MODEL_CONTENT_INVALID')return false;
+ const generation=job.generation||require('./generator.cjs').generationProfile();
+ const originalValidation=!/^\s*\{/.test(error.output)&&error.output.includes('{')?'模型在JSON正文前夹带说明文字。':String(error.cause.message).slice(0,1200);
+ const manifest={version:1,input:job.input,generation,repairGeneration:job.repairGeneration||generation,limit:Math.min(limit,5),pipeline:job.pipeline,figureGeneration:job.figureGeneration||generation,...(job.group?{group:job.group}:{}),createdAt:now(),originalUsage:error.diagnostic?.usage||{},originalValidation};
+ if(await removed(store,key,manifest))return false;
+ await store.create(key+'/format-repair-source.json',{output:error.output,validation:manifest.originalValidation});
+ await store.create(key+'/format-repair-progress.json',(await store.get(key+'/progress.json'))?.value||{});
+ await store.create(key+'/format-repair.json',manifest);
+ const saved=(await store.get(key+'/format-repair.json')).value;
+ await ensure(store,key,saved,0,{output:error.output,validation:manifest.originalValidation},{now,dispatch});
+ await snapshot(store,key,{now,dispatch});return true;
+}
+async function states(store,key,manifest,now){const entry=await latest(store,key);if(!entry)return [];const rows=[];for(let n=0;n<=entry.attempt;n++){const e=(await store.get(attemptPath(key,n))).value,child=parentKey(key,e.id),[result,run,progress,meta]=await Promise.all(['result','run','progress','meta'].map(name=>store.get(child+'/'+name+'.json'))),deadline=run?.value.deadlineAt||(meta?.value.deadline||e.createdAt+600000)+15000;rows.push({attempt:n,child,validation:meta?.value.repair?.validation,result:result?.value,progress:progress?.value||{},deadlineAt:deadline,status:result?.value.status||(deadline<now()?'failed':run?'running':'queued'),error:result?.value.error||(deadline<now()?'JOB_EXPIRED':undefined)});}return rows;}
+async function publish(store,key,manifest,list,now){
+ if(await removed(store,key,manifest))return;
+ const source=(await store.get(key+'/format-repair-progress.json'))?.value||{},old=(await store.get(key+'/progress.json'))?.value||{},active=list.at(-1),live=active.progress,revision=(active.attempt+1)*3+(active.status==='ready'?2:active.status==='failed'?1:0);
+ if((old.repairRevision||0)>revision)return;
+ const phase=active.status==='failed'?'failed':active.status==='ready'?'validating':live.phase==='validating'?'format-revalidating':'format-repairing';
+ const repairLog=list.map(row=>({attempt:row.attempt+1,model:manifest.repairGeneration.model,provider:manifest.repairGeneration.provider,status:row.status,reason:repairReason({...manifest,originalValidation:row.validation||manifest.originalValidation}),...(row.result?.failureDetail?{detail:row.result.failureDetail}:{}),outputText:(row.progress.outputText||'').slice(0,256000),summary:(row.progress.summary||'').slice(-4000),timing:row.progress.timing}));
+ await store.progress(key+'/progress.json',{...source,phase,sequence:(old.sequence||0)+1,repairRevision:revision,repairStage:{attempt:active.attempt+1,limit:manifest.limit,model:manifest.repairGeneration.model,status:active.status,...(active.error?{error:active.error}:{}),reason:repairReason({...manifest,originalValidation:active.validation||manifest.originalValidation})},repairLog,measurements:[...require('./job-diagnostics.cjs').progressMeasurements(source,manifest.generation.model),...list.flatMap(row=>require('./job-diagnostics.cjs').progressMeasurements(row.progress,manifest.repairGeneration.model).map(p=>({...p,role:'repair'})))],thinkingChars:(source.thinkingChars||0)+list.reduce((n,row)=>n+(row.progress.thinkingChars||0),0),responseChars:(source.responseChars||0)+list.reduce((n,row)=>n+(row.progress.responseChars||0),0),...(live.outputText?{outputText:live.outputText,draft:live.draft}:{}),summary:live.summary||source.summary,heartbeatAt:now(),receivedAt:live.receivedAt||source.receivedAt});
+}
+async function deliver(store,key,manifest,list,{now,dispatch}){
+ const active=list.at(-1),repaired=active.result;if(!repaired?.sheet||await removed(store,key,manifest))return null;
+ const usage={...manifest.originalUsage};for(const field of ['input','output','thinking'])usage[field]=(usage[field]||0)+list.reduce((n,row)=>n+(row.result?.usage?.[field]||0),0);
+ const result={...repaired,model:manifest.generation.model,provider:manifest.generation.provider,reasoningEffort:manifest.generation.reasoningEffort,usage,formatRepair:{attempts:active.attempt+1,model:manifest.repairGeneration.model,provider:manifest.repairGeneration.provider,reasoningEffort:manifest.repairGeneration.reasoningEffort}};
+ if(manifest.pipeline===2&&result.sheet.questions.some(q=>q.figureRequest)){
+  const figures=require('./figure-pipeline.cjs');await figures.begin(store,key,{input:manifest.input,generation:manifest.generation,figureGeneration:manifest.figureGeneration,pipeline:2,group:manifest.group},result,{now,dispatch});return figures.snapshot(store,key,{now,dispatch});
+ }
+ const path=await store.get(key+'/result.json')?'/recovered.json':'/result.json';await store.create(key+path,{...result,status:'ready',finishedAt:now()});const p=(await store.get(key+'/progress.json'))?.value||{};await store.progress(key+'/progress.json',{...p,phase:'ready',heartbeatAt:now()});return (await store.get(key+path)).value;
+}
+async function snapshot(store,key,{now=Date.now,dispatch=async()=>{}}={}){
+ const manifest=(await store.get(key+'/format-repair.json'))?.value;if(!manifest||await removed(store,key,manifest)||await store.get(key+'/figure-manifest.json'))return null;
+ const existing=(await store.get(key+'/recovered.json'))?.value||(await store.get(key+'/result.json'))?.value;if(existing?.status==='ready')return existing;
+ const list=await states(store,key,manifest,now);if(!list.length)return null;const active=list.at(-1);await publish(store,key,manifest,list,now);
+ if(active.status==='ready')return await deliver(store,key,manifest,list,{now,dispatch})||{status:'failed',error:'GENERATION_FAILED',resumeAvailable:true,failureDetail:'修正稿尚未完整保存，原稿保留，可继续本次修复。'};
+ return {status:active.status==='failed'?'failed':'running',formatRepair:true,repairRevision:(active.attempt+1)*3+(active.status==='failed'?1:0),deadlineAt:active.deadlineAt,...(active.status==='failed'?{error:active.error||'MODEL_CONTENT_INVALID',resumeAvailable:true,failureDetail:'第'+(active.attempt+1)+'次成稿格式修复未完成，原稿与已完成题组保留。'+(active.result?.failureDetail||'可以继续修复当前成稿。')}:{})};
+}
+async function runStep(store,key,job,{now=Date.now,dispatch=async()=>{},generator=require('./generator.cjs').generate}={}){
+ const parent=parentKey(key,job.repair.parentId),manifest=(await store.get(parent+'/format-repair.json'))?.value;
+ if(!manifest||await removed(store,parent,manifest)||await store.get(key+'/removed.json'))return {cancelled:true};
+ if(!await store.create(key+'/run.json',{startedAt:now(),deadlineAt:now()+Math.min(job.generation.timeoutMs||885000,885000)}))return {skipped:true};
+ const controller=new AbortController(),proxy={get:name=>name===key+'/removed.json'?removed(store,parent,manifest).then(r=>r?{value:{}}:store.get(name)):store.get(name),async progress(name,value){await store.progress(name,value);await publish(store,parent,manifest,await states(store,parent,manifest,now),now);if(manifest.group)await require('./exercise-groups.cjs').advance(store,parentKey(parent,manifest.group.parentId),{now,dispatch});}},progress=createProgressWriter({store:proxy,key,total:manifest.input.count,now,controller});await progress.flush();
+ try{
+  const repaired=await generator(manifest.input,{provider:job.generation.provider,generation:job.generation,repair:{output:job.repair.output,validation:job.repair.validation,attempt:job.repair.attempt+1},onProgress:progress.update,signal:controller.signal,separateFigures:manifest.pipeline===2});
+  // Re-check the repair result using the exact same contract, even for injected adapters.
+  const {validateOutput,validateRepairFidelity}=require('./generator.cjs'),options={separateFigures:manifest.pipeline===2,usage:repaired.usage};await validateOutput(JSON.stringify(repaired.sheet),manifest.input,options);await validateRepairFidelity(job.repair.output,repaired.sheet,manifest.input,options);
+  if(controller.signal.aborted||await removed(store,parent,manifest))throw Error('JOB_CANCELLED');
+  await store.create(key+'/result.json',{...repaired,status:'ready',finishedAt:now()});await progress.close('ready');
+  await snapshot(store,parent,{now,dispatch});
+ }catch(error){
+  await progress.close(error.message==='JOB_CANCELLED'?'removed':'failed');if(error.message==='JOB_CANCELLED')return {cancelled:true};
+  await store.create(key+'/diagnostic.json',{at:now(),category:error.message,validation:error.cause?.message,...(error.repairSource?{repairSource:error.repairSource}:{}),...(error.output?{raw:error.output.slice(0,256000)}:{}),...(error.diagnostic?{upstream:error.diagnostic}:{})});
+  await store.create(key+'/result.json',{status:'failed',...repairFailure(error),...(error.diagnostic?.usage?{usage:error.diagnostic.usage}:{}),finishedAt:now()});
+  if(eligible(error)&&job.repair.attempt+1<manifest.limit&&!await removed(store,parent,manifest))await ensure(store,parent,manifest,job.repair.attempt+1,{output:error.repairSource||error.output,validation:error.cause.message},{now,dispatch});
+ }
+ if(!await removed(store,parent,manifest)){
+  await snapshot(store,parent,{now,dispatch});
+  if(manifest.group)await require('./exercise-groups.cjs').advance(store,parentKey(parent,manifest.group.parentId),{now,dispatch});
+ }
+ return {ok:true};
+}
+async function resume(store,key,{now=Date.now,dispatch=async()=>{}}={}){
+ let manifest=(await store.get(key+'/format-repair.json'))?.value;
+ if(!manifest){
+  const [meta,result,diagnostic]=await Promise.all(['meta','result','diagnostic'].map(n=>store.get(key+'/'+n+'.json'))),d=diagnostic?.value;
+  if(result?.value.error!=='MODEL_CONTENT_INVALID'||!d?.raw||d.truncated)return null;
+  const error=Object.assign(Error('MODEL_CONTENT_INVALID'),{cause:Error(d.validation),output:d.raw,diagnostic:{...d.upstream,completeSignal:d.upstream?.completeSignal===true}});
+  // An old failed immutable result cannot be overwritten. Its repair success is
+  // saved separately, preserving both the failure and the original draft.
+  if(!eligible(error))return null;
+  const job=meta?.value;if(!job)return null;
+  // 0 disables automatic repair. An explicit continuation may still perform
+  // one repair without changing this job's frozen model or global settings.
+  if(!await begin(store,key,{...job,repairAttempts:Math.max(1,job.repairAttempts??1)},error,{now,dispatch}))return null;
+  return snapshot(store,key,{now,dispatch});
+ }
+ if(await removed(store,key,manifest))throw Object.assign(Error('JOB_REMOVED'),{status:410});
+ const state=await snapshot(store,key,{now,dispatch});if(!state||state.status!=='failed')return state;
+ const entry=await latest(store,key),source=(await store.get(parentKey(key,entry.id)+'/meta.json')).value.repair,d=(await store.get(parentKey(key,entry.id)+'/diagnostic.json'))?.value;
+ await ensure(store,key,manifest,entry.attempt+1,{output:d?.repairSource||d?.raw||source.output,validation:d?.validation||source.validation},{now,dispatch});return snapshot(store,key,{now,dispatch});
+}
+module.exports={eligible,begin,snapshot,resume,runStep};
