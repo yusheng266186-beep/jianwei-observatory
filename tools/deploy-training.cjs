@@ -11,6 +11,7 @@ const relayFile=path.join(dir,'beichen-live-current.json');
 if(!fs.existsSync(relayFile))throw new Error('Import the authorized Beichen configuration into the private deployment directory first.');
 const relayEnv=Object.fromEntries(JSON.parse(fs.readFileSync(relayFile)).Environment.Variables.map(v=>[v.Key,v.Value]));
 const grokFile=path.join(dir,'bytecat-grok.key');if(fs.existsSync(grokFile))relayEnv.BYTECAT_GROK_API_KEY=fs.readFileSync(grokFile,'utf8').trim();
+const cheetahFile=path.join(dir,'cheetah-gemini.key');if(fs.existsSync(cheetahFile))relayEnv.CHEETAH_GEMINI_API_KEY=fs.readFileSync(cheetahFile,'utf8').trim();
 const modelKeys=Object.fromEntries(Object.values(require('../backend/providers.json')).map(p=>{if(!relayEnv[p.key])throw new Error('RELAY_CREDENTIAL_MISSING');return [p.key,relayEnv[p.key]];}));
 const configuredProviders=JSON.stringify([...Object.keys(require('../backend/providers.json')),'kimi-code','gemini']);
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
