@@ -10,7 +10,7 @@ async function removed(store,key,manifest){return !!(await store.get(key+'/remov
 async function latestAttempt(store,key,q){let n=0,current=await store.get(attemptKey(key,q,0));if(!current)return {attempt:0,feedback:[]};let high=1;while(await store.get(attemptKey(key,q,high)))high*=2;let low=0;while(high-low>1){const mid=Math.floor((low+high)/2);if(await store.get(attemptKey(key,q,mid)))low=mid;else high=mid;}n=low;return {attempt:n,...(await store.get(attemptKey(key,q,n))).value};}
 async function ensureStep(store,key,manifest,q,attempt,stage,{now=Date.now,dispatch=async()=>{}}={}){
  const id=uuid(key+'|figure|'+q+'|'+attempt.attempt+'|'+stage),child=jobKey(key,id),saved=await store.get(child+'/meta.json');
- if(!saved&&!await removed(store,key,manifest)){const createdAt=now();if(await store.create(child+'/meta.json',{id,type:'figure-step',input:{},figure:{parentId:key.split('/').at(-1),questionId:q,attempt:attempt.attempt,stage,feedback:attempt.feedback||[]},generation:stage==='plan'?manifest.figureGeneration:manifest.generation,status:'queued',createdAt,deadline:createdAt+600000}))await dispatch(child);}
+ if(!saved&&!await removed(store,key,manifest)){const createdAt=now();if(await store.create(child+'/meta.json',{id,type:'figure-step',input:{},imageGeneration:manifest.imageGeneration,figure:{parentId:key.split('/').at(-1),questionId:q,attempt:attempt.attempt,stage,feedback:attempt.feedback||[]},generation:stage==='plan'?manifest.figureGeneration:manifest.generation,status:'queued',createdAt,deadline:createdAt+600000}))await dispatch(child);}
  return child;
 }
 async function stepState(store,key,manifest,q,attempt,stage,options){
@@ -29,7 +29,7 @@ async function nextAttempt(store,key,manifest,q,previous,feedback,{reusePlan=fal
 async function states(store,key,manifest,options){
  const out=[];let imageUsed=false;
  for(const q of manifest.questions){const attempt=await latestAttempt(store,key,q);let state=await stepState(store,key,manifest,q,attempt,'plan',options);
-  const logs=[],log=s=>{if(s.progress)logs.push({questionId:q,stage:s.stage,model:s.result?.model|| (s.stage==='plan'?manifest.figureGeneration.model:manifest.generation.model),...s.progress,usage:s.result?.usage||s.progress?.usage});};log(state);
+  const logs=[],log=s=>{if(s.progress)logs.push({questionId:q,stage:s.stage,model:s.result?.model|| (s.stage==='render'?(manifest.imageGeneration?.model||'gpt-image-2'):s.stage==='plan'?manifest.figureGeneration.model:manifest.generation.model),...s.progress,usage:s.result?.usage||s.progress?.usage});};log(state);
   if(state.status==='failed'&&state.error==='FIGURE_PLAN_INVALID'&&attempt.attempt===0){const feedback=state.result?.issues||['图示参数未通过校验，请按原题与Schema重新绘制。'];await store.create(attemptKey(key,q,1),{feedback,createdAt:options.now()});return states(store,key,manifest,options);}
   if(state.status!=='ready'){out.push({...state,logs});break;}
   const diagram=state.result.diagram;
@@ -57,7 +57,7 @@ async function begin(store,key,job,text,{now=Date.now,dispatch=async()=>{}}={}){
  const questions=job.type==='figure-refresh'?[job.input.questionId]:(text.sheet.questions||[]).filter(q=>q.figureRequest).map(q=>q.id);
  if(!questions.length)return false;
  await store.create(key+'/text-result.json',text);const progress=(await store.get(key+'/progress.json'))?.value||{};await store.create(key+'/text-progress.json',progress);
- await store.create(key+'/figure-manifest.json',{version:1,questions,input:job.type==='figure-refresh'?job.sourceRequest:job.input,generation:job.generation,figureGeneration:job.figureGeneration||job.generation,...(job.group?{group:job.group}:{}),...(job.type==='figure-refresh'?{refresh:true,sourceId:job.input.sourceId}:{}),createdAt:now()});
+ await store.create(key+'/figure-manifest.json',{version:1,questions,input:job.type==='figure-refresh'?job.sourceRequest:job.input,generation:job.generation,imageGeneration:job.imageGeneration,figureGeneration:job.figureGeneration||job.generation,...(job.group?{group:job.group}:{}),...(job.type==='figure-refresh'?{refresh:true,sourceId:job.input.sourceId}:{}),createdAt:now()});
  for(const q of questions)await store.create(attemptKey(key,q,0),{feedback:[],createdAt:now()});
  await snapshot(store,key,{now,dispatch});if(job.group)await require('./exercise-groups.cjs').advance(store,jobKey(key,job.group.parentId),{now,dispatch});return true;
 }
@@ -93,7 +93,7 @@ async function runStep(store,key,job,{now=Date.now,dispatch=async()=>{},planner=
  try{const text=(await store.get(parent+'/text-result.json')).value,q=text.sheet.questions.find(q=>q.id===job.figure.questionId),options={generation:job.generation,onProgress:progress.update,signal:controller.signal,feedback:job.figure.feedback};let result;
   if(job.figure.stage==='plan'){let request=manifest.input;for(const id of manifest.questions.filter(id=>id<q.id)){const a=await latestAttempt(store,parent,id),plan=await stepState(store,parent,manifest,id,a,'plan',{now,dispatch});if(plan.result?.diagram?.kind==='illustration')request={...request,visuals:'vector'};}result=await planner(q,request,options);}
   else{const attempt={attempt:job.figure.attempt},plan=await stepState(store,parent,manifest,q.id,attempt,'plan',{now,dispatch}),diagram=plan.result.diagram;
-   if(job.figure.stage==='render')result={diagram:{...diagram,image:await illustrator(diagram,{layout:q.figureLayout||q.figureRequest?.placement})}};
+   if(job.figure.stage==='render')result={diagram:{...diagram,image:await illustrator(diagram,{generation:manifest.imageGeneration,layout:q.figureLayout||q.figureRequest?.placement})},model:manifest.imageGeneration?.model||'gpt-image-2',provider:manifest.imageGeneration?.provider||'bytecat-image'};
    else{const rendered=diagram.kind==='illustration'?(await stepState(store,parent,manifest,q.id,attempt,'render',{now,dispatch})).result.diagram:diagram;result=await reviewer(q,manifest.input,rendered,options);}
   }
   if(controller.signal.aborted||await removed(store,parent,manifest)){await progress.close('removed');return {cancelled:true};}if(job.figure.stage==='review'&&result.approved===false&&result.contentIssues?.length)await store.create(parent+'/text-review.json',{questionId:job.figure.questionId,issues:result.contentIssues});await progress.close('ready');await store.create(key+'/result.json',{...result,status:'ready',finishedAt:now()});

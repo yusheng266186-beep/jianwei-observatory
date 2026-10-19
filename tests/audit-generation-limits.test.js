@@ -1,7 +1,8 @@
 import test from 'node:test';import assert from 'node:assert/strict';import crypto from 'node:crypto';import {deflateSync} from 'node:zlib';
 import {validateExerciseRequest,validateExerciseResult,minimumExerciseMinutes} from '../app/engine/exercise-contract.js';
-import {validateExerciseDiagram} from '../app/engine/exercise-diagrams.js';
+import {validateExerciseDiagram,EXERCISE_IMAGE_MAX_CHARS} from '../app/engine/exercise-diagrams.js';
 import {mergeJobSnapshot,jobSnapshotCurrent} from '../app/engine/exercise-jobs.js';
+import illustration from '../backend/illustration.cjs';import {jobEnvelope,RESPONSE_BUDGET} from '../backend/transport-envelope.cjs';
 import storeModule from '../backend/store.cjs';import worker from '../backend/worker.cjs';import {resolve as resolveMedia} from '../backend/media-idempotency.cjs';
 const {MemoryStore}=storeModule;
 const base={subject:'数学',grade:'高三',curriculum:'函数与导数',focus:'单调性',count:3,minutes:15,difficulty:'基础巩固',evidence:[]};
@@ -29,7 +30,7 @@ test('单张合法插图不再被整份文本上限误拒，文本与图片总�
  assert.throws(()=>validateExerciseResult(longText,base),/文档处理容量/);
  const twoImages=sheet();twoImages.questions[0].diagram=diagram;twoImages.questions[1].diagram=structuredClone(diagram);
  assert.throws(()=>validateExerciseResult(twoImages,{...base,visuals:'hybrid'}),/插图总量/);
- assert.throws(()=>validateExerciseDiagram({...diagram,image:{mime:'image/png',data:'A'.repeat(4000001)}}),/插图文件无效/);
+ assert.throws(()=>validateExerciseDiagram({...diagram,image:{mime:'image/png',data:'A'.repeat(EXERCISE_IMAGE_MAX_CHARS+1)}}),/插图文件无效/);
 });
 test('图示修订号同时兼容顶层与progress嵌套，旧响应不能把ready退回running',()=>{
  const record={};
@@ -88,4 +89,10 @@ test('部署前遗留的活跃插图pin被一次性接管，失败pin不锁死�
  await failed.create(failedJob+'/meta.json',{id:failedId,createdAt:1000});await failed.create(failedJob+'/result.json',{status:'failed',error:'IMAGE_REQUEST_FAILED'});await failed.create(failedPin,{id:failedId});
  const next=crypto.randomUUID(),retried=await resolveMedia({store:failed,owner,sourceId,questionId,type,id:next,fingerprint:'new',now:()=>200000,at:200000,reserve:async()=>{reserved++;}});
  assert.equal(retried.id,next);assert.equal(retried.created,true);assert.equal(reserved,1);
+});
+
+test('ByteCat超过旧3MB的真实PNG可经下载、前后端契约和状态响应完整交付',async()=>{
+ const bytes=png(1152,1024),data=bytes.toString('base64');assert(bytes.length>3000000);assert(data.length>4000000);assert.equal(illustration.IMAGE_MAX_CHARS,EXERCISE_IMAGE_MAX_CHARS);assert.equal(illustration.IMAGE_MAX_BYTES*4/3,EXERCISE_IMAGE_MAX_CHARS);
+ const result=await illustration.imageFromResult('https://pre-signed-firefly-prod.s3-accelerate.amazonaws.com/test.png',{download:async()=>({status:200,mime:'image/png',bytes})});const diagram={kind:'illustration',caption:'原图',description:'保持原始像素',image:result};assert.doesNotThrow(()=>validateExerciseDiagram(diagram));const document=sheet();document.questions[0].diagram=diagram;assert.doesNotThrow(()=>validateExerciseResult(document,{...base,visuals:'hybrid'}));const envelope=jobEnvelope({status:'ready',image:result});assert.equal(envelope.image.data,data);assert(Buffer.byteLength(JSON.stringify(envelope))<RESPONSE_BUDGET);assert(Buffer.byteLength(JSON.stringify({status:'ready',image:{mime:'image/png',data:'A'.repeat(EXERCISE_IMAGE_MAX_CHARS)}}))<RESPONSE_BUDGET);
+ await assert.rejects(illustration.imageFromResult('data:image/png;base64,'+data+'A'.repeat(EXERCISE_IMAGE_MAX_CHARS-data.length+1)),e=>e.message==='IMAGE_RESPONSE_INVALID'&&e.imageDiagnostic.stage==='image-size');
 });

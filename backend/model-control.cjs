@@ -1,6 +1,7 @@
 'use strict';
 const providers=require('./providers.json'),profiles=require('./model-profiles.json'),performanceReferences=require('./model-performance.json');
 const {hash}=require('./tencent.cjs');
+const images=require('./image-providers.cjs');
 const extras={
  'kimi-code':{label:'Kimi 官方 · 个人会员',url:'https://api.kimi.com/coding/v1',protocol:'kimi',key:'KIMI_API_KEY',model:'k3',catalog:['k3']},
  gemini:{label:'ByteCat · Gemini',url:'https://www.bytecatcode.org',protocol:'gemini',key:'GEMINI_API_KEY',model:'gemini-3.8-flash',catalog:['gemini-3.8-flash']}
@@ -30,18 +31,18 @@ function createModelControl({store,env=process.env,now=Date.now}){
  // Revisions are immutable, contiguous create-once objects. A concurrent writer
  // can win only one next slot. This avoids an unsafe GET/overwrite race on COS.
  async function latest(){let low=hint,high=hint+1;while(await store.get(revisionKey(high))){low=high;high=high*2+1;}while(high-low>1){const mid=Math.floor((low+high)/2);if(await store.get(revisionKey(mid)))low=mid;else high=mid;}hint=low;return low?(await store.get(revisionKey(low))).value:{revision:0,selection:defaultSelection(env),updatedAt:null};}
- async function state(){const current=await latest(),history=[];for(let n=current.revision;n>Math.max(0,current.revision-8);n--){const item=await store.get(revisionKey(n));if(item)history.push(item.value);}return {current,history,checks:(await latestChecks(store)).checks,providers:publicCatalog(env),image:{model:'GPT Image 2',label:'复杂配图',mode:'图示模型按策略选择，常见模型优先SVG'}};}
+ async function state(){const current=await latest(),history=[];for(let n=current.revision;n>Math.max(0,current.revision-8);n--){const item=await store.get(revisionKey(n));if(item)history.push(item.value);}return {current,history,checks:(await latestChecks(store)).checks,providers:publicCatalog(env),image:{model:'GPT Image 2',label:'复杂配图',selection:current.imageSelection||images.defaultSelection,providers:images.catalog(env),mode:'图示模型按策略选择，常见模型优先SVG'}};}
  async function apply(input){
-  if(!input||Object.keys(input).some(k=>!['expectedRevision','selection','role','repairAttempts'].includes(k))||!Number.isSafeInteger(input.expectedRevision)||input.expectedRevision<0||input.role!==undefined&&!['exercise','diagram','repair'].includes(input.role))throw fail('MODEL_SELECTION_INVALID');
+  if(!input||Object.keys(input).some(k=>!['expectedRevision','selection','role','repairAttempts'].includes(k))||!Number.isSafeInteger(input.expectedRevision)||input.expectedRevision<0||input.role!==undefined&&!['exercise','diagram','repair','image'].includes(input.role))throw fail('MODEL_SELECTION_INVALID');
   const role=input.role||'exercise';if(input.repairAttempts!==undefined&&(role!=='repair'||!Number.isInteger(input.repairAttempts)||input.repairAttempts<0||input.repairAttempts>5))throw fail('MODEL_SELECTION_INVALID');
-  if(role==='exercise'||input.selection!==null)snapshot(input.selection,env);
+  if(role==='image')images.snapshot(input.selection,env,{requireConfigured:true});else if(role==='exercise'||input.selection!==null)snapshot(input.selection,env);
   const current=await latest();if(input.expectedRevision!==current.revision)throw fail('MODEL_REVISION_CONFLICT');
-  const field=role==='diagram'?'diagramSelection':role==='repair'?'repairSelection':'selection';
+  const field=role==='image'?'imageSelection':role==='diagram'?'diagramSelection':role==='repair'?'repairSelection':'selection';
   const next={...current,revision:current.revision+1,[field]:input.selection?{...input.selection}:null,...(role==='repair'&&input.repairAttempts!==undefined?{repairAttempts:input.repairAttempts}:{}),role,updatedAt:now()};
   if(!await store.create(revisionKey(next.revision),next))throw fail('MODEL_REVISION_CONFLICT');hint=next.revision;return next;
  }
- async function generations(){const current=await latest();return {generation:snapshot(current.selection,env),figureGeneration:snapshot(current.diagramSelection||current.selection,env),repairGeneration:snapshot(current.repairSelection||current.selection,env),repairAttempts:current.repairAttempts??1};}
- async function generation(role='exercise'){const selected=await generations();return role==='diagram'?selected.figureGeneration:role==='repair'?selected.repairGeneration:selected.generation;}
+ async function generations(){const current=await latest();return {imageGeneration:images.snapshot(current.imageSelection||images.defaultSelection,env),generation:snapshot(current.selection,env),figureGeneration:snapshot(current.diagramSelection||current.selection,env),repairGeneration:snapshot(current.repairSelection||current.selection,env),repairAttempts:current.repairAttempts??1};}
+ async function generation(role='exercise'){if(role==='image')return images.snapshot((await latest()).imageSelection||images.defaultSelection,env);const selected=await generations();return role==='diagram'?selected.figureGeneration:role==='repair'?selected.repairGeneration:selected.generation;}
  return {state,apply,generation,generations};
 }
 const selectionId=g=>hash(JSON.stringify({provider:g.provider,model:g.model,effort:g.effort})).slice(0,24);

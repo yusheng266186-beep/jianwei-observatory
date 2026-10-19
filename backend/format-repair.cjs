@@ -31,7 +31,7 @@ async function begin(store,key,job,error,{now=Date.now,dispatch}={}){
  if(!['exercise','exercise-part'].includes(job.type)||!eligible(error)||limit<1||existing&&existing.error!=='MODEL_CONTENT_INVALID')return false;
  const generation=job.generation||require('./generator.cjs').generationProfile();
  const originalValidation=!/^\s*\{/.test(error.output)&&error.output.includes('{')?'模型在JSON正文前夹带说明文字。':String(error.cause.message).slice(0,1200);
- const manifest={version:1,input:job.input,generation,repairGeneration:job.repairGeneration||generation,limit:Math.min(limit,5),pipeline:job.pipeline,figureGeneration:job.figureGeneration||generation,...(job.group?{group:job.group}:{}),createdAt:now(),originalUsage:error.diagnostic?.usage||{},originalValidation};
+ const manifest={version:1,input:job.input,generation,imageGeneration:job.imageGeneration,repairGeneration:job.repairGeneration||generation,limit:Math.min(limit,5),pipeline:job.pipeline,figureGeneration:job.figureGeneration||generation,...(job.group?{group:job.group}:{}),createdAt:now(),originalUsage:error.diagnostic?.usage||{},originalValidation};
  if(await removed(store,key,manifest))return false;
  await store.create(key+'/format-repair-source.json',{output:error.output,validation:manifest.originalValidation});
  await store.create(key+'/format-repair-progress.json',(await store.get(key+'/progress.json'))?.value||{});
@@ -54,7 +54,7 @@ async function deliver(store,key,manifest,list,{now,dispatch}){
  const usage={...manifest.originalUsage};for(const field of ['input','output','thinking'])usage[field]=(usage[field]||0)+list.reduce((n,row)=>n+(row.result?.usage?.[field]||0),0);
  const result={...repaired,model:manifest.generation.model,provider:manifest.generation.provider,reasoningEffort:manifest.generation.reasoningEffort,usage,formatRepair:{attempts:active.attempt+1,model:manifest.repairGeneration.model,provider:manifest.repairGeneration.provider,reasoningEffort:manifest.repairGeneration.reasoningEffort}};
  if(manifest.pipeline===2&&result.sheet.questions.some(q=>q.figureRequest)){
-  const figures=require('./figure-pipeline.cjs');await figures.begin(store,key,{input:manifest.input,generation:manifest.generation,figureGeneration:manifest.figureGeneration,pipeline:2,group:manifest.group},result,{now,dispatch});return figures.snapshot(store,key,{now,dispatch});
+  const figures=require('./figure-pipeline.cjs');await figures.begin(store,key,{input:manifest.input,generation:manifest.generation,imageGeneration:manifest.imageGeneration,figureGeneration:manifest.figureGeneration,pipeline:2,group:manifest.group},result,{now,dispatch});return figures.snapshot(store,key,{now,dispatch});
  }
  const path=await store.get(key+'/result.json')?'/recovered.json':'/result.json';await store.create(key+path,{...result,status:'ready',finishedAt:now()});const p=(await store.get(key+'/progress.json'))?.value||{};await store.progress(key+'/progress.json',{...p,phase:'ready',heartbeatAt:now()});return (await store.get(key+path)).value;
 }
