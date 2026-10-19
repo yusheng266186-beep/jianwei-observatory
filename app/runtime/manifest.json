@@ -26,20 +26,20 @@
     "app/runtime/shared-OIY7F67X.js",
     "app/runtime/shared-XT7OAR7V.js"
   ],
-  "css": "assets/runtime-aaf03258ffed.css",
+  "css": "assets/runtime-27f4bccc6920.css",
   "landing": "assets/landing-8e0095cb7b55.css",
   "styles": [
     "assets/figure-library-20349b898c28.css",
-    "assets/model-workbench-9dd1d926c19a.css",
+    "assets/model-workbench-7263ce7c4a69.css",
     "styles/fields-a6e6da17cff4.css",
     "styles/reading-fonts-daadf771f13d.css",
     "styles/refinement-642e4c4ecaec.css",
-    "styles/visual-language-a6408f6e7eb1.css",
+    "styles/visual-language-3c0502e6eb8a.css",
     "styles/wheels-907315f6eddb.css"
   ],
   "standalone": {
     "figures": "runtime/figure-library-N3B22UHP.js",
-    "models": "runtime/model-workbench-CKB423W2.js"
+    "models": "runtime/model-workbench-4DYYBTJY.js"
   },
   "files": [
     "app/runtime/prepare-NOKZSWUW.js",
@@ -86,10 +86,6 @@
     "app/runtime/shared-RMTIRWQZ.js",
     "app/runtime/shared-XT7OAR7V.js",
     "app/runtime/figure-library-N3B22UHP.js",
-    "app/runtime/model-workbench-CKB423W2.js"
-  ],
-  "compatibility": [
-    "app/runtime/main-HFILWSHJ.js",
-    "app/runtime/shared-STE4CCD5.js"
+    "app/runtime/model-workbench-4DYYBTJY.js"
   ]
 }
