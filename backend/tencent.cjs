@@ -43,7 +43,7 @@ async function cloud(service,action,version,params,{region='ap-chengdu',auth=cre
  const data=JSON.parse(result.body).Response;if(data?.Error){const error=new Error(data.Error.Code);error.code=data.Error.Code;error.detail=data.Error.Message;throw error;}if(!data)throw new Error('CLOUD_BAD_RESPONSE');return data;
 }
 const encode=value=>encodeURIComponent(value).replace(/[!'()*]/g,c=>'%'+c.charCodeAt(0).toString(16).toUpperCase());
-async function cos(host,path,{method='GET',body='',headers={},auth=credentials()}={}){
+async function cos(host,path,{method='GET',body='',headers={},auth=credentials(),maxBytes=6*1024*1024}={}){
  if(!auth.SecretId||!auth.SecretKey)throw new Error('CLOUD_AUTH_REQUIRED');
  const time=Math.floor(Date.now()/1000)-60,keyTime=time+';'+(time+960),all={host,...headers,...(auth.Token?{'x-cos-security-token':auth.Token}:{})};
  const names=Object.keys(all).map(k=>k.toLowerCase()).sort(),normalized=Object.fromEntries(Object.entries(all).map(([k,v])=>[k.toLowerCase(),String(v)]));
@@ -52,6 +52,6 @@ async function cos(host,path,{method='GET',body='',headers={},auth=credentials()
  const httpString=method.toLowerCase()+'\n'+pathname+'\n'+queryString+'\n'+headerString+'\n',signKey=hmac(auth.SecretKey,keyTime,'sha1','hex');
  const signature=hmac(signKey,'sha1\n'+keyTime+'\n'+hash(httpString,'sha1')+'\n','sha1','hex');
  const authorization='q-sign-algorithm=sha1&q-ak='+auth.SecretId+'&q-sign-time='+keyTime+'&q-key-time='+keyTime+'&q-header-list='+names.join(';')+'&q-url-param-list='+queryNames.join(';')+'&q-signature='+signature;
- return request('https://'+host+path,{method,body,headers:{...all,Authorization:authorization},maxBytes:6*1024*1024});
+ return request('https://'+host+path,{method,body,headers:{...all,Authorization:authorization},maxBytes});
 }
 module.exports={request,cloud,cos,credentials,hash};

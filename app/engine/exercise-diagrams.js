@@ -5,7 +5,7 @@ const kinds=['plot','geometry','forces','circuit','apparatus','flow','bars','ill
 export const exerciseEquipment=['gas-bottle','round-flask','conical-flask','three-neck-flask','beaker'];
 // A single generated illustration is bounded here; the whole document keeps a
 // separate combined budget in exercise-contract.js.
-export const EXERCISE_IMAGE_MAX_CHARS=4000000;
+export const EXERCISE_IMAGE_MAX_CHARS=5200000;
 // Comparisons and chemical flow arrows are teaching text. The renderer escapes
 // every label; reject markup without treating "a -> b" or "x < 0" as HTML.
 const text=(s,n)=>typeof s==='string'&&s.length<=n&&!/<\s*\/?\s*[a-z!][^>]*>|javascript:/i.test(s);

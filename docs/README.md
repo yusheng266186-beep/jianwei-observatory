@@ -1,5 +1,9 @@
 # 文档总索引
 
+- [独立生图服务切换与猎豹权限实测（2026-10-19）](IMAGE-SERVICE-WORKBENCH-2026-10-19.md)
+
+- [ByteCat新分组生图接收与高清PNG导出（2026-10-19）](BYTECAT-IMAGE-RESPONSE-2026-10-19.md)
+
 - [成稿格式校检与模型局部修复（2026-10-19）](FORMAT-REPAIR-2026-10-19.md)
 
 - [猎豹Gemini多学科实测与稳定性修复（2026-10-19）](CHEETAH-CROSS-SUBJECT-2026-10-19.md)
