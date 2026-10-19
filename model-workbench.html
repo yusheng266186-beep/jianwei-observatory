@@ -1,16 +1,227 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="referrer" content="no-referrer"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; connect-src https://1459223409-4t5ckc9dro.ap-chengdu.tencentscf.com; img-src 'self' data:; base-uri 'self'; form-action 'self'"><title>模型工作台 · 荣县一中</title><link rel="stylesheet" href="./assets/model-workbench-9dd1d926c19a.css"><link rel="stylesheet" href="./styles/fields-a6e6da17cff4.css"><link rel="stylesheet" href="./styles/wheels-907315f6eddb.css"><link rel="stylesheet" href="./styles/refinement-642e4c4ecaec.css"><link rel="stylesheet" href="./styles/reading-fonts-daadf771f13d.css"><link rel="stylesheet" href="./styles/visual-language-a6408f6e7eb1.css"><link rel="icon" type="image/png" href="./assets/school-crest-192.png?v=entry-v1"><script type="module" src="./app/runtime/model-workbench-CKB423W2.js"></script></head>
-<body><div class="ambient" aria-hidden="true"></div><main>
-<header class="top"><a class="brand" href="./#library"><img class="brand-crest" src="assets/school-crest-192.png?v=entry-v1" width="40" height="40" alt="荣县第一中学校徽"><span>荣县第一中学<small>成绩研究与教学跟进</small></span></a><nav><a href="figure-library.html">图示参考 ↗</a><a href="./#library">返回研究台 ↗</a><button id="logout" hidden>退出验证</button></nav></header>
-<section class="intro"><div><p class="eyebrow">TEACHING / MODEL WORKBENCH</p><h1>模型工作台<span>让每次出题，选择合适的能力。</span></h1><p>统一配置出题、图示与成稿校检，管理思考强度与使用次数。</p></div><span class="workspace-label">教师专用</span></section>
-<section id="login" class="glass login"><div><span class="eyebrow">教师访问</span><h2>验证后管理出题模型</h2><p>使用现有认证器中的动态验证码。</p></div><form id="login-form"><label for="code">动态验证码</label><div class="code-line"><input id="code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" placeholder="6 位数字" required><button class="primary" type="submit">进入工作台 ↗</button></div></form></section>
-<p id="message" class="message" role="status" hidden></p>
-<div id="workspace" hidden>
-<section class="glass model-role-panel"><div class="model-role-switch" role="group" aria-label="模型职责"><button type="button" data-model-role="exercise" aria-pressed="true">出题模型<small>题干 · 答案 · 解析</small></button><button type="button" data-model-role="diagram" aria-pressed="false">图示模型<small>图型选择 · SVG · 配图要求</small></button><button type="button" data-model-role="repair" aria-pressed="false">校检模型<small>成稿格式 · 字段 · 公式</small></button></div><p id="pipeline-summary"></p><button type="button" id="diagram-inherit" class="quiet" hidden>沿用出题模型</button></section><section class="glass current"><div><span class="eyebrow"><i></i> 当前职责配置</span><h2 id="current-model">正在读取…</h2><p id="current-detail"></p></div><div class="current-side"><span id="current-version"></span><p>新任务使用此配置<br>已提交任务保持原配置</p></div></section>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; connect-src https://1459223409-4t5ckc9dro.ap-chengdu.tencentscf.com; img-src 'self' data:; base-uri 'self'; form-action 'self'">
+<title>模型工作台 · 荣县一中</title><link rel="stylesheet" href="./assets/model-workbench-7263ce7c4a69.css"><link rel="stylesheet" href="./styles/fields-a6e6da17cff4.css"><link rel="stylesheet" href="./styles/wheels-907315f6eddb.css"><link rel="stylesheet" href="./styles/refinement-642e4c4ecaec.css"><link rel="stylesheet" href="./styles/reading-fonts-daadf771f13d.css"><link rel="stylesheet" href="./styles/visual-language-3c0502e6eb8a.css"><link rel="icon" type="image/png" href="./assets/school-crest-192.png?v=entry-v1">
+<script type="module" src="./app/runtime/model-workbench-4DYYBTJY.js"></script>
+</head>
+<body class="workbench-page">
+<div class="ambient" aria-hidden="true"></div>
+<main>
+<header class="top">
+  <a class="brand" href="./#library">
+    <img class="brand-crest" src="assets/school-crest-192.png?v=entry-v1" width="40" height="40" alt="荣县第一中学校徽">
+    <span>荣县第一中学<small>成绩研究与教学跟进</small></span>
+  </a>
+  <nav aria-label="页面导航">
+    <a href="figure-library.html">图示参考 ↗</a>
+    <a href="./#library">返回研究台 ↗</a>
+    <button id="logout" hidden>退出验证</button>
+  </nav>
+</header>
 
-<section class="glass image-service-panel" aria-labelledby="image-service-title"><div><span class="eyebrow">IMAGE / 复杂插图</span><h2 id="image-service-title">生图服务</h2><p>GPT Image 系列 · 常见模型优先使用SVG，复杂插图按已选服务生成。</p></div><div class="image-service-controls"><div id="image-services" class="image-service-options" role="group" aria-label="生图服务"></div><button type="button" id="image-apply" class="primary">应用生图服务 ↗</button><p id="image-service-message" role="status" aria-live="polite"></p></div></section>
-<div class="work-grid"><aside class="glass providers"><header><span class="eyebrow">01 / 选择服务</span><h2>服务来源</h2><p id="catalog-count"></p></header><div id="providers" class="provider-list" aria-label="服务来源"></div></aside>
-<section class="glass chooser"><header class="chooser-head"><div><span class="eyebrow">02 / 选择模型</span><h2 id="provider-title"></h2></div><span id="model-count" class="pill"></span></header><label class="search"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="搜索模型名称" aria-label="搜索模型"></label><div id="models" class="model-list" aria-label="可选模型"></div><p id="empty" hidden>没有匹配的模型，试试其他名称。</p></section>
-<aside class="settings"><section class="glass selection"><span class="eyebrow">03 / 确认配置</span><h2 id="selected-model"></h2><p id="selected-provider"></p><div id="model-performance" class="model-speed-reference" hidden></div><div class="divider"></div><h3>思考强度</h3><div id="efforts" class="efforts" aria-label="思考强度"></div><p id="model-note" class="note"></p><div id="repair-policy" class="repair-policy" hidden><div id="repair-wheel"></div><div><b id="repair-mode"></b><p>校验未通过时局部修复，再按同一规则复核。0次关闭自动修复。</p><button id="repair-inherit" type="button" class="quiet">沿用出题模型</button></div></div><div class="selection-actions"><button id="probe">测试连接</button><button id="apply" class="primary">应用于新任务 ↗</button></div><p id="probe-state" class="probe-state" role="status"></p><small>出题与图示分开处理，图题核对后进入审题。常见模型由SVG绘制，允许复杂插图时才调用 GPT Image 2。</small></section><section class="glass usage-panel" aria-labelledby="usage-title"><header><h2 id="usage-title">每日生成次数</h2><button id="usage-refresh" class="quiet" type="button" aria-label="刷新今日用量">↻</button></header><div class="usage-totals"><span>今日已用 <strong id="usage-used">—</strong></span><span>剩余 <strong id="usage-remaining">—</strong></span></div><form id="usage-form"><div id="usage-wheel"></div><div class="usage-controls"><div class="usage-presets" role="group" aria-label="常用次数"><button type="button" data-usage-limit="30">30</button><button type="button" data-usage-limit="100">100</button><button type="button" data-usage-limit="300">300</button><button type="button" data-usage-limit="0">不限</button></div><button type="submit" id="usage-save" class="primary">保存上限</button><button type="button" id="usage-reset" class="quiet">清零今日计数</button></div></form><p class="usage-guide">滑动选择 · 方向键微调</p><p id="usage-message" role="status" aria-live="polite"></p><details class="usage-help"><summary>计数说明</summary><p>北京时间每日零点重新计数；试题与手动重绘按提交计数；同一试题内的图示规划、绘制与核对不重复计数，失败任务计入，同一任务重查不重复计数。清零保留全部试题和任务。服务商自身额度仍适用。</p></details></section><section class="glass history"><header><h3>最近切换</h3><button id="refresh" class="quiet">刷新</button></header><div id="history"></div></section></aside></div>
-<section class="glass diagnostics-panel" aria-labelledby="diagnostic-title"><header><div><span class="eyebrow">RUN / DIAGNOSTICS</span><h2 id="diagnostic-title">运行观察</h2><p>用真实记录判断生成与页面速度。</p></div><div class="diagnostic-actions"><div role="group" aria-label="统计天数"><button data-diagnostic-days="1">今天</button><button data-diagnostic-days="7" aria-pressed="true">7天</button><button data-diagnostic-days="30">30天</button></div><button id="diagnostic-refresh" type="button">刷新记录 ↻</button><button id="diagnostic-import" class="quiet" type="button">补入本机历史</button></div></header><p id="diagnostic-message" role="status" aria-live="polite"></p><div id="diagnostic-content"></div></section>
-</div><footer>荣县一中 · 教学研究工作台<span>个人专用 / 动态验证码访问</span></footer></main></body></html>
+<section class="intro workbench-intro">
+  <div class="intro-copy">
+    <p class="eyebrow">TEACHING / MODEL WORKBENCH</p>
+    <h1>模型工作台<span>让每次出题，选择合适的能力。</span></h1>
+    <p>统一配置出题、图示与成稿校检，管理思考强度与使用次数。</p>
+  </div>
+  <span class="workspace-label">教师专用</span>
+</section>
+
+<section id="login" class="glass login">
+  <div class="login-copy">
+    <span class="eyebrow">教师访问</span>
+    <h2>验证后管理出题模型</h2>
+    <p>使用现有认证器中的动态验证码。</p>
+  </div>
+  <form id="login-form" class="login-form">
+    <label for="code">动态验证码</label>
+    <div class="code-line">
+      <input id="code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" placeholder="6 位数字" required>
+      <button class="primary" type="submit">进入工作台 ↗</button>
+    </div>
+  </form>
+</section>
+<p id="message" class="message" role="status" hidden></p>
+
+<div id="workspace" hidden>
+  <section class="glass model-role-panel panel workbench-brief" aria-labelledby="brief-title">
+    <header class="panel-head brief-head">
+      <div>
+        <span class="eyebrow">ROLES / 职责</span>
+        <h2 id="brief-title">选择职责与模型</h2>
+      </div>
+      <button type="button" id="diagram-inherit" class="quiet" hidden>沿用出题模型</button>
+    </header>
+    <div class="model-role-switch" role="group" aria-label="模型职责">
+      <button type="button" data-model-role="exercise" aria-pressed="true">出题模型<small>习题与解析</small></button>
+      <button type="button" data-model-role="diagram" aria-pressed="false">图示模型<small>图型与配图</small></button>
+      <button type="button" data-model-role="repair" aria-pressed="false">校检模型<small>格式与完整性</small></button>
+    </div>
+    <div class="current">
+      <div class="current-main">
+        <span class="eyebrow"><i aria-hidden="true"></i>当前职责配置</span>
+        <div class="current-line">
+          <h3 id="current-model">正在读取…</h3>
+          <span id="current-version"></span>
+        </div>
+        <p id="current-detail"></p>
+      </div>
+      <div class="current-side">
+        <p>仅用于新任务；已提交任务保持原配置。</p>
+      </div>
+    </div>
+    <div class="pipeline-row">
+      <p id="pipeline-summary"></p>
+    </div>
+  </section>
+
+  <div class="work-grid">
+    <aside class="glass providers panel" aria-labelledby="providers-title">
+      <header class="panel-head">
+        <div>
+          <span class="eyebrow">01 / 选择服务</span>
+          <h2 id="providers-title">服务来源</h2>
+          <p id="catalog-count"></p>
+        </div>
+      </header>
+      <div id="providers" class="provider-list" aria-label="服务来源"></div>
+    </aside>
+
+    <section class="glass chooser panel" aria-labelledby="provider-title">
+      <header class="chooser-head panel-head">
+        <div>
+          <span class="eyebrow">02 / 选择模型</span>
+          <h2 id="provider-title"></h2>
+        </div>
+        <span id="model-count" class="pill"></span>
+      </header>
+      <label class="search">
+        <span aria-hidden="true">⌕</span>
+        <input id="search" type="search" placeholder="搜索模型名称" aria-label="搜索模型">
+      </label>
+      <div id="models" class="model-list" aria-label="可选模型"></div>
+      <p id="empty" hidden>没有匹配的模型，试试其他名称。</p>
+    </section>
+
+    <aside class="settings">
+      <section class="glass selection panel" aria-labelledby="selected-model">
+        <div class="selection-summary">
+          <span class="eyebrow">03 / 确认配置</span>
+          <h2 id="selected-model"></h2>
+          <p id="selected-provider"></p>
+          <div id="model-performance" class="model-speed-reference" hidden></div>
+        </div>
+        <div class="selection-controls">
+          <div class="effort-block">
+            <h3>思考强度</h3>
+            <div id="efforts" class="efforts" aria-label="思考强度"></div>
+            <p id="model-note" class="note"></p>
+          </div>
+          <div id="repair-policy" class="repair-policy" hidden>
+            <div id="repair-wheel"></div>
+            <div>
+              <b id="repair-mode"></b>
+              <p>校验未通过时局部修复，再按同一规则复核。0次关闭自动修复。</p>
+              <button id="repair-inherit" type="button" class="quiet">沿用出题模型</button>
+            </div>
+          </div>
+          <div class="selection-actions">
+            <button id="probe" type="button">测试连接</button>
+            <button id="apply" class="primary" type="button">应用于新任务 ↗</button>
+          </div>
+          <p id="probe-state" class="probe-state" role="status"></p>
+          <small>出题与图示分开处理，图题核对后进入审题。常见图示使用 SVG；允许复杂插图时，才调用下方选定的生图服务。</small>
+        </div>
+      </section>
+    </aside>
+  </div>
+
+  <div class="workbench-support-grid">
+    <section class="glass image-service-panel panel" aria-labelledby="image-service-title">
+      <header class="panel-head">
+        <div>
+          <span class="eyebrow">IMAGE / 复杂插图</span>
+          <h2 id="image-service-title">生图服务</h2>
+          <p>GPT Image 系列 · 常见模型优先使用SVG，复杂插图按已选服务生成。</p>
+        </div>
+      </header>
+      <div class="image-service-controls">
+        <div id="image-services" class="image-service-options" role="group" aria-label="生图服务"></div>
+        <button type="button" id="image-apply" class="primary">应用生图服务 ↗</button>
+        <p id="image-service-message" role="status" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <section class="glass usage-panel panel" aria-labelledby="usage-title">
+      <header class="panel-head">
+        <h2 id="usage-title">每日生成次数</h2>
+        <button id="usage-refresh" class="quiet" type="button" aria-label="刷新今日用量">↻</button>
+      </header>
+      <div class="usage-totals">
+        <span>今日已用 <strong id="usage-used">—</strong></span>
+        <span>剩余 <strong id="usage-remaining">—</strong></span>
+      </div>
+      <form id="usage-form">
+        <div id="usage-wheel"></div>
+        <div class="usage-controls">
+          <div class="usage-presets" role="group" aria-label="常用次数">
+            <button type="button" data-usage-limit="30">30</button>
+            <button type="button" data-usage-limit="100">100</button>
+            <button type="button" data-usage-limit="300">300</button>
+            <button type="button" data-usage-limit="0">不限</button>
+          </div>
+          <button type="submit" id="usage-save" class="primary">保存上限</button>
+          <button type="button" id="usage-reset" class="quiet">清零今日计数</button>
+        </div>
+      </form>
+      <p class="usage-guide">滑动选择 · 方向键微调</p>
+      <p id="usage-message" role="status" aria-live="polite"></p>
+      <details class="usage-help">
+        <summary>计数说明</summary>
+        <p>北京时间每日零点重新计数；试题与手动重绘按提交计数；同一试题内的图示规划、绘制与核对不重复计数，失败任务计入，同一任务重查不重复计数。清零保留全部试题和任务。服务商自身额度仍适用。</p>
+      </details>
+    </section>
+  </div>
+
+  <section class="glass history panel" aria-labelledby="history-title">
+    <header class="history-head">
+      <div>
+        <span class="eyebrow">HISTORY / 最近变更</span>
+        <h2 id="history-title">最近切换</h2>
+      </div>
+      <button id="refresh" class="quiet" type="button">刷新</button>
+    </header>
+    <div id="history"></div>
+  </section>
+
+  <section class="glass diagnostics-panel panel" aria-labelledby="diagnostic-title">
+    <header>
+      <div>
+        <span class="eyebrow">RUN / DIAGNOSTICS</span>
+        <h2 id="diagnostic-title">运行观察</h2>
+        <p>用真实记录判断生成与页面速度。</p>
+      </div>
+      <div class="diagnostic-actions">
+        <div role="group" aria-label="统计天数">
+          <button data-diagnostic-days="1">今天</button>
+          <button data-diagnostic-days="7" aria-pressed="true">7天</button>
+          <button data-diagnostic-days="30">30天</button>
+        </div>
+        <button id="diagnostic-refresh" type="button">刷新记录 ↻</button>
+        <button id="diagnostic-import" class="quiet" type="button">补入本机历史</button>
+      </div>
+    </header>
+    <p id="diagnostic-message" role="status" aria-live="polite"></p>
+    <div id="diagnostic-content"></div>
+  </section>
+</div>
+
+<footer>荣县一中 · 教学研究工作台<span>个人专用 / 动态验证码访问</span></footer>
+</main>
+</body>
+</html>
