@@ -1,5 +1,7 @@
 # 荣县第一中学高三成绩分析
 
+模型工作台新增猎豹 GPT‑6.1 Sol、独立 DeepSeek V4.1 Flash 线路；已核对的猎豹与 ByteCat 型号显示 TPS 参考，可展开查看分组、日期和来源。详见[模型目录与速度参考](docs/MODEL-SPEED-REFERENCE-2026-10-19.md)。
+
 猎豹Gemini多科目实测修复原生流式接口、图文恢复、表格识别、失败诊断及短题作答区分页；技术完成与内容审阅分别记录，生物复杂遗传题未判为内容通过。见[本轮实测与修复](docs/CHEETAH-CROSS-SUBJECT-2026-10-19.md)。
 
 模型工作台新增独立的“猎豹词元工厂 · Gemini”线路，可选择Gemini 3.8 Flash用于出题或图示。与原ByteCat线路分别配置、分别测试，不自动切换；见[接入说明](docs/CHEETAH-GEMINI-2026-10-19.md)。

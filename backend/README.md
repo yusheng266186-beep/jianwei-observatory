@@ -4,6 +4,8 @@
 
 猎豹多科实测补丁（2026-10-19）：新任务使用Gemini原生流式JSON接口；旧兼容任务按精确白名单保留。仅未建立TLS且未发送HTTP的连接错误可共用截止时间安全重连一次，已发送请求不自动重发。图题核对发现题文错误时恢复失败题组的题文，保留其他组。新稿增加表格列数及未完成解析检查，漏选项字段有明确诊断，不补写模型原文。API/Worker代码包现为46文件，环境、认证、额度和时限不变。详见[实测与边界](../docs/CHEETAH-CROSS-SUBJECT-2026-10-19.md)。
 
+模型目录与速度参考补丁（2026-10-19）：`wefucke-gpt` 增加 `gpt-6.1-sol`，新增 `cheetah-deepseek`／`deepseek-v4.1-flash`，凭据为独立的 `CHEETAH_DEEPSEEK_API_KEY`。`model-performance.json` 仅保存公开模型广场快照，随认证后的目录返回，不进入任务冻结参数或用作生成时限。详见[目录与验证说明](../docs/MODEL-SPEED-REFERENCE-2026-10-19.md)。
+
 ## 资源与边界
 
 | 资源 | 当前配置 |
