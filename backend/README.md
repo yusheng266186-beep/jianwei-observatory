@@ -1,5 +1,7 @@
 # 个性化辅导后端
 
+猎豹 GPT‑6 Astra（2026-10-20）加入既有 `wefucke-gpt` 目录，沿用 `WEFUCKE_GPT_API_KEY` 与 `/v1/chat/completions`，三档发送 `low / high / max`。新增 TPS 快照按来源隔离，当前模型选择不变，见[接入验证](../docs/CHEETAH-ASTRA-2026-10-20.md)。
+
 生成恢复与校检保真已加固：多轮固定最初原稿，成稿保存失败与原图下载可独立恢复，支持实际位图核对并保留教师审题。见[本轮维护说明](../docs/GENERATION-RECOVERY-2026-10-19.md)。
 
 
