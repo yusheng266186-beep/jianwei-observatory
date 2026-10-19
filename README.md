@@ -3,7 +3,7 @@
 生成恢复与校检保真已加固：多轮固定最初原稿，成稿保存失败与原图下载可独立恢复，支持实际位图核对并保留教师审题。见[本轮维护说明](docs/GENERATION-RECOVERY-2026-10-19.md)。
 
 
-生图服务独立切换；ByteCat保持默认。新增猎豹 Image 2.5 原生协议适配，网页画布已实测成功，云端启用与验证边界见[Image 2.5 复核](docs/CHEETAH-IMAGE25-2026-10-19.md)。
+生图服务独立切换；ByteCat保持默认。猎豹 [Image 2 原生接口](docs/CHEETAH-IMAGE2-2026-10-20.md)与[Image 2.5](docs/CHEETAH-IMAGE25-2026-10-19.md)分别配置，云端实测与验证边界见对应说明。
 
 ByteCat新分组生图已兼容图片链接响应，并同步高清PNG的接收、文档与存储容量。实测范围和限制见[生图接收维护记录](docs/BYTECAT-IMAGE-RESPONSE-2026-10-19.md)。
 

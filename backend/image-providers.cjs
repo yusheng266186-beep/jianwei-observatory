@@ -2,8 +2,9 @@
 // Bitmap services stay separate from text/SVG model catalogs and credentials.
 const routes={
  'bytecat-image':{label:'ByteCat · 生图',base:'https://www.bytecatcode.org/v1',protocol:'chat-image',credentialRef:'IMAGE_API_KEY'},
+ 'cheetah-image2-native':{label:'猎豹词元工厂 · Image 2',base:'https://www.wefucke.top/v1',protocol:'native-image',credentialRef:'CHEETAH_IMAGE2_API_KEY',model:'gpt-image-2'},
  'cheetah-image25':{label:'猎豹词元工厂 · Image 2.5',base:'https://www.wefucke.top/v1',protocol:'native-image',credentialRef:'CHEETAH_IMAGE25_API_KEY',model:'gpt-image-2.5'},
- 'cheetah-image':{label:'猎豹词元工厂 · 生图',base:'https://www.wefucke.top/v1',protocol:'chat-image',credentialRef:'CHEETAH_IMAGE_API_KEY'}
+ 'cheetah-image':{label:'猎豹词元工厂 · Image 2（旧接口）',base:'https://www.wefucke.top/v1',protocol:'chat-image',credentialRef:'CHEETAH_IMAGE_API_KEY'}
 };
 const defaultSelection={provider:'bytecat-image',model:'gpt-image-2'};
 function configured(provider,env=process.env){let declared=[];try{declared=JSON.parse(env.TRAINING_CONFIGURED_IMAGE_PROVIDERS||'[]');}catch{}return !!env[routes[provider]?.credentialRef]||declared.includes(provider);}

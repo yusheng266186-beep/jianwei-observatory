@@ -14,8 +14,8 @@ const grokFile=path.join(dir,'bytecat-grok.key');if(fs.existsSync(grokFile))rela
 const cheetahFile=path.join(dir,'cheetah-gemini.key');if(fs.existsSync(cheetahFile))relayEnv.CHEETAH_GEMINI_API_KEY=fs.readFileSync(cheetahFile,'utf8').trim();
 const deepseekFile=path.join(dir,'cheetah-deepseek.key');if(fs.existsSync(deepseekFile))relayEnv.CHEETAH_DEEPSEEK_API_KEY=fs.readFileSync(deepseekFile,'utf8').trim();
 const modelKeys=Object.fromEntries(Object.values(require('../backend/providers.json')).map(p=>{if(!relayEnv[p.key])throw new Error('RELAY_CREDENTIAL_MISSING');return [p.key,relayEnv[p.key]];}));
-const imageConfigFile=path.join(dir,'image-services.json'),enabledImages=fs.existsSync(imageConfigFile)?JSON.parse(fs.readFileSync(imageConfigFile)):["bytecat-image"];if(!Array.isArray(enabledImages)||!enabledImages.length||enabledImages.some(id=>!['bytecat-image','cheetah-image'].includes(id)))throw Error('IMAGE_SERVICE_CONFIGURATION_INVALID');
-const imageKeys=Object.fromEntries(enabledImages.map(id=>[id==='cheetah-image'?'CHEETAH_IMAGE_API_KEY':'IMAGE_API_KEY',fs.readFileSync(path.join(dir,id==='cheetah-image'?'cheetah-image.key':'image.key'),'utf8').trim()]));
+const imageConfigFile=path.join(dir,'image-services.json'),enabledImages=fs.existsSync(imageConfigFile)?JSON.parse(fs.readFileSync(imageConfigFile)):["bytecat-image"],imageServices=require('./training-image-config.cjs').imageServiceConfig(enabledImages);
+const imageKeys=Object.fromEntries(imageServices.map(service=>[service.credentialRef,fs.readFileSync(path.join(dir,service.file),'utf8').trim()]));
 const configuredProviders=JSON.stringify([...Object.keys(require('../backend/providers.json')),'kimi-code','gemini']);
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const call=(service,action,params)=>{console.log(JSON.stringify({cloudAction:action}));return cloud(service,action,service==='cam'?'2019-01-16':'2018-04-16',params,{auth,region});};
