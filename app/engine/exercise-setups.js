@@ -8,7 +8,7 @@ export function exerciseSetupContent(request){
  if(!Number.isInteger(content.count)||content.count<3||content.count>12||!Number.isInteger(content.minutes)||content.minutes<5||content.minutes>90||!difficultyProfile(content.difficulty))throw new Error('请确认题量、时长与难度后保存');
  for(const field of ['targets','questionTypes'])if(content[field]!==undefined&&(!Array.isArray(content[field])||content[field].some(v=>typeof v!=='string')||new Set(content[field]).size!==content[field].length))throw new Error('草稿选项无效');
  if(content.targets?.some(t=>!t.trim()||t.length>200)||content.questionTypes?.some(t=>!exerciseQuestionTypes(content.subject).includes(t)))throw new Error('请使用当前学科的训练选项');
- if(content.visuals!==undefined&&!['none','vector','hybrid'].includes(content.visuals)||content.template!==undefined&&!['targeted','variation','retest'].includes(content.template))throw new Error('草稿设置无效');
+ if(content.visuals!==undefined&&!['auto','none','vector','hybrid'].includes(content.visuals)||content.template!==undefined&&!['targeted','variation','retest'].includes(content.template))throw new Error('草稿设置无效');
  return content;
 }
 export function setupMetadata({tags=[],purpose='课后巩固'}={}){if(typeof tags==='string')tags=tags.split(/[,，;；、]/).map(s=>s.trim()).filter(Boolean);if(!Array.isArray(tags)||tags.length>6||tags.some(t=>typeof t!=='string'||!t.trim()||t.length>16))throw new Error('模板标签最多6个，每个不超过16字');if(!['课后巩固','课堂练习','考前复习','错题复测','分层辅导'].includes(purpose))throw new Error('请选择模板用途');return {tags:[...new Set(tags)],purpose};}

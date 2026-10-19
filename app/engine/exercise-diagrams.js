@@ -35,7 +35,7 @@ export function validateExerciseDiagram(d){
    else if(['liquidLevel','inlet','outlet','additionFunnel'].some(k=>Object.hasOwn(n,k)))throw new Error('导管参数须对应具体仪器。');
   }
   for(const n of d.nodes){if(n.inlet==='funnel'&&(n.equipment!=='beaker'||n.outlet!=='none'||n.liquidLevel<20))throw new Error('倒置漏斗须对应盛液烧杯，末端吸收装置不另接出气管。');if(n.additionFunnel!==undefined&&typeof n.additionFunnel!=='boolean'||n.additionFunnel&&(!['round-flask','conical-flask'].includes(n.equipment)||n.inlet!=='none'))throw new Error('分液漏斗须接入发生烧瓶，不能与同一进气口重复占用。');}
-  const detailed=d.nodes.some(n=>n.equipment);if(detailed&&d.nodes.some(n=>!n.equipment))throw new Error('同一套实验装置须完整指定各个仪器。');
+  const detailed=d.nodes.some(n=>n.equipment);if(detailed&&d.nodes.some(n=>!n.equipment))throw new Error('同一套实验装置须完整指定各个仪器；nodes只能放完整仪器，端口字母或水面标签不能作为point节点。需要独立位置标签时应使用drawing整体绘制。');
   if(detailed)for(const [i,a] of d.nodes.entries())for(const b of d.nodes.slice(i+1))if(Math.abs(a.x-b.x)<18&&Math.abs(a.y-b.y)<43)throw new Error('实验仪器之间间距不足。');
   for(const e of d.edges)if(typeof e?.label!=='string')throw new Error('每条连线必须包含from、to、label、type；label没有文字时也必须写成空字符串。');
   for(const e of d.edges)if(!keys(e,['from','to','label','type'])||!ids.has(e.from)||!ids.has(e.to)||e.from===e.to||!text(e.label,24)||!['line','arrow','dashed','resistor','battery','lamp','switch','tube'].includes(e.type))throw new Error('图示连线无效。');

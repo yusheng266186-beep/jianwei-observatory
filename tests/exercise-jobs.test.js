@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {jobState,jobStateLabel,jobTiming,jobConnection,mergeJobSnapshot,filterExerciseJobs} from '../app/engine/exercise-jobs.js';
+import {jobState,jobStateLabel,jobTiming,jobFigureCount,jobConnection,mergeJobSnapshot,filterExerciseJobs} from '../app/engine/exercise-jobs.js';
 const record=()=>({id:'one',status:'queued',createdAt:100000,request:{subject:'数学',count:6,focus:'函数'}});
 test('试题中心按真实任务状态分组、检索，进行中排在前面',()=>{const queued=record(),ready={...record(),id:'two',status:'ready',sheet:{title:'函数专项'},reviewedAt:'yes',createdAt:200000,student:{name:'甲同学',classNo:4}},failed={...record(),id:'three',status:'failed'};assert.equal(jobState(queued),'pending');assert.equal(jobStateLabel(queued),'后台排队中');assert.equal(jobState(ready),'reviewed');assert.deepEqual(filterExerciseJobs([ready,failed,queued]).map(r=>r.id),['one','two','three']);assert.deepEqual(filterExerciseJobs([ready,queued],{status:'done',query:'4班'}).map(r=>r.id),['two']);assert.equal(filterExerciseJobs([ready],{query:'不存在'}).length,0);assert.equal(jobState({...ready,imageJobs:{1:{status:'running'}}}),'pending');});
 test('预计时间使用范围和实际时间戳，不以估算改变后台状态',()=>{const r=record();const value=jobTiming(r,[],220000);assert.equal(value.elapsed,120);assert(value.low<value.high);assert.match(value.label,/通常约.*分钟/);assert.equal(r.status,'queued');assert.equal(jobTiming(r,[],1000000).overdue,true);assert.match(jobTiming(r,[],1000000).label,/已等待/);const samples=[40,50,60].map(t=>({...record(),status:'ready',startedAt:1000,finishedAt:1000+t*1000}));assert.equal(jobTiming(r,samples,220000).high,80);r.startedAt=50000;r.serverTime=90000;r.lastCheckedAt=200000;assert.equal(jobTiming(r,[],210000).elapsed,50);});
@@ -14,3 +14,11 @@ test('K3 max任务立即显示对应估时，不混用旧模型历史或将估�
 test('切换服务、模型或强度后独立估时，不混用其他中转与模型的历史速度',()=>{const r={...record(),model:'gpt-6-sol',provider:'wefucke-gpt',reasoningEffort:'max'},samples=[40,50,60].map(seconds=>({...r,status:'ready',provider:'bytecat-gpt',startedAt:1000,finishedAt:1000+seconds*1000}));assert(jobTiming(r,samples).high>300);assert.equal(jobTiming(r,samples.map(s=>({...s,provider:r.provider}))).high,80);assert(jobTiming({...r,reasoningEffort:'low'},samples.map(s=>({...s,provider:r.provider}))).high>300);});
 
 test('分离出图把图示数量与纠错耗时计入估时，不沿用纯文本的历史速度',()=>{const base=record(),withFigure={...record(),request:{...record().request,visuals:'vector'},progress:{figureTotal:2,figureStage:{attempt:0}}},samples=[40,50,60].map(t=>({...record(),status:'ready',startedAt:1000,finishedAt:1000+t*1000}));const plain=jobTiming(base,samples),figure=jobTiming(withFigure,samples);assert(figure.high>plain.high+400);assert(jobTiming({...withFigure,progress:{...withFigure.progress,figureStage:{attempt:1}}},samples).high>figure.high);assert.equal(withFigure.status,'queued');});
+
+test('默认自动配图不预先添加生图等待时间，出现真实委托后才计入，零图历史与图示历史分开',()=>{
+ const auto={...record(),request:{...record().request,visuals:'auto'}},plain={...auto,request:{...auto.request,visuals:'none'}};
+ assert.equal(jobFigureCount(auto),0);assert.equal(jobTiming(auto).high,jobTiming(plain).high);
+ const drawing={...auto,progress:{draft:{questions:[{figureRequest:{caption:'必要结构'}}]}}};assert.equal(jobFigureCount(drawing),1);assert(jobTiming(drawing).high>jobTiming(auto).high);
+ const samples=[40,50,60].map(t=>({...auto,status:'ready',startedAt:1000,finishedAt:1000+t*1000,sheet:{questions:[{stem:'纯文字'}]}}));assert.equal(jobTiming(auto,samples).high,80);assert(jobTiming(drawing,samples).high>80);
+ assert.equal(jobFigureCount({...auto,status:'ready',sheet:{questions:[{diagram:{kind:'plot'}}]}}),1);
+});

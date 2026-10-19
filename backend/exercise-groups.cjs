@@ -6,7 +6,7 @@ function grouped(input){const count=Math.floor(input.count/3);return input.count
 function partId(parent,index,attempt){const h=crypto.createHash('sha256').update(parent+'|'+index+'|'+attempt).digest('hex').slice(0,32);return h.slice(0,8)+'-'+h.slice(8,12)+'-4'+h.slice(13,16)+'-a'+h.slice(17,20)+'-'+h.slice(20);}
 function plan(input){
  const count=Math.floor(input.count/3),base=Math.floor(input.count/count),extra=input.count%count,parts=[];let offset=0,minutes=0;
- for(let i=0;i<count;i++){const size=base+(i<extra?1:0),end=offset+size,duration=i===count-1?input.minutes-minutes:Math.round(input.minutes*end/input.count)-minutes;
+ for(let i=0;i<count;i++){const size=base+(i<extra?1:0),end=offset+size,remaining=count-i-1,duration=remaining?Math.max(5,Math.min(input.minutes-minutes-remaining*5,Math.round(input.minutes*end/input.count)-minutes)):input.minutes-minutes;
   const slots=Array.from({length:size},(_,j)=>{const n=offset+j;return {target:input.targets?.[Math.floor(n*(input.targets?.length||0)/input.count)],type:input.questionTypes?.[Math.floor(n*(input.questionTypes?.length||0)/input.count)]};}),targets=[...new Set(slots.map(s=>s.target).filter(Boolean))],types=[...new Set(slots.map(s=>s.type).filter(Boolean))];
   parts.push({index:i,offset,input:{...structuredClone(input),count:size,minutes:duration,...(input.targets?{targets}:{}),...(input.questionTypes?{questionTypes:types}:{}),...(input.visuals==='hybrid'&&i>0?{visuals:'vector'}:{})}});offset=end;minutes+=duration;
  }return parts;
@@ -14,8 +14,17 @@ function plan(input){
 async function latestAttempt(store,key,index){let low=0,high=1;const first=await store.get(ref(key,index,0));if(!first)return null;while(await store.get(ref(key,index,high))){low=high;high=high*2+1;}while(high-low>1){const mid=Math.floor((low+high)/2);if(await store.get(ref(key,index,mid)))low=mid;else high=mid;}const r=low?await store.get(ref(key,index,low)):first;return {...r.value,attempt:low};}
 async function ensurePart(store,key,manifest,index,attempt,now=Date.now,dispatch=async()=>{}){
  if(await store.get(key+'/removed.json'))return;const part=manifest.parts[index],parent=key.split('/').at(-1),id=partId(parent,index,attempt),child=key.slice(0,key.lastIndexOf('/')+1)+id;
- const entry={id,createdAt:now()};await store.create(ref(key,index,attempt),entry);const saved=(await store.get(ref(key,index,attempt))).value;
- if(await store.create(child+'/meta.json',{id,type:'exercise-part',input:part.input,generation:manifest.generation,imageGeneration:manifest.imageGeneration,repairGeneration:manifest.repairGeneration||manifest.generation,repairAttempts:manifest.repairAttempts??1,...(manifest.pipeline?{pipeline:manifest.pipeline,figureGeneration:manifest.figureGeneration}:{}),group:{parentId:parent,index,attempt},status:'queued',createdAt:saved.createdAt,deadline:saved.createdAt+600000}))await dispatch(child);return child;
+ // Auto keeps the raster allowance available until a completed group actually
+ // needs it. Freeze the effective policy per attempt, as with its model route.
+ let visuals=part.input.visuals;
+ if(visuals==='auto')for(const previous of manifest.parts.slice(0,index)){
+  const prior=await latestAttempt(store,key,previous.index);if(!prior)continue;
+  const priorKey=key.slice(0,key.lastIndexOf('/')+1)+prior.id,result=await store.get(priorKey+'/recovered.json')||await store.get(priorKey+'/result.json');
+  if(result?.value.status==='ready'&&result.value.sheet?.questions.some(q=>q.diagram?.kind==='illustration')){visuals='vector';break;}
+ }
+ const entry={id,createdAt:now(),...(part.input.visuals==='auto'?{visuals}:{})};await store.create(ref(key,index,attempt),entry);const saved=(await store.get(ref(key,index,attempt))).value;
+ const effectiveInput=saved.visuals?{...part.input,visuals:saved.visuals}:part.input;
+ if(await store.create(child+'/meta.json',{id,type:'exercise-part',input:effectiveInput,generation:manifest.generation,imageGeneration:manifest.imageGeneration,repairGeneration:manifest.repairGeneration||manifest.generation,repairAttempts:manifest.repairAttempts??1,...(manifest.pipeline?{pipeline:manifest.pipeline,figureGeneration:manifest.figureGeneration}:{}),group:{parentId:parent,index,attempt},status:'queued',createdAt:saved.createdAt,deadline:saved.createdAt+600000}))await dispatch(child);return child;
 }
 async function begin(store,key,job,{now=Date.now,dispatch}={}){
  const startedAt=now();await store.create(key+'/run.json',{startedAt,deadlineAt:startedAt+7200000,grouped:true});await store.create(key+'/groups.json',{version:1,parts:plan(job.input),input:job.input,generation:job.generation,imageGeneration:job.imageGeneration,repairGeneration:job.repairGeneration||job.generation,repairAttempts:job.repairAttempts??1,...(job.pipeline?{pipeline:job.pipeline,figureGeneration:job.figureGeneration}:{}),createdAt:startedAt});const manifest=(await store.get(key+'/groups.json')).value;

@@ -27,8 +27,14 @@ export function mergeJobSnapshot(record,data,at=Date.now()){
  if(!data.error)delete record.failure;
  return old!==snapshot();
 }
+export function jobFigureCount(record){
+ if(Number.isFinite(record.progress?.figureTotal))return record.progress.figureTotal;
+ if(record.sheet?.questions)return record.sheet.questions.filter(q=>q.diagram||q.figureRequest).length;
+ const actual=record.progress?.draft?.questions?.filter(q=>q.diagram||q.figureRequest).length||0;
+ return actual||(record.request?.visuals&& !['auto','none'].includes(record.request.visuals)?Math.ceil((Number(record.request.count)||6)/3):0);
+}
 export function jobTiming(record,history=[],at=Date.now()){
- const image=pendingImages(record)&&!pendingJob(record),count=Number(record.request?.count)||6,gemini=!record.model||record.provider==='gemini'||record.model==='gemini-3.8-flash',figures=record.progress?.figureTotal??(record.request?.visuals&&record.request.visuals!=='none'?Math.ceil(count/3):0),ceiling=figures?7200:gemini?420:840,sameModel=r=>(r.model||'gemini-3.8-flash')===(record.model||'gemini-3.8-flash')&&(r.provider||'gemini')===(record.provider||'gemini')&&(r.reasoningEffort||'max')===(record.reasoningEffort||'max')&&!!(r.progress?.figureTotal||r.request?.visuals&&r.request.visuals!=='none')===!!figures;
+ const image=pendingImages(record)&&!pendingJob(record),count=Number(record.request?.count)||6,gemini=!record.model||record.provider==='gemini'||record.model==='gemini-3.8-flash',figures=jobFigureCount(record),ceiling=figures?7200:gemini?420:840,sameModel=r=>(r.model||'gemini-3.8-flash')===(record.model||'gemini-3.8-flash')&&(r.provider||'gemini')===(record.provider||'gemini')&&(r.reasoningEffort||'max')===(record.reasoningEffort||'max')&&!!jobFigureCount(r)===!!figures;
  let low=image?120:!gemini?90+count*12:40+count*8,high=image?330:!gemini?240+count*35:90+count*18;
  const groups=Number(record.progress?.partCount)||Number(record.groupCount)||1;if(!image&&groups>1){low=groups*(gemini?40+(count/groups)*8:90+(count/groups)*12);high=groups*(gemini?90+(count/groups)*18:240+(count/groups)*35);}
  if(!image&&figures){const retries=Number(record.progress?.figureStage?.attempt)||0;low+=figures*45+retries*45;high+=figures*240+retries*240;}

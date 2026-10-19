@@ -1,5 +1,7 @@
 # 文档总索引
 
+- [分环节提示词与默认自动配图（2026-10-20）](PROMPT-STAGES-AND-AUTO-FIGURES-2026-10-20.md)
+
 - [猎豹 GPT‑6 Astra 接入与连接验证（2026-10-20）](CHEETAH-ASTRA-2026-10-20.md)
 
 - [模型工作台视觉协调与适配（2026-10-20）](WORKBENCH-VISUAL-2026-10-20.md)
