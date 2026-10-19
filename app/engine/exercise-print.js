@@ -20,6 +20,10 @@ export function exerciseAnswerSpaceHeight(question,subject){
  return lines*18;
 }
 export function exerciseWritingRows(height){const rows=[];while(height>0){const part=Math.min(18,height);rows.push(part);height-=part;}return rows;}
+// A compact subjective prompt plus at most sixteen handwriting rows fits on a
+// fresh A4 page. Keeping only this bounded case avoids an orphan blank page;
+// lengthy passages, diagrams and larger writing areas can still flow normally.
+export const exerciseKeepWritingTogether=(q,subject)=>exerciseKeepPromptTogether(q)&&String(q.stem||'').length<=400&&exerciseAnswerSpaceHeight(q,subject)<=288;
 import {exerciseFigureParts} from './exercise-figure-layout.js';
 export {exerciseFigureParts};
 // A single terrain map is naturally taller than a two-panel diagram. Keep its

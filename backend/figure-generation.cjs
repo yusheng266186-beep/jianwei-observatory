@@ -5,11 +5,7 @@ async function structuredOnce(prompt,{generation,key,env=process.env,transport=r
  if(!route||!key)throw new Error('MODEL_NOT_CONFIGURED');
  if(g.protocol==='kimi')return require('./kimi.cjs').completeKimi(prompt,{key,kind:g.provider.slice(5),effort:g.reasoningEffort||'max',transport,onProgress,signal});
  if(g.protocol!=='gemini')return require('./model-completion.cjs').completeRemote(prompt,g,{key,transport,onProgress,signal});
- const {createStreamReader}=require('./stream-reader.cjs'),reader=createStreamReader('gemini'),progress=onProgress?require('./progress.cjs').streamProgress('gemini',onProgress):null;
- const body={systemInstruction:{parts:[{text:prompt.system}]},contents:[{role:'user',parts:[{text:JSON.stringify(prompt.input)}]}],generationConfig:{temperature:.2,maxOutputTokens:65536,responseMimeType:'application/json',responseJsonSchema:prompt.schema,thinkingConfig:{thinkingLevel:g.reasoningEffort||'high',...(onProgress?{includeThoughts:true}:{})}}};
- const response=await transport(route.url+'/v1beta/models/'+g.model+':streamGenerateContent?alt=sse',{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},body:JSON.stringify(body),timeout:840000,deadlineMs:840000,maxBytes:64*1024*1024,collectBody:false,signal,onChunk:chunk=>{reader.write(chunk);progress?.(chunk);}});
- if(response.status!==200)throw require('./model-completion.cjs').upstreamError(response,key);
- return {...require('./model-completion.cjs').parseResponse(reader.received?{...response,body:reader.finish()}:response,'gemini'),model:g.model,provider:g.provider,reasoningEffort:g.reasoningEffort};
+ return require('./model-completion.cjs').completeGemini(prompt,g,{key,transport,onProgress,signal});
 }
 // Retry only an explicit transient upstream rejection, never a broken stream
 // whose generation may already have been billed. The durable parent keeps text.

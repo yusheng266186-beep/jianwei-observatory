@@ -2,12 +2,17 @@
 // Return only fixed teaching-facing messages. Never expose raw JSON, credentials,
 // upstream diagnostics or model text through a parsing error.
 function validationSummary(message=''){
+ if(/Unexpected token ['\"]?`/.test(message))return '模型返回了Markdown代码围栏，未按要求直接输出JSON成稿。请重新生成本组。';
+ if(message.includes('引用了未提供的图示'))return (message.match(/^第\d{1,2}题/)?.[0]||'题目')+'提及配图但未提供图示委托，无法完整作答。请重新生成本组。';
  if(/(?:Bad escaped character|Bad escape character|Bad control character|Invalid escape|Unterminated string|Unexpected (?:token|end)|Expected .*JSON|JSON at position)/i.test(message))return '模型已返回内容，但文档编码不符合要求（公式转义或JSON结构错误），未通过格式校验。请重新生成本组。';
  const match=/^第(\d{1,2})题(?:的(题干|答案|解析|选项|评分点))?未按约定输出公式或正文格式。$/.exec(message);
  if(match)return '第'+match[1]+'题'+(match[2]?'的'+match[2]:'')+'存在公式格式问题：排版指令须放在公式标记内。请重新生成。';
  const field=/^第(\d{1,2})题的(题干|答案|解析)(?:未完整返回|为空或超过\d+字符)。$/.exec(message);
  if(field)return '第'+field[1]+'题的'+field[2]+'未完整返回，请重新生成。';
  const question=/^第(\d{1,2})题/.exec(message),number=question?'第'+question[1]+'题':'';
+ if(message.includes('选项字段未完整返回'))return number+'缺少完整的选项字段，未通过文档结构校验。请重新生成本组。';
+ if(message.includes('未完成改题草稿'))return number+'的解析仍含未完成改题草稿，未形成最终参考答案。请重新生成本组。';
+ if(message.includes('数据表列数不一致'))return number+'的数据表列数不一致，未通过排版校验。请重新生成本组。';
  if(message.includes('图示插入位置'))return number+'的配图位置与题干不匹配，请重新生成本组。';
  if(message.includes('客观题评分'))return number+'的客观题评分规则不符合高考作答方式，请重新生成。';
  if(message.includes('选项或答案不符合题型'))return number+'的选项数量或答案标记不符合题型，请重新生成。';

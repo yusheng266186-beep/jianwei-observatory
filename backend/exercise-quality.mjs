@@ -1,7 +1,8 @@
 import {contentStamp} from './content-stamp.mjs';
 // Shared, deterministic review aids. This module never changes model text and
 // never treats an unrecognised expression as either correct or incorrect.
-export const EXERCISE_QUALITY_VERSION=1;
+export const EXERCISE_QUALITY_VERSION=5;
+export const hasExerciseDraft=text=>/等等[，,]?\s*重新(?:核算|计算)|若我们把选项(?:设定|改)为|重新设计(?:一下)?(?:题目|选项)|重新审视设问|在题干中加上|重新核定已知条件设置|如果题干原意/.test(String(text||''));
 function braces(source,start){if(source[start]!=='{')return null;let depth=0;for(let i=start;i<source.length;i++){if(source[i]==='{')depth++;if(source[i]==='}'&&!--depth)return {value:source.slice(start+1,i),end:i+1};}return null;}
 function expand(source){
  for(let n=0;n<40;n++){const found=/\\(?:dfrac|tfrac|frac|sqrt)\s*/.exec(source);if(!found)return source;const first=braces(source,found.index+found[0].length);if(!first)return null;const sqrt=found[0].includes('sqrt');let last=first.end,replacement;
@@ -21,8 +22,11 @@ export function numericExerciseExpression(value){
 function equations(text){return [...String(text||'').matchAll(/\$\$([\s\S]*?)\$\$|\$([^$\n]+)\$/g)].map(m=>m[1]??m[2]);}
 export function exerciseQualityStamp(sheet){return contentStamp([EXERCISE_QUALITY_VERSION,sheet]);}
 export function auditExerciseQuality(sheet,request={},notes=[]){
- const issues=[],checks={questions:0,equations:0,consistentEquations:0,figures:0},seen=new Map(),add=(questionId,code,message,detail='')=>{const id=[questionId,code,detail||message].join('|');if(!issues.some(x=>x.id===id))issues.push({id,questionId,code,severity:'review',message,detail});};
+ const issues=[],checks={questions:0,equations:0,consistentEquations:0,figures:0},seen=new Map(),add=(questionId,code,message,detail='',severity='review')=>{const id=[questionId,code,detail||message].join('|');if(!issues.some(x=>x.id===id))issues.push({id,questionId,code,severity,message,detail});};
  for(const q of sheet?.questions||[]){checks.questions++;if(q.diagram)checks.figures++;const signature=String(q.stem||'').replace(/\s/g,'');if(seen.has(signature))add(q.id,'duplicate','与第'+seen.get(signature)+'题题干重复，请确认训练安排。');else seen.set(signature,q.id);
+  if(hasExerciseDraft([q.answer,q.analysis,...(q.points||[])].join('\n')))add(q.id,'draft','参考答案或解析含未整理的改题草稿，请修正并更新预览后再输出。','','block');
+  for(const m of String(q.stem||'').matchAll(/\\triangle\s*([A-Z]{3})\s*\$\s*沿\s*\$([A-Z]{2})\$\s*(?:翻折|折起)(?:至|到)\s*\$\\triangle\s*([A-Z]{3})/g))if([...m[2]].some(point=>!m[1].includes(point)||!m[3].includes(point)))add(q.id,'fold-labels','翻折前后三角形的字母与折叠轴不一致，请核对固定点和运动点。');
+  if(request.subject==='英语'&&q.type==='写作'){const target=/词数\s*(?:为|约)?\s*(\d{2,3})\s*(?:左右|词)/.exec(q.stem),words=(String(q.answer||'').match(/\b[A-Za-z]+(?:['’-][A-Za-z]+)*\b/g)||[]).length;if(target&&(words<Number(target[1])*.75||words>Number(target[1])*1.25))add(q.id,'word-count','参考范文约'+words+'词，题干要求约'+target[1]+'词，请按题目给出的计词范围核对字数。');}
   if(q.choices?.length&&new Set(q.choices.map(c=>String(c).replace(/\s/g,''))).size!==q.choices.length)add(q.id,'choices','存在重复选项，请核对答案区分度。');
   for(const text of [q.answer,q.analysis,...(q.points||[])])for(const expression of equations(text)){
    if(!expression.includes('=')||/\\(?:approx|sim|begin|end|cases|le|ge|neq)|[<>≈]/.test(expression))continue;
@@ -36,5 +40,5 @@ export function auditExerciseQuality(sheet,request={},notes=[]){
  for(const n of notes)for(const message of n.issues||[])add(n.questionId,'content',message);
  return {version:EXERCISE_QUALITY_VERSION,checks,issues,stamp:exerciseQualityStamp(sheet)};
 }
-export function exerciseQualityReviewed(record){const report=auditExerciseQuality(record.sheet,record.request,record.figureReviewNotes);return !report.issues.length||record.qualityReview?.stamp===report.stamp&&report.issues.every(i=>record.qualityReview.acknowledged?.includes(i.id));}
-export function requireExerciseQualityReview(record){if(!exerciseQualityReviewed(record))throw Error('请先核对题目检查中的审阅意见，再确认输出。');}
+export function exerciseQualityReviewed(record){const report=auditExerciseQuality(record.sheet,record.request,record.figureReviewNotes);return !report.issues.some(i=>i.severity==='block')&&(!report.issues.length||record.qualityReview?.stamp===report.stamp&&report.issues.every(i=>record.qualityReview.acknowledged?.includes(i.id)));}
+export function requireExerciseQualityReview(record){if(auditExerciseQuality(record.sheet,record.request,record.figureReviewNotes).issues.some(i=>i.severity==='block'))throw Error('参考答案或解析仍含未完成草稿，请编辑题目并更新预览后再输出。');if(!exerciseQualityReviewed(record))throw Error('请先核对题目检查中的审阅意见，再确认输出。');}

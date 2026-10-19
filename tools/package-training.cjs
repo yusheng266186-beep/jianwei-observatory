@@ -4,7 +4,8 @@ const check=process.argv.includes('--check');
 function emit(file,contents){const bytes=Buffer.from(contents);if(check){if(!fs.existsSync(file)||!fs.readFileSync(file).equals(bytes))throw new Error('Shared contract differs: '+path.relative(root,file));}else fs.writeFileSync(file,bytes);}
 function copy(source,target){emit(target,fs.readFileSync(source));}
 
-emit(path.join(root,'backend/exercise-contract.mjs'),fs.readFileSync(path.join(root,'app/engine/exercise-contract.js'),'utf8').replace("'./exercise-diagrams.js'","'./exercise-diagrams.mjs'").replace("'./exercise-figure-layout.js'","'./exercise-figure-layout.mjs'"));
+emit(path.join(root,'backend/exercise-contract.mjs'),fs.readFileSync(path.join(root,'app/engine/exercise-contract.js'),'utf8').replace("'./exercise-diagrams.js'","'./exercise-diagrams.mjs'").replace("'./exercise-figure-layout.js'","'./exercise-figure-layout.mjs'").replace("'./exercise-rich-blocks.js'","'./exercise-rich-blocks.mjs'").replace("'./exercise-quality.js'","'./exercise-quality.mjs'"));
+copy(path.join(root,'app/engine/exercise-rich-blocks.js'),path.join(root,'backend/exercise-rich-blocks.mjs'));
 emit(path.join(root,'backend/exercise-diagrams.mjs'),fs.readFileSync(path.join(root,'app/engine/exercise-diagrams.js'),'utf8').replace("'./exercise-models.js'","'./exercise-models.mjs'").replace("'./exercise-scene.js'","'./exercise-scene.mjs'").replace("'./exercise-science.js'","'./exercise-science.mjs'"));
 copy(path.join(root,'app/engine/exercise-models.js'),path.join(root,'backend/exercise-models.mjs'));
 emit(path.join(root,'backend/exercise-science.mjs'),fs.readFileSync(path.join(root,'app/engine/exercise-science.js'),'utf8').replace("'./exercise-molecular-model.js'","'./exercise-molecular-model.mjs'").replace("'./exercise-geography.js'","'./exercise-geography.mjs'").replace("'./exercise-advanced-figures.js'","'./exercise-advanced-figures.mjs'"));

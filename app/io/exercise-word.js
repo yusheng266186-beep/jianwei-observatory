@@ -1,6 +1,6 @@
 import {requireExerciseQualityReview} from '../engine/exercise-quality.js';
 import {validateExerciseResult,difficultyProfile,exerciseTypeLabel} from '../engine/exercise-contract.js';
-import {exercisePrintSections,exerciseAnswerSpaceHeight,exerciseWritingRows,exercisePrintFigureParts,exerciseKeepPromptTogether} from '../engine/exercise-print.js';
+import {exercisePrintSections,exerciseAnswerSpaceHeight,exerciseWritingRows,exercisePrintFigureParts,exerciseKeepPromptTogether,exerciseKeepWritingTogether} from '../engine/exercise-print.js';
 import {mathParts,mathSVG,warmExerciseMath,exerciseLineWidth} from './exercise-math.js';
 import {exerciseDiagramSVG} from './exercise-diagram.js';
 import {mathMLToOffice,mathMLTableToWord,wordMathNeedsVector} from './exercise-word-math.js';
@@ -10,11 +10,15 @@ const xml=value=>String(value??'').replace(/[\u0000-\u0008\u000b\u000c\u000e-\u0
 // Blank source lines are paragraph spacing, not extra Word paragraphs before
 // a page break; retaining those empty paragraphs can create a blank page.
 export const wordParagraphLines=value=>String(value).split('\n').filter(line=>line.trim());
+// A short prompt and a modest writing area fit on one page. Keep that area
+// with its prompt so a trailing page cannot contain only invisible blank rows.
+// Larger writing areas must remain splittable; the requested height is retained.
+export function wordAnswerSpaceParagraphs(question,subject){const height=exerciseAnswerSpaceHeight(question,subject),rows=exerciseWritingRows(height),keep=exerciseKeepWritingTogether(question,subject);return rows.map((part,i)=>'<w:p><w:pPr><w:pStyle w:val="AnswerSpace"/>'+(keep&&i<rows.length-1?'<w:keepNext/>':'')+'<w:spacing w:before="0" w:after="0" w:line="'+Math.round(part*20)+'" w:lineRule="exact"/></w:pPr><w:r><w:rPr><w:sz w:val="2"/></w:rPr><w:t xml:space="preserve"> </w:t></w:r></w:p>').join('');}
 let zipTask;
 async function zipLibrary(){if(!zipTask){const task=import('../../vendor/jszip.min.js').then(()=>{if(!window.JSZip)throw new Error('Word组件未能载入，请重试');return window.JSZip;});zipTask=task;task.catch(()=>{if(zipTask===task)zipTask=null;});}return zipTask;}
 export async function exerciseWord(record,{teacher=false,name=record.student?.name||'',classNo=record.student?.classNo??''}={}){
  if(!record.reviewedAt)throw new Error('请完成审题确认后输出正式练习。');requireExerciseQualityReview(record);
- const sheet=validateExerciseResult(record.sheet,record.request),key=JSON.stringify(['docx-v25-objective-tail',record.request,sheet,teacher,name,classNo,{exerciseId:record.id}]);
+ const sheet=validateExerciseResult(record.sheet,record.request),key=JSON.stringify(['docx-v27-writing-pagination',record.request,sheet,teacher,name,classNo,{exerciseId:record.id}]);
  const snapshot=structuredClone(record);return exerciseFile(key,()=>buildExerciseWord(snapshot,{teacher,name,classNo}));
 }
 async function buildExerciseWord(record,{teacher,name,classNo}){
@@ -51,7 +55,7 @@ async function buildExerciseWord(record,{teacher,name,classNo}){
    if(teacher){body+=await p('参考答案','Heading2')+await lines(q.answer)+await p('第'+q.id+'题 解析与评分要点','Heading2')+await lines(q.analysis,'Normal',q.analysis.length<1000?'<w:keepLines/>':'')+await p('评分要点','Heading2');for(const point of q.points)body+=await p('• '+point);}
    // Choices are answered in their existing brackets. An extra empty paragraph
    // can spill past the last option and create a page containing only a footer.
-   else if(!['选择','多选'].includes(q.type)){for(const height of exerciseWritingRows(exerciseAnswerSpaceHeight(q,subject)))body+='<w:p><w:pPr><w:pStyle w:val="AnswerSpace"/><w:spacing w:before="0" w:after="0" w:line="'+Math.round(height*20)+'" w:lineRule="exact"/></w:pPr><w:r><w:rPr><w:sz w:val="2"/></w:rPr><w:t xml:space="preserve"> </w:t></w:r></w:p>';}
+   else if(!['选择','多选'].includes(q.type))body+=wordAnswerSpaceParagraphs(q,subject);
   }
  }
  const ns='xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"';
