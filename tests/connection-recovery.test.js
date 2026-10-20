@@ -28,3 +28,14 @@ test('底层连接只有错误码没有消息时，重连后仍保留可识别�
  https.request=()=>{calls++;const req=new EventEmitter();req.setTimeout=()=>{};req.destroy=e=>queueMicrotask(()=>req.emit('error',e));req.end=()=>queueMicrotask(()=>req.emit('error',Object.assign(Error(''),{code:'ECONNRESET'})));return req;};
  try{await assert.rejects(()=>transport.request('https://model.test',{deadlineMs:2000}),error=>{assert.equal(error.message,'ECONNRESET');assert.equal(error.code,'ECONNRESET');assert.deepEqual(error.diagnostic,{kind:'network',tlsEstablished:false,requestFinished:false,responseHeadersReceived:false,responseBytes:0});return true;});assert.equal(calls,2);}finally{https.request=original;}
 });
+
+test('持续响应达到总时限与连接空闲超时分别记录，均不能重发已到达上游的请求',async()=>{
+ const original=https.request;
+ try{for(const mode of ['deadline','idle']){let calls=0,received=0;
+  https.request=(url,options,respond)=>{calls++;const req=new EventEmitter();let idle;
+   req.setTimeout=(ms,callback)=>{idle=callback;};req.destroy=error=>queueMicrotask(()=>req.emit('error',error));
+   req.end=()=>queueMicrotask(()=>{const socket=new EventEmitter();req.emit('socket',socket);socket.emit('secureConnect');req.emit('finish');const res=new EventEmitter();res.statusCode=200;res.headers={};respond(res);res.emit('data',Buffer.from('partial stream'));if(mode==='idle')idle();});return req;
+  };
+  await assert.rejects(()=>transport.request('https://model.test',{method:'POST',body:'private input',timeout:80,deadlineMs:30,onChunk:chunk=>{received+=chunk.length;}}),error=>{assert.equal(error.message,'NETWORK_TIMEOUT');assert.equal(error.diagnostic.timeoutKind,mode);assert.equal(error.diagnostic.timeoutMs,mode==='idle'?80:30);assert.equal(error.diagnostic.responseBytes,received);assert(error.diagnostic.requestFinished);assert(error.diagnostic.responseHeadersReceived);assert(!JSON.stringify(error.diagnostic).includes('private input'));return true;});assert.equal(calls,1);assert(received>0);
+ }}finally{https.request=original;}
+});

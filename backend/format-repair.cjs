@@ -40,10 +40,10 @@ async function recordCandidate(store,key,n,{output,validation,at}){
 }
 async function ensure(store,key,manifest,n,round,{now=Date.now,dispatch=async()=>{}}={}){
  if(await removed(store,key,manifest))return null;
- const id=uuid(key+'|format-repair|'+n),child=parentKey(key,id),createdAt=now(),source=round.baseline||{output:round.output,validation:round.validation};
+ const id=uuid(key+'|format-repair|'+n),child=parentKey(key,id),createdAt=now(),source=round.baseline||{output:round.output,validation:round.validation},groupContext=manifest.groupContext||manifest.job?.groupContext;
  await store.create(attemptPath(key,n),{id,createdAt});const entry=(await store.get(attemptPath(key,n))).value;
  const repair={parentId:key.split('/').at(-1),attempt:n,output:source.output,validation:round.validation||source.validation,originalValidation:source.validation,...(round.candidateKey?{candidateKey:round.candidateKey}:{})};
- if(await store.create(child+'/meta.json',{id,type:'format-repair',input:manifest.input,generation:manifest.repairGeneration,repair,status:'queued',createdAt:entry.createdAt,deadline:entry.createdAt+600000}))await dispatch(child);
+ if(await store.create(child+'/meta.json',{id,type:'format-repair',input:manifest.input,generation:manifest.repairGeneration,repair,...(groupContext?{groupContext}:{}),status:'queued',createdAt:entry.createdAt,deadline:entry.createdAt+600000}))await dispatch(child);
  return child;
 }
 async function begin(store,key,job,error,{now=Date.now,dispatch}={}){
@@ -52,7 +52,7 @@ async function begin(store,key,job,error,{now=Date.now,dispatch}={}){
  if(!['exercise','exercise-part'].includes(job.type)||!eligible(error)||limit<1||existing&&existing.error!=='MODEL_CONTENT_INVALID')return false;
  const generation=job.generation||require('./generator.cjs').generationProfile();
  const originalValidation=!/^\s*\{/.test(error.output)&&error.output.includes('{')?'模型在JSON正文前夹带说明文字。':String(error.cause.message).slice(0,1200);
- const manifest={version:1,input:job.input,generation,imageGeneration:job.imageGeneration,repairGeneration:job.repairGeneration||generation,limit:Math.min(limit,5),pipeline:job.pipeline,contentReview:job.contentReview,figureGeneration:job.figureGeneration||generation,...(job.group?{group:job.group}:{}),createdAt:now(),originalUsage:error.diagnostic?.usage||{},originalValidation};
+ const manifest={version:1,input:job.input,generation,imageGeneration:job.imageGeneration,repairGeneration:job.repairGeneration||generation,limit:Math.min(limit,5),pipeline:job.pipeline,contentReview:job.contentReview,figureGeneration:job.figureGeneration||generation,...(job.group?{group:job.group}:{}),...(job.groupContext?{groupContext:job.groupContext}:{}),createdAt:now(),originalUsage:error.diagnostic?.usage||{},originalValidation};
  if(await removed(store,key,manifest))return false;
  await store.create(key+'/format-repair-source.json',{output:error.output,validation:manifest.originalValidation,createdAt:now()});
  await store.create(key+'/format-repair-progress.json',(await store.get(key+'/progress.json'))?.value||{});
@@ -76,7 +76,7 @@ async function deliver(store,key,manifest,list,{now,dispatch}){
  const result={...repaired,model:manifest.generation.model,provider:manifest.generation.provider,reasoningEffort:manifest.generation.reasoningEffort,usage,formatRepair:{attempts:active.attempt+1,model:manifest.repairGeneration.model,provider:manifest.repairGeneration.provider,reasoningEffort:manifest.repairGeneration.reasoningEffort,...(active.result?.repairFidelity?{fidelity:active.result.repairFidelity}:{})}};
  if(manifest.contentReview){await require('./content-review.cjs').begin(store,key,{...manifest,createdAt:manifest.createdAt},result,{now,dispatch});return require('./content-review.cjs').snapshot(store,key,{now,dispatch});}
  if(manifest.pipeline===2&&result.sheet.questions.some(q=>q.figureRequest)){
-  const figures=require('./figure-pipeline.cjs');await figures.begin(store,key,{input:manifest.input,generation:manifest.generation,imageGeneration:manifest.imageGeneration,figureGeneration:manifest.figureGeneration,pipeline:2,group:manifest.group},result,{now,dispatch});return figures.snapshot(store,key,{now,dispatch});
+  const figures=require('./figure-pipeline.cjs');await figures.begin(store,key,{input:manifest.input,generation:manifest.generation,imageGeneration:manifest.imageGeneration,figureGeneration:manifest.figureGeneration,pipeline:2,group:manifest.group,...(manifest.groupContext?{groupContext:manifest.groupContext}:{})},result,{now,dispatch});return figures.snapshot(store,key,{now,dispatch});
  }
  const path=await store.get(key+'/result.json')?'/recovered.json':'/result.json';await store.create(key+path,{...result,status:'ready',finishedAt:now()});const p=(await store.get(key+'/progress.json'))?.value||{};await store.progress(key+'/progress.json',{...p,phase:'ready',heartbeatAt:now()});return (await store.get(key+path)).value;
 }
@@ -97,16 +97,16 @@ async function runStep(store,key,job,{now=Date.now,dispatch=async()=>{},generato
  if(!manifest||await removed(store,parent,manifest)||await store.get(key+'/removed.json'))return {cancelled:true};
  if(!await store.create(key+'/run.json',{startedAt:now(),deadlineAt:now()+Math.min(job.generation.timeoutMs||885000,885000)}))return {skipped:true};
  const controller=new AbortController(),proxy={get:name=>name===key+'/removed.json'?removed(store,parent,manifest).then(r=>r?{value:{}}:store.get(name)):store.get(name),async progress(name,value){await store.progress(name,value);await publish(store,parent,manifest,await states(store,parent,manifest,now),now);if(manifest.group)await require('./exercise-groups.cjs').advance(store,parentKey(parent,manifest.group.parentId),{now,dispatch});}},progress=createProgressWriter({store:proxy,key,total:manifest.input.count,now,controller});await progress.flush();
- const attempt=Number.isInteger(job.repair.attempt)?job.repair.attempt:0,baseline=await initialSource(store,parent),fallback=baseline||(attempt===0?{output:job.repair.output,validation:job.repair.validation||manifest.originalValidation}:null);
+ const attempt=Number.isInteger(job.repair.attempt)?job.repair.attempt:0,baseline=await initialSource(store,parent),fallback=baseline||(attempt===0?{output:job.repair.output,validation:job.repair.validation||manifest.originalValidation}:null),groupScope=job.groupContext||manifest.groupContext;
  try{
   if(!fallback)throw Object.assign(Error('MODEL_CONTENT_INVALID'),{cause:Error('缺少最初原稿保真基准，不能把后续修正稿当作原题继续修复。'),diagnostic:{kind:'document',completeSignal:true}});
   let candidate;
   if(job.repair.candidateKey){const saved=await store.get(job.repair.candidateKey);if(saved?.value&&typeof saved.value.output==='string')candidate=saved.value.output;}
   if(candidate===undefined&&typeof job.repair.candidate==='string')candidate=job.repair.candidate;
   if(candidate===undefined&&attempt>0&&job.repair.output!==fallback.output)candidate=job.repair.output;
-  const validation=job.repair.validation||fallback.validation,repaired=await generator(manifest.input,{provider:job.generation.provider,generation:job.generation,repair:{output:fallback.output,validation,attempt:attempt+1,originalValidation:fallback.validation,...(candidate!==undefined?{candidate}:{})},onProgress:progress.update,signal:controller.signal,separateFigures:manifest.pipeline===2});
+  const validation=job.repair.validation||fallback.validation,repaired=await generator(manifest.input,{provider:job.generation.provider,generation:job.generation,repair:{output:fallback.output,validation,attempt:attempt+1,originalValidation:fallback.validation,...(candidate!==undefined?{candidate}:{})},onProgress:progress.update,signal:controller.signal,separateFigures:manifest.pipeline===2,...(groupScope?{groupScope}:{})});
   // Re-check the repair result using the exact same contract, even for injected adapters.
-  const {validateOutput,validateRepairFidelity}=require('./generator.cjs'),options={separateFigures:manifest.pipeline===2,usage:repaired.usage};await validateOutput(JSON.stringify(repaired.sheet),manifest.input,options);const fidelity=await validateRepairFidelity(fallback.output,repaired.sheet,manifest.input,options);
+  const {validateOutput,validateRepairFidelity}=require('./generator.cjs'),options={separateFigures:manifest.pipeline===2,usage:repaired.usage,...(groupScope?{groupScope}:{})};await validateOutput(JSON.stringify(repaired.sheet),manifest.input,options);const fidelity=await validateRepairFidelity(fallback.output,repaired.sheet,manifest.input,options);
   if(controller.signal.aborted||await removed(store,parent,manifest))throw Error('JOB_CANCELLED');
   await progress.update({phase:'saving'});await progress.flush();
   await delivery.save(store,key,job,{...repaired,status:'ready',finishedAt:now(),repairFidelity:fidelity},{now,dispatch});await progress.close('ready');

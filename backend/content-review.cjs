@@ -9,15 +9,15 @@ function childId(key,n){const h=crypto.createHash('sha256').update(key+'|content
 async function latest(store,key){let n=0;while(await store.get(attemptPath(key,n+1)))n++;return n;}
 async function active(store,key,manifest){await delivery.active(store,key,manifest.job);}
 async function ensure(store,key,manifest,n,{now=Date.now,dispatch=async()=>{}}={}){
- await active(store,key,manifest);const id=childId(key,n),child=parentKey(key,id),createdAt=now();
+ await active(store,key,manifest);const id=childId(key,n),child=parentKey(key,id),createdAt=now(),groupContext=manifest.groupContext||manifest.job.groupContext;
  await delivery.createVerified(store,attemptPath(key,n),{id,attempt:n},{check:()=>active(store,key,manifest)});
- if(await store.create(child+'/meta.json',{id,type:'content-review',review:{parentId:key.split('/').at(-1),attempt:n},generation:manifest.job.generation,input:manifest.job.input,status:'queued',createdAt,deadline:createdAt+600000}))await dispatch(child);
+ if(await store.create(child+'/meta.json',{id,type:'content-review',review:{parentId:key.split('/').at(-1),attempt:n},generation:manifest.job.generation,input:manifest.job.input,...(groupContext?{groupContext}:{}),status:'queued',createdAt,deadline:createdAt+600000}))await dispatch(child);
  return child;
 }
 async function begin(store,key,job,draft,options={}){
  if(!job.contentReview)return false;
  await delivery.createVerified(store,key+'/content-review-source.json',draft,{check:()=>delivery.active(store,key,job)});
- await delivery.createVerified(store,key+'/content-review-manifest.json',{version:1,job,createdAt:job.createdAt},{check:()=>delivery.active(store,key,job)});
+ await delivery.createVerified(store,key+'/content-review-manifest.json',{version:1,job,...(job.groupContext?{groupContext:job.groupContext}:{}),createdAt:job.createdAt},{check:()=>delivery.active(store,key,job)});
  await store.create(key+'/content-review-progress.json',(await store.get(key+'/progress.json'))?.value||{});
  const manifest=(await store.get(key+'/content-review-manifest.json')).value;
  await ensure(store,key,manifest,0,options);return true;
@@ -68,9 +68,10 @@ async function runStep(store,key,job,{now=Date.now,dispatch=async()=>{},reviewer
   const source=(await store.get(parent+'/content-review-source.json')).value;
   const prior=job.review.attempt>0?(await store.get(parentKey(parent,childId(parent,job.review.attempt-1))+'/diagnostic.json'))?.value:null;
   const formatSource=source.formatRepair?.fidelity?.verified===false?(await store.get(parent+'/format-repair-source.json'))?.value?.output:undefined;
-  const result=await reviewer(structuredClone(source.sheet),manifest.job.input,{generation:job.generation,separateFigures:manifest.job.pipeline===2,signal:controller.signal,onProgress:progress.update,...(prior?{feedback:{notes:prior.notes,detail:prior.detail,validation:prior.validation},candidate:prior.candidate}:{}),...(formatSource?{formatSource}:{})});
+  const groupScope=job.groupContext||manifest.groupContext||manifest.job.groupContext;
+  const result=await reviewer(structuredClone(source.sheet),manifest.job.input,{generation:job.generation,separateFigures:manifest.job.pipeline===2,signal:controller.signal,onProgress:progress.update,...(groupScope?{groupScope}:{}),...(prior?{feedback:{notes:prior.notes,detail:prior.detail,validation:prior.validation},candidate:prior.candidate}:{}),...(formatSource?{formatSource}:{})});
   require('./content-check.cjs').validateReviewResult(source.sheet,result);
-  await require('./generator.cjs').validateOutput(JSON.stringify(result.sheet),manifest.job.input,{separateFigures:manifest.job.pipeline===2,usage:result.usage});
+  await require('./generator.cjs').validateOutput(JSON.stringify(result.sheet),manifest.job.input,{separateFigures:manifest.job.pipeline===2,usage:result.usage,...(groupScope?{groupScope}:{})});
   await active(store,parent,manifest);if(controller.signal.aborted)throw Error('JOB_CANCELLED');
   await progress.flush();await delivery.save(store,key,job,{...result,status:'ready',finishedAt:now()},{now,dispatch});await progress.close('ready');
  }catch(error){

@@ -117,6 +117,11 @@ async function buildReviewPrompt(sheet,input,options={}){
  const built=await generator.buildExercisePrompt(input,{separateFigures});
  const questionSchema=structuredClone(built.schema.properties.questions.items);
  const count=input.count;
+ let groupScope=null;
+ if(options.groupScope){
+  try{groupScope=require('./exercise-group-scope.cjs').normalizeGroupScope(options.groupScope,{count,request:input});}
+  catch(cause){throw Object.assign(Error('CONTENT_REVIEW_INVALID'),{detail:'本组冻结范围与复核请求不一致，已停止复核。',cause});}
+ }
  const figureRule=input.visuals==='none'
   ?'本次不允许任何图示：题目 Schema 不含 diagram 或 figureRequest。不得新增图示字段，也不得让题干依赖未提供的图；若原题依赖缺失图示，报告 issue 而不是自行补图。'
   :!separateFigures
@@ -136,6 +141,7 @@ async function buildReviewPrompt(sheet,input,options={}){
   '- points 可以精确修正，但各评分点的分值合计必须仍等于原题 maxScore；不得借修改评分点增删总分或改变评分结构。',
   '- 没有实际改动的题不得列入 corrections；replacement 必须与原题至少一个允许字段不同。未列入 corrections 的题必须逐字保持不变，不得借复核做未声明的润色、改写或重排。',
   '- 每处修订必须给出具体 reason：说明原错误、核对依据和修正结果；不得为空，不得只写“优化表达”“更规范”等无法核对的话。',
+  ...(groupScope?[require('./exercise-group-scope.cjs').scopeSection(groupScope,{stage:'review'})]:[]),
   '【图示约束】',
   figureRule,
   '【判定契约】',
@@ -159,10 +165,11 @@ async function buildReviewPrompt(sheet,input,options={}){
  ].join('\n');
  return {
   system,
-  input:{task:'subject-content-review',subject:input.subject,count,figureMode:separateFigures?'pendingFigures':'integratedFigures',request:structuredClone(input),sheet:structuredClone(sheet),programChecks:contentGuards(sheet,input),...(options.feedback?{previousReview:options.feedback}:{}),...(options.candidate?{previousCandidate:options.candidate}:{}),...(options.formatSource?{originalFormatSource:options.formatSource}:{} )},
+  input:{task:'subject-content-review',subject:input.subject,count,figureMode:separateFigures?'pendingFigures':'integratedFigures',request:structuredClone(input),sheet:structuredClone(sheet),programChecks:contentGuards(sheet,input),...(groupScope?{groupScope}:{}),...(options.feedback?{previousReview:options.feedback}:{}),...(options.candidate?{previousCandidate:options.candidate}:{}),...(options.formatSource?{originalFormatSource:options.formatSource}:{} )},
   schema:reviewSchemaFor(input,questionSchema),
   questionSchema,
   separateFigures,
+  groupScope,
   templateVersion:built.template.version,
   templateId:built.template.id
  };
@@ -268,7 +275,11 @@ async function reviewContent(sheet,input,options={}){
  const original=structuredClone(sheet);
  assertReviewableSheet(original,input);
  const separateFigures=options.separateFigures!==false;
- const prompt=await buildReviewPrompt(original,input,{separateFigures,feedback:options.feedback,candidate:options.candidate,formatSource:options.formatSource});
+ const prompt=await buildReviewPrompt(original,input,{separateFigures,feedback:options.feedback,candidate:options.candidate,formatSource:options.formatSource,groupScope:options.groupScope});
+ if(prompt.groupScope){
+  try{require('./exercise-group-scope.cjs').validateScopeSheet(original,prompt.groupScope);}
+  catch(cause){throw Object.assign(Error('CONTENT_REVIEW_INVALID'),{detail:'待复核题组与服务器冻结的本组槽位不一致，已停止复核。',cause});}
+ }
  const {complete:injected,...completionOptions}=options,complete=injected||structured;
  if(typeof complete!=='function')throw Error('CONTENT_REVIEW_COMPLETE_INVALID');
  const onProgress=options.onProgress;
@@ -322,7 +333,7 @@ async function reviewContent(sheet,input,options={}){
  onProgress?.({phase:'content-review-applying',changeCount:parsed.corrections.length});
  const reviewed=applyCorrections(original,parsed.corrections,prompt.questionSchema,invalid);
  let validated;
- try{validated=await generator.validateOutput(JSON.stringify(reviewed.sheet),input,{separateFigures,usage});}
+ try{validated=await generator.validateOutput(JSON.stringify(reviewed.sheet),input,{separateFigures,usage,groupScope:prompt.groupScope});}
  catch(cause){throw invalid('最终题目未通过与出题相同的契约校验：'+(cause?.cause?.message||cause?.message||'未知错误'),{cause,candidate:reviewed.sheet});}
  const remaining=contentGuards(validated,input);if(remaining.length)throw Object.assign(Error('CONTENT_REVIEW_FAILED'),{notes:groupIssues(remaining),candidate:validated,output,diagnostic:{kind:'content-review',phase:'guard-failed'}});
  onProgress?.({phase:'content-reviewed',changeCount:reviewed.changes.length});

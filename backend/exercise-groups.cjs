@@ -1,17 +1,46 @@
 'use strict';
 const crypto=require('node:crypto');
 const {partialDocument}=require('./progress.cjs');
+const groupScope=require('./exercise-group-scope.cjs');
 const padding=n=>String(n).padStart(5,'0'),ref=(key,index,attempt)=>key+'/group-attempts/'+padding(index)+'/'+padding(attempt)+'.json';
 function grouped(input){const count=Math.floor(input.count/3);return input.count>=6&&input.minutes>=count*5;}
 function partId(parent,index,attempt){const h=crypto.createHash('sha256').update(parent+'|'+index+'|'+attempt).digest('hex').slice(0,32);return h.slice(0,8)+'-'+h.slice(8,12)+'-4'+h.slice(13,16)+'-a'+h.slice(17,20)+'-'+h.slice(20);}
 function plan(input){
- const count=Math.floor(input.count/3),base=Math.floor(input.count/count),extra=input.count%count,parts=[];let offset=0,minutes=0;
+ const count=Math.floor(input.count/3),base=Math.floor(input.count/count),extra=input.count%count,parts=[],whole=groupScope.globalSlots(input);let offset=0,minutes=0;
  for(let i=0;i<count;i++){const size=base+(i<extra?1:0),end=offset+size,remaining=count-i-1,duration=remaining?Math.max(5,Math.min(input.minutes-minutes-remaining*5,Math.round(input.minutes*end/input.count)-minutes)):input.minutes-minutes;
-  const slots=Array.from({length:size},(_,j)=>{const n=offset+j;return {target:input.targets?.[Math.floor(n*(input.targets?.length||0)/input.count)],type:input.questionTypes?.[Math.floor(n*(input.questionTypes?.length||0)/input.count)]};}),targets=[...new Set(slots.map(s=>s.target).filter(Boolean))],types=[...new Set(slots.map(s=>s.type).filter(Boolean))];
-  parts.push({index:i,offset,input:{...structuredClone(input),count:size,minutes:duration,...(input.targets?{targets}:{}),...(input.questionTypes?{questionTypes:types}:{}),...(input.visuals==='hybrid'&&i>0?{visuals:'vector'}:{})}});offset=end;minutes+=duration;
+  // Slice the whole-paper plan instead of redistributing the reduced arrays:
+  // with three global targets and a late two-target group, redistribution
+  // would silently turn geo/prob/prob into geo/geo/prob.
+  const slots=groupScope.localSlots(whole,offset,size),targets=[...new Set(slots.map(s=>s.target).filter(Boolean))],types=[...new Set(slots.map(s=>s.type).filter(Boolean))];
+  parts.push({index:i,offset,slots,input:{...structuredClone(input),count:size,minutes:duration,...(input.targets?{targets}:{}),...(input.questionTypes?{questionTypes:types}:{}),...(input.visuals==='hybrid'&&i>0?{visuals:'vector'}:{})}});offset=end;minutes+=duration;
  }return parts;
 }
 async function latestAttempt(store,key,index){let low=0,high=1;const first=await store.get(ref(key,index,0));if(!first)return null;while(await store.get(ref(key,index,high))){low=high;high=high*2+1;}while(high-low>1){const mid=Math.floor((low+high)/2);if(await store.get(ref(key,index,mid)))low=mid;else high=mid;}const r=low?await store.get(ref(key,index,low)):first;return {...r.value,attempt:low};}
+async function priorQuestions(store,key,manifest,index){
+ const completed=[],base=key.slice(0,key.lastIndexOf('/')+1);let offset=0;
+ for(const part of manifest.parts.slice(0,index)){
+  const start=Number.isInteger(part.offset)?part.offset:offset;offset+=part.input?.count||0;
+  const prior=await latestAttempt(store,key,part.index);if(!prior)continue;
+  const child=base+prior.id,recovered=await store.get(child+'/recovered.json'),result=recovered?.value?.status==='ready'?recovered:await store.get(child+'/result.json');
+  if(result?.value?.status!=='ready'||!Array.isArray(result.value.sheet?.questions))continue;
+  for(const question of result.value.sheet.questions){
+   if(!question||!Number.isInteger(question.id))continue;
+   completed.push(groupScope.questionSummary(question,start+question.id));
+   if(completed.length>=groupScope.MAX_COMPLETED)return completed;
+  }
+ }
+ return completed;
+}
+async function buildGroupContext(store,key,manifest,index){
+ const part=manifest?.parts?.[index];
+ if(!part||!manifest?.input)return null;
+ const whole=groupScope.globalSlots(manifest.input),count=part.input?.count;
+ if(!whole.length||!Number.isInteger(count)||count<1)return null;
+ const offset=Number.isInteger(part.offset)?part.offset:manifest.parts.slice(0,index).reduce((n,p)=>n+(p.input?.count||0),0);
+ const slots=groupScope.localSlots(whole,offset,count);
+ if(slots.length!==count)throw Object.assign(Error('GROUP_SCOPE_INVALID'),{detail:'本组槽位超出整卷范围。'});
+ return groupScope.createGroupContext({request:manifest.input,index,partCount:manifest.parts.length,offset,slots,completed:await priorQuestions(store,key,manifest,index)});
+}
 async function ensurePart(store,key,manifest,index,attempt,now=Date.now,dispatch=async()=>{}){
  if(await store.get(key+'/removed.json'))return;const part=manifest.parts[index],parent=key.split('/').at(-1),id=partId(parent,index,attempt),child=key.slice(0,key.lastIndexOf('/')+1)+id;
  // Auto keeps the raster allowance available until a completed group actually
@@ -22,12 +51,17 @@ async function ensurePart(store,key,manifest,index,attempt,now=Date.now,dispatch
   const priorKey=key.slice(0,key.lastIndexOf('/')+1)+prior.id,result=await store.get(priorKey+'/recovered.json')||await store.get(priorKey+'/result.json');
   if(result?.value.status==='ready'&&result.value.sheet?.questions.some(q=>q.diagram?.kind==='illustration')){visuals='vector';break;}
  }
- const entry={id,createdAt:now(),...(part.input.visuals==='auto'?{visuals}:{})};await store.create(ref(key,index,attempt),entry);const saved=(await store.get(ref(key,index,attempt))).value;
+ // The attempt record freezes the scope: two concurrent resumes of the same
+ // attempt converge on the value that won create(), never on two summaries.
+ const frozen=await buildGroupContext(store,key,manifest,index);
+ const entry={id,createdAt:now(),...(part.input.visuals==='auto'?{visuals}:{}),...(frozen?{groupContext:frozen}:{})};await store.create(ref(key,index,attempt),entry);const saved=(await store.get(ref(key,index,attempt)))?.value;if(!saved)throw Error('GROUP_ATTEMPT_NOT_SAVED');
  const effectiveInput=saved.visuals?{...part.input,visuals:saved.visuals}:part.input;
- if(await store.create(child+'/meta.json',{id,type:'exercise-part',input:effectiveInput,generation:manifest.generation,imageGeneration:manifest.imageGeneration,repairGeneration:manifest.repairGeneration||manifest.generation,repairAttempts:manifest.repairAttempts??1,...(manifest.contentReview?{contentReview:manifest.contentReview}:{}),...(manifest.pipeline?{pipeline:manifest.pipeline,figureGeneration:manifest.figureGeneration}:{}),group:{parentId:parent,index,attempt},status:'queued',createdAt:saved.createdAt,deadline:saved.createdAt+600000}))await dispatch(child);return child;
+ let groupContext=saved.groupContext||frozen;
+ if(groupContext)groupContext=groupScope.normalizeGroupScope(groupContext,{count:effectiveInput.count,request:effectiveInput});
+ if(await store.create(child+'/meta.json',{id,type:'exercise-part',input:effectiveInput,generation:manifest.generation,imageGeneration:manifest.imageGeneration,repairGeneration:manifest.repairGeneration||manifest.generation,repairAttempts:manifest.repairAttempts??1,...(manifest.contentReview?{contentReview:manifest.contentReview}:{}),...(manifest.pipeline?{pipeline:manifest.pipeline,figureGeneration:manifest.figureGeneration}:{}),...(groupContext?{groupContext}:{}),group:{parentId:parent,index,attempt},status:'queued',createdAt:saved.createdAt,deadline:saved.createdAt+600000}))await dispatch(child);return child;
 }
 async function begin(store,key,job,{now=Date.now,dispatch}={}){
- const startedAt=now();await store.create(key+'/run.json',{startedAt,deadlineAt:startedAt+7200000,grouped:true});await store.create(key+'/groups.json',{version:1,parts:plan(job.input),input:job.input,generation:job.generation,imageGeneration:job.imageGeneration,repairGeneration:job.repairGeneration||job.generation,repairAttempts:job.repairAttempts??1,...(job.contentReview?{contentReview:job.contentReview}:{}),...(job.pipeline?{pipeline:job.pipeline,figureGeneration:job.figureGeneration}:{}),createdAt:startedAt});const manifest=(await store.get(key+'/groups.json')).value;
+ const startedAt=now(),parts=plan(job.input);await store.create(key+'/run.json',{startedAt,deadlineAt:startedAt+7200000,grouped:true});await store.create(key+'/groups.json',{version:1,parts,slots:groupScope.globalSlots(job.input),input:job.input,generation:job.generation,imageGeneration:job.imageGeneration,repairGeneration:job.repairGeneration||job.generation,repairAttempts:job.repairAttempts??1,...(job.contentReview?{contentReview:job.contentReview}:{}),...(job.pipeline?{pipeline:job.pipeline,figureGeneration:job.figureGeneration}:{}),createdAt:startedAt});const manifest=(await store.get(key+'/groups.json')).value;
  await ensurePart(store,key,manifest,0,0,now,dispatch);await advance(store,key,{now,dispatch});return {grouped:true};
 }
 async function states(store,key,manifest,now=Date.now,dispatch){const out=[];

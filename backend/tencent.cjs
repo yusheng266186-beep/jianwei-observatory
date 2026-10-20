@@ -5,16 +5,16 @@ const hmac=(key,value,algorithm='sha256',encoding)=>crypto.createHmac(algorithm,
 function requestOnce(url,{method='GET',headers={},body='',timeout=30000,deadlineMs=0,maxBytes=1024*1024,onChunk,signal,collectBody=true}={}){
  return new Promise((resolve,reject)=>{
   const target=new URL(url);if(target.protocol!=='https:')return reject(new Error('HTTPS_REQUIRED'));
-  let deadline,abort,tlsEstablished=false,requestFinished=false,responseHeadersReceived=false,responseBytes=0;const finish=(error,result)=>{clearTimeout(deadline);if(abort)signal?.removeEventListener('abort',abort);if(error){if(!error.message&&/^[A-Z0-9_]+$/.test(error.code||''))error.message=error.code;if(!error.diagnostic&&['ETIMEDOUT','ECONNRESET','EHOSTUNREACH','ENETUNREACH','EAI_AGAIN','NETWORK_TIMEOUT','NETWORK_INTERRUPTED'].includes(error.code||error.message))error.diagnostic={kind:'network',tlsEstablished,requestFinished,responseHeadersReceived,responseBytes};reject(error);}else resolve(result);};
+  let deadline,abort,tlsEstablished=false,requestFinished=false,responseHeadersReceived=false,responseBytes=0;const finish=(error,result)=>{clearTimeout(deadline);if(abort)signal?.removeEventListener('abort',abort);if(error){if(!error.message&&/^[A-Z0-9_]+$/.test(error.code||''))error.message=error.code;if(!error.diagnostic&&['ETIMEDOUT','ECONNRESET','EHOSTUNREACH','ENETUNREACH','EAI_AGAIN','NETWORK_TIMEOUT','NETWORK_INTERRUPTED'].includes(error.code||error.message))error.diagnostic={kind:'network',tlsEstablished,requestFinished,responseHeadersReceived,responseBytes,...(error.timeoutKind?{timeoutKind:error.timeoutKind,timeoutMs:error.timeoutMs}:{})};reject(error);}else resolve(result);};
   const req=https.request(target,{method,headers:{...headers,...(body?{'Content-Length':Buffer.byteLength(body)}:{})}},res=>{
    responseHeadersReceived=true;let bytes=0,chunks=[];res.on('data',chunk=>{bytes+=chunk.length;responseBytes=bytes;if(bytes>maxBytes){res.destroy(new Error('RESPONSE_LIMIT'));return;}if(collectBody||res.statusCode!==200)chunks.push(chunk);if(res.statusCode===200&&onChunk){try{onChunk(chunk);}catch(error){req.destroy(error);}}});
    res.on('end',()=>finish(null,{status:res.statusCode,headers:res.headers,body:Buffer.concat(chunks).toString('utf8')}));
    res.on('error',error=>finish(error));res.on('aborted',()=>finish(new Error('NETWORK_INTERRUPTED')));
   });
   req.on('socket',socket=>{if(socket.encrypted&&!socket.connecting&&socket.authorized)tlsEstablished=true;else socket.once('secureConnect',()=>{tlsEstablished=true;});});req.once('finish',()=>{requestFinished=true;});
-  req.setTimeout(timeout,()=>req.destroy(new Error('NETWORK_TIMEOUT')));req.on('error',error=>finish(error));
+  req.setTimeout(timeout,()=>req.destroy(Object.assign(new Error('NETWORK_TIMEOUT'),{timeoutKind:'idle',timeoutMs:timeout})));req.on('error',error=>finish(error));
   if(signal){abort=()=>req.destroy(new Error('JOB_CANCELLED'));if(signal.aborted){abort();return;}signal.addEventListener('abort',abort,{once:true});}
-  if(deadlineMs>0)deadline=setTimeout(()=>req.destroy(new Error('NETWORK_TIMEOUT')),deadlineMs);
+  if(deadlineMs>0)deadline=setTimeout(()=>req.destroy(Object.assign(new Error('NETWORK_TIMEOUT'),{timeoutKind:'deadline',timeoutMs:deadlineMs})),deadlineMs);
   req.end(body);
  });
 }
