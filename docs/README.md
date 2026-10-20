@@ -1,5 +1,7 @@
 # 文档总索引
 
+- [学科复核、三维翻折与失败恢复（2026-10-20）](GENERATION-RELIABILITY-2026-10-20.md)
+
 - [十科差异化真实生成与内容复核（2026-10-20）](VARIED-GENERATION-2026-10-20.md)
 
 - [分环节提示词与默认自动配图（2026-10-20）](PROMPT-STAGES-AND-AUTO-FIGURES-2026-10-20.md)

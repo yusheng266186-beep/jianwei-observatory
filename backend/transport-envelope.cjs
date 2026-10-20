@@ -11,7 +11,7 @@ function tracePart(progress,index){const text=traceText(progress),hash=crypto.cr
 function jobEnvelope(value){
  if(bytes(value)<=RESPONSE_BUDGET)return value;
  const result={...value},artifacts={};
- if(value.progress){result.progress=Object.fromEntries(['phase','sequence','heartbeatAt','receivedAt','timing','thinkingChars','responseChars','figureRevision','groupRevision','repairStage','repairRevision','figureStage','figureTotal','figureCompleted','total','completedQuestions','completedGroups','partIndex','partCount'].filter(key=>value.progress[key]!==undefined).map(key=>[key,value.progress[key]]));artifacts.trace=traceDescriptor(value.progress);}
+ if(value.progress){result.progress=Object.fromEntries(['phase','sequence','heartbeatAt','receivedAt','timing','thinkingChars','responseChars','figureRevision','groupRevision','repairStage','repairRevision','contentStage','contentRevision','contentChars','figureStage','figureTotal','figureCompleted','total','completedQuestions','completedGroups','partIndex','partCount'].filter(key=>value.progress[key]!==undefined).map(key=>[key,value.progress[key]]));artifacts.trace=traceDescriptor(value.progress);}
  if(bytes(result)>RESPONSE_BUDGET&&value.sheet){
   artifacts.images=[];
   result.sheet={...value.sheet,questions:value.sheet.questions.map(question=>{

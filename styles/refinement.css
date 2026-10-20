@@ -152,8 +152,8 @@ body[data-surface=paper] #exercise-dialog .exercise-footer{background:#f6fafd;ba
 /* Generation steps are a progress rail, rather than a row of inert buttons. */
 #exercise-content .exercise-live-progress>header h3{font-size:18px;line-height:1.5;margin:4px 0 0}
 #exercise-content .exercise-live-progress>header .overline{font-size:9px;line-height:1.6}
-#exercise-content .exercise-live-stages{display:flex;margin:9px 0 0;padding:8px 0 0;gap:14px}
-#exercise-content .exercise-live-stages>li{display:flex;align-items:center;justify-content:flex-start;gap:7px;flex:1;padding:4px 0;border:0;border-radius:0;background:transparent;box-shadow:none;text-align:left;font-size:10px;line-height:1.7}
+#exercise-content .exercise-live-stages{display:flex;flex-wrap:wrap;margin:9px 0 0;padding:8px 0 0;gap:14px}
+#exercise-content .exercise-live-stages>li{display:flex;align-items:center;justify-content:flex-start;gap:7px;flex:1 1 44px;padding:4px 0;border:0;border-radius:0;background:transparent;box-shadow:none;text-align:left;font-size:10px;line-height:1.7}
 #exercise-content .exercise-live-stages>li::before{content:'';flex:none;width:4px;height:4px;border-radius:50%;background:#8faabb80}
 #exercise-content .exercise-live-stages>li.is-current{background:transparent;color:var(--ink);font-weight:550}
 #exercise-content .exercise-live-stages>li.is-current::before{background:var(--school-blue);box-shadow:0 0 0 3px #7fa5bd20}

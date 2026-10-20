@@ -222,7 +222,7 @@ async function submitImageJob(record,{job,key},endpoint,{generation,source}){
  }
  let renderedReview=null;
  const previews=new WeakMap();
- async function previewFor(record){const key=JSON.stringify([record.sheet,Object.entries(record.imageJobs||{}).map(([id,job])=>[id,job.status,job.failure]),record.figureReviewNotes||[]]);let cached=previews.get(record);if(cached?.key===key)return cached.task;const task=exercisePreviewHTML(record);previews.set(record,{key,task});task.catch(()=>{if(previews.get(record)?.task===task)previews.delete(record);});return task;}
+ async function previewFor(record){const key=JSON.stringify([record.sheet,Object.entries(record.imageJobs||{}).map(([id,job])=>[id,job.status,job.failure]),record.figureReviewNotes||[],record.contentReview]);let cached=previews.get(record);if(cached?.key===key)return cached.task;const task=exercisePreviewHTML(record);previews.set(record,{key,task});task.catch(()=>{if(previews.get(record)?.task===task)previews.delete(record);});return task;}
 
  async function draw(){figureResize.finish();if(!dialog.open)return;if(selecting)return drawPicker();if(!context)return;const previewRecord=current,previewSource=current?.sheet?JSON.stringify(current.sheet):'',revision=++drawing,identity=exerciseIdentity(getAtlas(),current||context),person=identity.name,history=eligible();let preview='';if(current?.sheet){try{preview=await previewFor(current);}catch(e){error=e.message;}}
   if(revision!==drawing||!dialog.open||current!==previewRecord)return;if(current?.sheet&&previewSource!==JSON.stringify(current.sheet))return draw();choices.close(false,true);
@@ -273,7 +273,7 @@ async function submitImageJob(record,{job,key},endpoint,{generation,source}){
     if(!live(record)||!jobSnapshotCurrent(record,data))return;if(!['queued','running','ready','failed'].includes(data.status))throw new Error('后台状态暂未返回，正在重新同步');let sheet=null;if(data.sheet)try{sheet=validateExerciseResult(data.sheet,record.request);}catch{throw Object.assign(new Error('生成内容未通过完整性检查，请调整目标后重新生成'),{code:'MODEL_CONTENT_INVALID'});}
     progressChanged=progressChanged||(data.progress?.sequence!==record.progress?.sequence);changed=mergeJobSnapshot(record,data)||changed;if(record===current)error='';
     if(['ready','failed'].includes(data.status)&&data.progress)record.generationLog=data.progress;
-    if(sheet){record.sheet=sheet;record.figureReviewNotes=data.figureReviewNotes||[];record.model=data.model;record.generatedAt=data.generatedAt;record.reviewedAt=null;record.usage=data.usage;record.templateVersion=data.templateVersion;record.templateId=data.templateId;changed=true;}
+    if(sheet){record.sheet=sheet;record.figureReviewNotes=data.figureReviewNotes||[];record.contentReview=data.contentReview;record.model=data.model;record.generatedAt=data.generatedAt;record.reviewedAt=null;record.usage=data.usage;record.templateVersion=data.templateVersion;record.templateId=data.templateId;changed=true;}
     if(data.error){record.failure=data.failureDetail||messages[data.error]||'本次生成未完成';if(data.failureDetail)record.validationCheckedAt=Date.now();changed=true;}
    }catch(e){
     if(!live(record)||e.code==='SESSION_CHANGED')return;

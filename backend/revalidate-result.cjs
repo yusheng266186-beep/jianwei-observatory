@@ -14,6 +14,7 @@ async function revalidateResult(store,key,job,result,{now=Date.now,dispatch=asyn
   sheet=await validateOutput(diagnostic.raw,job.input,{separateFigures,usage:diagnostic.upstream?.usage});
  }catch{return result;}
  const finishedAt=Number.isFinite(result.finishedAt)?result.finishedAt:now(),ready={status:'ready',sheet,...(job.generation?{model:job.generation.model,provider:job.generation.provider,reasoningEffort:job.generation.reasoningEffort}:{}),finishedAt,generatedAt:new Date(finishedAt).toISOString(),recovered:true,...(diagnostic.upstream?.usage?{usage:diagnostic.upstream.usage}:{})};
+ if(job.contentReview){await require('./content-review.cjs').begin(store,key,job,ready,{now,dispatch});return await require('./content-review.cjs').snapshot(store,key,{now,dispatch})||result;}
  if(!(separateFigures&&sheet.questions.some(q=>q.figureRequest))){
   const created=await store.create(key+'/recovered.json',ready);return created?ready:(await store.get(key+'/recovered.json'))?.value||ready;
  }

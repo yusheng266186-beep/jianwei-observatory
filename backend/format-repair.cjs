@@ -52,7 +52,7 @@ async function begin(store,key,job,error,{now=Date.now,dispatch}={}){
  if(!['exercise','exercise-part'].includes(job.type)||!eligible(error)||limit<1||existing&&existing.error!=='MODEL_CONTENT_INVALID')return false;
  const generation=job.generation||require('./generator.cjs').generationProfile();
  const originalValidation=!/^\s*\{/.test(error.output)&&error.output.includes('{')?'模型在JSON正文前夹带说明文字。':String(error.cause.message).slice(0,1200);
- const manifest={version:1,input:job.input,generation,imageGeneration:job.imageGeneration,repairGeneration:job.repairGeneration||generation,limit:Math.min(limit,5),pipeline:job.pipeline,figureGeneration:job.figureGeneration||generation,...(job.group?{group:job.group}:{}),createdAt:now(),originalUsage:error.diagnostic?.usage||{},originalValidation};
+ const manifest={version:1,input:job.input,generation,imageGeneration:job.imageGeneration,repairGeneration:job.repairGeneration||generation,limit:Math.min(limit,5),pipeline:job.pipeline,contentReview:job.contentReview,figureGeneration:job.figureGeneration||generation,...(job.group?{group:job.group}:{}),createdAt:now(),originalUsage:error.diagnostic?.usage||{},originalValidation};
  if(await removed(store,key,manifest))return false;
  await store.create(key+'/format-repair-source.json',{output:error.output,validation:manifest.originalValidation,createdAt:now()});
  await store.create(key+'/format-repair-progress.json',(await store.get(key+'/progress.json'))?.value||{});
@@ -74,13 +74,14 @@ async function deliver(store,key,manifest,list,{now,dispatch}){
  const active=list.at(-1),repaired=active.result;if(!repaired?.sheet||await removed(store,key,manifest))return null;
  const usage={...manifest.originalUsage};for(const field of ['input','output','thinking'])usage[field]=(usage[field]||0)+list.reduce((n,row)=>n+(row.result?.usage?.[field]||0),0);
  const result={...repaired,model:manifest.generation.model,provider:manifest.generation.provider,reasoningEffort:manifest.generation.reasoningEffort,usage,formatRepair:{attempts:active.attempt+1,model:manifest.repairGeneration.model,provider:manifest.repairGeneration.provider,reasoningEffort:manifest.repairGeneration.reasoningEffort,...(active.result?.repairFidelity?{fidelity:active.result.repairFidelity}:{})}};
+ if(manifest.contentReview){await require('./content-review.cjs').begin(store,key,{...manifest,createdAt:manifest.createdAt},result,{now,dispatch});return require('./content-review.cjs').snapshot(store,key,{now,dispatch});}
  if(manifest.pipeline===2&&result.sheet.questions.some(q=>q.figureRequest)){
   const figures=require('./figure-pipeline.cjs');await figures.begin(store,key,{input:manifest.input,generation:manifest.generation,imageGeneration:manifest.imageGeneration,figureGeneration:manifest.figureGeneration,pipeline:2,group:manifest.group},result,{now,dispatch});return figures.snapshot(store,key,{now,dispatch});
  }
  const path=await store.get(key+'/result.json')?'/recovered.json':'/result.json';await store.create(key+path,{...result,status:'ready',finishedAt:now()});const p=(await store.get(key+'/progress.json'))?.value||{};await store.progress(key+'/progress.json',{...p,phase:'ready',heartbeatAt:now()});return (await store.get(key+path)).value;
 }
 async function snapshot(store,key,{now=Date.now,dispatch=async()=>{}}={}){
- const manifest=(await store.get(key+'/format-repair.json'))?.value;if(!manifest||await removed(store,key,manifest)||await store.get(key+'/figure-manifest.json'))return null;
+ const manifest=(await store.get(key+'/format-repair.json'))?.value;if(!manifest||await removed(store,key,manifest)||await store.get(key+'/figure-manifest.json')||await store.get(key+'/content-review-manifest.json'))return null;
  const existing=(await store.get(key+'/recovered.json'))?.value||(await store.get(key+'/result.json'))?.value;if(existing?.status==='ready')return existing;
  const entry=await latest(store,key);
  if(entry?.id){

@@ -16,11 +16,11 @@ async function structured(prompt,options={}){
   await new Promise((resolve,reject)=>{const abort=()=>{clearTimeout(timer);reject(new Error('JOB_CANCELLED'));},timer=setTimeout(()=>{options.signal?.removeEventListener('abort',abort);resolve();},1500);options.signal?.addEventListener('abort',abort,{once:true});});
  }}
 }
-const questionData=(q,input)=>({subject:input.subject,curriculum:input.curriculum,type:q.type,stem:q.stem,choices:q.choices,answer:q.answer,analysis:q.analysis,figureRequest:q.figureRequest?{...q.figureRequest,placement:q.figureLayout||q.figureRequest.placement}:undefined});
+const questionData=(q,input)=>({subject:input.subject,curriculum:input.curriculum,type:q.type,stem:q.stem,choices:q.choices,answer:q.answer,analysis:q.analysis,points:q.points,maxScore:q.maxScore,target:q.target,figureRequest:q.figureRequest?{...q.figureRequest,placement:q.figureLayout||q.figureRequest.placement}:undefined});
 async function planFigure(q,input,options={}){
  const diagrams=await import('./exercise-diagrams.mjs'),schema={type:'object',additionalProperties:false,required:['diagram'],properties:{diagram:diagrams.exerciseDiagramSchema}};
  const system=require('./figure-prompt-guidance.cjs').figurePlanPrompt(input.subject);
- const completion=await (options.complete||structured)({system,input:{...questionData(q,input),visuals:input.visuals,feedback:options.feedback||null},schema},options);
+ const completion=await (options.complete||structured)({system,input:{...questionData(q,input),visuals:input.visuals,feedback:options.feedback||null,...(options.previousDiagram?{previousDiagram:options.previousDiagram}:{})},schema},options);
  const diagram=await parseFigurePlan(completion.output,q,input);
  return {...completion,diagram,output:undefined};
 }
@@ -42,7 +42,7 @@ async function reviewFigure(q,input,diagram,options={}){
  const parse=completion=>{let result;try{result=JSON.parse(completion.output);if(!result||Object.keys(result).some(k=>!['approved','issues','contentIssues','layoutNotes'].includes(k))||typeof result.approved!=='boolean'||!Array.isArray(result.issues)||result.issues.length>12||result.issues.some(s=>typeof s!=='string'||s.length>400)||result.approved&&result.issues.length||!result.approved&&!result.issues.length||result.contentIssues!==undefined&&(!Array.isArray(result.contentIssues)||result.contentIssues.length>8||result.contentIssues.some(s=>typeof s!=='string'||!s||s.length>400))||result.layoutNotes!==undefined&&(!Array.isArray(result.layoutNotes)||result.layoutNotes.length>8||result.layoutNotes.some(s=>typeof s!=='string'||!s||s.length>400)))throw Error('图题核对结果不完整。');}catch(cause){throw Object.assign(new Error('FIGURE_REVIEW_INVALID'),{cause,output:completion.output});}return {...completion,...result,layoutNotes:result.layoutNotes||[],contentIssues:result.contentIssues||[],output:undefined};};
  const run=async withPixels=>{
   const reviewSystem=require('./figure-prompt-guidance.cjs').figureReviewPrompt(input.subject,{pixels:withPixels});
-  const completion=await (options.complete||structured)({...(withPixels?{image:diagram.image}:{}),system:reviewSystem,input:{...questionData(q,input),diagram:copy,feedback:options.feedback||null},schema},options);
+  const completion=await (options.complete||structured)({...(withPixels?{image:diagram.image}:{}),system:reviewSystem,input:{...questionData(q,input),diagram:copy,feedback:options.feedback||null,...(options.previousDiagram?{previousDiagram:options.previousDiagram}:{})},schema},options);
   return {...parse(completion),reviewScope:withPixels?'pixels':(raster?'brief':'vector-source')};
  };
  if(!pixels)return run(false);

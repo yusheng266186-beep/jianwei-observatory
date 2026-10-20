@@ -17,7 +17,7 @@ const same=(a,b)=>isDeepStrictEqual(stable(a),stable(b));
 const storageFailure=error=>error?.message==='RESULT_SAVE_PENDING'||transient(error);
 async function active(store,key,job){
  if(await store.get(key+'/removed.json'))throw Error('JOB_CANCELLED');
- for(const id of [job?.group?.parentId,job?.input?.sourceId,job?.figure?.parentId,job?.repair?.parentId])if(id&&await store.get(key.slice(0,key.lastIndexOf('/')+1)+id+'/removed.json'))throw Error('JOB_CANCELLED');
+ for(const id of [job?.group?.parentId,job?.input?.sourceId,job?.figure?.parentId,job?.repair?.parentId,job?.review?.parentId])if(id&&await store.get(key.slice(0,key.lastIndexOf('/')+1)+id+'/removed.json'))throw Error('JOB_CANCELLED');
 }
 async function createVerified(store,key,value,{check=async()=>{},wait=pause}={}){
  const payload=snapshot(value);let failure;
@@ -37,6 +37,10 @@ async function checkpoint(store,key,job,result,{stage='ready',now=Date.now,wait}
 }
 async function commit(store,key,job,candidate,{now=Date.now,wait,dispatch}={}){
  await active(store,key,job);
+ if(candidate.stage==='content'){
+  await require('./content-review.cjs').begin(store.source||store,key,job,candidate.result,{now,dispatch});
+  return {status:'running',contentReviewPipeline:true};
+ }
  if(candidate.stage==='figures'){
   await require('./figure-pipeline.cjs').begin(store.source||store,key,job,candidate.result,{now,dispatch});
   return {status:'running',figurePipeline:true};
@@ -54,6 +58,7 @@ async function recover(store,key,job,options={}){
  try{await active(store,key,job);}catch(e){if(e.message==='JOB_CANCELLED')return null;throw e;}
  const candidate=(await store.get(key+'/delivery-candidate.json'))?.value;if(!candidate)return null;
  if(candidate.version!==1)throw Error('JOB_RESULT_CONFLICT');
+ if(candidate.stage==='content'&&await store.get(key+'/content-review-manifest.json'))return {status:'running',contentReviewPipeline:true};
  if(candidate.stage==='figures'&&await store.get(key+'/figure-manifest.json'))return {status:'running',figurePipeline:true};
  try{return await commit(store,key,job,candidate,options);}
  catch(e){if(e.message==='JOB_CANCELLED')return null;if(!transient(e)&&e.message!=='RESULT_SAVE_PENDING')throw e;
