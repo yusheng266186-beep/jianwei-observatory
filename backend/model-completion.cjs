@@ -62,7 +62,7 @@ async function completeGemini(prompt,generation,{key,transport=request,onProgres
 async function probeModel(generation,{env=process.env,transport=request}={}){
  const started=Date.now(),prompt={system:'只输出JSON对象，字段value为整数。计算37乘19，不输出解释。禁止Markdown和代码围栏，回复首字符必须为{，末字符必须为}。',input:{task:'37×19'},schema:{type:'object',properties:{value:{type:'integer'}},required:['value'],additionalProperties:false}};
  let result;
- if(generation.protocol==='kimi')result=await require('./kimi.cjs').completeKimi(prompt,{key:env[generation.credentialRef],kind:'code',effort:generation.reasoningEffort,transport,probe:true});
+ if(generation.protocol==='kimi')result=await require('./kimi.cjs').completeKimi(prompt,{key:env[generation.credentialRef],kind:'code',model:generation.model,effort:generation.reasoningEffort,transport,probe:true});
  else if(generation.protocol==='gemini')result=await completeGemini(prompt,generation,{key:env[generation.credentialRef],transport,probe:true});
  else result=await completeRemote(prompt,generation,{key:env[generation.credentialRef],transport,probe:true});
  let value;try{value=JSON.parse(result.output);}catch{throw new Error('MODEL_CONTENT_INVALID');}if(value?.value!==703)throw new Error('MODEL_CONTENT_INVALID');

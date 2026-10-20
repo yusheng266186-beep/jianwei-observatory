@@ -3,7 +3,7 @@ const providers=require('./providers.json'),profiles=require('./model-profiles.j
 const {hash}=require('./tencent.cjs');
 const images=require('./image-providers.cjs');
 const extras={
- 'kimi-code':{label:'Kimi 官方 · 个人会员',url:'https://api.kimi.com/coding/v1',protocol:'kimi',key:'KIMI_API_KEY',model:'k3',catalog:['k3']},
+ 'kimi-code':{label:'Kimi 官方 · 个人会员',url:'https://api.kimi.com/coding/v1',protocol:'kimi',key:'KIMI_API_KEY',model:'k3',catalog:['k3','kimi-for-coding']},
  gemini:{label:'ByteCat · Gemini',url:'https://www.bytecatcode.org',protocol:'gemini',key:'GEMINI_API_KEY',model:'gemini-3.8-flash',catalog:['gemini-3.8-flash']}
 };
 const routes={...extras,...providers},revisionKey=n=>'models/revisions/'+String(n).padStart(10,'0')+'.json';

@@ -268,7 +268,7 @@ async function generate(input,{provider=process.env.TRAINING_PROVIDER||'gemini',
  }else if(generation&&['chat-completions','anthropic','responses'].includes(generation.protocol)){
   const result=await require('./model-completion.cjs').completeRemote(prompt,generation,{key:key||process.env[generation.credentialRef],transport,onProgress,signal});({output,usage,model}=result);metadata={provider,reasoningEffort:generation.reasoningEffort};
  }else if(provider.startsWith('kimi-')){
-  const result=await require('./kimi.cjs').completeKimi(prompt,{key:key||process.env.KIMI_API_KEY,kind:provider.slice(5),effort:generation?.reasoningEffort||'max',transport,onProgress,signal});
+  const result=await require('./kimi.cjs').completeKimi(prompt,{key:key||process.env.KIMI_API_KEY,kind:provider.slice(5),model:generation?.model,effort:generation?.reasoningEffort||'max',transport,onProgress,signal});
   ({output,usage,model}=result);metadata={provider:result.provider,reasoningEffort:result.reasoningEffort};
  }else{
  key=key||process.env.GEMINI_API_KEY;
