@@ -33,7 +33,7 @@ export function exerciseDiagramSVG(value){
    if(d.kind==='bars')for(const p of s.points){const y=Y(p[1]);parts+=`<rect data-bar-series="${i}" x="${X(p[0])-groupWidth/2+i*barWidth}" y="${Math.min(y,zeroY)}" width="${Math.max(.2,barWidth-1)}" height="${Math.abs(zeroY-y)}" fill="${shades[i]}"/>`;}
    else if(d.kind==='scatter')for(const p of s.points)parts+=dot(X(p[0]),Y(p[1]),i);
    else parts+=`<polyline points="${s.points.map(p=>X(p[0])+','+Y(p[1])).join(' ')}" fill="none" stroke-width="1.8" ${dash}/>`;
-   const x=58+i*145;parts+=d.kind==='scatter'?dot(x+9,347,i):d.kind==='bars'?`<rect x="${x}" y="341" width="18" height="9" fill="${shades[i]}"/>`:line(x,347,x+19,347,dash);for(const [row,text] of diagramLabelLines(s.label).entries())parts+=label(x+25,351+row*14,text);
+   if(!s.label.trim())return;const x=58+i*145;parts+=d.kind==='scatter'?dot(x+9,347,i):d.kind==='bars'?`<rect x="${x}" y="341" width="18" height="9" fill="${shades[i]}"/>`:line(x,347,x+19,347,dash);for(const [row,text] of diagramLabelLines(s.label).entries())parts+=label(x+25,351+row*14,text);
   });
  }else{
   if(d.nodes.some(n=>n.equipment)){const top=Math.min(...d.nodes.map(n=>n.y*3.5-(n.additionFunnel?140:100))),bottom=Math.max(...d.nodes.map(n=>n.y*3.5+110));height=bottom-top;viewBox='0 '+top+' 640 '+height;}

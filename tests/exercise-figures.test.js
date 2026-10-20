@@ -68,3 +68,5 @@ test('翻折使用真实三维线框统一投影，拒绝把共面三角形冒�
  const backend=await import('../backend/exercise-diagrams.mjs');assert.deepEqual(backend.validateExerciseDiagram(d),validateExerciseDiagram(d));
  for(const edit of [m=>m.vertices[3]=[4,3,0],m=>m.vertices[3]=[4,0,0],m=>m.links.push({...m.links[0]}),m=>m.links[0].from=9,m=>m.labels[3]='B',m=>m.vertices[3][2]=NaN,m=>m.links[0].hidden='false',m=>m.links=m.links.filter(e=>e.to!==3&&e.from!==3)]){const bad=structuredClone(d);edit(bad.model);assert.throws(()=>validateExerciseDiagram(bad));}
 });
+
+test('没有系列标签的单曲线图不留下无名图例横线，曲线与坐标保持完整',()=>{const d={...changePlot,series:[{label:'',points:changePlot.series[0].points}]},svg=exerciseDiagramSVG(d);assert(svg.includes('<polyline'));assert(!svg.includes('y1="347"'));const labelled=exerciseDiagramSVG({...d,series:[{...d.series[0],label:'测量值'}]});assert(labelled.includes('y1="347"'));assert(labelled.includes('测量值'));});
