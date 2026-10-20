@@ -1,12 +1,20 @@
+// A multipart science fill may ask for a structure, equation and explanation
+// without supplying inline blanks. Give these a few compact handwriting rows;
+// normal cloze/number blanks still use their existing answer positions.
+export function exerciseCompactFillRows(q){
+ const stem=String(q.stem||'');if(q.type!=='填空'||/_{2,}|＿{2,}|[（(][\s　]+[）)]|□/.test(stem))return 0;
+ const parts=[...stem.matchAll(/(?:^|\n)\s*[（(][0-9一二三四五六七八九十]+[）)]/g)].length;
+ return parts>=2&&/写出[\s\S]*(?:结构简式|方程式|表达式)|(?:说明|分析)[\s\S]*(?:原因|理由|现象)/.test(stem)?Math.min(4,parts):0;
+}
 // Physical handwriting space in points, shared by PDF and editable Word.
-export const exerciseObjectiveQuestion=q=>['选择','多选','填空'].includes(q.type);
+export const exerciseObjectiveQuestion=q=>['选择','多选'].includes(q.type)||q.type==='填空'&&!exerciseCompactFillRows(q);
 // Keep a readable prompt and its choices together, independently of answer
 // space or lengthy teacher explanations. Long passages can still flow.
 export const exerciseKeepPromptTogether=q=>!q.diagram&&String(q.stem||'').length+(q.choices||[]).join('').length<650&&String(q.stem||'').split('\n').length<18;
 export function exerciseAnswerSpaceHeight(question,subject){
  // Objective answers belong in their option/blank, even if a model overestimates.
  if(['选择','多选'].includes(question.type))return 6;
- if(question.type==='填空')return 10;
+ if(question.type==='填空')return exerciseCompactFillRows(question)*18||10;
  const suggested=question.answerLines;
  if(Number.isInteger(suggested)&&suggested>0&&suggested<=48)return suggested*18;
  const answer=String(question.answer||''),words=subject==='英语'?Number(question.stem?.match(/(?:no more than|at most|within)\s+(\d+)\s+words/i)?.[1]):0;

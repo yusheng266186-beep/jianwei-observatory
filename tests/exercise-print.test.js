@@ -1,5 +1,13 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {exercisePrintSections,exerciseAnswerSpaceHeight,exerciseAnswerSpaceParts} from '../app/engine/exercise-print.js';
+test('化学多小问填空没有内嵌作答空位时保留紧凑书写区，语篇空格和选择仍紧凑',async()=>{
+ const {exerciseObjectiveQuestion}=await import('../app/engine/exercise-print.js');
+ const q={type:'填空',answerLines:0,stem:'某酯完全水解生成甲醇和丙酸。\n（1）写出X的结构简式。\n（2）写出碱性水解的化学方程式。\n（3）说明区分异构体与X时的现象。'};
+ assert.equal(exerciseAnswerSpaceHeight(q,'化学'),54);assert.equal(exerciseObjectiveQuestion(q),false);
+ const inline={...q,stem:q.stem+'\n填写在____处。'};assert.equal(exerciseAnswerSpaceHeight(inline,'化学'),10);assert(exerciseObjectiveQuestion(inline));
+ assert.equal(exerciseAnswerSpaceHeight({...q,type:'选择',answerLines:40},'化学'),6);
+ const {wordAnswerSpaceParagraphs}=await import('../app/io/exercise-word.js');const word=wordAnswerSpaceParagraphs(q,'化学');assert.equal((word.match(/w:pStyle/g)||[]).length,3);assert(!word.includes('w:pBdr'));
+});
 test('选择填空只保留小间隔，主观题采用逐题模型行数，不按题干长度分配',()=>{
  for(const type of ['选择','多选','填空'])assert(exerciseAnswerSpaceHeight({type,answerLines:40},'数学')<=10);
  assert.equal(exerciseAnswerSpaceHeight({type:'解答',answerLines:4},'数学'),72);assert.equal(exerciseAnswerSpaceHeight({type:'实验',answerLines:14},'化学'),252);

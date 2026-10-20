@@ -7,6 +7,10 @@ import guidance from '../backend/figure-guidance.cjs';
 import generation from '../backend/figure-generation.cjs';
 import {laboratory,changePlot,solidFigures,physicsFigures} from './fixtures/exercise-figures.js';
 const question=diagram=>({id:1,stem:'实验气路如图所示，观察导管及液位。',choices:[],diagram});
+test('翻折绘图提示要求表达两个空间平面，不能以画面内直角或同平面三角形替代',async()=>{
+ let system='';await generation.planFigure({id:1,stem:'沿折轴翻折后，两平面垂直，立体示意如图。',choices:[]},{subject:'数学',visuals:'vector'},{complete:async p=>{system=p.system;return {output:JSON.stringify({diagram:solidFigures[0]})};}});
+ assert.match(system,/立体翻折须用清楚的空间投影/);assert.match(system,/画面内两条线的直角不能代替题设的面面垂直/);assert.match(system,/不为套模板改题/);
+});
 test('自由绘图明确文字安全区与中心定位，越界反馈给出具体范围且不移动原图',async()=>{
  const d={kind:'drawing',caption:'反应历程',description:'已知反应历程示意',scene:[{type:'path',d:'M 50 350 L 600 350'},{type:'text',x:570,y:366,text:'反应历程'}]};
  assert.doesNotThrow(()=>validateExerciseDiagram(d));

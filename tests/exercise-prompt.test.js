@@ -2,7 +2,7 @@ import test from 'node:test';import assert from 'node:assert/strict';
 import generator from '../backend/generator.cjs';import templates from '../backend/templates.cjs';
 import {exerciseScopeMatches} from '../app/ui/exercise-presets.js';
 const request={subject:'数学',grade:'高三',curriculum:'已学函数与导数',focus:'单调性',count:3,minutes:15,difficulty:'基础巩固',evidence:[{label:'19',knowledge:'另一个未选知识点',score:0,max:5}],targets:['单调性'],questionTypes:['填空','解答'],requirements:'教师补充：不涉及积分'};
-test('云端实际请求将补充内容作为数据，并按已选目标和题型约束最终输出',async()=>{const {body,template}=await generator.buildExercisePrompt(request),data=JSON.parse(body),system=data.systemInstruction.parts[0].text;assert.deepEqual(JSON.parse(data.contents[0].parts[0].text),request);assert(!system.includes(request.requirements));assert.match(system,/evidence和basis仅解释选题背景/);assert.match(system,/所有已选训练点至少覆盖一次/);assert.match(system,/不会经过程序修复/);assert.deepEqual(data.generationConfig.responseJsonSchema.properties.questions.items.properties.target.enum,['单调性']);assert.deepEqual(data.generationConfig.responseJsonSchema.properties.questions.items.properties.type.enum,['填空','解答']);assert.equal(template.version,'subject-templates-20261020.1');});
+test('云端实际请求将补充内容作为数据，并按已选目标和题型约束最终输出',async()=>{const {body,template}=await generator.buildExercisePrompt(request),data=JSON.parse(body),system=data.systemInstruction.parts[0].text;assert.deepEqual(JSON.parse(data.contents[0].parts[0].text),request);assert(!system.includes(request.requirements));assert.match(system,/evidence和basis仅解释选题背景/);assert.match(system,/所有已选训练点至少覆盖一次/);assert.match(system,/不会经过程序修复/);assert.deepEqual(data.generationConfig.responseJsonSchema.properties.questions.items.properties.target.enum,['单调性']);assert.deepEqual(data.generationConfig.responseJsonSchema.properties.questions.items.properties.type.enum,['填空','解答']);assert.equal(template.version,'subject-templates-20261020.7');});
 test('各科模板落实不同命题与复核任务，而不是共用同一空泛提示',()=>{const rules={语文:/材料中的证据/,数学:/退化、端点/,英语:/完形和语法填空/,物理:/量纲、数量级/,化学:/元素和电荷守恒/,生物:/基因型、表现型/,日语:/授受视角/,历史:/自拟材料/,政治:/原理、材料对应/,地理:/空间尺度/};for(const [subject,rule] of Object.entries(rules))assert.match(templates.templateFor(subject).rule,rule);});
 test('范围匹配仅返回原有标签，支持导数和化学实验等术语，未知范围不编造薄弱点',()=>{const labels=['集合的交集','导数综合压轴','概率递推证明'];assert.deepEqual(exerciseScopeMatches('数学','高中数学已学内容：函数与导数',labels),['导数综合压轴']);assert.deepEqual(exerciseScopeMatches('化学','高中化学已学内容：化学实验与探究',['实验除杂','化学平衡']),['实验除杂']);assert.deepEqual(exerciseScopeMatches('数学','教师自定义未知范围',labels),[]);});
 
@@ -11,6 +11,49 @@ test('阅读材料不制造虚假权威，推断题有推理任务，词数与�
 test('上游失败诊断在进入私有存储之前去掉API密钥并限制长度',()=>{const key='secret-for-test-123456',e=generator.upstreamFailure({status:503,body:'error '+key+' '+('x'.repeat(5000))},key);assert.equal(e.message,'MODEL_REQUEST_FAILED');assert(!e.diagnostic.message.includes(key));assert(e.diagnostic.message.length<=4000);});
 
 test('英语前置规则要求内部核对词数，避免在答案里添加容易误写的计数注记',()=>assert.match(templates.templateFor('英语').rule,/不附加未经要求的词数统计数字/));
+
+test('英语实测中的无提示实词和不唯一填空进入各策略的实际出题约束',async()=>{
+ for(const template of ['targeted','variation','retest']){
+  const p=await generator.buildExercisePrompt({...request,subject:'英语',targets:['语法填空'],questionTypes:['填空'],template});
+  const system=JSON.parse(p.body).systemInstruction.parts[0].text;
+  assert.match(system,/词形变化时，在对应空格旁给出括号提示词/);
+  assert.match(system,/不能把可唯一定位误当作答案唯一/);
+  assert.match(system,/answer和评分点完整列出可接受答案/);
+  assert.match(system,/来源说明放在analysis中/);
+ }
+});
+
+test('历史多小问的评分归属与总分在实际出题提示中明确，避免概括与作用混给分',async()=>{
+ const p=await generator.buildExercisePrompt({...request,subject:'历史',targets:['罗马法与治理'],questionTypes:['简答']});
+ assert.match(p.system,/按小问分别标明分值与可接受得分点，各小问合计等于满分/);
+ assert.match(p.system,/不能要求补答另一问的内容才给本问分数/);
+});
+
+test('地理海陆风约束同时检查海岸线、陆海两侧与昼夜高低空，待求方向不得先标答案',async()=>{
+ const p=await generator.buildExercisePrompt({...request,subject:'地理',targets:['海陆风环流'],questionTypes:['简答'],visuals:'auto'});
+ assert.match(p.system,/海岸线延伸方向与陆海两侧方位必须相容/);
+ assert.match(p.system,/海陆风区分近地面与高空、昼夜/);
+ assert.match(p.system,/方向是待求量时不得在图表中提前标明答案/);
+});
+
+test('物理实测的板块端点与电阻率公式须在正文、推导和评分中保持一致',async()=>{
+ const p=await generator.buildExercisePrompt({...request,subject:'物理',targets:['板块模型动力学','电阻率测量'],questionTypes:['计算','实验']});
+ assert.match(p.system,/物块相对木板的有向位移/);
+ assert.match(p.system,/不能因从中点出发、距离绝对值相同而把左右端写反/);
+ assert.match(p.system,/ρ=πRd²\/\(4L\)，量纲应为Ω·m/);
+ assert.match(p.system,/每次变形都要与原定义、量纲及偏大偏小结论一致/);
+});
+
+test('语文限字任务明确计字口径，参考答案和替代表达都须核算而非自称合格',async()=>{
+ const p=await generator.buildExercisePrompt({...request,subject:'语文',targets:['语言简明改写'],questionTypes:['简答']});
+ assert.match(p.system,/限字改写明确是否计标点/);
+ assert.match(p.system,/参考答案及每个替代表达均逐字核对/);
+});
+
+test('科学实验提示区分指示剂终点条件与净效应、机制推断的证据边界',async()=>{
+ const chemistry=await generator.buildExercisePrompt({...request,subject:'化学',targets:['物质制备与滴定'],questionTypes:['实验']});assert.match(chemistry.system,/不能把强碱过量时CO2完全转化为碳酸根的反应套到甲基橙的酸性终点/);
+ const biology=await generator.buildExercisePrompt({...request,subject:'生物',targets:['光合作用与光呼吸'],questionTypes:['实验']});assert.match(biology.system,/只有高低CO2两组不能单独证明后一机制/);assert.match(biology.system,/部分区间不变时不能概括为随温度单调增大/);
+});
 
 test('所有学科与三种策略均采用四川高考题型规范，图示可为零张',async()=>{for(const subject of templates.summary().subjects)for(const strategy of ['targeted','variation','retest']){const p=await generator.buildExercisePrompt({...request,subject:subject.subject,template:strategy,questionTypes:[],visuals:'vector'});assert.match(p.system,/四川高考题型规范/);assert.match(p.system,/整份练习可以完全不配图/);assert.match(p.system,/不把判断正误、连线配对/);assert(!p.schema.properties.questions.items.required.includes('diagram'));}const none=await generator.buildExercisePrompt({...request,visuals:'none'});assert(!none.schema.properties.questions.items.properties.diagram);assert.match(none.system,/本次只用文字与公式/);});
 
