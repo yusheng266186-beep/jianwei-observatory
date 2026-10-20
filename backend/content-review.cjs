@@ -49,7 +49,7 @@ async function snapshot(store,key,{now=Date.now,dispatch=async()=>{}}={}){
   }
   const path=await store.get(key+'/result.json')?'/recovered.json':'/result.json';
   await delivery.createVerified(store,key+path,{...result,status:'ready',finishedAt:now()},{check:()=>active(store,key,manifest)});
-  return (await store.get(key+path)).value;
+  const progress=(await store.get(key+'/progress.json'))?.value||{};await store.progress(key+'/progress.json',{...progress,phase:'ready',heartbeatAt:now()});return (await store.get(key+path)).value;
  }
  return {status:s.status==='failed'?'failed':'running',contentReviewPipeline:true,deadlineAt:s.deadlineAt,...(s.status==='failed'?{error:s.result?.error||'JOB_EXPIRED',contentReviewNotes:s.result?.notes||[],resumeAvailable:true,failureDetail:s.result?.failureDetail||'学科复核尚未完成，原始题文已保存；继续时只重试复核，不重新出题。'}:{})};
 }

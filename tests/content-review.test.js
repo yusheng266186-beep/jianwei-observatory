@@ -63,3 +63,5 @@ test('学科复核进度、实时输出和明确修订记录使用现有视觉�
 
 test('独立pipeline再次防守适配器返回的未声明改动和题数分值变化',async()=>{for(const mutate of [s=>s.questions.pop(),s=>s.questions[0].maxScore=99,s=>s.questions[0].answer='未声明答案']){const c=await setup();await content.begin(c.store,c.key,c.job,{sheet:sheet()},c);await runNext(c,async s=>{mutate(s);return good(s);});const r=await content.snapshot(c.store,c.key,c);assert.equal(r.status,'failed');assert.equal(r.error,'CONTENT_REVIEW_INVALID');assert.equal(await c.store.get(c.key+'/result.json'),null);}});
 test('复核响应无效后保留诊断和候选；明确继续时只将其作为上下文',async()=>{const c=await setup();await content.begin(c.store,c.key,c.job,{sheet:sheet()},c);await runNext(c,async()=>{throw Object.assign(Error('CONTENT_REVIEW_INVALID'),{detail:'图示位置锚点已改变',candidate:sheet()});});await content.resume(c.store,c.key,c);await runNext(c,async(s,i,o)=>{assert.equal(o.feedback.detail,'图示位置锚点已改变');assert.deepEqual(o.candidate,sheet());assert.deepEqual(s,sheet());return good(s);});assert.equal((await content.snapshot(c.store,c.key,c)).status,'ready');});
+
+test('完成后的旧阶段快照不再让状态标题继续显示复核中',()=>{assert.equal(generationPhase({status:'ready',progress:{phase:'content-reviewing'}}),'练习已生成');});
