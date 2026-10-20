@@ -1,11 +1,7 @@
 'use strict';
-const {completionUsage,incompleteCompletion}=require('./completion-diagnostics.cjs'),{eventError,redactSecrets}=require('./upstream-event.cjs');
+const {completionUsage,incompleteCompletion}=require('./completion-diagnostics.cjs'),{eventError,httpError}=require('./upstream-event.cjs');
 const {request}=require('./tencent.cjs'),{routes,connectionMatches}=require('./model-control.cjs'),{adaptModelBody}=require('./model-adapter.cjs'),{USER_AGENT,readCompletion}=require('./kimi.cjs');
-function upstreamError(response,key){
- let detail;try{detail=JSON.parse(response.body).error;}catch{}
- const message=String(detail?.message||''),code=detail?.code==='subscription_expired'?'MODEL_SUBSCRIPTION_EXPIRED':/insufficient (?:credits|balance)|余额不足/i.test(message)?'MODEL_BALANCE_REQUIRED':response.status===401||response.status===403?'MODEL_AUTH_FAILED':response.status===429?'MODEL_RATE_LIMIT':[408,504,524].includes(response.status)?'MODEL_UPSTREAM_TIMEOUT':'MODEL_REQUEST_FAILED';
- return Object.assign(new Error(code),{diagnostic:{kind:'upstream',status:response.status,message:redactSecrets(String(response.body),key).slice(0,4000)}});
-}
+function upstreamError(response,key){return httpError(response,key);}
 function parseStream(source,protocol,options={}){
  let output='',done=false,finish='',usage={};
  for(const event of String(source).split(/\r?\n\r?\n/)){

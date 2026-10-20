@@ -32,7 +32,8 @@ export function exercisePrintLead(value){
 // remains splittable; chaining the second row would pin the whole item.
 // Long individual choices use a one-column path. Its bounded short option
 // group needs the same keep protection as the compact two-column grid.
-export const exerciseChoiceKeepNext=(question,index)=>(question.choices||[]).length===4&&question.choices.join('').length<650&&index<3;
+export const exerciseKeepChoicesTogether=question=>(question.choices||[]).length===4&&question.choices.join('').length<650&&question.choices.join('\n').split('\n').length<18;
+export const exerciseChoiceKeepNext=(question,index)=>exerciseKeepChoicesTogether(question)&&index<3;
 export const exerciseChoiceRowKeepNext=(question,row)=>row===0&&(question.choices||[]).length===4;
 export function exerciseAnswerSpaceHeight(question,subject){
  // Objective answers belong in their option/blank, even if a model overestimates.

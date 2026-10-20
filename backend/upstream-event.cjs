@@ -34,11 +34,13 @@ function inspectEvent(event,key){
 function classifyUpstream(info={}){
  const token=[info.event,info.type,info.code,info.reason].filter(Boolean).join(' ').toLowerCase();
  const message=String(info.message||'').toLowerCase();
- if(/subscription[_ -]?expired|subscription[^.]{0,40}expired/.test(token+' '+message))return 'MODEL_SUBSCRIPTION_EXPIRED';
- if(/insufficient_quota|billing_(?:hard|soft)_limit|insufficient[_ -]?(?:credits?|balance|funds)|余额不足|account balance/.test(token+' '+message))return 'MODEL_BALANCE_REQUIRED';
- if(/invalid[_ -]?api[_ -]?key|api[_ -]?key[_ -]?invalid|authentication|unauthorized|permission_error|forbidden|unauthenticated|api key not valid/.test(token+' '+message))return 'MODEL_AUTH_FAILED';
- if(/rate[_ -]?limit|too[_ -]?many[_ -]?requests|resource[_ -]?exhausted|throttl|overloaded/.test(token+' '+message))return 'MODEL_RATE_LIMIT';
- if(/timeout|timed[_ -]?out|deadline[_ -]?exceeded|etimedout/.test(token+' '+message))return 'MODEL_UPSTREAM_TIMEOUT';
+ if(/subscription[_ -]?expired|subscription[^.]{0,40}expired|订阅[^.]{0,8}(?:已)?(?:到期|过期)/.test(token+' '+message))return 'MODEL_SUBSCRIPTION_EXPIRED';
+ // An explicit balance/pre-charge business error wins over the generic 401/403
+ // auth fallback below: providers commonly return quota failures as HTTP 403.
+ if(/insufficient[_ -]?(?:user[_ -]?)?(?:quota|credits?|balance|funds)|billing_(?:hard|soft)_limit|payment[_ -]?required|余额[^.]{0,8}不足|额度不足|预扣费[^.]{0,20}失败|account balance/.test(token+' '+message))return 'MODEL_BALANCE_REQUIRED';
+ if(/invalid[_ -]?(?:api[_ -]?)?key|(?:api[_ -]?)?key[_ -]?(?:invalid|not[_ -]?valid)|incorrect api key|api key not valid|authentication|unauthorized|permission[_ -]?error|permission[_ -]?denied|access[_ -]?denied|forbidden|unauthenticated|无效[^.]{0,10}(?:api)?(?:key|密钥|秘钥)|(?:密钥|秘钥)[^.]{0,8}(?:无效|错误)|权限不足|无权限/.test(token+' '+message))return 'MODEL_AUTH_FAILED';
+ if(/rate[_ -]?limit|too[_ -]?many[_ -]?requests|resource[_ -]?exhausted|throttl|overloaded|请求过于频繁|限流/.test(token+' '+message))return 'MODEL_RATE_LIMIT';
+ if(/timeout|timed[_ -]?out|deadline[_ -]?exceeded|etimedout|超时/.test(token+' '+message))return 'MODEL_UPSTREAM_TIMEOUT';
  const status=Number(info.upstreamStatus);
  if(status===401||status===403)return 'MODEL_AUTH_FAILED';
  if(status===429)return 'MODEL_RATE_LIMIT';
@@ -64,4 +66,25 @@ function eventError(event,{protocol='unknown',key='',outputChars,partial=false}=
  if(outputChars!==undefined){const size=Number(outputChars);diagnostic.outputChars=Number.isFinite(size)?Math.max(0,Math.min(size,64*1024*1024)):0;diagnostic.partial=!!partial;}
  return Object.assign(new Error(code),{diagnostic});
 }
-module.exports={MAX_MESSAGE,redactSecrets,inspectEvent,classifyUpstream,eventError};
+// Non-200 transport responses go through the same classifier as HTTP 200
+// envelopes so a protocol cannot drift into a different category for the same
+// upstream error. Keep diagnostic.status only for real HTTP failures; inband
+// 200 events deliberately have no status so they are never automatically resent.
+function httpError(response,key=''){
+ const data=response&&typeof response==='object'?response:{};
+ const status=Number.isInteger(data.status)?data.status:undefined,raw=text(data.body);
+ let payload;if(raw.trimStart().startsWith('{')){try{payload=JSON.parse(raw);}catch{}}
+ const info=inspectEvent(payload||{},key);
+ if(!info.message)info.message=field(raw,key,MAX_MESSAGE);
+ if(status!==undefined)info.upstreamStatus=status;
+ const code=classifyUpstream(info)||'MODEL_REQUEST_FAILED',diagnostic={kind:'upstream'};
+ if(status!==undefined)diagnostic.status=status;
+ const message=field(raw,key,MAX_MESSAGE);
+ if(message)diagnostic.message=message;
+ if(info.type)diagnostic.type=info.type;
+ if(info.code)diagnostic.code=info.code;
+ if(info.param)diagnostic.param=info.param;
+ if(info.reason)diagnostic.reason=info.reason;
+ return Object.assign(new Error(code),{diagnostic});
+}
+module.exports={MAX_MESSAGE,redactSecrets,inspectEvent,classifyUpstream,eventError,httpError};

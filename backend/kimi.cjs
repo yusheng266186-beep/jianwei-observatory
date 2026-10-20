@@ -1,7 +1,7 @@
 'use strict';
 // Use the application's real identity. A subscription endpoint is never
 // accessed by impersonating a supported coding client.
-const {request}=require('./tencent.cjs'),{eventError,redactSecrets}=require('./upstream-event.cjs');
+const {request}=require('./tencent.cjs'),{eventError,httpError}=require('./upstream-event.cjs');
 const USER_AGENT='JianweiObservatory/1.0 (+https://github.com/yusheng266186-beep/jianwei-observatory)';
 function kimiProfile(kind='platform'){
  if(kind==='platform')return {kind,base:'https://api.moonshot.cn/v1',model:'kimi-k3'};
@@ -40,7 +40,7 @@ async function completeKimi({input,system,schema},{key,kind='platform',effort='m
  const body=JSON.stringify({model:profile.model,reasoning_effort:effort,max_completion_tokens:probe?4096:131072,messages:[{role:'system',content:system},{role:'user',content:JSON.stringify(input)}],response_format:{type:'json_schema',json_schema:{name:'student_exercise',strict:true,schema:kimiExerciseSchema(schema)}},stream:true,stream_options:{include_usage:true}});
  const reader=require('./stream-reader.cjs').createStreamReader('kimi'),progress=onProgress?require('./progress.cjs').streamProgress('kimi',onProgress):null;
  const response=await transport(profile.base+'/chat/completions',{method:'POST',body,headers:{'Content-Type':'application/json',Authorization:'Bearer '+key,'User-Agent':USER_AGENT},timeout:probe?45000:840000,deadlineMs:probe?45000:840000,maxBytes:64*1024*1024,collectBody:false,signal,onChunk:chunk=>{reader.write(chunk);progress?.(chunk);}});
- if(response.status!==200)throw Object.assign(new Error(response.status===429?'MODEL_RATE_LIMIT':'MODEL_REQUEST_FAILED'),{diagnostic:{kind:'upstream',status:response.status,message:redactSecrets(String(response.body||''),key).slice(0,4000)}});
+ if(response.status!==200)throw httpError(response,key);
  return {...readCompletion(reader.received?reader.finish():response.body,{protocol:'kimi',key}),model:profile.model,provider:'kimi-'+kind,reasoningEffort:effort};
 }
 module.exports={kimiProfile,kimiExerciseSchema,readCompletion,completeKimi,USER_AGENT};

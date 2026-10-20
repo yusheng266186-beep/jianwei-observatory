@@ -20,8 +20,9 @@ export class Inbox {
         if(this.committing||this.busy||!this.incoming)return;
         if(!importDecisionsComplete(this.incoming,this.choices||[])){this.notify('请先确认重复记录，再加入工作区。');return;}
         const incoming=resolveImportConflicts(this.incoming,this.choices||[]);
-        this.committing=true;for(const button of this.content.querySelectorAll('[data-inbox]'))button.disabled=true;
+        this.committing=true;
         this.progress(this.incoming.sourceName||'本次教学材料','正在建立分析索引并保存到本机',98);
+        for(const button of this.content.querySelectorAll('[data-inbox]'))button.disabled=true;
         try{await this.commit(incoming,target.dataset.mode);await closeSurface(this.dialog);this.incoming=null;}catch(error){this.error(error.message);}
         finally{this.committing=false;}
       }

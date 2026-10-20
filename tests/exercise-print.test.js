@@ -75,3 +75,11 @@ test('有图题的单列选项同样连排，长材料选项不被锁成整页�
  const q={diagram:{kind:'plot'},choices:['0至2秒内加速度为2，0至7秒内位移为20。','0至2秒内加速度为4，0至7秒内位移为20。','0至2秒内加速度为2，0至7秒内位移为28。','5至7秒内物体做速度为零的匀速运动。']};
  assert.deepEqual(q.choices.map((_,i)=>exerciseChoiceKeepNext(q,i)),[true,true,true,false]);assert(q.choices.every(c=>exerciseChoiceKeepNext({...q,choices:q.choices.map(x=>x.repeat(50))},0)===false));
 });
+
+test('复杂配图后的四个短选项整组分页，显式多行长选项仍可流动',async()=>{
+ const {exerciseKeepChoicesTogether}=await import('../app/engine/exercise-print.js');
+ const q={diagram:{kind:'illustration'},choices:['基粒由类囊体堆叠，结合低氧处理及温度比较说明光呼吸与净吸收的关系。'.repeat(2),'基质是类囊体内部的空间，光反应主要在基质中进行。','低氧处理下净吸收较低，说明光呼吸增强。','数据证明光呼吸是唯一影响过程。']};
+ assert(exerciseKeepChoicesTogether(q));
+ assert(!exerciseKeepChoicesTogether({...q,choices:q.choices.map(s=>s.repeat(20))}));
+ assert(!exerciseKeepChoicesTogether({...q,choices:['甲\n'.repeat(18),'乙','丙','丁']}));
+});

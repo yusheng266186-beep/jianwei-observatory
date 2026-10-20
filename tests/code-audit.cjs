@@ -15,9 +15,10 @@ const url=process.env.AUDIT_URL||'http://127.0.0.1:4175';
  async function test(name,fn,{empty=false}={}){
   if(process.argv[2]&&!name.includes(process.argv[2]))return;
   const context=await browser.newContext({viewport:{width:1440,height:1000},reducedMotion:'reduce'}),page=await context.newPage(),errors=[];page.setDefaultTimeout(7000);page.on('pageerror',e=>errors.push(e.message));
+  await context.addInitScript(()=>{window.__auditLandingReady=false;window.addEventListener('hengji:landing-ready',()=>{window.__auditLandingReady=true;},{once:true});});
   const click=async selector=>{await page.locator(selector).first().click();await page.waitForTimeout(100);};
   try{
-   await page.goto(url);await page.waitForSelector('#welcome-title');await page.waitForTimeout(150);
+   await page.goto(url);await page.waitForSelector('#welcome-title');await page.waitForFunction(()=>window.__auditLandingReady);
    if(!empty){await page.locator('#files').setInputFiles(file);await page.locator('[data-inbox="commit"]').click();await page.waitForSelector('body[data-workspace="ready"]');await page.waitForSelector('#inbox:not([open])',{state:'attached'});}
    await fn({page,click});assert.deepEqual(errors,[]);results.push({name,ok:true});console.log('PASS '+name);
   }catch(error){results.push({name,ok:false,error:error.message,errors});console.log('FAIL '+name+' '+error.message.slice(0,900));await page.screenshot({path:path.join(output,'failure-'+results.length+'.png')});}
@@ -42,6 +43,8 @@ const url=process.env.AUDIT_URL||'http://127.0.0.1:4175';
  await test('导入提交后其他提交按钮与关闭入口被锁定',async({page})=>{
   await page.evaluate(()=>{const put=IDBObjectStore.prototype.put;IDBObjectStore.prototype.put=function(...args){const req=put.apply(this,args);if(args[1]==='previous')window.__undoWrites=(window.__undoWrites||0)+1;return req;};});
   await page.locator('#files').setInputFiles(file);await page.waitForSelector('[data-inbox="commit"][data-mode="merge"]');
+  const resolve=page.locator('[data-inbox="resolve"][data-index="all"][data-value="previous"]');if(await resolve.count())await resolve.click();
+  await page.waitForFunction(()=>!document.querySelector('[data-inbox="commit"][data-mode="merge"]')?.disabled);
   const locked=await page.evaluate(()=>{document.querySelector('[data-inbox="commit"][data-mode="merge"]').click();return [...document.querySelectorAll('[data-inbox="commit"],[data-inbox="close"]')].every(b=>b.disabled);});
   assert.equal(locked,true);
   await page.waitForSelector('#inbox:not([open])',{state:'attached'});assert.equal(await page.evaluate(()=>window.__undoWrites),1);

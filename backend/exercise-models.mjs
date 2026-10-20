@@ -8,7 +8,8 @@ export const exerciseModels={
 };
 export function validateExerciseModel(d){
  const m=d.model,spec=exerciseModels[m?.id],spatial=m?.id==='spatial-frame';
- if(!spec||d.kind!==spec.kind||!m||Object.keys(m).some(k=>!['id','dimensions','labels',...(spatial?['vertices','links']:[])].includes(k))||!Array.isArray(m.dimensions)||m.dimensions.length!==spec.dimensions||m.dimensions.some(v=>!Number.isFinite(v)||v<.001||v>1000)||!Array.isArray(m.labels)||(spatial?(m.labels.length<4||m.labels.length>12):m.labels.length!==spec.labels)||m.labels.some(s=>typeof s!=='string'||s.length>8||/[<>$\\]/.test(s)))throw new Error('标准模型的类型、尺寸或标签不完整。');
+ if(m&&!spatial&&Object.hasOwn(m,'motionArcs'))throw new Error('运动弧仅用于spatial-frame空间线框。');
+ if(!spec||d.kind!==spec.kind||!m||Object.keys(m).some(k=>!['id','dimensions','labels',...(spatial?['vertices','links','motionArcs']:[])].includes(k))||!Array.isArray(m.dimensions)||m.dimensions.length!==spec.dimensions||m.dimensions.some(v=>!Number.isFinite(v)||v<.001||v>1000)||!Array.isArray(m.labels)||(spatial?(m.labels.length<4||m.labels.length>12):m.labels.length!==spec.labels)||m.labels.some(s=>typeof s!=='string'||s.length>8||/[<>$\\]/.test(s)))throw new Error('标准模型的类型、尺寸或标签不完整。');
  if(spatial)validateSpatialFrame(m);
  if(m.dimensions.length&&Math.max(...m.dimensions)/Math.min(...m.dimensions)>6)throw new Error('模型尺寸比例过大，无法清楚标注。');
  if(m.id==='inclined-plane'&&(m.dimensions[1]/m.dimensions[0]<.2||m.dimensions[1]/m.dimensions[0]>1.4))throw new Error('斜面模型的高宽比例无效。');
@@ -27,6 +28,37 @@ function validateSpatialFrame(m){
  if(!Array.isArray(m.links)||m.links.length<4||m.links.length>30)fail();const seen=new Set(),used=new Set();
  for(const e of m.links){if(!e||Object.keys(e).length!==3||!['from','to','hidden'].every(k=>Object.hasOwn(e,k))||!Number.isInteger(e.from)||!Number.isInteger(e.to)||e.from===e.to||e.from<0||e.to<0||e.from>=ps.length||e.to>=ps.length||typeof e.hidden!=='boolean')fail();const key=[e.from,e.to].sort((a,b)=>a-b).join('-');if(seen.has(key)||Math.hypot(...ps[e.from].map((n,i)=>n-ps[e.to][i]))<span*.001)fail();seen.add(key);used.add(e.from);used.add(e.to);}if(used.size!==ps.length)fail();
  const connected=new Set([0]);for(let n=0;n<ps.length;n++)for(const e of m.links){if(connected.has(e.from))connected.add(e.to);if(connected.has(e.to))connected.add(e.from);}if(connected.size!==ps.length)fail();
+ spatialArcDefinitions(m);
+}
+// A motion arc is a circular path in the plane of (from-center, to-center).
+// It is sampled in 3D and then projected exactly like the wireframe.
+const spatialArcLimit=4,spatialArcSegments=32;
+function spatialArcFail(){throw new Error('空间运动弧须给出有效起止顶点、圆心、等长非零半径，且不退化或反向共线。');}
+function spatialArcDefinitions(m){
+ if(m.motionArcs===undefined)return [];
+ if(!Array.isArray(m.motionArcs)||m.motionArcs.length>spatialArcLimit)spatialArcFail();
+ return m.motionArcs.map(arc=>{
+  if(!arc||typeof arc!=='object'||Array.isArray(arc)||Object.keys(arc).length!==3||!['from','to','center'].every(k=>Object.hasOwn(arc,k)))spatialArcFail();
+  const {from,to,center}=arc,n=m.vertices.length;
+  if(!Number.isInteger(from)||!Number.isInteger(to)||from===to||from<0||to<0||from>=n||to>=n)spatialArcFail();
+  if(!Array.isArray(center)||center.length!==3||center.some(v=>!Number.isFinite(v)||Math.abs(v)>1000))spatialArcFail();
+  const u=m.vertices[from].map((v,i)=>v-center[i]),w=m.vertices[to].map((v,i)=>v-center[i]),r1=Math.hypot(...u),r2=Math.hypot(...w);
+  if(r1<1e-9||r2<1e-9||Math.abs(r1-r2)>Math.max(r1,r2)*1e-6)spatialArcFail();
+  const radius=(r1+r2)/2,cross=[u[1]*w[2]-u[2]*w[1],u[2]*w[0]-u[0]*w[2],u[0]*w[1]-u[1]*w[0]],crossNorm=Math.hypot(...cross),angle=Math.atan2(crossNorm,u[0]*w[0]+u[1]*w[1]+u[2]*w[2]);
+  if(crossNorm<=radius*radius*1e-6||!(angle>1e-6&&angle<Math.PI-1e-6))spatialArcFail();
+  const e1=u.map(v=>v/radius),normal=cross.map(v=>v/crossNorm),e2=[normal[1]*e1[2]-normal[2]*e1[1],normal[2]*e1[0]-normal[0]*e1[2],normal[0]*e1[1]-normal[1]*e1[0]];
+  return {from,to,center:[...center],radius,angle,e1,e2};
+ });
+}
+function spatialArcSamples(m,arc){
+ const points=[];
+ for(let i=0;i<=spatialArcSegments;i++){
+  if(i===0){points.push([...m.vertices[arc.from]]);continue;}
+  if(i===spatialArcSegments){points.push([...m.vertices[arc.to]]);continue;}
+  const t=i/spatialArcSegments,c=Math.cos(t*arc.angle),s=Math.sin(t*arc.angle);
+  points.push(arc.center.map((value,k)=>value+arc.radius*(c*arc.e1[k]+s*arc.e2[k])));
+ }
+ return points;
 }
 // Orthographic view from (+x,+y,+z). An edge is visible if at least one of
 // its adjacent outward faces faces the camera. No model-authored coordinates.
@@ -42,10 +74,11 @@ export function solidModelGeometry(model){
   vertices=[[0,0,0],[a,0,0],[a,0,b],[0,0,b],[a/2,h,b/2]];
   faces=[[0,3,2,1],[0,1,4],[1,2,4],[2,3,4],[3,0,4]];
  }else throw new Error('模型不是立体几何。');
+ const arcDefinitions=model.id==='spatial-frame'?spatialArcDefinitions(model):[],arcVertices=arcDefinitions.map(arc=>spatialArcSamples(model,arc)),allVertices=[...vertices,...arcVertices.flat()];
  const centre=vertices[0].map((_,i)=>vertices.reduce((s,p)=>s+p[i],0)/vertices.length),edges=new Map();
  const views=[[36,25],[30,35],[55,28],[65,38],[24,18],[60,18]].map(([az,el])=>{
-  const a=az*Math.PI/180,e=el*Math.PI/180,camera=[Math.sin(a)*Math.cos(e),Math.sin(e),Math.cos(a)*Math.cos(e)],raw=vertices.map(([x,y,z])=>[Math.cos(a)*x-Math.sin(a)*z,Math.sin(e)*(Math.sin(a)*x+Math.cos(a)*z)-Math.cos(e)*y]),xs=raw.map(p=>p[0]),ys=raw.map(p=>p[1]),left=Math.min(...xs),top=Math.min(...ys),width=Math.max(...xs)-left,height=Math.max(...ys)-top,scale=Math.min(390/width,230/height),points=raw.map(([x,y])=>[320+(x-left-width/2)*scale,184+(y-top-height/2)*scale]);
-  let separation=Infinity;for(const [i,p] of points.entries())for(const q of points.slice(i+1))separation=Math.min(separation,Math.hypot(p[0]-q[0],p[1]-q[1]));return {points,camera,separation};
+  const a=az*Math.PI/180,e=el*Math.PI/180,camera=[Math.sin(a)*Math.cos(e),Math.sin(e),Math.cos(a)*Math.cos(e)],raw=allVertices.map(([x,y,z])=>[Math.cos(a)*x-Math.sin(a)*z,Math.sin(e)*(Math.sin(a)*x+Math.cos(a)*z)-Math.cos(e)*y]),xs=raw.map(p=>p[0]),ys=raw.map(p=>p[1]),left=Math.min(...xs),top=Math.min(...ys),width=Math.max(...xs)-left,height=Math.max(...ys)-top,scale=Math.min(390/width,230/height),projected=raw.map(([x,y])=>[320+(x-left-width/2)*scale,184+(y-top-height/2)*scale]),points=projected.slice(0,vertices.length),arcPoints=arcVertices.map((ps,i)=>projected.slice(vertices.length+i*(spatialArcSegments+1),vertices.length+(i+1)*(spatialArcSegments+1)));
+  let separation=Infinity;for(const [i,p] of points.entries())for(const q of points.slice(i+1))separation=Math.min(separation,Math.hypot(p[0]-q[0],p[1]-q[1]));return {points,arcPoints,camera,separation};
  });
  const view=views[0].separation>=34?views[0]:views.reduce((a,b)=>a.separation>b.separation?a:b);
  for(const face of faces){
@@ -54,6 +87,6 @@ export function solidModelGeometry(model){
   const visible=normal.reduce((s,n,i)=>s+n*view.camera[i],0)>1e-9;
   for(let i=0;i<face.length;i++){const pair=[face[i],face[(i+1)%face.length]].sort((a,b)=>a-b),key=pair.join('-'),old=edges.get(key);edges.set(key,{vertices:pair,visible:visible||old?.visible||false});}
  }
- return {vertices,points:view.points,edges:model.id==='spatial-frame'?model.links.map(e=>({vertices:[e.from,e.to],visible:!e.hidden})):[...edges.values()]};
+ return {vertices,points:view.points,edges:model.id==='spatial-frame'?model.links.map(e=>({vertices:[e.from,e.to],visible:!e.hidden})):[...edges.values()],...(arcDefinitions.length?{motionArcs:arcDefinitions.map((arc,i)=>({from:arc.from,to:arc.to,center:arc.center,radius:arc.radius,vertices:arcVertices[i],points:view.arcPoints[i]}))}:{})};
 }
-export const exerciseModelSchema={type:'object',additionalProperties:false,required:['id','dimensions','labels'],properties:{vertices:{type:'array',minItems:4,maxItems:12,items:{type:'array',minItems:3,maxItems:3,items:{type:'number',minimum:-1000,maximum:1000}}},links:{type:'array',minItems:4,maxItems:30,items:{type:'object',additionalProperties:false,required:['from','to','hidden'],properties:{from:{type:'integer',minimum:0,maximum:11},to:{type:'integer',minimum:0,maximum:11},hidden:{type:'boolean'}}}},id:{type:'string',enum:Object.keys(exerciseModels)},dimensions:{type:'array',items:{type:'number',minimum:.001,maximum:1000}},labels:{type:'array',items:{type:'string',maxLength:8}}}};
+export const exerciseModelSchema={type:'object',additionalProperties:false,required:['id','dimensions','labels'],properties:{motionArcs:{type:'array',maxItems:4,items:{type:'object',additionalProperties:false,required:['from','to','center'],properties:{from:{type:'integer',minimum:0,maximum:11},to:{type:'integer',minimum:0,maximum:11},center:{type:'array',minItems:3,maxItems:3,items:{type:'number',minimum:-1000,maximum:1000}}}}},vertices:{type:'array',minItems:4,maxItems:12,items:{type:'array',minItems:3,maxItems:3,items:{type:'number',minimum:-1000,maximum:1000}}},links:{type:'array',minItems:4,maxItems:30,items:{type:'object',additionalProperties:false,required:['from','to','hidden'],properties:{from:{type:'integer',minimum:0,maximum:11},to:{type:'integer',minimum:0,maximum:11},hidden:{type:'boolean'}}}},id:{type:'string',enum:Object.keys(exerciseModels)},dimensions:{type:'array',items:{type:'number',minimum:.001,maximum:1000}},labels:{type:'array',items:{type:'string',maxLength:8}}}};
