@@ -1,6 +1,6 @@
 import {requireExerciseQualityReview} from '../engine/exercise-quality.js';
 import {validateExerciseResult,difficultyProfile,exerciseTypeLabel} from '../engine/exercise-contract.js';
-import {exercisePrintSections,exerciseAnswerSpaceHeight,exerciseWritingRows,exercisePrintFigureParts,exerciseKeepPromptTogether,exerciseKeepWritingTogether} from '../engine/exercise-print.js';
+import {exercisePrintSections,exerciseAnswerSpaceHeight,exerciseWritingRows,exercisePrintFigureParts,exerciseKeepPromptTogether,exerciseKeepWritingTogether,exerciseChoiceRowKeepNext,exerciseChoiceKeepNext} from '../engine/exercise-print.js';
 import {mathParts,mathSVG,warmExerciseMath,exerciseLineWidth} from './exercise-math.js';
 import {exerciseDiagramSVG} from './exercise-diagram.js';
 import {mathMLToOffice,mathMLTableToWord,wordMathNeedsVector} from './exercise-word-math.js';
@@ -18,7 +18,7 @@ let zipTask;
 async function zipLibrary(){if(!zipTask){const task=import('../../vendor/jszip.min.js').then(()=>{if(!window.JSZip)throw new Error('Word组件未能载入，请重试');return window.JSZip;});zipTask=task;task.catch(()=>{if(zipTask===task)zipTask=null;});}return zipTask;}
 export async function exerciseWord(record,{teacher=false,name=record.student?.name||'',classNo=record.student?.classNo??''}={}){
  if(!record.reviewedAt)throw new Error('请完成审题确认后输出正式练习。');requireExerciseQualityReview(record);
- const sheet=validateExerciseResult(record.sheet,record.request),key=JSON.stringify(['docx-v29-plot-legend',record.request,sheet,teacher,name,classNo,{exerciseId:record.id}]);
+ const sheet=validateExerciseResult(record.sheet,record.request),key=JSON.stringify(['docx-v33-option-blocks',record.request,sheet,teacher,name,classNo,{exerciseId:record.id}]);
  const snapshot=structuredClone(record);return exerciseFile(key,()=>buildExerciseWord(snapshot,{teacher,name,classNo}));
 }
 async function buildExerciseWord(record,{teacher,name,classNo}){
@@ -49,9 +49,9 @@ async function buildExerciseWord(record,{teacher,name,classNo}){
    if(q.diagram){let src,svg=false;if(q.diagram.kind==='illustration'){if(!q.diagram.image)throw new Error('复杂插图尚未生成，请先补充图示。');src='data:'+q.diagram.image.mime+';base64,'+q.diagram.image.data;}else{src=exerciseDiagramSVG(q.diagram);svg=true;}body+='<w:p><w:pPr><w:jc w:val="center"/><w:keepNext/><w:spacing w:before="80" w:after="80" w:line="240" w:lineRule="auto"/></w:pPr>'+await image(src,{svg,width:figure.width,height:figure.height,upscale:figure.widthPercent!==undefined,alt:q.diagram.description||q.diagram.caption})+'</w:p>'+await p(q.diagram.caption,'Caption',keepStudentQuestion||figure.after&&figure.after.length<350?'<w:keepNext/>':'');}
    if(figure.after)body+=await lines(figure.after,'Normal',keepStudentQuestion?'<w:keepNext/>':'');
    if(q.choices.length===4&&(await Promise.all(q.choices.map(c=>exerciseLineWidth(c)))).every(width=>width<=220)){
-    const cells=await Promise.all(q.choices.map((c,i)=>p('ABCD'[i]+'. '+c,'Choice',keepStudentQuestion&&i<2?'<w:keepNext/>':'')));
+    const cells=await Promise.all(q.choices.map((c,i)=>p('ABCD'[i]+'. '+c,'Choice',exerciseChoiceRowKeepNext(q,Math.floor(i/2))?'<w:keepNext/>':'')));
     body+='<w:tbl><w:tblPr><w:tblW w:w="10146" w:type="dxa"/><w:tblLayout w:type="fixed"/><w:tblBorders>'+['top','left','bottom','right','insideH','insideV'].map(side=>'<w:'+side+' w:val="nil"/>').join('')+'</w:tblBorders><w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="0" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="80" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="5073"/><w:gridCol w:w="5073"/></w:tblGrid>'+[0,2].map(i=>'<w:tr><w:trPr><w:cantSplit/></w:trPr>'+[i,i+1].map(n=>'<w:tc><w:tcPr><w:tcW w:w="5073" w:type="dxa"/></w:tcPr>'+cells[n]+'</w:tc>').join('')+'</w:tr>').join('')+'</w:tbl>';
-   }else for(const [i,c] of q.choices.entries())body+=await p('ABCD'[i]+'. '+c,'Normal',keepStudentQuestion&&i<q.choices.length-1?'<w:keepNext/>':'');
+   }else for(const [i,c] of q.choices.entries())body+=await p('ABCD'[i]+'. '+c,'Normal',(keepStudentQuestion||exerciseChoiceKeepNext(q,i))&&i<q.choices.length-1?'<w:keepNext/>':'');
    if(teacher){body+=await p('参考答案','Heading2')+await lines(q.answer)+await p('第'+q.id+'题 解析与评分要点','Heading2')+await lines(q.analysis,'Normal',q.analysis.length<1000?'<w:keepLines/>':'')+await p('评分要点','Heading2');for(const point of q.points)body+=await p('• '+point);}
    // Choices are answered in their existing brackets. An extra empty paragraph
    // can spill past the last option and create a page containing only a footer.

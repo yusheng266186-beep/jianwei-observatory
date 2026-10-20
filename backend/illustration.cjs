@@ -3,7 +3,11 @@ const https=require('node:https'),dns=require('node:dns'),net=require('node:net'
 const {request}=require('./tencent.cjs'),candidates=require('./image-candidate.cjs');
 // Leave response/store headroom while accepting full 2048px provider PNGs.
 const IMAGE_MAX_CHARS=5200000,IMAGE_MAX_BYTES=IMAGE_MAX_CHARS/4*3;
-const IMAGE_HOSTS=['www.bytecatcode.org','bytecatcode.org','files.oaiusercontent.com','oaidalleapiprodscus.blob.core.windows.net','pre-signed-firefly-prod.s3-accelerate.amazonaws.com'];
+// Exact Cloudflare R2 bucket host returned by the native images/generations
+// endpoint. Never widen this to *.r2.dev or any other wildcard.
+const R2_IMAGE_HOST='pub-13fd1d3607a441b4a9d232b3a223f5f6.r2.dev';
+const IMAGE_HOSTS=['www.bytecatcode.org','bytecatcode.org','files.oaiusercontent.com','oaidalleapiprodscus.blob.core.windows.net','pre-signed-firefly-prod.s3-accelerate.amazonaws.com',R2_IMAGE_HOST];
+const CANDIDATE_URL_MAX_CHARS=8192;
 const RETRYABLE_STATUS=new Set([408,425,429,500,502,503,504]);
 const EXPIRED_STATUS=new Set([400,401,403,404,410]);
 const NETWORK_CODES=new Set(['NETWORK_TIMEOUT','NETWORK_INTERRUPTED','ETIMEDOUT','ECONNRESET','EPIPE','EAI_AGAIN','ENOTFOUND','ECONNREFUSED','EHOSTUNREACH','ENETUNREACH']);
@@ -24,11 +28,21 @@ function responseImage(body){
  const candidate=candidates.find(s=>/^data:image\/(?:png|jpeg);base64,/.test(s))||candidates.find(s=>s.startsWith('https://'));if(!candidate)throw new Error('IMAGE_RESPONSE_INVALID');return candidate;
 }
 function dataImage(value){const match=typeof value==='string'?/^data:(image\/(?:png|jpeg));base64,([A-Za-z0-9+/=]+)$/.exec(value):null;return match?{mime:match[1],data:match[2]}:null;}
+// Basic URL shape that may be kept in a private candidate checkpoint. This
+// grants no download permission: the exact host allowlist is applied by
+// imageUrl() immediately before every request. Only HTTPS without credentials
+// or a custom port, and within a bounded length, qualifies for persistence.
+function candidateUrl(value){
+ if(typeof value!=='string'||!value||value.length>CANDIDATE_URL_MAX_CHARS||/[\u0000-\u0020\u007f]/.test(value))throw new Error('IMAGE_URL_REJECTED');
+ let url;try{url=new URL(value);}catch{throw new Error('IMAGE_URL_REJECTED');}
+ if(url.protocol!=='https:'||url.username||url.password||url.port||!url.hostname)throw new Error('IMAGE_URL_REJECTED');
+ return url;
+}
 // Strict host allowlist. Credentials, ports and non-HTTPS schemes are rejected
 // before a request is made; no redirect is followed anywhere in this module.
 function imageUrl(value){
- let url;try{url=new URL(value);}catch{throw new Error('IMAGE_URL_REJECTED');}
- if(url.protocol!=='https:'||url.username||url.password||url.port||!IMAGE_HOSTS.includes(url.hostname))throw new Error('IMAGE_URL_REJECTED');
+ const url=candidateUrl(value);
+ if(!IMAGE_HOSTS.includes(url.hostname))throw new Error('IMAGE_URL_REJECTED');
  return url;
 }
 function jpegDimensions(bytes){
@@ -179,10 +193,13 @@ async function deliverGenerated(result,{context,regenerate,download,downloadAtte
   if(context)try{await candidates.save(context,{source:'data',...data},{regenerate});}catch{}
   return image;
  }
- const url=imageUrl(result);let saved=null,saveError=null;
+ const url=candidateUrl(result);let saved=null,saveError=null;
+ // Persist the provider's original URL before any host/download check. An
+ // unknown CDN must never discard the only paid artifact; saving here only
+ // keeps a bounded HTTPS URL in the private candidate prefix.
  if(context){try{saved=await candidates.save(context,{source:'url',url:url.href},{regenerate});}catch(error){saveError=error;}}
  const downloadOptions={download,downloadAttempts,downloadDelayMs,sleep,signal,isRemoved};
- try{return await downloadAndValidate(url,downloadOptions);}
+ try{return await downloadAndValidate(imageUrl(url.href),downloadOptions);}
  catch(error){
   if(error?.message==='JOB_CANCELLED')throw error;
   if(error?.message==='IMAGE_CANDIDATE_EXPIRED'&&saved)await candidates.markUnusable(context,saved.slot,{reason:unusableReason(error),status:error.diagnostic?.status,attempts:error.diagnostic?.attempts});

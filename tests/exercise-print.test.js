@@ -38,3 +38,40 @@ test('教师解析和评分标题在页尾先换页，普通正文仍可自由�
  assert.equal(exercisePageBreakBefore({text:'继续的正文',startPosition:{top:760}}),false);
  assert.equal(exercisePageBreakBefore({id:'exercise-section-analysis-1'}),false);
 });
+
+test('教师有图题不把题干、选项和答案锁成整页大块，长答案可续页',async()=>{
+ const {exerciseTeacherKeepPromptTogether,exerciseTeacherKeepAnswerTogether,exercisePrintLead}=await import('../app/engine/exercise-print.js');
+ const diagram={id:1,type:'选择',stem:'某物体沿直线运动。'.repeat(20),choices:['甲项','乙项','丙项','丁项'],answer:'A',analysis:'解析。'.repeat(80),points:['选对得5分'],diagram:{kind:'plot'}};
+ assert.equal(exerciseTeacherKeepPromptTogether(diagram),false);assert.equal(exerciseTeacherKeepAnswerTogether(diagram),false);
+ const plain={...diagram,diagram:undefined,stem:'求物体到达右端的时间。',answer:'由运动学公式可得结果。'};
+ assert.equal(exerciseTeacherKeepPromptTogether(plain),true);assert.equal(exerciseTeacherKeepAnswerTogether(plain),true);
+ assert.equal(exerciseTeacherKeepAnswerTogether({...plain,answer:'解析。'.repeat(300)}),false);
+ const answer='（1）由公式得第一问。\n（2）代入数据得第二问。\n（3）结论成立。',parts=exercisePrintLead(answer);
+ assert.equal(parts.lead,'（1）由公式得第一问。');assert.equal(parts.lead+'\n'+parts.rest,answer);
+ assert.deepEqual(exercisePrintLead('A'),{lead:'A',rest:''});
+ const table='| I/A | 0.100 |\n| --- | --- |\n| U/V | 0.200 |';assert.deepEqual(exercisePrintLead(table),{lead:table,rest:''});
+});
+
+test('Word四选一的两行选项始终成对，题干仍可自由分页',async()=>{
+ const {exerciseKeepPromptTogether,exerciseChoiceRowKeepNext}=await import('../app/engine/exercise-print.js');
+ const diagram={type:'选择',stem:'长题干。'.repeat(120),choices:['甲项','乙项','丙项','丁项'],diagram:{kind:'plot'}};
+ assert.equal(exerciseKeepPromptTogether(diagram),false);
+ assert.equal(exerciseChoiceRowKeepNext(diagram,0),true);assert.equal(exerciseChoiceRowKeepNext(diagram,1),false);
+ assert.equal(exerciseChoiceRowKeepNext({...diagram,choices:['甲项','乙项','丙项']},0),false);
+});
+
+
+test('答案首段保持时不切开跨行公式、混合公式或结构化表格',async()=>{
+ const {exercisePrintLead,exerciseChoiceRowKeepNext}=await import('../app/engine/exercise-print.js');
+ for(const source of [String.raw`先计算 $\begin{aligned}a&=1
+b&=2\end{aligned}$
+继续说明`, '先给数据：\n| A | B |\n| --- | --- |\n| 1 | 2 |'])assert.deepEqual(exercisePrintLead(source),{lead:source,rest:''});
+ const q={choices:['A','B','C','D']};assert.deepEqual([0,1,2,3].map(i=>exerciseChoiceRowKeepNext(q,Math.floor(i/2))),[true,true,false,false]);
+});
+
+
+test('有图题的单列选项同样连排，长材料选项不被锁成整页大块',async()=>{
+ const {exerciseChoiceKeepNext}=await import('../app/engine/exercise-print.js');
+ const q={diagram:{kind:'plot'},choices:['0至2秒内加速度为2，0至7秒内位移为20。','0至2秒内加速度为4，0至7秒内位移为20。','0至2秒内加速度为2，0至7秒内位移为28。','5至7秒内物体做速度为零的匀速运动。']};
+ assert.deepEqual(q.choices.map((_,i)=>exerciseChoiceKeepNext(q,i)),[true,true,true,false]);assert(q.choices.every(c=>exerciseChoiceKeepNext({...q,choices:q.choices.map(x=>x.repeat(50))},0)===false));
+});

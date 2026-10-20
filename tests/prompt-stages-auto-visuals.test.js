@@ -88,3 +88,11 @@ test('洗气瓶不能把导管标签当成仪器节点；提示与校验反馈�
  let prompt;await figures.planFigure(q,request,{complete:async p=>{prompt=p;return {output:JSON.stringify({diagram:{kind:'drawing',caption:'已给结构',description:'题干给定的结构与字母',scene:[{type:'path',d:'M 100 100 L 200 100 L 200 200'},{type:'text',x:100,y:80,text:'a'}]}})};}});
  assert.match(prompt.system,/若这些位置标签是题目必需，就对整张图使用drawing/);assert.match(prompt.system,/不能混入shape:point/);
 });
+
+
+test('复杂观察图允许必要灰度纹理，仍禁止编造细胞器、定量关系和答案信息',async()=>{
+ const {illustrationPrompt}=await import('../backend/figure-prompt-guidance.cjs');
+ const diagram={caption:'模拟显微观察',description:'只有表皮与保卫细胞轮廓，不显示细胞器。'},original=structuredClone(diagram),feedback=['删去叶绿体结构，保留轻微显微纹理。'];
+ const prompt=illustrationPrompt(diagram,{layout:{width:'wide',aspect:'wide'},feedback});
+ assert.match(prompt,/允许轻微、非结构指示性的显微纹理和明暗变化/);assert.match(prompt,/明确禁止的细胞器、标签和其他结构必须省略/);assert.match(prompt,/不能强制画成空白轮廓线稿/);assert.match(prompt,/不把复杂位图当作定量科学图/);assert(prompt.includes(feedback[0]));assert.deepEqual(diagram,original);
+});

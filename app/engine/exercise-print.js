@@ -11,6 +11,29 @@ export const exerciseObjectiveQuestion=q=>['选择','多选'].includes(q.type)||
 // Keep a readable prompt and its choices together, independently of answer
 // space or lengthy teacher explanations. Long passages can still flow.
 export const exerciseKeepPromptTogether=q=>!q.diagram&&String(q.stem||'').length+(q.choices||[]).join('').length<650&&String(q.stem||'').split('\n').length<18;
+// Teacher pages add an answer to the prompt. A short prose question may travel
+// as one unit, but a figure question is already anchored by its heading, stem,
+// figure and caption; folding options and the full answer into that anchor can
+// make a block larger than a page and empty the page before it.
+export const exerciseTeacherKeepPromptTogether=q=>!q.diagram&&String(q.stem||'').length+(q.choices||[]).join('').length<650&&String(q.stem||'').split('\n').length<18;
+export const exerciseTeacherKeepAnswerTogether=q=>!q.diagram&&String(q.stem||'').length+(q.choices||[]).join('').length+String(q.answer||'').length<650;
+// Keep a teacher answer label with the opening source line only. Later lines of
+// a long derivation stay free to continue on the next page.
+export function exercisePrintLead(value){
+ const text=String(value??'').replace(/\r\n?/g,'\n');
+ // A leading table, fenced sample or display formula must not be cut inside
+ // the block; keep the label with the whole compact answer instead.
+ if(/\$|\\\(|\\\[|\\begin\{|^\s*(?:\||`)/m.test(text))return {lead:text,rest:''};
+ const at=text.indexOf('\n');
+ return at<0?{lead:text,rest:''}:{lead:text.slice(0,at),rest:text.slice(at+1)};
+}
+// Word's two-row option grid cannot split a row, but it can separate the rows.
+// Tie only the first row to the second, including figure questions whose prompt
+// remains splittable; chaining the second row would pin the whole item.
+// Long individual choices use a one-column path. Its bounded short option
+// group needs the same keep protection as the compact two-column grid.
+export const exerciseChoiceKeepNext=(question,index)=>(question.choices||[]).length===4&&question.choices.join('').length<650&&index<3;
+export const exerciseChoiceRowKeepNext=(question,row)=>row===0&&(question.choices||[]).length===4;
 export function exerciseAnswerSpaceHeight(question,subject){
  // Objective answers belong in their option/blank, even if a model overestimates.
  if(['选择','多选'].includes(question.type))return 6;

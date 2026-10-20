@@ -21,3 +21,10 @@ test('连接重试也不能延长已耗尽的任务总时限',async()=>{
  const original=https.request;let calls=0;https.request=()=>{calls++;const req=new EventEmitter();req.setTimeout=()=>{};req.end=()=>queueMicrotask(()=>req.emit('error',Object.assign(Error('connect failed'),{code:'ETIMEDOUT'})));return req;};
  try{await assert.rejects(()=>transport.request('https://model.test',{deadlineMs:100}),/connect failed/);assert.equal(calls,1);}finally{https.request=original;}
 });
+
+
+test('底层连接只有错误码没有消息时，重连后仍保留可识别的连接诊断',async()=>{
+ const original=https.request;let calls=0;
+ https.request=()=>{calls++;const req=new EventEmitter();req.setTimeout=()=>{};req.destroy=e=>queueMicrotask(()=>req.emit('error',e));req.end=()=>queueMicrotask(()=>req.emit('error',Object.assign(Error(''),{code:'ECONNRESET'})));return req;};
+ try{await assert.rejects(()=>transport.request('https://model.test',{deadlineMs:2000}),error=>{assert.equal(error.message,'ECONNRESET');assert.equal(error.code,'ECONNRESET');assert.deepEqual(error.diagnostic,{kind:'network',tlsEstablished:false,requestFinished:false,responseHeadersReceived:false,responseBytes:0});return true;});assert.equal(calls,2);}finally{https.request=original;}
+});

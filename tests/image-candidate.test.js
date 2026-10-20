@@ -1,9 +1,12 @@
 import test from 'node:test';import assert from 'node:assert/strict';import crypto from 'node:crypto';import {readFileSync} from 'node:fs';import {EventEmitter} from 'node:events';
-import {MemoryStore} from '../backend/store.cjs';import illustration from '../backend/illustration.cjs';import candidates from '../backend/image-candidate.cjs';
+import {MemoryStore} from '../backend/store.cjs';import illustration from '../backend/illustration.cjs';import candidates from '../backend/image-candidate.cjs';import providers from '../backend/image-providers.cjs';
 const png=readFileSync(new URL('../assets/school-crest-192.png',import.meta.url));
 const owner='a'.repeat(32),diagram={caption:'结构图',description:'只包含题干给出的对象与结构'};
 const url='https://pre-signed-firefly-prod.s3-accelerate.amazonaws.com/example.png?X-Amz-Signature=private-test-signature';
 const body=JSON.stringify({data:[{url}]});
+const native=providers.snapshot({provider:'cheetah-image25',model:'gpt-image-2.5'});
+const r2Host='pub-13fd1d3607a441b4a9d232b3a223f5f6.r2.dev';
+const r2Url='https://'+r2Host+'/generated/example.png?X-Amz-Signature=private-r2-signature';
 const job=()=>crypto.randomUUID();
 const run=(id,options={})=>illustration.generateIllustration(diagram,{key:'private-model-key',owner,job:id,...options});
 const successDownload=calls=>({status:200,mime:'image/png',bytes:png});
@@ -44,16 +47,77 @@ test('URL过期或404不自动重新生图，只有显式regenerate才再次付�
  assert.equal(generated,2);assert.equal(downloads,2);assert.equal(image.data,png.toString('base64'));
  assert.equal((await illustration.candidateStatus(diagram,{store,owner,job:id})).unusable,null);
 });
-test('拒绝未授权图片主机、私网解析结果和302，不把模型密钥转给对象存储',async()=>{
+test('未知图片主机只保留私有候选不下载，私网解析结果和302仍拒绝',async()=>{
  const store=new MemoryStore(),id=job();let generated=0,downloads=0;
  await assert.rejects(run(id,{store,transport:async()=>{generated++;return{status:200,body:JSON.stringify({data:[{url:'https://unknown.test/p.png?token=x'}]})};},download:()=>{downloads++;}}),error=>error.message==='IMAGE_URL_REJECTED'&&error.diagnostic.status===200);
- assert.equal(generated,1);assert.equal(downloads,0);assert.deepEqual(await illustration.candidateStatus(diagram,{store,owner,job:id}),{exists:false});
+ assert.equal(generated,1);assert.equal(downloads,0);
+ const status=await illustration.candidateStatus(diagram,{store,owner,job:id});
+ assert.equal(status.exists,true);assert.equal(status.source,'url');assert.equal(status.unusable,null);
+ assert(!JSON.stringify(status).includes('unknown.test')&&!JSON.stringify(status).includes('token=x'));
+ const fallback=providers.snapshot(),context=candidates.context({store,owner,job:id,provider:fallback.provider,model:fallback.model,diagram});
+ assert.equal((await candidates.latest(context)).record.url,'https://unknown.test/p.png?token=x');
+ await assert.rejects(illustration.resumeIllustration(diagram,{store,owner,job:id,download:()=>{downloads++;}}),/IMAGE_URL_REJECTED/);
+ assert.equal(downloads,0);assert.equal(generated,1);
+ assert.equal((await illustration.candidateStatus(diagram,{store,owner,job:id})).exists,true);
  for(const blocked of ['http://pre-signed-firefly-prod.s3-accelerate.amazonaws.com/a.png','https://other.s3-accelerate.amazonaws.com/a.png','https://pre-signed-firefly-prod.s3-accelerate.amazonaws.com.attacker.test/a.png','https://user:password@pre-signed-firefly-prod.s3-accelerate.amazonaws.com/a.png','https://pre-signed-firefly-prod.s3-accelerate.amazonaws.com:444/a.png'])await assert.rejects(illustration.imageFromResult(blocked,{download:()=>assert.fail('不能访问未授权图片地址')}),/IMAGE_URL_REJECTED/);
  for(const address of ['127.0.0.1','10.1.2.3','169.254.1.1','172.16.0.1','192.168.1.1','100.64.0.1','::1','fc00::1','fe80::1','::ffff:10.0.0.1','::ffff:7f00:1','::10.0.0.1'])assert.equal(illustration.isPublicAddress(address),false,address);
  for(const address of ['8.8.8.8','1.1.1.1','2606:4700:4700::1111'])assert.equal(illustration.isPublicAddress(address),true,address);
  const redirectJob=job();
  await assert.rejects(run(redirectJob,{store,transport:async()=>{generated++;return{status:200,body};},download:async()=>{downloads++;return{status:302,mime:'image/png',bytes:png};},downloadAttempts:3,downloadDelayMs:0}),error=>error.message==='IMAGE_REQUEST_FAILED'&&error.diagnostic.status===302);
  assert.equal(downloads,1);
+});
+test('精确Cloudflare R2桶域可下载，相近域和任意r2.dev仍拒绝',async()=>{
+ const store=new MemoryStore(),id=job();let generated=0,downloads=0;
+ const image=await run(id,{generation:native,store,request:{questionId:1},transport:async(target,options)=>{generated++;assert.equal(target,'https://www.wefucke.top/v1/images/generations');assert.equal(JSON.parse(options.body).model,'gpt-image-2.5');return{status:200,body:JSON.stringify({data:[{url:r2Url}]})};},download:async(...args)=>{downloads++;assert.deepEqual(args,[r2Url]);return successDownload();}});
+ assert.equal(generated,1);assert.equal(downloads,1);assert.equal(image.data,png.toString('base64'));
+ assert.equal(illustration.IMAGE_HOSTS.includes(r2Host),true);
+ const status=await illustration.candidateStatus(diagram,{generation:native,store,owner,job:id,request:{questionId:1}});
+ assert.equal(status.exists,true);assert.equal(status.source,'url');assert.equal(status.unusable,null);
+ assert(!JSON.stringify(status).includes(r2Host)&&!JSON.stringify(status).includes('private-r2-signature'));
+ const blocked=['https://evil.r2.dev/a.png','https://pub-13fd1d3607a441b4a9d232b3a223f5f6.r2.dev.attacker.test/a.png','https://pub-13fd1d3607a441b4a9d232b3a223f5f6.r2.dev.evil/a.png','https://xpub-13fd1d3607a441b4a9d232b3a223f5f6.r2.dev/a.png'];
+ for(const candidate of blocked){
+  const otherStore=new MemoryStore(),otherJob=job();let calls=0,downloadCalls=0;
+  await assert.rejects(illustration.generateIllustration(diagram,{generation:native,key:'private-model-key',store:otherStore,owner,job:otherJob,request:{questionId:1},transport:async()=>{calls++;return{status:200,body:JSON.stringify({data:[{url:candidate}]})};},download:async()=>{downloadCalls++;return successDownload();}}),error=>error.message==='IMAGE_URL_REJECTED'&&error.diagnostic.status===200);
+  assert.equal(calls,1);assert.equal(downloadCalls,0,candidate);
+  const saved=await candidates.latest(candidates.context({store:otherStore,owner,job:otherJob,provider:native.provider,model:native.model,diagram,request:{questionId:1}}));
+  assert.equal(saved.record.url,candidate);
+  await assert.rejects(illustration.resumeIllustration(diagram,{generation:native,store:otherStore,owner,job:otherJob,request:{questionId:1},download:async()=>{downloadCalls++;return successDownload();}}),/IMAGE_URL_REJECTED/);
+  assert.equal(downloadCalls,0);assert.equal(calls,1);assert.equal((await illustration.candidateStatus(diagram,{generation:native,store:otherStore,owner,job:otherJob,request:{questionId:1}})).exists,true);
+ }
+});
+test('未知合法HTTPS候选先私有保存但不下载，恢复仍拒绝且不调用生图',async()=>{
+ const host='private-cdn.example.test',candidate='https://'+host+'/images/private.png?token=private-unknown-token',store=new MemoryStore(),id=job();let generated=0,downloads=0;
+ await assert.rejects(run(id,{generation:native,store,request:{questionId:7},transport:async()=>{generated++;return{status:200,body:JSON.stringify({data:[{url:candidate}]})};},download:async()=>{downloads++;return successDownload();}}),error=>{assert.equal(error.message,'IMAGE_URL_REJECTED');assert.equal(error.diagnostic.status,200);const text=JSON.stringify(error);assert(!text.includes('private-unknown-token')&&!text.includes('/images/private.png'));return true;});
+ assert.equal(generated,1);assert.equal(downloads,0);
+ const saved=await candidates.latest(candidates.context({store,owner,job:id,provider:native.provider,model:native.model,diagram,request:{questionId:7}}));
+ assert.equal(saved.record.url,candidate);
+ const statusText=JSON.stringify(await illustration.candidateStatus(diagram,{generation:native,store,owner,job:id,request:{questionId:7}}));
+ assert(!statusText.includes(host)&&!statusText.includes('private-unknown-token'));
+ await assert.rejects(illustration.resumeIllustration(diagram,{generation:native,store,owner,job:id,request:{questionId:7},download:async()=>{downloads++;return successDownload();}}),/IMAGE_URL_REJECTED/);
+ assert.equal(downloads,0);assert.equal(generated,1);
+ await assert.rejects(run(id,{generation:native,store,request:{questionId:7},transport:async()=>{generated++;return{status:200,body:JSON.stringify({data:[{url:r2Url}]})};},download:async()=>{downloads++;return successDownload();}}),/IMAGE_URL_REJECTED/);
+ assert.equal(generated,1);assert.equal(downloads,0);
+ assert.equal((await illustration.candidateStatus(diagram,{generation:native,store,owner,job:id,request:{questionId:7}})).exists,true);
+});
+test('候选按题目指纹隔离，同一任务的另一题不复用未知域候选',async()=>{
+ const store=new MemoryStore(),id=job();let generated=0,downloads=0;
+ const unknown='https://private-cdn.example.test/a.png?token=private';
+ await assert.rejects(run(id,{generation:native,store,request:{questionId:1},transport:async()=>{generated++;return{status:200,body:JSON.stringify({data:[{url:unknown}]})};},download:async()=>{downloads++;return successDownload();}}),/IMAGE_URL_REJECTED/);
+ assert.equal(generated,1);assert.equal(downloads,0);
+ const image=await illustration.generateIllustration(diagram,{generation:native,key:'private-model-key',store,owner,job:id,request:{questionId:2},transport:async()=>{generated++;return{status:200,body:JSON.stringify({data:[{url:r2Url}]})};},download:async()=>{downloads++;return successDownload();}});
+ assert.equal(generated,2);assert.equal(downloads,1);assert.equal(image.data,png.toString('base64'));
+ const first=await candidates.latest(candidates.context({store,owner,job:id,provider:native.provider,model:native.model,diagram,request:{questionId:1}}));
+ const second=await candidates.latest(candidates.context({store,owner,job:id,provider:native.provider,model:native.model,diagram,request:{questionId:2}}));
+ assert.equal(first.record.url,unknown);assert.equal(second.record.url,r2Url);assert.notEqual(first.record.request,second.record.request);
+});
+test('非法scheme、凭据和自定义端口在私有保存前拒绝且不下载',async()=>{
+ for(const invalid of ['https://user:password@'+r2Host+'/a.png','https://'+r2Host+':444/a.png','https://'+r2Host+'/'+'a'.repeat(8192)]){
+  const store=new MemoryStore(),id=job();let generated=0,downloads=0;
+  await assert.rejects(run(id,{generation:native,store,transport:async()=>{generated++;return{status:200,body:JSON.stringify({data:[{url:invalid}]})};},download:async()=>{downloads++;return successDownload();}}),/IMAGE_URL_REJECTED/);
+  assert.equal(generated,1);assert.equal(downloads,0);
+  assert.deepEqual(await illustration.candidateStatus(diagram,{generation:native,store,owner,job:id}),{exists:false});
+ }
+ await assert.rejects(illustration.imageFromResult('http://'+r2Host+'/a.png',{download:()=>assert.fail('不能访问未授权图片地址')}),/IMAGE_URL_REJECTED/);
 });
 test('默认下载不携带Authorization且URL签名和模型密钥不出现在公开错误中',async()=>{
  const store=new MemoryStore(),id=job();
