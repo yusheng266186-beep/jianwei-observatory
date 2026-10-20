@@ -172,11 +172,11 @@ test('content与repair阶段manifest和子任务保留scope，旧记录缺省sco
 });
 test('未知或与请求不匹配的内部scope立即失败关闭，旧记录缺省scope仍可生成',async()=>{
  const part=groups.plan(request)[1],context=priorContext();
- await assert.rejects(generator.buildExercisePrompt(part.input,{groupScope:{...context,version:2}}),/GROUP_SCOPE_INVALID/);
+ await assert.rejects(generator.buildExercisePrompt(part.input,{groupScope:{...context,version:99}}),/GROUP_SCOPE_INVALID/);
  await assert.rejects(generator.buildExercisePrompt(part.input,{groupScope:{...context,unknown:true}}),/GROUP_SCOPE_INVALID/);
  const wrong=structuredClone(context);wrong.slots[0].target='分式不等式';
  await assert.rejects(generator.buildExercisePrompt(part.input,{groupScope:wrong}),/GROUP_SCOPE_INVALID/);
- await assert.rejects(contentCheck.buildReviewPrompt(documentFor(context,'第2组').sheet,part.input,{groupScope:{...context,version:2}}),/CONTENT_REVIEW_INVALID/);
+ await assert.rejects(contentCheck.buildReviewPrompt(documentFor(context,'第2组').sheet,part.input,{groupScope:{...context,version:99}}),/CONTENT_REVIEW_INVALID/);
  const legacy=await generator.buildExercisePrompt(part.input);
  assert.equal(legacy.input.groupScope,undefined);
  assert(!/本组在整卷中的冻结范围/.test(legacy.system));
@@ -185,4 +185,15 @@ test('未知或与请求不匹配的内部scope立即失败关闭，旧记录缺
  assert(!/本组与整卷的冻结边界/.test(review.system));
  const repair=await generator.buildRepairPrompt(part.input,{output:'{}',validation:'格式错误'});
  assert.equal(repair.input.groupScope,undefined);
+});
+
+
+test('分组调度只为教师要求共享的语言阅读传递完整材料，不传答案或改写旧组',async()=>{
+ const input={...request,subject:'日语',focus:'语法、阅读与写作',curriculum:'高中日语',targets:['助词与基础语法','阅读理解','书面表达'],questionTypes:['选择','填空','写作'],requirements:'阅读理解两题共用同一篇完整语篇，分别信息与推断。'};
+ const lab=await setup();await lab.store.progress(lab.key+'/meta.json',{id:lab.key.split('/').at(-1),type:'exercise',generation:profile,input,createdAt:Date.now(),deadline:Date.now()+7200000});
+ const text='完整阅读材料'.repeat(45)+'。';
+ const generate=async(req,options)=>{const sheet=documentFor(options.groupScope,'共享组').sheet;for(const q of sheet.questions)if(q.target==='阅读理解')q.stem=text+'\n\n问题：哪项正确？';return {sheet,model:profile.model};};
+ await worker.run({key:lab.key},{store:lab.store,generator:generate,dispatch:lab.dispatch});const first=lab.queue.shift();await worker.run({key:first},{store:lab.store,generator:generate,dispatch:lab.dispatch});
+ const second=(await lab.store.get(lab.queue[0]+'/meta.json')).value;const reading=second.groupContext.completed.find(q=>q.target==='阅读理解');
+ assert.equal(reading.sharedStem,text+'\n\n问题：哪项正确？');assert(reading.sharedStem.length>120);assert(!('answer' in reading));assert(!('analysis' in reading));
 });

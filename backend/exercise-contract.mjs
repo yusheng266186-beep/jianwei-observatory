@@ -44,7 +44,21 @@ const subjectTypes={语文:['选择','简答','写作'],数学:['选择','多选
 const legacyQuestionType=(subject,type)=>(type==='阅读'&&['语文','英语','日语','历史','政治','地理'].includes(subject))||(['英语','日语'].includes(subject)&&['简答','翻译'].includes(type))||(['化学','生物'].includes(subject)&&type==='多选');
 export const exerciseQuestionTypes=subject=>subjectTypes[subject]||types;
 export const exerciseTypeLabel=type=>({选择:'单项选择',多选:'多项选择',阅读:'阅读简答',简答:'简答'}[type]||type);
-export function exercisePlanFor(request){return Array.from({length:request.count},(_,i)=>({id:i+1,...(request.targets?.length?{target:request.targets[Math.floor(i*request.targets.length/request.count)]}:{}),...(request.questionTypes?.length?{type:request.questionTypes[Math.floor(i*request.questionTypes.length/request.count)]}:{})}));}
+export function exercisePlanFor(request){
+ const slots=Array.from({length:request.count},(_,i)=>({id:i+1,...(request.targets?.length?{target:request.targets[Math.floor(i*request.targets.length/request.count)]}:{}),...(request.questionTypes?.length?{type:request.questionTypes[Math.floor(i*request.questionTypes.length/request.count)]}:{})}));
+ const types=request.questionTypes||[];if(!types.length||!request.targets?.length)return slots;
+ const preferred=slots.map(slot=>{
+  const target=slot.target||'';let type;
+  if(request.subject==='语文'){if(/文言.*翻译|语言简明|简明改写|语言.*改写|压缩语段/.test(target))type='简答';else if(/写作|作文/.test(target))type='写作';}
+  if(['英语','日语'].includes(request.subject)){if(/写作|书面表达|作文/.test(target))type='写作';else if(/语法|助词|词形/.test(target))type='填空';else if(/阅读/.test(target))type='选择';}
+  return types.includes(type)?type:null;
+ });
+ if(!preferred.some(Boolean))return slots;
+ let flexible=0;const planned=slots.map((slot,i)=>({...slot,type:preferred[i]||types[flexible++%types.length]}));
+ // Keep the teacher's selected types and coverage. Unknown or incompatible
+ // selections retain the established distribution rather than invent a type.
+ return types.every(type=>planned.some(slot=>slot.type===type))?planned:slots;
+}
 const text=(v,max=Infinity)=>typeof v==='string'&&v.trim().length>0&&v.length<=max;
 const keys=(o,allowed)=>o&&typeof o==='object'&&!Array.isArray(o)&&Object.keys(o).every(k=>allowed.includes(k));
 export function validateExerciseRequest(value){

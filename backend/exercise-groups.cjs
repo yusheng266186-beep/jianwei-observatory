@@ -25,7 +25,7 @@ async function priorQuestions(store,key,manifest,index){
   if(result?.value?.status!=='ready'||!Array.isArray(result.value.sheet?.questions))continue;
   for(const question of result.value.sheet.questions){
    if(!question||!Number.isInteger(question.id))continue;
-   completed.push(groupScope.questionSummary(question,start+question.id));
+   completed.push(groupScope.questionSummary(question,start+question.id,{shareReading:['语文','英语','日语'].includes(manifest.input?.subject)&&/共用|共享|同一.{0,8}(?:语篇|文章|材料|阅读)/.test(manifest.input?.requirements||'')}));
    if(completed.length>=groupScope.MAX_COMPLETED)return completed;
   }
  }
@@ -34,12 +34,12 @@ async function priorQuestions(store,key,manifest,index){
 async function buildGroupContext(store,key,manifest,index){
  const part=manifest?.parts?.[index];
  if(!part||!manifest?.input)return null;
- const whole=groupScope.globalSlots(manifest.input),count=part.input?.count;
+ const planVersion=manifest.planVersion??1,whole=manifest.slots||groupScope.globalSlots(manifest.input,planVersion),count=part.input?.count;
  if(!whole.length||!Number.isInteger(count)||count<1)return null;
  const offset=Number.isInteger(part.offset)?part.offset:manifest.parts.slice(0,index).reduce((n,p)=>n+(p.input?.count||0),0);
  const slots=groupScope.localSlots(whole,offset,count);
  if(slots.length!==count)throw Object.assign(Error('GROUP_SCOPE_INVALID'),{detail:'本组槽位超出整卷范围。'});
- return groupScope.createGroupContext({request:manifest.input,index,partCount:manifest.parts.length,offset,slots,completed:await priorQuestions(store,key,manifest,index)});
+ return groupScope.createGroupContext({request:manifest.input,index,partCount:manifest.parts.length,offset,slots,completed:await priorQuestions(store,key,manifest,index),planVersion});
 }
 async function ensurePart(store,key,manifest,index,attempt,now=Date.now,dispatch=async()=>{}){
  if(await store.get(key+'/removed.json'))return;const part=manifest.parts[index],parent=key.split('/').at(-1),id=partId(parent,index,attempt),child=key.slice(0,key.lastIndexOf('/')+1)+id;
@@ -61,7 +61,7 @@ async function ensurePart(store,key,manifest,index,attempt,now=Date.now,dispatch
  if(await store.create(child+'/meta.json',{id,type:'exercise-part',input:effectiveInput,generation:manifest.generation,imageGeneration:manifest.imageGeneration,repairGeneration:manifest.repairGeneration||manifest.generation,repairAttempts:manifest.repairAttempts??1,...(manifest.contentReview?{contentReview:manifest.contentReview}:{}),...(manifest.pipeline?{pipeline:manifest.pipeline,figureGeneration:manifest.figureGeneration}:{}),...(groupContext?{groupContext}:{}),group:{parentId:parent,index,attempt},status:'queued',createdAt:saved.createdAt,deadline:saved.createdAt+600000}))await dispatch(child);return child;
 }
 async function begin(store,key,job,{now=Date.now,dispatch}={}){
- const startedAt=now(),parts=plan(job.input);await store.create(key+'/run.json',{startedAt,deadlineAt:startedAt+7200000,grouped:true});await store.create(key+'/groups.json',{version:1,parts,slots:groupScope.globalSlots(job.input),input:job.input,generation:job.generation,imageGeneration:job.imageGeneration,repairGeneration:job.repairGeneration||job.generation,repairAttempts:job.repairAttempts??1,...(job.contentReview?{contentReview:job.contentReview}:{}),...(job.pipeline?{pipeline:job.pipeline,figureGeneration:job.figureGeneration}:{}),createdAt:startedAt});const manifest=(await store.get(key+'/groups.json')).value;
+ const startedAt=now(),parts=plan(job.input);await store.create(key+'/run.json',{startedAt,deadlineAt:startedAt+7200000,grouped:true});await store.create(key+'/groups.json',{version:1,planVersion:groupScope.VERSION,parts,slots:groupScope.globalSlots(job.input),input:job.input,generation:job.generation,imageGeneration:job.imageGeneration,repairGeneration:job.repairGeneration||job.generation,repairAttempts:job.repairAttempts??1,...(job.contentReview?{contentReview:job.contentReview}:{}),...(job.pipeline?{pipeline:job.pipeline,figureGeneration:job.figureGeneration}:{}),createdAt:startedAt});const manifest=(await store.get(key+'/groups.json')).value;
  await ensurePart(store,key,manifest,0,0,now,dispatch);await advance(store,key,{now,dispatch});return {grouped:true};
 }
 async function states(store,key,manifest,now=Date.now,dispatch){const out=[];

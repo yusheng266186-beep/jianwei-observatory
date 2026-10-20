@@ -4,6 +4,14 @@ import {EventEmitter} from 'node:events';
 import https from 'node:https';
 import transport from '../backend/tencent.cjs';
 
+test('207字节后断流保留响应状态和类型用于区分SSE与网关错误，仍不自动重发',async()=>{
+ const original=https.request;
+ try{for(const status of [200,524]){
+  let calls=0;https.request=(url,options,respond)=>{calls++;const req=new EventEmitter();req.setTimeout=()=>{};req.end=()=>queueMicrotask(()=>{const socket=new EventEmitter();req.emit('socket',socket);socket.emit('secureConnect');req.emit('finish');const res=new EventEmitter();res.statusCode=status;res.headers={'content-type':status===200?'text/event-stream; charset=utf-8':'text/html','set-cookie':'private-cookie','x-private-key':'private-key'};respond(res);res.emit('data',Buffer.from('x'.repeat(207)));res.emit('aborted');});return req;};
+  await assert.rejects(transport.request('https://model.test',{method:'POST',body:'private-prompt',collectBody:false,deadlineMs:1000}),error=>{const d=error.diagnostic;assert.equal(d.responseBytes,207);assert.equal(d.responseStatus,status);assert.equal(d.responseType,status===200?'text/event-stream':'text/html');assert.equal(d.status,undefined);assert(!JSON.stringify(d).includes('private'));assert(!JSON.stringify(d).includes('model.test'));return true;});assert.equal(calls,1);
+ }}finally{https.request=original;}
+});
+
 test('仅TLS建立前且HTTP未写出的连接错误重连一次，沿用原总时限',async()=>{
  const original=https.request;let calls=0;
  https.request=(url,options,respond)=>{const req=new EventEmitter();req.setTimeout=()=>{};req.destroy=e=>queueMicrotask(()=>req.emit('error',e));req.end=()=>queueMicrotask(()=>{const socket=new EventEmitter();req.emit('socket',socket);if(++calls===1)req.emit('error',Object.assign(Error('connect failed'),{code:'ETIMEDOUT'}));else {socket.emit('secureConnect');req.emit('finish');const res=new EventEmitter();res.statusCode=200;res.headers={};respond(res);res.emit('data',Buffer.from('ok'));res.emit('end');}});return req;};

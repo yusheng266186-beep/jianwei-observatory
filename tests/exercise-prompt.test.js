@@ -2,7 +2,16 @@ import test from 'node:test';import assert from 'node:assert/strict';
 import generator from '../backend/generator.cjs';import templates from '../backend/templates.cjs';
 import {exerciseScopeMatches} from '../app/ui/exercise-presets.js';
 const request={subject:'数学',grade:'高三',curriculum:'已学函数与导数',focus:'单调性',count:3,minutes:15,difficulty:'基础巩固',evidence:[{label:'19',knowledge:'另一个未选知识点',score:0,max:5}],targets:['单调性'],questionTypes:['填空','解答'],requirements:'教师补充：不涉及积分'};
-test('云端实际请求将补充内容作为数据，并按已选目标和题型约束最终输出',async()=>{const {body,template}=await generator.buildExercisePrompt(request),data=JSON.parse(body),system=data.systemInstruction.parts[0].text;assert.deepEqual(JSON.parse(data.contents[0].parts[0].text),request);assert(!system.includes(request.requirements));assert.match(system,/evidence和basis仅解释选题背景/);assert.match(system,/所有已选训练点至少覆盖一次/);assert.match(system,/不会经过程序修复/);assert.deepEqual(data.generationConfig.responseJsonSchema.properties.questions.items.properties.target.enum,['单调性']);assert.deepEqual(data.generationConfig.responseJsonSchema.properties.questions.items.properties.type.enum,['填空','解答']);assert.equal(template.version,'subject-templates-20261020.8');});
+test('日语语言运用使用新课标语篇任务，写作区分交际任务与字数核算',async()=>{
+ for(const template of ['targeted','variation','retest']){
+  const p=await generator.buildExercisePrompt({...request,subject:'日语',targets:['助词与基础语法','书面表达'],questionTypes:['选择','填空','写作'],template});
+  assert.match(p.system,/不退回旧版40道脱离语篇的单句四选一/);
+  assert.match(p.system,/语法填空使用带清晰编号空位的完整短文/);
+  assert.match(p.system,/不将两种写作任务混成一题/);
+  assert.match(p.system,/标点、假名和汉字的计数规则/);
+ }
+});
+test('云端实际请求将补充内容作为数据，并按已选目标和题型约束最终输出',async()=>{const {body,template}=await generator.buildExercisePrompt(request),data=JSON.parse(body),system=data.systemInstruction.parts[0].text;assert.deepEqual(JSON.parse(data.contents[0].parts[0].text),request);assert(!system.includes(request.requirements));assert.match(system,/evidence和basis仅解释选题背景/);assert.match(system,/所有已选训练点至少覆盖一次/);assert.match(system,/不会经过程序修复/);assert.deepEqual(data.generationConfig.responseJsonSchema.properties.questions.items.properties.target.enum,['单调性']);assert.deepEqual(data.generationConfig.responseJsonSchema.properties.questions.items.properties.type.enum,['填空','解答']);assert.equal(template.version,'subject-templates-20261020.10');});
 test('各科模板落实不同命题与复核任务，而不是共用同一空泛提示',()=>{const rules={语文:/材料中的证据/,数学:/退化、端点/,英语:/完形和语法填空/,物理:/量纲、数量级/,化学:/元素和电荷守恒/,生物:/基因型、表现型/,日语:/授受视角/,历史:/自拟材料/,政治:/原理、材料对应/,地理:/空间尺度/};for(const [subject,rule] of Object.entries(rules))assert.match(templates.templateFor(subject).rule,rule);});
 test('范围匹配仅返回原有标签，支持导数和化学实验等术语，未知范围不编造薄弱点',()=>{const labels=['集合的交集','导数综合压轴','概率递推证明'];assert.deepEqual(exerciseScopeMatches('数学','高中数学已学内容：函数与导数',labels),['导数综合压轴']);assert.deepEqual(exerciseScopeMatches('化学','高中化学已学内容：化学实验与探究',['实验除杂','化学平衡']),['实验除杂']);assert.deepEqual(exerciseScopeMatches('数学','教师自定义未知范围',labels),[]);});
 

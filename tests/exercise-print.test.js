@@ -1,5 +1,10 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {exercisePrintSections,exerciseAnswerSpaceHeight,exerciseAnswerSpaceParts} from '../app/engine/exercise-print.js';
+import {exercisePrintSections,exerciseAnswerSpaceHeight,exerciseAnswerSpaceParts,exercisePrintSubtitle} from '../app/engine/exercise-print.js';
+test('分组通用卷名不重复占标题行，具体训练标题原样保留',()=>{
+ assert.equal(exercisePrintSubtitle('语文专项练习','语文'),'');
+ assert.equal(exercisePrintSubtitle('语文 专项练习','语文'),'');
+ assert.equal(exercisePrintSubtitle('校园阅读与语言改写专项','语文'),'校园阅读与语言改写专项');
+});
 test('化学多小问填空没有内嵌作答空位时保留紧凑书写区，语篇空格和选择仍紧凑',async()=>{
  const {exerciseObjectiveQuestion}=await import('../app/engine/exercise-print.js');
  const q={type:'填空',answerLines:0,stem:'某酯完全水解生成甲醇和丙酸。\n（1）写出X的结构简式。\n（2）写出碱性水解的化学方程式。\n（3）说明区分异构体与X时的现象。'};
@@ -82,4 +87,12 @@ test('复杂配图后的四个短选项整组分页，显式多行长选项仍�
  assert(exerciseKeepChoicesTogether(q));
  assert(!exerciseKeepChoicesTogether({...q,choices:q.choices.map(s=>s.repeat(20))}));
  assert(!exerciseKeepChoicesTogether({...q,choices:['甲\n'.repeat(18),'乙','丙','丁']}));
+});
+
+
+test('短写作范文保持称谓、标题与正文同页，长解答和超大范文仍允许流动',async()=>{
+ const {exerciseKeepWritingSampleTogether:keep}=await import('../app/engine/exercise-print.js');
+ assert(keep({type:'写作',answer:'NOTICE\n\n'+('Natural English sentences. '.repeat(20))+'\n\nThe Student Union'}));
+ assert(keep({type:'写作',answer:'佐藤さんへ\n'+('学校生活の話です。'.repeat(30))+'\n李華'}));
+ assert(!keep({type:'简答',answer:'长推导的开头'}));assert(!keep({type:'写作',answer:'字'.repeat(901)}));assert(!keep({type:'写作',answer:'行\n'.repeat(19)}));assert(!keep({type:'写作',answer:'$x$'}));
 });

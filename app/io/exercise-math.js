@@ -34,10 +34,13 @@ export async function exerciseParagraph(value,{limit=490,fontSize=11}={}){
  const stack=[];for(const block of blocks){
   if(block.kind==='text'){if(block.text.trim())stack.push(await exerciseTextParagraph(block.text,{limit,fontSize}));continue;}
   const widths=exerciseTableWidths(block.header.length,limit-block.header.length*10-(block.header.length+1)*.5),body=[];
-  for(const [r,row] of [block.header,...block.rows].entries())body.push(await Promise.all(row.map(async(text,i)=>({stack:[await exerciseTextParagraph(text,{limit:widths[i],fontSize:r===0?9.4:10.5})],bold:r===0,alignment:block.alignments[i],fillColor:r===0?'#f1f3f4':null,margin:[0,2,0,2]}))));
+  for(const [r,row] of [block.header,...block.rows].entries())body.push(await Promise.all(row.map(async(text,i)=>({stack:[await exerciseTableParagraph(text,{limit:widths[i],fontSize:r===0?9.4:10.5})],bold:r===0,alignment:block.alignments[i],fillColor:r===0?'#f1f3f4':null,margin:[0,2,0,2]}))));
   stack.push({table:{headerRows:1,keepWithHeaderRows:1,widths,body,dontBreakRows:true},layout:'exerciseDataTable',margin:[0,8,0,9]});
  }return {stack};
 }
+// Data cells need compact leading; retain the full math line metrics so tall
+// fractions and scientific formulae cannot overlap neighbouring rows.
+async function exerciseTableParagraph(text,options){const block=await exerciseTextParagraph(text,options);return block.text?{...block,lineHeight:1.2}:block;}
 async function exerciseTextParagraph(value,{limit=490,fontSize=11}={}){
  const parts=mathParts(String(value));if(parts.every(part=>!part.latex))return {text:String(value),fontSize,lineHeight:1.45,margin:[0,1,0,3]};
  const base=await printMeasure(),ratio=fontSize/11,metrics={ascent:base.ascent*ratio,descent:base.descent*ratio},measure=text=>base.measure(text)*ratio,stack=[];let line=[],used=0,sourceLines=[],sourceHeight=0;

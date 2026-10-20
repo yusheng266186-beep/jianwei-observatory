@@ -8,6 +8,9 @@ export function exerciseCompactFillRows(q){
 }
 // Physical handwriting space in points, shared by PDF and editable Word.
 export const exerciseObjectiveQuestion=q=>['选择','多选'].includes(q.type)||q.type==='填空'&&!exerciseCompactFillRows(q);
+// Grouped papers use a generic title. Do not print that same title twice, but
+// preserve a model's specific training title verbatim when it adds information.
+export const exercisePrintSubtitle=(title,subject)=>String(title||'').replace(/\s/g,'')===subject+'专项练习'?'':String(title||'');
 // Keep a readable prompt and its choices together, independently of answer
 // space or lengthy teacher explanations. Long passages can still flow.
 export const exerciseKeepPromptTogether=q=>!q.diagram&&String(q.stem||'').length+(q.choices||[]).join('').length<650&&String(q.stem||'').split('\n').length<18;
@@ -17,6 +20,9 @@ export const exerciseKeepPromptTogether=q=>!q.diagram&&String(q.stem||'').length
 // make a block larger than a page and empty the page before it.
 export const exerciseTeacherKeepPromptTogether=q=>!q.diagram&&String(q.stem||'').length+(q.choices||[]).join('').length<650&&String(q.stem||'').split('\n').length<18;
 export const exerciseTeacherKeepAnswerTogether=q=>!q.diagram&&String(q.stem||'').length+(q.choices||[]).join('').length+String(q.answer||'').length<650;
+// Keep a bounded writing model's title, salutation and body on one page,
+// independently of the longer prompt. Do not pin the following explanation.
+export const exerciseKeepWritingSampleTogether=q=>q.type==='写作'&&String(q.answer||'').length<=900&&String(q.answer||'').split('\n').length<=18&&!/\$|\\begin\{|^\s*\|/m.test(String(q.answer||''));
 // Keep a teacher answer label with the opening source line only. Later lines of
 // a long derivation stay free to continue on the next page.
 export function exercisePrintLead(value){

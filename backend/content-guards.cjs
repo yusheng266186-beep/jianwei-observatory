@@ -19,6 +19,21 @@ function contentGuards(sheet,input){
    const coast=/(?:海岸线|海岸).{0,10}东西(?:向|走向|延伸)?/.test(q.stem),sides=/(?:陆地|陆).{0,5}西(?:侧|边|方)?.{0,20}(?:海洋|海).{0,5}东|(?:陆地|陆).{0,5}东(?:侧|边|方)?.{0,20}(?:海洋|海).{0,5}西/.test(q.stem);
    if(coast&&sides&&(q.stem.match(/海岸线/g)||[]).length<=1)add(q,'coast-orientation','题干同时给出东西向海岸线与陆海东西两侧，局部海岸线延伸方向和两侧方位矛盾，需明确一致的空间条件。');
   }
+  if(input.subject==='化学'){
+   // Only catch ordered identities followed by the same identity question.
+   // Candidate sets, property questions and error-analysis tasks remain valid.
+   const stem=String(q.stem||'').replace(/\$/g,'').replace(/\\(?:mathrm|text)\{([A-Za-z])\}/g,'$1');
+   if(!/纠正|指出.{0,20}错误|判断.{0,12}(?:正误|是否合理)|错误的说法/.test(stem)){
+    const known=/\b([A-Z])\s*[、,，和与]\s*([A-Z])\b([^。；;\n]{0,80}?)分别(?:是|为)([^。；;\n]+)/g;
+    for(const match of stem.matchAll(known)){
+     if(/候选|可能|假设|假定|待判断|对应关系未知|某种?|未知/.test(match[3]+match[4]))continue;
+     if(/颜色|色泽|状态|性状|性质|气味|沸点|熔点|质量|浓度|体积|密度|溶解度|温度|含量|pH|反应现象/.test(match[3])||/^(?:(?:白|黑|无|淡黄|黄|红|蓝|绿|棕)色|(?:常见的)?(?:固体|液体|气体|粉末))/.test(match[4].trim()))continue;
+     const [a,b]=[match[1],match[2]],tail=stem.slice(match.index+match[0].length);
+     const question=new RegExp('(?:判断|确定|鉴别|推断|辨别)\\s*'+a+'\\s*[、,，和与]\\s*'+b+'\\s*(?:各自|各|分别)?(?:\\s*是|\\s*为|\\s*的身份|\\s*对应)(?:什么|何种|哪种|何物|的物质|物质|身份)');
+     if(question.test(tail)){add(q,'identity-leaked','题干已将'+a+'、'+b+'按“分别为/是”对应到具体物质，后文又要求判断同一身份，直接透露待求答案。请独立核对；若会改变已知条件而不能安全修订，应报告内容问题，不静默改题。');break;}
+    }
+   }
+  }
   if(input.subject==='物理')for(const text of [q.answer,q.analysis,...(q.points||[])]){
    for(const m of String(text).matchAll(/\$([^$\n]+)\$/g)){
     if(/错误|不能|误写|不应/.test(text.slice(Math.max(0,m.index-12),m.index))||/错误|不正确|应为|改为|不成立/.test(text.slice(m.index+m[0].length,m.index+m[0].length+12)))continue;

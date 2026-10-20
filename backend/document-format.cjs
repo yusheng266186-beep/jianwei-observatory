@@ -13,15 +13,15 @@ const samples={
   analysis:"由幂函数求导法则得 $f'(x)=2x$。\n若结果为根式，则写为 $e=\\sqrt{3}$，中文标点放在公式之外。"
  },
  '英语':{
-  stem:'Read the passage and choose the best answer.\n\n(Original fictional context) Last spring, our class visited a small community garden. The gardener showed us how kitchen waste becomes soil, and we planted seedlings in boxes made from old wood.\n\nWhat did the writer learn from the visit?',
+  stem:'Read the passage and choose the best answer.\n\nLast spring, our class visited a small community garden. The gardener showed us how kitchen waste becomes soil, and we planted seedlings in boxes made from old wood.\n\nWhat did the writer learn from the visit?',
   choices:['To grow vegetables in winter.','To give used materials a new purpose.','To sell old boxes to the garden.','To study kitchen waste at school.'],
   answer:'B',
   analysis:'The passage supports the idea that used materials can be given a new purpose; the other options are not supported by the text.'
  },
  '日语':{
-  stem:'次の文の（　）に適切な言葉を入れなさい。\n\n私は毎朝、コーヒー（　）飲みます。',
-  answer:'を',
-  analysis:'「コーヒー」は動作の対象なので、格助詞「を」を使う。\n前後の語との関係を確認する。'
+  stem:'次の文章を読み、___1___に入る最も適切な言葉を書きなさい。\n\n先週、学校の図書館で小さな読書会がありました。私は初めて参加しました。友達が好きな本を紹介してくれたので、私もその本を読んでみたいと思いました。家に帰る前に、図書館でその本___1___借りました。次の読書会では、感想を話すつもりです。',
+  answer:'1：を',
+  analysis:'本文は読書会の後に図書館で本を借りたという流れであり、「その本」は「借りる」の対象なので格助詞「を」を使う。\n番号と解答を対応させる。'
  },
  '物理':{
   stem:'一物体以 $v_0=2.0\\,\\mathrm{m/s}$ 的初速度沿水平面滑行，加速度大小为 $a=0.5\\,\\mathrm{m/s^2}$，方向与初速度相同。求它在前 $4.0\\,\\mathrm{s}$ 内的位移。',
