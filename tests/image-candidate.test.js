@@ -175,3 +175,4 @@ test('下载返回的MIME和文件签名必须一致，否则拒绝且保持私�
  assert.equal((await illustration.imageFromResult('data:image/jpeg;base64,'+jpeg(640,480).toString('base64'))).mime,'image/jpeg');
  await assert.rejects(illustration.imageFromResult('data:image/jpeg;base64,'+jpeg(32,32).toString('base64')),error=>error.message==='IMAGE_RESPONSE_INVALID'&&error.imageDiagnostic.stage==='jpeg-dimensions');
 });
+test('猎豹实际返回的新CDN精确放行，恢复原图不扩大到同域其他主机',async()=>{const image=await illustration.imageFromResult('https://nx1.cc2api.xyz/generated/test.png',{download:async url=>{assert.equal(new URL(url).hostname,'nx1.cc2api.xyz');return {status:200,mime:'image/png',bytes:png};}});assert.equal(image.mime,'image/png');for(const host of ['nx2.cc2api.xyz','nx1.cc2api.xyz.attacker.test','other.nx1.cc2api.xyz','127.0.0.1'])await assert.rejects(illustration.imageFromResult('https://'+host+'/generated/test.png',{download:async()=>{throw Error('MUST_NOT_FETCH');}}),/IMAGE_URL_REJECTED/);});

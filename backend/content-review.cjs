@@ -81,7 +81,8 @@ async function runStep(store,key,job,{now=Date.now,dispatch=async()=>{},reviewer
   await store.create(key+'/diagnostic.json',{at:now(),category:error.message,validation:error.cause?.message,detail:error.detail,notes:error.notes,...(error.candidate?{candidate:error.candidate}:{}),...(error.output?{raw:String(error.output).slice(0,256000)}:{}),...(error.diagnostic?{upstream:error.diagnostic}:{})});
   const serviceFailures={MODEL_AUTH_FAILED:'学科复核服务鉴权失败，请检查当前模型的凭据或分组权限。',MODEL_RATE_LIMIT:'学科复核服务暂时限流，可稍后继续当前复核。',MODEL_BALANCE_REQUIRED:'学科复核服务余额不足，请检查当前模型账户。',MODEL_NOT_CONFIGURED:'当前出题模型尚未完成服务配置。',MODEL_SUBSCRIPTION_EXPIRED:'当前模型订阅已到期，请检查模型服务。'};
   const code=serviceFailures[error.message]?error.message:['CONTENT_REVIEW_FAILED','CONTENT_REVIEW_INVALID'].includes(error.message)?error.message:'CONTENT_REVIEW_INTERRUPTED';
-  const detail=code==='CONTENT_REVIEW_FAILED'?'学科复核发现尚未解决的问题。'+(error.notes||[]).map(n=>'第'+n.questionId+'题：'+(n.reason||(n.issues||[]).join('；'))).join('；'):code==='CONTENT_REVIEW_INVALID'?'学科复核回复未符合契约。'+String(error.detail||error.cause?.message||'').slice(0,240):serviceFailures[code]||'学科复核连接未完成。';
+  const officialDetail=require('./upstream-event.cjs').userFailureDetail(error);
+  const detail=officialDetail||(code==='CONTENT_REVIEW_FAILED'?'学科复核发现尚未解决的问题。'+(error.notes||[]).map(n=>'第'+n.questionId+'题：'+(n.reason||(n.issues||[]).join('；'))).join('；'):code==='CONTENT_REVIEW_INVALID'?'学科复核回复未符合契约。'+String(error.detail||error.cause?.message||'').slice(0,240):serviceFailures[code]||'学科复核连接未完成。');
   await store.create(key+'/result.json',{status:'failed',error:code,notes:error.notes||[],failureDetail:detail.slice(0,1600)+'原始题文保留；继续时只重试复核，不重新出题。',finishedAt:now()});
  }
  await snapshot(store,parent,{now,dispatch});

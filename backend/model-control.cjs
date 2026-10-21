@@ -10,11 +10,11 @@ const routes={...extras,...providers},revisionKey=n=>'models/revisions/'+String(
 const fail=code=>Object.assign(new Error(code),{status:code==='MODEL_REVISION_CONFLICT'?409:400});
 function modelProfile(provider,model){return profiles.providers?.[provider]?.[model]||(provider==='deepseek'?profiles.models[model]:null);}
 function connectionMatches(generation){const route=routes[generation?.provider];return !!route&&route.catalog.includes(generation.model)&&[{url:route.url,protocol:route.protocol},...(route.legacyConnections||[])].some(c=>c.url===generation.base&&c.protocol===generation.protocol);}
-function configured(provider,env=process.env){let declared=[];try{declared=JSON.parse(env.TRAINING_CONFIGURED_PROVIDERS||'[]');}catch{}return !!env[routes[provider]?.key]||declared.includes(provider);}
+function configured(provider,env=process.env){let declared=[];try{declared=JSON.parse(env.TRAINING_CONFIGURED_PROVIDERS||'[]');}catch{}return (provider==='openai-chatgpt'?env.OPENAI_SIWC_ENABLED==='true':!!env[routes[provider]?.key])||declared.includes(provider);}
 function snapshot(selection,env=process.env){
  if(!selection||Object.keys(selection).some(k=>!['provider','model','effort'].includes(k)))throw fail('MODEL_SELECTION_INVALID');
  const {provider,model,effort}=selection,route=routes[provider];
- if(!route||!route.catalog.includes(model)||!['eco','standard','deep'].includes(effort))throw fail('MODEL_SELECTION_INVALID');
+ if(!route||!route.catalog.includes(model)||typeof effort!=='string')throw fail('MODEL_SELECTION_INVALID');
  if(!configured(provider,env))throw fail('MODEL_NOT_CONFIGURED');
  const profile=modelProfile(provider,model),efforts=profile?.efforts||(provider==='kimi-code'?{deep:'max'}:{deep:'high'});if(!Object.hasOwn(efforts,effort))throw fail('MODEL_SELECTION_INVALID');const reasoningEffort=efforts[effort];
  return {provider,model,effort,reasoningEffort,protocol:route.protocol,base:route.url,credentialRef:route.key,profileVersion:profiles.version,timeoutMs:885000,...(profile?{adapterProfile:structuredClone(profile)}:{})};

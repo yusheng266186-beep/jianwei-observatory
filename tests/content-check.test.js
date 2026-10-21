@@ -223,7 +223,7 @@ test('replacement schema is taken from the generation prompt for the same figure
  const prompt=await buildReviewPrompt(physicsSheet,physicsInput);
  const built=await generator.buildExercisePrompt(physicsInput,{separateFigures:true});
  assert.deepEqual(prompt.questionSchema,built.schema.properties.questions.items);
- assert.deepEqual(prompt.schema.properties.corrections.items.properties.replacement,built.schema.properties.questions.items);
+ assert.equal(prompt.schema.properties.corrections.items.properties.replacement,undefined);assert.deepEqual(prompt.schema.properties.corrections.items.properties.patch.properties.answer,built.schema.properties.questions.items.properties.answer);
 });
 
 test('each subject prompt contains its targeted review rules, Sichuan boundaries and strict JSON policy',async()=>{
@@ -250,8 +250,8 @@ test('each subject prompt contains its targeted review rules, Sichuan boundaries
   assert.match(prompt.system,/只输出一个严格 JSON 对象/);
   assert.equal(prompt.schema.properties.corrections.maxItems,3);
   assert.equal(prompt.schema.properties.issues.maxItems,6);
-  assert.equal(prompt.schema.properties.corrections.items.properties.replacement.additionalProperties,false);
-  assert.deepEqual(prompt.schema.properties.corrections.items.properties.replacement,prompt.questionSchema);
+  assert.equal(prompt.schema.properties.corrections.items.properties.patch.additionalProperties,false);
+  assert.equal(prompt.schema.properties.corrections.items.properties.patch.properties.id,undefined);
   assert.equal(prompt.questionSchema.properties.diagram,undefined);
   assert.equal(prompt.questionSchema.properties.figureRequest,undefined);
  }
@@ -291,3 +291,5 @@ test('pendingFigures exposes figureRequest without diagram and integratedFigures
 test('教师确认级建议不伪装成确定错误或阻塞已正确的题组',async()=>{const result=await review(physicsSheet,{approved:true,issues:[{questionId:1,reason:'请结合本班进度确认训练用时。',severity:'review'}],corrections:[]});assert.equal(result.approved,true);assert.equal(result.notes[0].unresolved,true);});
 test('程序核对先发给复核模型，修正后仍存在的明确分值错误不能被模型批准绕过',async()=>{const bad=clone(physicsSheet);bad.questions[1].points=['正确得7分。'];let checks;await assert.rejects(review(bad,{approved:true,issues:[],corrections:[]},{complete:async p=>{checks=p.input.programChecks;return completion({approved:true,issues:[],corrections:[]});}}),e=>e.message==='CONTENT_REVIEW_FAILED'&&e.notes[0].issues.some(x=>x.includes('分值')));assert(checks.some(x=>x.code==='score-sum'));});
 test('再次复核传递先前诊断与失败候选，原稿仍是唯一基准',async()=>{const feedback={detail:'缺少一个条件'},candidate={title:'失败候选'};const p=await buildReviewPrompt(physicsSheet,physicsInput,{feedback,candidate});assert.deepEqual(p.input.sheet,physicsSheet);assert.deepEqual(p.input.previousReview,feedback);assert.deepEqual(p.input.previousCandidate,candidate);});
+test('复核仅回传实际修改字段，其余题文保真，原题及输入不变',async()=>{const original=clone(physicsSheet),nextAnswer='1，单位按原题要求。',nextAnalysis='独立核算后结果为1，单位按原题要求。';const result=await review(physicsSheet,{approved:true,issues:[{questionId:2,reason:'补充原答案缺失的单位。'}],corrections:[{questionId:2,reason:'补充原答案缺失的单位。',patch:{answer:nextAnswer,analysis:nextAnalysis}}]});assert.deepEqual(physicsSheet,original);assert.equal(result.sheet.questions[1].answer,nextAnswer);assert.deepEqual(result.changes[0].fields,['answer','analysis']);for(const k of ['stem','choices','target','type','maxScore','minutes'])assert.deepEqual(result.sheet.questions[1][k],original.questions[1][k]);});
+test('精简复核不能借patch改题号分值、同时提交两种格式或制造空修订',async()=>{for(const patch of [{id:2},{maxScore:6},{}, {diagram:{kind:'geometry'}}])await assert.rejects(review(physicsSheet,{approved:true,issues:[],corrections:[{questionId:2,reason:'修正。',patch}]}),e=>e.message==='CONTENT_REVIEW_INVALID');const prompt=await buildReviewPrompt(physicsSheet,{...physicsInput,evidence:[{label:'1',knowledge:'不应重复发送的考试档案',score:1,max:5}]});assert.equal(prompt.input.request.evidence,undefined);assert(!JSON.stringify(prompt.input).includes('不应重复发送的考试档案'));assert(prompt.schema.properties.corrections.items.required.includes('patch'));});

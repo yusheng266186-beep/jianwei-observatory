@@ -96,3 +96,5 @@ test('复杂观察图允许必要灰度纹理，仍禁止编造细胞器、定�
  const prompt=illustrationPrompt(diagram,{layout:{width:'wide',aspect:'wide'},feedback});
  assert.match(prompt,/允许轻微、非结构指示性的显微纹理和明暗变化/);assert.match(prompt,/明确禁止的细胞器、标签和其他结构必须省略/);assert.match(prompt,/不能强制画成空白轮廓线稿/);assert.match(prompt,/不把复杂位图当作定量科学图/);assert(prompt.includes(feedback[0]));assert.deepEqual(diagram,original);
 });
+test('叶片横切复杂配图保持截面视角，不把气孔表面观混入横切图',async()=>{const {illustrationPrompt}=await import('../backend/figure-prompt-guidance.cjs');assert.match(illustrationPrompt({caption:'叶片横切',description:'叶片横切组织的气孔与保卫细胞。'}),/不在下表皮嵌入表面观/);assert(!illustrationPrompt({caption:'化学装置',description:'蒸馏装置外观。'}).includes('【横切视角】'));});
+test('复杂插图复核不再附带无关矢量构造手册，但保留像素、学科与标签核对',async()=>{const {figureReviewPrompt}=await import('../backend/figure-prompt-guidance.cjs');const pixels=figureReviewPrompt('生物',{pixels:true}),vector=figureReviewPrompt('生物');assert.match(pixels,/实际生成的图片像素/);assert.match(pixels,/DNA两条链是否反平行/);assert.match(pixels,/标签被切掉/);assert(!pixels.includes('【已实现的标准图示说明'));assert(vector.includes('【已实现的标准图示说明'));assert(pixels.length<vector.length);});

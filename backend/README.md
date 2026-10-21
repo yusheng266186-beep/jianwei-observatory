@@ -97,7 +97,7 @@ ByteCat新分组的图片链接、精确存储主机放行及高清PNG容量修�
 
 `providers.json`、`model-profiles.json`、`model-adapter.cjs` 管理已授权的服务目录和协议；工作台分别选择题文、图示与校检模型及思考档位。目录数量和可用性会变化，配置存在不代表余额或实测通过。新任务冻结提供方、模型、适配、凭据引用和时限；旧任务不随工作台切换变化，也不自动换服务。
 
-`openai-siwc.cjs` 接入本项目独立的 ChatGPT 官方授权，支持 Sol 6.1/Astra及low/high/max；`openai-proxy.cjs`仅对固定官方接口使用云端回环代理，`openai-credentials.cjs`在加密私有控制前缀下串行续期并保留不可变凭据版本。访问令牌不注入HTTP函数或浏览器；代理核心通过腾讯云层保留，代码更新不得移除该层和专属环境配置。具体授权、部署、实测边界与维护命令见[官方授权接入](../docs/OPENAI-SIWC-2026-10-21.md)。
+`openai-siwc.cjs` 接入本项目独立的 ChatGPT 官方授权，支持账号实际可用的7个模型和low至ultra推理档位，两款Luna最高max；`openai-proxy.cjs`仅对固定官方接口使用云端回环代理，`openai-credentials.cjs`在加密私有控制前缀下串行续期并保留不可变凭据版本。访问令牌不注入HTTP函数或浏览器；代理核心通过腾讯云层保留，代码更新不得移除该层和专属环境配置。具体授权、部署、实测边界与维护命令见[官方授权接入](../docs/OPENAI-SIWC-2026-10-21.md)。
 
 猎豹词元工厂使用独立提供方`cheetah-gemini`、`gemini-3.8-flash`及Chat Completions流式协议。`CHEETAH_GEMINI_API_KEY`仅注入Worker，HTTP函数只声明提供方已配置。私有部署目录需有`cheetah-gemini.key`供后续维护复用；不能借用GLM或旧ByteCat密钥。详情见[线路接入记录](../docs/CHEETAH-GEMINI-2026-10-19.md)。
 

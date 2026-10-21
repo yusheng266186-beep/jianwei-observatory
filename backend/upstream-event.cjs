@@ -35,7 +35,7 @@ function classifyUpstream(info={}){
  const token=[info.event,info.type,info.code,info.reason].filter(Boolean).join(' ').toLowerCase();
  const message=String(info.message||'').toLowerCase();
  if(/subscription_sharing_usage_limit_exceeded/.test(token))return 'MODEL_RATE_LIMIT';
- if(/subscription_sharing_usage_unavailable/.test(token))return 'MODEL_AUTH_FAILED';
+ if(/subscription_sharing_(?:usage|user)_unavailable/.test(token))return 'MODEL_REQUEST_FAILED';
  if(/subscription[_ -]?expired|subscription[^.]{0,40}expired|订阅[^.]{0,8}(?:已)?(?:到期|过期)/.test(token+' '+message))return 'MODEL_SUBSCRIPTION_EXPIRED';
  // An explicit balance/pre-charge business error wins over the generic 401/403
  // auth fallback below: providers commonly return quota failures as HTTP 403.
@@ -90,8 +90,10 @@ function httpError(response,key=''){
  return Object.assign(new Error(code),{diagnostic});
 }
 function userFailureDetail(error){
+ if(error?.diagnostic?.code==='OPENAI_REFRESH_UNCERTAIN')return '官方授权续期的响应中断，无法确认轮换结果。原注册身份已保留；请由维护者重新完成本项目官方登录后继续，避免反复使用可能已轮换的刷新凭据。';
  if(error?.diagnostic?.code==='subscription_sharing_usage_limit_exceeded')return 'ChatGPT账号的套餐用量已达到当前上限。请在ChatGPT设置的用量页面查看恢复时间，或在模型工作台选择其他服务。';
- if(error?.diagnostic?.code==='subscription_sharing_usage_unavailable')return '当前ChatGPT授权的套餐调用暂不可用。请检查该账号的应用授权和套餐状态，再重新测试连接。';
+ if(['subscription_sharing_usage_unavailable','subscription_sharing_user_unavailable'].includes(error?.diagnostic?.code))return 'ChatGPT服务暂时无法核对账号用量或状态，已保留授权。请稍后继续当前任务。';
+ if(error?.message==='OPENAI_AUTH_TEMPORARY')return '官方授权续期暂未完成，账号授权和已完成题目均已保留，请稍后继续。';
  return '';
 }
 module.exports={MAX_MESSAGE,redactSecrets,inspectEvent,classifyUpstream,eventError,httpError,userFailureDetail};

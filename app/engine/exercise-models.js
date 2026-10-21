@@ -9,7 +9,7 @@ export const exerciseModels={
 export function validateExerciseModel(d){
  const m=d.model,spec=exerciseModels[m?.id],spatial=m?.id==='spatial-frame';
  if(m&&!spatial&&Object.hasOwn(m,'motionArcs'))throw new Error('运动弧仅用于spatial-frame空间线框。');
- if(!spec||d.kind!==spec.kind||!m||Object.keys(m).some(k=>!['id','dimensions','labels',...(spatial?['vertices','links','motionArcs']:[])].includes(k))||!Array.isArray(m.dimensions)||m.dimensions.length!==spec.dimensions||m.dimensions.some(v=>!Number.isFinite(v)||v<.001||v>1000)||!Array.isArray(m.labels)||(spatial?(m.labels.length<4||m.labels.length>12):m.labels.length!==spec.labels)||m.labels.some(s=>typeof s!=='string'||s.length>8||/[<>$\\]/.test(s)))throw new Error('标准模型的类型、尺寸或标签不完整。');
+ if(!spec||d.kind!==spec.kind||!m||Object.keys(m).some(k=>!['id','dimensions','labels',...(spatial?['vertices','links','motionArcs','views','edgeLabels']:[])].includes(k))||!Array.isArray(m.dimensions)||m.dimensions.length!==spec.dimensions||m.dimensions.some(v=>!Number.isFinite(v)||v<.001||v>1000)||!Array.isArray(m.labels)||(spatial?(m.labels.length<4||m.labels.length>12):m.labels.length!==spec.labels)||m.labels.some(s=>typeof s!=='string'||s.length>8||/[<>$\\]/.test(s)))throw new Error('标准模型的类型、尺寸或标签不完整。');
  if(spatial)validateSpatialFrame(m);
  if(m.dimensions.length&&Math.max(...m.dimensions)/Math.min(...m.dimensions)>6)throw new Error('模型尺寸比例过大，无法清楚标注。');
  if(m.id==='inclined-plane'&&(m.dimensions[1]/m.dimensions[0]<.2||m.dimensions[1]/m.dimensions[0]>1.4))throw new Error('斜面模型的高宽比例无效。');
@@ -20,7 +20,8 @@ export function validateExerciseModel(d){
 // drawing cannot pass as a folded or rotated solid by changing its caption.
 function validateSpatialFrame(m){
  const fail=()=>{throw Error('空间线框须给出4–12个非共面三维顶点、对应标签和不重复的有效棱。');};
- if(!Array.isArray(m.vertices)||m.vertices.length!==m.labels.length||m.vertices.some(v=>!Array.isArray(v)||v.length!==3||v.some(n=>!Number.isFinite(n)||Math.abs(n)>1000))||new Set(m.labels).size!==m.labels.length||m.labels.some(x=>!x))fail();
+ if(!Array.isArray(m.vertices)||m.vertices.length!==m.labels.length||m.vertices.some(v=>!Array.isArray(v)||v.length!==3||v.some(n=>!Number.isFinite(n)||Math.abs(n)>1000))||m.labels.some(x=>!x))fail();
+ if(new Set(m.labels).size!==m.labels.length)throw Error('空间线框labels必须全局唯一。同名顶点须在views中复用同一vertices下标，不能为每幅分图复制C、B或D。');
  const ps=m.vertices,span=Math.max(...[0,1,2].map(i=>Math.max(...ps.map(p=>p[i]))-Math.min(...ps.map(p=>p[i]))));if(span<.001)fail();
  let volume=0;for(let a=1;a<ps.length;a++)for(let b=a+1;b<ps.length;b++)for(let c=b+1;c<ps.length;c++){
   const [u,v,w]=[ps[a],ps[b],ps[c]].map(p=>p.map((n,i)=>n-ps[0][i]));volume=Math.max(volume,Math.abs(u[0]*(v[1]*w[2]-v[2]*w[1])-u[1]*(v[0]*w[2]-v[2]*w[0])+u[2]*(v[0]*w[1]-v[1]*w[0])));
@@ -28,7 +29,30 @@ function validateSpatialFrame(m){
  if(!Array.isArray(m.links)||m.links.length<4||m.links.length>30)fail();const seen=new Set(),used=new Set();
  for(const e of m.links){if(!e||Object.keys(e).length!==3||!['from','to','hidden'].every(k=>Object.hasOwn(e,k))||!Number.isInteger(e.from)||!Number.isInteger(e.to)||e.from===e.to||e.from<0||e.to<0||e.from>=ps.length||e.to>=ps.length||typeof e.hidden!=='boolean')fail();const key=[e.from,e.to].sort((a,b)=>a-b).join('-');if(seen.has(key)||Math.hypot(...ps[e.from].map((n,i)=>n-ps[e.to][i]))<span*.001)fail();seen.add(key);used.add(e.from);used.add(e.to);}if(used.size!==ps.length)fail();
  const connected=new Set([0]);for(let n=0;n<ps.length;n++)for(const e of m.links){if(connected.has(e.from))connected.add(e.to);if(connected.has(e.to))connected.add(e.from);}if(connected.size!==ps.length)fail();
+ validateSpatialViews(m);
  spatialArcDefinitions(m);
+}
+// Views share one verified 3D frame; a panel cannot invent a second set of
+// coordinates or detach an edge label from its actual endpoints.
+function validateSpatialViews(m){
+ const fail=()=>{throw Error('空间分图或长度标注须对应原三维顶点与有效棱，不能缺点、重复或使用额外字段。');};
+ const short=s=>typeof s==='string'&&s.length>0&&s.length<=16&&!/[<>$\\]/.test(s);
+ if(m.views!==undefined){
+  if(!Array.isArray(m.views)||m.views.length<2||m.views.length>3)fail();
+  const covered=new Set();
+  for(const view of m.views){
+   if(!view||Object.keys(view).some(k=>!['title','vertices','hiddenLinks'].includes(k))||!short(view.title)||!Array.isArray(view.vertices)||view.vertices.length<3||view.vertices.length>m.vertices.length||new Set(view.vertices).size!==view.vertices.length||view.vertices.some(i=>!Number.isInteger(i)||i<0||i>=m.vertices.length))fail();
+   const indices=new Set(view.vertices),links=m.links.map((e,i)=>({...e,index:i})).filter(e=>indices.has(e.from)&&indices.has(e.to));
+   if(view.hiddenLinks!==undefined&&(!Array.isArray(view.hiddenLinks)||new Set(view.hiddenLinks).size!==view.hiddenLinks.length||view.hiddenLinks.some(i=>!Number.isInteger(i)||!links.some(e=>e.index===i))))fail();
+   const reached=new Set([view.vertices[0]]);for(let j=0;j<indices.size;j++)for(const e of links){if(reached.has(e.from))reached.add(e.to);if(reached.has(e.to))reached.add(e.from);}if(reached.size!==indices.size)fail();
+   for(const i of indices)covered.add(i);
+  }
+  if(covered.size!==m.vertices.length)fail();
+ }
+ if(m.edgeLabels!==undefined){
+  if(!Array.isArray(m.edgeLabels)||m.edgeLabels.length>12)fail();const seen=new Set();
+  for(const label of m.edgeLabels){if(!label||Object.keys(label).length!==3||!['from','to','text'].every(k=>Object.hasOwn(label,k))||!short(label.text)||!m.links.some(e=>e.from===label.from&&e.to===label.to||e.from===label.to&&e.to===label.from))fail();const key=[label.from,label.to].sort((a,b)=>a-b).join('-');if(seen.has(key))fail();seen.add(key);}
+ }
 }
 // A motion arc is a circular path in the plane of (from-center, to-center).
 // It is sampled in 3D and then projected exactly like the wireframe.
@@ -76,11 +100,11 @@ export function solidModelGeometry(model){
  }else throw new Error('模型不是立体几何。');
  const arcDefinitions=model.id==='spatial-frame'?spatialArcDefinitions(model):[],arcVertices=arcDefinitions.map(arc=>spatialArcSamples(model,arc)),allVertices=[...vertices,...arcVertices.flat()];
  const centre=vertices[0].map((_,i)=>vertices.reduce((s,p)=>s+p[i],0)/vertices.length),edges=new Map();
- const views=[[36,25],[30,35],[55,28],[65,38],[24,18],[60,18]].map(([az,el])=>{
+ const views=[[36,25],[30,35],[55,28],[65,38],[24,18],[60,18],...(model.id==='spatial-frame'?[[95,25],[125,40],[145,25],[70,65]]:[])].map(([az,el])=>{
   const a=az*Math.PI/180,e=el*Math.PI/180,camera=[Math.sin(a)*Math.cos(e),Math.sin(e),Math.cos(a)*Math.cos(e)],raw=allVertices.map(([x,y,z])=>[Math.cos(a)*x-Math.sin(a)*z,Math.sin(e)*(Math.sin(a)*x+Math.cos(a)*z)-Math.cos(e)*y]),xs=raw.map(p=>p[0]),ys=raw.map(p=>p[1]),left=Math.min(...xs),top=Math.min(...ys),width=Math.max(...xs)-left,height=Math.max(...ys)-top,scale=Math.min(390/width,230/height),projected=raw.map(([x,y])=>[320+(x-left-width/2)*scale,184+(y-top-height/2)*scale]),points=projected.slice(0,vertices.length),arcPoints=arcVertices.map((ps,i)=>projected.slice(vertices.length+i*(spatialArcSegments+1),vertices.length+(i+1)*(spatialArcSegments+1)));
-  let separation=Infinity;for(const [i,p] of points.entries())for(const q of points.slice(i+1))separation=Math.min(separation,Math.hypot(p[0]-q[0],p[1]-q[1]));return {points,arcPoints,camera,separation};
+  let separation=Infinity;for(const [i,p] of points.entries())for(const q of points.slice(i+1))separation=Math.min(separation,Math.hypot(p[0]-q[0],p[1]-q[1]));let clarity=separation;if(model.id==='spatial-frame'){for(const panel of model.views||[{vertices:points.map((_,i)=>i)}]){const members=new Set(panel.vertices);for(const i of members)for(const edge of model.links){if(i===edge.from||i===edge.to||!members.has(edge.from)||!members.has(edge.to))continue;const p=points[i],a=points[edge.from],b=points[edge.to],dx=b[0]-a[0],dy=b[1]-a[1],sq=dx*dx+dy*dy,t=((p[0]-a[0])*dx+(p[1]-a[1])*dy)/sq;if(t<=0||t>=1)continue;const u=vertices[i].map((v,k)=>v-vertices[edge.from][k]),v=vertices[edge.to].map((v,k)=>v-vertices[edge.from][k]),cross=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]];if(Math.hypot(...cross)<1e-7)continue;clarity=Math.min(clarity,2*Math.hypot(p[0]-a[0]-t*dx,p[1]-a[1]-t*dy));}}}return {points,arcPoints,camera,separation,clarity};
  });
- const view=views[0].separation>=34?views[0]:views.reduce((a,b)=>a.separation>b.separation?a:b);
+ const view=views[0].clarity>=34?views[0]:views.reduce((a,b)=>a.clarity>b.clarity?a:b);
  for(const face of faces){
   const [p,q,r]=face.map(i=>vertices[i]),u=q.map((v,i)=>v-p[i]),v=r.map((v,i)=>v-p[i]),normal=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]],mid=p.map((_,i)=>face.reduce((s,j)=>s+vertices[j][i],0)/face.length);
   if(normal.reduce((s,n,i)=>s+n*(mid[i]-centre[i]),0)<0)for(let i=0;i<3;i++)normal[i]*=-1;
@@ -89,4 +113,4 @@ export function solidModelGeometry(model){
  }
  return {vertices,points:view.points,edges:model.id==='spatial-frame'?model.links.map(e=>({vertices:[e.from,e.to],visible:!e.hidden})):[...edges.values()],...(arcDefinitions.length?{motionArcs:arcDefinitions.map((arc,i)=>({from:arc.from,to:arc.to,center:arc.center,radius:arc.radius,vertices:arcVertices[i],points:view.arcPoints[i]}))}:{})};
 }
-export const exerciseModelSchema={type:'object',additionalProperties:false,required:['id','dimensions','labels'],properties:{motionArcs:{type:'array',maxItems:4,items:{type:'object',additionalProperties:false,required:['from','to','center'],properties:{from:{type:'integer',minimum:0,maximum:11},to:{type:'integer',minimum:0,maximum:11},center:{type:'array',minItems:3,maxItems:3,items:{type:'number',minimum:-1000,maximum:1000}}}}},vertices:{type:'array',minItems:4,maxItems:12,items:{type:'array',minItems:3,maxItems:3,items:{type:'number',minimum:-1000,maximum:1000}}},links:{type:'array',minItems:4,maxItems:30,items:{type:'object',additionalProperties:false,required:['from','to','hidden'],properties:{from:{type:'integer',minimum:0,maximum:11},to:{type:'integer',minimum:0,maximum:11},hidden:{type:'boolean'}}}},id:{type:'string',enum:Object.keys(exerciseModels)},dimensions:{type:'array',items:{type:'number',minimum:.001,maximum:1000}},labels:{type:'array',items:{type:'string',maxLength:8}}}};
+export const exerciseModelSchema={type:'object',additionalProperties:false,required:['id','dimensions','labels'],properties:{views:{type:'array',minItems:2,maxItems:3,items:{type:'object',additionalProperties:false,required:['title','vertices','hiddenLinks'],properties:{title:{type:'string',minLength:1,maxLength:16},vertices:{type:'array',minItems:3,maxItems:12,uniqueItems:true,items:{type:'integer',minimum:0,maximum:11}},hiddenLinks:{type:'array',maxItems:30,uniqueItems:true,items:{type:'integer',minimum:0,maximum:29}}}}},edgeLabels:{type:'array',maxItems:12,items:{type:'object',additionalProperties:false,required:['from','to','text'],properties:{from:{type:'integer',minimum:0,maximum:11},to:{type:'integer',minimum:0,maximum:11},text:{type:'string',minLength:1,maxLength:16}}}},motionArcs:{type:'array',maxItems:4,items:{type:'object',additionalProperties:false,required:['from','to','center'],properties:{from:{type:'integer',minimum:0,maximum:11},to:{type:'integer',minimum:0,maximum:11},center:{type:'array',minItems:3,maxItems:3,items:{type:'number',minimum:-1000,maximum:1000}}}}},vertices:{type:'array',minItems:4,maxItems:12,items:{type:'array',minItems:3,maxItems:3,items:{type:'number',minimum:-1000,maximum:1000}}},links:{type:'array',minItems:4,maxItems:30,items:{type:'object',additionalProperties:false,required:['from','to','hidden'],properties:{from:{type:'integer',minimum:0,maximum:11},to:{type:'integer',minimum:0,maximum:11},hidden:{type:'boolean'}}}},id:{type:'string',enum:Object.keys(exerciseModels)},dimensions:{type:'array',items:{type:'number',minimum:.001,maximum:1000}},labels:{type:'array',items:{type:'string',maxLength:8}}}};

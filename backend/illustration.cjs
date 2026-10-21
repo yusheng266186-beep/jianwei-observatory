@@ -5,8 +5,11 @@ const {request}=require('./tencent.cjs'),candidates=require('./image-candidate.c
 const IMAGE_MAX_CHARS=5200000,IMAGE_MAX_BYTES=IMAGE_MAX_CHARS/4*3;
 // Exact Cloudflare R2 bucket host returned by the native images/generations
 // endpoint. Never widen this to *.r2.dev or any other wildcard.
+// Exact delivery host observed in the configured Cheetah Image 2 response.
+// Public-address lookup and TLS validation still apply; no redirects or keys.
+const CHEETAH_IMAGE_HOST='nx1.cc2api.xyz';
 const R2_IMAGE_HOST='pub-13fd1d3607a441b4a9d232b3a223f5f6.r2.dev';
-const IMAGE_HOSTS=['www.bytecatcode.org','bytecatcode.org','files.oaiusercontent.com','oaidalleapiprodscus.blob.core.windows.net','pre-signed-firefly-prod.s3-accelerate.amazonaws.com',R2_IMAGE_HOST];
+const IMAGE_HOSTS=['www.bytecatcode.org','bytecatcode.org','files.oaiusercontent.com','oaidalleapiprodscus.blob.core.windows.net','pre-signed-firefly-prod.s3-accelerate.amazonaws.com',R2_IMAGE_HOST,CHEETAH_IMAGE_HOST];
 const CANDIDATE_URL_MAX_CHARS=8192;
 const RETRYABLE_STATUS=new Set([408,425,429,500,502,503,504]);
 const EXPIRED_STATUS=new Set([400,401,403,404,410]);

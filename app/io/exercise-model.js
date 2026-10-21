@@ -3,11 +3,20 @@ const esc=s=>s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&q
 const text=(x,y,label)=>`<text x="${x}" y="${y}" text-anchor="middle">${esc(label).replace(/^([A-Za-z])_?(\d+)$/,(_,letter,n)=>letter+'<tspan baseline-shift="sub" font-size="9">'+n+'</tspan>')}</text>`;
 export function exerciseModelSVG(model){
  if(['cuboid','right-triangular-prism','rectangular-pyramid','spatial-frame'].includes(model.id)){
-  const {points,edges,motionArcs=[]}=solidModelGeometry(model);let parts='';
-  for(const e of edges.sort((a,b)=>Number(a.visible)-Number(b.visible))){const [p,q]=e.vertices.map(i=>points[i]);parts+=`<path d="M ${p[0]} ${p[1]} L ${q[0]} ${q[1]}"${e.visible?'':' stroke-dasharray="6 4"'} stroke-width="1.6"/>`;}
-  for(const arc of motionArcs){const ps=arc.points,b=ps.at(-1),a=ps.at(-2),length=Math.hypot(b[0]-a[0],b[1]-a[1]);if(length<1e-8)continue;const ux=(b[0]-a[0])/length,uy=(b[1]-a[1])/length;parts+=`<path data-motion-arc="true" d="${ps.map((p,i)=>(i?'L ':'M ')+p[0]+' '+p[1]).join(' ')}" stroke-width="1.4"/><path data-motion-arrow="true" d="M ${b[0]-9*ux+4*uy} ${b[1]-9*uy-4*ux} L ${b[0]} ${b[1]} L ${b[0]-9*ux-4*uy} ${b[1]-9*uy+4*ux}" stroke-width="1.4"/>`;}
-  const centre=points[0].map((_,i)=>points.reduce((n,p)=>n+p[i],0)/points.length);
-  for(const [i,p] of points.entries()){const dx=p[0]-centre[0],dy=p[1]-centre[1],len=Math.hypot(dx,dy)||1;parts+=text(p[0]+dx/len*18,p[1]+dy/len*18+4,model.labels[i]);}
+  const geometry=solidModelGeometry(model),views=model.views||[{vertices:geometry.points.map((_,i)=>i)}];let parts='';
+  for(const [viewIndex,view] of views.entries()){
+   const chosen=new Set(view.vertices),raw=view.vertices.map(i=>geometry.points[i]);
+   let points=geometry.points,arcs=geometry.motionArcs||[];
+   if(model.views){const minX=Math.min(...raw.map(p=>p[0])),maxX=Math.max(...raw.map(p=>p[0])),minY=Math.min(...raw.map(p=>p[1])),maxY=Math.max(...raw.map(p=>p[1])),w=600/views.length,scale=Math.min((w-64)/Math.max(1,maxX-minX),205/Math.max(1,maxY-minY)),midX=20+w*(viewIndex+.5),map=p=>[midX+(p[0]-(minX+maxX)/2)*scale,175+(p[1]-(minY+maxY)/2)*scale];points=geometry.points.map(map);arcs=arcs.filter(a=>chosen.has(a.from)&&chosen.has(a.to)).map(a=>({...a,points:a.points.map(map)}));}
+   const edges=geometry.edges.map((e,i)=>({...e,visible:view.hiddenLinks?!view.hiddenLinks.includes(i):e.visible})).filter(e=>e.vertices.every(i=>chosen.has(i)));
+   let drawing='';for(const e of edges.sort((a,b)=>Number(a.visible)-Number(b.visible))){const [p,q]=e.vertices.map(i=>points[i]);drawing+=`<path d="M ${p[0]} ${p[1]} L ${q[0]} ${q[1]}"${e.visible?'':' stroke-dasharray="6 4"'} stroke-width="1.6"/>`;}
+   for(const arc of arcs){const ps=arc.points,b=ps.at(-1),a=ps.at(-2),length=Math.hypot(b[0]-a[0],b[1]-a[1]);if(length<1e-8)continue;const ux=(b[0]-a[0])/length,uy=(b[1]-a[1])/length;drawing+=`<path data-motion-arc="true" d="${ps.map((p,i)=>(i?'L ':'M ')+p[0]+' '+p[1]).join(' ')}" stroke-width="1.4"/><path data-motion-arrow="true" d="M ${b[0]-9*ux+4*uy} ${b[1]-9*uy-4*ux} L ${b[0]} ${b[1]} L ${b[0]-9*ux-4*uy} ${b[1]-9*uy+4*ux}" stroke-width="1.4"/>`;}
+   const selected=view.vertices.map(i=>points[i]),centre=[selected.reduce((n,p)=>n+p[0],0)/selected.length,selected.reduce((n,p)=>n+p[1],0)/selected.length];
+   for(const i of view.vertices){const p=points[i],dx=p[0]-centre[0],dy=p[1]-centre[1],len=Math.hypot(dx,dy)||1;drawing+=text(p[0]+dx/len*18,p[1]+dy/len*18+4,model.labels[i]);}
+   for(const label of model.edgeLabels||[]){if(!chosen.has(label.from)||!chosen.has(label.to))continue;const a=points[label.from],b=points[label.to],x=(a[0]+b[0])/2,y=(a[1]+b[1])/2,dx=b[0]-a[0],dy=b[1]-a[1],len=Math.hypot(dx,dy)||1,side=(-dy*(x-centre[0])+dx*(y-centre[1]))>=0?1:-1;drawing+=text(x-dy/len*14*side,y+dx/len*14*side+4,label.text);}
+   if(model.views)drawing+=text(20+600/views.length*(viewIndex+.5),325,view.title);
+   parts+=model.views?`<g data-spatial-view="${viewIndex}">${drawing}</g>`:drawing;
+  }
   return parts;
  }
  if(model.id==='inclined-plane'){
@@ -20,8 +29,9 @@ export function exerciseModelSVG(model){
 }
 
 export function exerciseModelFrame(model){
+ if(model.views)return {x:0,y:30,width:640,height:320};
  let left,right,top,bottom;
- if(['cuboid','right-triangular-prism','rectangular-pyramid','spatial-frame'].includes(model.id)){const geometry=solidModelGeometry(model),points=[...geometry.points,...(geometry.motionArcs||[]).flatMap(arc=>arc.points)],pad=Math.max(30,...model.labels.map(s=>[...s].reduce((n,c)=>n+(/[^\x00-\xff]/.test(c)?13:6.5),0)/2+23));left=Math.min(...points.map(p=>p[0]))-pad;right=Math.max(...points.map(p=>p[0]))+pad;top=Math.min(...points.map(p=>p[1]))-32;bottom=Math.max(...points.map(p=>p[1]))+32;}
+ if(['cuboid','right-triangular-prism','rectangular-pyramid','spatial-frame'].includes(model.id)){const geometry=solidModelGeometry(model),points=[...geometry.points,...(geometry.motionArcs||[]).flatMap(arc=>arc.points)],pad=Math.max(30,...(model.edgeLabels||[]).map(l=>[...l.text].reduce((n,c)=>n+(/[^\x00-\xff]/.test(c)?13:6.5),0)/2+24),...model.labels.map(s=>[...s].reduce((n,c)=>n+(/[^\x00-\xff]/.test(c)?13:6.5),0)/2+23));left=Math.min(...points.map(p=>p[0]))-pad;right=Math.max(...points.map(p=>p[0]))+pad;top=Math.min(...points.map(p=>p[1]))-32;bottom=Math.max(...points.map(p=>p[1]))+32;}
  else if(model.id==='inclined-plane'){const [length,height]=model.dimensions,scale=Math.min(400/length,190/height),w=length*scale,h=height*scale,x=320-w/2,y=290,my=y-h*.56;left=x-40;right=x+w+40;top=Math.min(y-h,my-80)-10;bottom=y+50;}
  else{left=205;right=435;top=22;bottom=338;}
  left=Math.max(0,Math.floor(left));top=Math.max(0,Math.floor(top));right=Math.min(640,Math.ceil(right));bottom=Math.min(380,Math.ceil(bottom));return {x:left,y:top,width:right-left,height:bottom-top};
