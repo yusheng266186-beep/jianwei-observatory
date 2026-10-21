@@ -46,6 +46,8 @@ function createServer({store=new COSStore(),env=process.env,now=Date.now,dispatc
    if(url.pathname==='/admin/codex/accounts'&&req.method==='GET')return send(200,await codex().accounts());
    if(url.pathname==='/admin/codex/accounts/active'&&req.method==='POST')return send(200,await codex().activate(await read(req,{maxBytes:4096})));
    if(url.pathname==='/admin/codex/authorize'&&req.method==='POST')return send(202,await codex().begin(await read(req,{maxBytes:4096}),req.headers['x-request-id']));
+   const codexCallback=url.pathname.match(/^\/admin\/codex\/authorize\/([a-f0-9-]+)\/callback$/);
+   if(codexCallback&&uuid.test(codexCallback[1])&&req.method==='POST')return send(202,await codex().submitCallback(codexCallback[1],await read(req,{maxBytes:20000})));
    const codexAttempt=url.pathname.match(/^\/admin\/codex\/authorize\/([a-f0-9-]+)(\/cancel)?$/);
    if(codexAttempt&&uuid.test(codexAttempt[1])){if(!codexAttempt[2]&&req.method==='GET')return send(200,await codex().status(codexAttempt[1]));if(codexAttempt[2]&&req.method==='POST'){const input=await read(req,{maxBytes:1024});if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).length)throw error(400,'CODEX_INPUT_INVALID');return send(200,await codex().cancel(codexAttempt[1]));}}
    const codexAccount=url.pathname.match(/^\/admin\/codex\/accounts\/([a-f0-9]{32})\/(quota|wake)$/);

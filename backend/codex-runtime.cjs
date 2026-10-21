@@ -722,7 +722,7 @@ async function checkCancelled(isCancelled) {
   }
 }
 
-async function waitForLoginOutcome(completed, isCancelled, timeoutMs, state) {
+async function waitForLoginOutcome(completed, isCancelled, timeoutMs, state, onPoll) {
   const deadline = Date.now() + timeoutMs;
   let stopped = false;
   let timer = null;
@@ -740,6 +740,7 @@ async function waitForLoginOutcome(completed, isCancelled, timeoutMs, state) {
     while (!stopped) {
       if (state.closed) return { type: 'closed' };
       if (await checkCancelled(isCancelled)) return { type: 'cancel' };
+      if (onPoll) await onPoll();
       if (Date.now() >= deadline) return { type: 'timeout' };
       await new Promise((resolve) => setTimeout(resolve, 200));
     }
@@ -763,9 +764,11 @@ async function waitForLoginOutcome(completed, isCancelled, timeoutMs, state) {
 async function login(runtime, options = {}) {
   const state = states.get(runtime);
   if (!state) throw fail('MODEL_NOT_CONFIGURED', { kind: 'runtime' });
-  const { onReady = null, isCancelled = null, deadlineMs = LOGIN_TIMEOUT_MS } = options || {};
+  const { onReady = null, isCancelled = null, readCallback = null, flow = 'browser', deadlineMs = LOGIN_TIMEOUT_MS } = options || {};
   if (onReady !== null && typeof onReady !== 'function') throw new TypeError('onReady must be a function');
   if (isCancelled !== null && typeof isCancelled !== 'function') throw new TypeError('isCancelled must be a function');
+  if (readCallback !== null && typeof readCallback !== 'function') throw new TypeError('readCallback must be a function');
+  if (!['browser','device'].includes(flow)) throw new TypeError('flow must be browser or device');
   if (state.closed) throw fail('MODEL_CONNECTION_LOST', { kind: 'login' });
   const waitMs = timeoutValue(deadlineMs, LOGIN_TIMEOUT_MS);
   const deadlineAt = Date.now() + waitMs;
@@ -792,25 +795,29 @@ async function login(runtime, options = {}) {
 
     let started;
     try {
-      started = await callWithState(state, 'account/login/start', { type: 'chatgptDeviceCode' }, { timeoutMs: 30000 });
+      started = await callWithState(state, 'account/login/start', { type: flow==='browser'?'chatgpt':'chatgptDeviceCode' }, { timeoutMs: 30000 });
     } catch (error) {
       if (error && (error.name === 'AbortError' || error.message === 'MODEL_CONNECTION_LOST')) throw error;
       const wrapped = fail('LOGIN_FAILED', { kind: 'login', phase: 'start' });
       wrapped.cause = error;
       throw wrapped;
     }
-    if (!started || started.type !== 'chatgptDeviceCode' || typeof started.loginId !== 'string' || typeof started.userCode !== 'string' || typeof started.verificationUrl !== 'string') {
+    if (!started || typeof started.loginId !== 'string' || (flow==='device'?(started.type!=='chatgptDeviceCode'||typeof started.userCode!=='string'||typeof started.verificationUrl!=='string'):(started.type!=='chatgpt'||typeof started.authUrl!=='string'))) {
       throw fail('LOGIN_FAILED', { kind: 'login', reason: 'invalid-start-response' });
     }
     loginId = started.loginId;
-    const verificationUrl = checkedDeviceUrl(started.verificationUrl);
-    if (!verificationUrl) {
-      await cancelLogin(state, loginId);
-      throw fail('LOGIN_URL_UNTRUSTED', { kind: 'login' });
-    }
+    let ready;
+    try {
+      if(flow==='browser')ready={flow,authorizationUrl:require('./browser-oauth.cjs').authorization(started.authUrl).authorizationUrl,loginId};
+      else {
+        const verificationUrl=checkedDeviceUrl(started.verificationUrl);
+        if(!verificationUrl)throw fail('LOGIN_URL_UNTRUSTED',{kind:'login'});
+        ready={flow,verificationUrl,userCode:started.userCode,loginId};
+      }
+    }catch(e){await cancelLogin(state,loginId);throw e;}
     if (onReady) {
       try {
-        await onReady({ verificationUrl, userCode: started.userCode, loginId: started.loginId });
+        await onReady(ready);
       } catch (error) {
         await cancelLogin(state, loginId);
         throw error;
@@ -825,7 +832,16 @@ async function login(runtime, options = {}) {
       await cancelLogin(state, loginId);
       throw fail('LOGIN_TIMEOUT', { kind: 'login', timeoutMs: waitMs });
     }
-    const outcome = await waitForLoginOutcome(completed, isCancelled, remaining, state);
+    let delivered=false;
+    const pollCallback=flow==='browser'&&readCallback?async()=>{
+      if(delivered)return;
+      const callbackUrl=await readCallback();
+      if(!callbackUrl)return;
+      delivered=true;
+      try{await require('./browser-oauth.cjs').deliver(callbackUrl,ready.authorizationUrl,{signal:state.signal});}
+      catch(e){await cancelLogin(state,loginId);throw e;}
+    }:null;
+    const outcome = await waitForLoginOutcome(completed, isCancelled, remaining, state,pollCallback);
     if (outcome.type === 'cancel') {
       await cancelLogin(state, loginId);
       throw fail('LOGIN_CANCELLED', { kind: 'login' });

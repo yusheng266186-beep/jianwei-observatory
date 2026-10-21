@@ -147,9 +147,9 @@ function createControl({store,jobStore,owner,env=process.env,now=Date.now,dispat
  }
  async function begin(input={},id){
   checkEnabled();
-  if(!plain(input)||Object.keys(input).some(k=>!['mode','accountId'].includes(k))||!['add','reauthorize'].includes(input.mode||'add')||(input.mode||'add')==='add'&&input.accountId)throw failure('CODEX_INPUT_INVALID');
+  if(!plain(input)||Object.keys(input).some(k=>!['mode','accountId','flow'].includes(k))||!['browser','device'].includes(input.flow||'browser')||!['add','reauthorize'].includes(input.mode||'add')||(input.mode||'add')==='add'&&input.accountId)throw failure('CODEX_INPUT_INVALID');
   if(input.mode==='reauthorize')await entry(input.accountId);
-  return enqueue('codex-login',{mode:input.mode||'add',...(input.accountId?{accountId:input.accountId}:{})},id);
+  return enqueue('codex-login',{mode:input.mode||'add',flow:input.flow||'browser',...(input.accountId?{accountId:input.accountId}:{})},id);
  }
  async function status(id){
   checkEnabled();checkUuid(id);const base=prefix+'attempts/'+id+'/',request=(await vault().get(base+'request.json'))?.value;if(!request||request.owner!==owner)throw failure('CODEX_OPERATION_NOT_FOUND',404);
@@ -159,8 +159,26 @@ function createControl({store,jobStore,owner,env=process.env,now=Date.now,dispat
   if(result)return {id,expiresAt:request.deadline,...result};
   if(await vault().get(base+'candidate.json')){await recoverLogin(id,request);result=(await vault().get(base+'result.json'))?.value;if(result)return {id,expiresAt:request.deadline,...result};}
   if(now()>request.deadline)return {id,status:'expired',expiresAt:request.deadline};
+  const browser=(await vault().get(base+'browser.json'))?.value;
+  if(browser)return {id,status:'waiting',flow:'browser',expiresAt:request.deadline,authorizationUrl:browser.authorizationUrl,callbackSubmitted:!!await vault().get(base+'callback.json')};
   const device=(await vault().get(base+'device.json'))?.value;
-  return {id,status:device?'waiting':'queued',expiresAt:request.deadline,...(device?{verificationUrl:device.verificationUrl,userCode:device.userCode}:{})};
+  return {id,status:device?'waiting':'queued',flow:request.flow||'device',expiresAt:request.deadline,...(device?{verificationUrl:device.verificationUrl,userCode:device.userCode}:{})};
+ }
+ async function submitCallback(id,input){
+  checkEnabled();checkUuid(id);
+  if(!plain(input)||Object.keys(input).some(k=>k!=='callbackUrl')||typeof input.callbackUrl!=='string')throw failure('CODEX_INPUT_INVALID');
+  const base=prefix+'attempts/'+id+'/',request=(await vault().get(base+'request.json'))?.value;
+  if(!request||request.owner!==owner)throw failure('CODEX_OPERATION_NOT_FOUND',404);
+  const result=(await vault().get(base+'result.json'))?.value;
+  if(result?.status==='complete')return {id,status:'complete'};
+  if(result||await vault().get(base+'terminal.json'))throw failure('CODEX_AUTHORIZATION_CONFLICT',409);
+  if(now()>request.deadline)throw failure('CODEX_AUTHORIZATION_EXPIRED',410);
+  const browser=(await vault().get(base+'browser.json'))?.value;
+  if(request.flow!=='browser'||!browser)throw failure('CODEX_CALLBACK_NOT_READY',409);
+  const callbackUrl=require('./browser-oauth.cjs').callback(input.callbackUrl,browser.authorizationUrl),key=base+'callback.json';
+  const value={callbackUrl,digest:hash(callbackUrl),at:now()};
+  if(!await vault().create(key,value)&&(await vault().get(key))?.value.digest!==value.digest)throw failure('CODEX_CALLBACK_ALREADY_SUBMITTED',409);
+  return {id,status:'accepted',callbackSubmitted:true};
  }
  async function cancel(id){
   checkEnabled();checkUuid(id);const base=prefix+'attempts/'+id+'/',request=(await vault().get(base+'request.json'))?.value;
@@ -221,7 +239,18 @@ function createControl({store,jobStore,owner,env=process.env,now=Date.now,dispat
    try{
     if(await vault().get(base+'terminal.json')){await recoverLogin(job.id,request);return {cancelled:true};}
     if(now()>request.deadline)throw failure('CODEX_OPERATION_EXPIRED');
-    const result=await runtime({timeoutMs:Math.max(1000,Math.min(840000,job.deadline-now()-15000)),onAuth:async auth=>{if(validAuth(auth))await vault().create(base+'candidate-'+hash(JSON.stringify(auth))+'.json',{auth,at:now()});}},rt=>methods().login(rt,{deadlineMs:Math.max(1000,Math.min(840000,job.deadline-now()-15000)),isCancelled:async()=>!!await vault().get(base+'terminal.json'),onReady:async device=>{await vault().create(base+'device.json',{verificationUrl:device.verificationUrl,userCode:device.userCode,at:now()});}}));
+    let cancelled=false,nextCancelRead=0,nextCallbackRead=0;
+    const result=await runtime({timeoutMs:Math.max(1000,Math.min(840000,job.deadline-now()-15000)),onAuth:async auth=>{if(validAuth(auth))await vault().create(base+'candidate-'+hash(JSON.stringify(auth))+'.json',{auth,at:now()});}},rt=>methods().login(rt,{
+     flow:request.flow||'device',deadlineMs:Math.max(1000,Math.min(840000,job.deadline-now()-15000)),
+     isCancelled:async()=>{if(now()>=nextCancelRead){cancelled=!!await vault().get(base+'terminal.json');nextCancelRead=now()+1200;}return cancelled;},
+     readCallback:async()=>{if(now()<nextCallbackRead)return null;nextCallbackRead=now()+1200;return (await vault().get(base+'callback.json'))?.value.callbackUrl||null;},
+     onReady:async ready=>{
+      if(ready.flow==='browser'){
+       const checked=require('./browser-oauth.cjs').authorization(ready.authorizationUrl);
+       await vault().create(base+'browser.json',{authorizationUrl:checked.authorizationUrl,at:now()});
+      }else await vault().create(base+'device.json',{verificationUrl:ready.verificationUrl,userCode:ready.userCode,at:now()});
+     }
+    }));
     if(now()>request.deadline)throw failure('CODEX_OPERATION_EXPIRED');
     const info=identity(result.account,result.auth);if(request.accountId&&request.accountId!==info.id)throw failure('CODEX_ACCOUNT_IDENTITY_MISMATCH');
     const candidate={account:result.account,accountId:info.id,auth:result.auth,digest:hash(JSON.stringify(result.auth)),epoch:crypto.randomUUID(),at:now()};
@@ -256,6 +285,6 @@ function createControl({store,jobStore,owner,env=process.env,now=Date.now,dispat
   if(!a||a.status!=='ready')throw failure('CODEX_ACCOUNT_REAUTH_REQUIRED',409);
   return {...generation,codexAccountId:id};
  }
- return {accounts,activate,begin,status,cancel,operation,queueAccount,run,withAccount,bind,registry};
+ return {accounts,activate,begin,status,submitCallback,cancel,operation,queueAccount,run,withAccount,bind,registry};
 }
 module.exports={createControl,secureStore,validAuth,identity,latest,prefix,numbered,safeError};

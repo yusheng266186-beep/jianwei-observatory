@@ -8,6 +8,8 @@ const {createControl,identity,numbered,latest,validAuth}=require('../backend/cod
 const env={OPENAI_CODEX_ENABLED:'true'},owner='a'.repeat(32);
 const authFor=n=>({auth_mode:'chatgpt',OPENAI_API_KEY:null,tokens:{account_id:'workspace-'+n,access_token:'private-access-'+n,refresh_token:'private-refresh-'+n,id_token:'private-id-'+n}});
 const info=n=>({type:'chatgpt',email:'teacher'+n+'@example.test',planType:'plus'});
+const browserUrl='https://auth.openai.com/oauth/authorize?'+new URLSearchParams({response_type:'code',client_id:'runtime-client',redirect_uri:'http://127.0.0.1:1455/auth/callback',state:'current-browser-state',code_challenge:'runtime-pkce',code_challenge_method:'S256'});
+const browserReturn='http://localhost:1455/auth/callback?state=current-browser-state&code=one-use-code';
 test('a nullable official email does not reject an otherwise authorized account',()=>{
  const auth=authFor(1);auth.tokens.id_token='e30.'+Buffer.from(JSON.stringify({sub:'official-stable-subject'})).toString('base64url')+'.example';
  const a=identity({type:'chatgpt',email:null,planType:'plus'},auth);
@@ -88,6 +90,39 @@ test('account quota is read from snapshots without running or charging the model
  await store.create(numbered('quota/'+a.id,1),{epoch:a.epoch,fetchedAt:123,rateLimits:{primary:{usedPercent:15,windowDurationMins:300,resetsAt:1800000000},secondary:null}});
  const state=await control.accounts();assert.equal(state.accounts[0].quota.rateLimits.primary.usedPercent,15);assert.equal(state.accounts[0].quota.rateLimits.secondary,null);
 });
+test('browser returns are owner-bound, state-checked, idempotent and never exposed by status',async()=>{
+ const {control,store,jobs}=await setup(),id=crypto.randomUUID();
+ await control.begin({mode:'add'},id);assert.equal((await control.status(id)).flow,'browser');
+ await assert.rejects(control.submitCallback(id,{callbackUrl:browserReturn}),/CODEX_CALLBACK_NOT_READY/);
+ await store.create('openai-codex/attempts/'+id+'/browser.json',{authorizationUrl:browserUrl});
+ const waiting=await control.status(id);assert.equal(waiting.authorizationUrl,browserUrl);assert.equal(waiting.callbackSubmitted,false);assert.equal(waiting.userCode,undefined);
+ const other=createControl({store,jobStore:jobs,owner:'b'.repeat(32),env});
+ await assert.rejects(other.submitCallback(id,{callbackUrl:browserReturn}),/CODEX_OPERATION_NOT_FOUND/);
+ await assert.rejects(control.submitCallback(id,{callbackUrl:browserReturn.replace('current-browser-state','another-state')}),/CODEX_CALLBACK_STATE_MISMATCH/);
+ const accepted=await control.submitCallback(id,{callbackUrl:browserReturn});assert.equal(accepted.status,'accepted');
+ assert.deepEqual(await control.submitCallback(id,{callbackUrl:browserReturn}),accepted);
+ await assert.rejects(control.submitCallback(id,{callbackUrl:browserReturn.replace('one-use-code','different-code')}),/CODEX_CALLBACK_ALREADY_SUBMITTED/);
+ const status=await control.status(id);assert.equal(status.callbackSubmitted,true);assert(!JSON.stringify(status).includes('one-use-code'));
+ await control.cancel(id);await assert.rejects(control.submitCallback(id,{callbackUrl:browserReturn}),/CODEX_AUTHORIZATION_CONFLICT/);
+});
+test('browser runtime receives the submitted return and persists the confirmed final credential',async()=>{
+ const {store,jobs}=await setup(),id=crypto.randomUUID(),auth=authFor(3);let control;
+ control=createControl({store,jobStore:jobs,owner,env,network:fn=>fn(),runtimeFactory:async options=>({getAuth:()=>auth,close:async()=>options.onAuth(auth)}),runtimeMethods:{login:async(rt,options)=>{
+  assert.equal(options.flow,'browser');await options.onReady({flow:'browser',authorizationUrl:browserUrl});
+  await control.submitCallback(id,{callbackUrl:browserReturn});
+  const returned=await options.readCallback();assert.equal(new URL(returned).searchParams.get('code'),'one-use-code');
+  assert.equal((await control.status(id)).status,'waiting');return {account:info(3),auth};
+ }}});
+ await control.begin({mode:'add'},id);const key='jobs/'+owner+'/'+id;
+ assert.equal((await control.run(key,(await jobs.get(key+'/meta.json')).value)).ok,true);assert.equal((await control.status(id)).status,'complete');
+});
+test('an expired browser attempt rejects returns and a request id cannot switch login modes',async()=>{
+ const {control,store,jobs}=await setup(),id=crypto.randomUUID();await control.begin({mode:'add',flow:'browser'},id);
+ await store.create('openai-codex/attempts/'+id+'/browser.json',{authorizationUrl:browserUrl});
+ await assert.rejects(control.begin({mode:'add',flow:'device'},id),/REQUEST_ID_CONFLICT/);
+ const future=createControl({store,jobStore:jobs,owner,env,now:()=>Date.now()+900000});
+ await assert.rejects(future.submitCallback(id,{callbackUrl:browserReturn}),/CODEX_AUTHORIZATION_EXPIRED/);
+});
 test('SIWC and other provider settings are left untouched and API-key auth is rejected',async()=>{
  const {control,store,accounts}=await setup();
  const siwc={credentials:{refresh_token:'existing-plan-token'}};
@@ -114,6 +149,9 @@ test('all remote account management routes keep the existing TOTP and Origin bou
   assert.equal((await call('/admin/codex/authorize',{method:'POST',body:{mode:'add',redirectUri:'https://evil.test/callback'}})).status,400);
   const attempt=await call('/admin/codex/authorize',{method:'POST',body:{mode:'add'}});assert.equal(attempt.status,202);
   const id=(await attempt.json()).id;assert.equal((await call('/admin/codex/authorize/'+id,{auth:false})).status,401);
+  assert.equal((await call('/admin/codex/authorize/'+id+'/callback',{method:'POST',body:{callbackUrl:browserReturn},auth:false})).status,401);
+  assert.equal((await call('/admin/codex/authorize/'+id+'/callback',{method:'POST',body:{callbackUrl:browserReturn},origin:'https://evil.test'})).status,403);
+  assert.equal((await call('/admin/codex/authorize/'+id+'/callback',{method:'POST',body:{callbackUrl:browserReturn}})).status,409);
   assert.equal((await call('/admin/codex/authorize/'+id+'/cancel',{method:'POST',body:{}})).status,200);
  }finally{await new Promise(r=>server.close(r));}
 });

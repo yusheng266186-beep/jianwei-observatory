@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { EventEmitter } from 'node:events';
+import http from 'node:http';
 
 import runtimeModule from '../backend/codex-runtime.cjs';
 
@@ -476,12 +477,12 @@ test('设备码登录只向 onReady 暴露安全字段并确认 ChatGPT 身份',
     },
   });
   const ready = [];
-  const pending = login(runtime, { onReady: (value) => ready.push(value), deadlineMs: 2000 });
+  const pending = login(runtime, { flow: 'device', onReady: (value) => ready.push(value), deadlineMs: 2000 });
   await fake.waitRequest('account/login/start');
   await fsp.writeFile(path.join(fake.spawn.spawnOptions.cwd, 'auth.json'), JSON.stringify({ ...AUTH, tokens: { ...AUTH.tokens, access_token: 'device-token' } }), { mode: 0o600 });
   fake.notify('account/login/completed', { success: true, loginId: 'login-1', error: null });
   const result = await pending;
-  assert.deepEqual(ready, [{ verificationUrl: 'https://auth.openai.com/codex/device', userCode: 'ABCD-EFGH', loginId: 'login-1' }]);
+  assert.deepEqual(ready, [{ flow: 'device', verificationUrl: 'https://auth.openai.com/codex/device', userCode: 'ABCD-EFGH', loginId: 'login-1' }]);
   assert.deepEqual(result.account, { type: 'chatgpt', email: 'teacher@example.invalid', planType: 'plus' });
   assert.equal(result.auth.tokens.access_token, 'device-token');
 });
@@ -498,7 +499,7 @@ test('登录拒绝非官方 verificationUrl 并取消后台登录', async (t) =>
     },
   });
   let ready = false;
-  await assert.rejects(login(runtime, { onReady: () => { ready = true; }, deadlineMs: 1000 }), /LOGIN_URL_UNTRUSTED/);
+  await assert.rejects(login(runtime, { flow: 'device', onReady: () => { ready = true; }, deadlineMs: 1000 }), /LOGIN_URL_UNTRUSTED/);
   assert.equal(ready, false);
   assert.equal(fake.find('account/login/cancel').params.loginId, 'login-bad');
 });
@@ -517,23 +518,49 @@ test('登录取消、超时与失败通知均映射明确错误并取消登录',
     const { runtime, fake } = await startRuntime(t, { handlers: base });
     let cancelled = false;
     setTimeout(() => { cancelled = true; }, 20);
-    await assert.rejects(login(runtime, { deadlineMs: 1000, isCancelled: () => cancelled }), /LOGIN_CANCELLED/);
+    await assert.rejects(login(runtime, { flow: 'device', deadlineMs: 1000, isCancelled: () => cancelled }), /LOGIN_CANCELLED/);
     assert.equal(fake.find('account/login/cancel').params.loginId, 'login-x');
   }
 
   {
     const { runtime, fake } = await startRuntime(t, { handlers: base });
-    await assert.rejects(login(runtime, { deadlineMs: 20 }), /LOGIN_TIMEOUT/);
+    await assert.rejects(login(runtime, { flow: 'device', deadlineMs: 20 }), /LOGIN_TIMEOUT/);
     assert.equal(fake.find('account/login/cancel').params.loginId, 'login-x');
   }
 
   {
     const { runtime, fake } = await startRuntime(t, { handlers: base });
-    const pending = login(runtime, { deadlineMs: 1000 });
+    const pending = login(runtime, { flow: 'device', deadlineMs: 1000 });
     await fake.waitRequest('account/login/start');
     fake.notify('account/login/completed', { success: false, loginId: 'login-x', error: 'access_denied' });
     await assert.rejects(pending, (error) => error.message === 'LOGIN_FAILED' && error.diagnostic.reason === 'access_denied');
   }
+});
+
+test('浏览器授权默认使用普通 OAuth，手动返回交给原运行时后才保存账号', async (t) => {
+ let fake,received=0,callbackUrl,ready;
+ const listener=http.createServer(async(req,res)=>{
+  received++;const u=new URL(req.url,'http://local');
+  assert.equal(u.searchParams.get('state'),'browser-state');assert.equal(u.searchParams.get('code'),'one-use-code');
+  await fsp.writeFile(path.join(fake.spawn.spawnOptions.cwd,'auth.json'),JSON.stringify(AUTH),{mode:0o600});
+  res.writeHead(302,{Location:'/success'});res.end();
+  fake.notify('account/login/completed',{success:true,loginId:'browser-login'});
+ });
+ await new Promise(r=>listener.listen(0,'127.0.0.1',r));t.after(()=>new Promise(r=>listener.close(r)));
+ const port=listener.address().port,authUrl='https://auth.openai.com/oauth/authorize?'+new URLSearchParams({response_type:'code',client_id:'runtime-client',redirect_uri:'http://127.0.0.1:'+port+'/auth/callback',state:'browser-state',code_challenge:'runtime-pkce',code_challenge_method:'S256'});
+ const started=await startRuntime(t,{handlers:{'account/login/start':params=>{assert.equal(params.type,'chatgpt');return {type:'chatgpt',loginId:'browser-login',authUrl};}}});fake=started.fake;
+ const pending=login(started.runtime,{onReady:value=>{ready=value;},readCallback:()=>callbackUrl,deadlineMs:2500});
+ await waitFor(()=>ready);assert.equal(ready.authorizationUrl,authUrl);assert.equal(ready.flow,'browser');assert.equal(ready.userCode,undefined);
+ assert.equal(started.runtime.getAuth(),null);
+ callbackUrl='http://localhost:'+port+'/auth/callback?state=browser-state&code=one-use-code';
+ const result=await pending;assert.equal(received,1);assert.equal(result.auth.tokens.access_token,AUTH.tokens.access_token);
+});
+
+test('手动返回状态不匹配时取消当前浏览器登录，不交付账号', async (t) => {
+ const authUrl='https://auth.openai.com/oauth/authorize?'+new URLSearchParams({response_type:'code',client_id:'runtime-client',redirect_uri:'http://127.0.0.1:1455/auth/callback',state:'current-state',code_challenge:'runtime-pkce',code_challenge_method:'S256'});
+ const {runtime,fake}=await startRuntime(t,{handlers:{'account/login/start':()=>({type:'chatgpt',loginId:'browser-login',authUrl})}});
+ await assert.rejects(login(runtime,{readCallback:()=> 'http://127.0.0.1:1455/auth/callback?state=old-state&code=old-code',deadlineMs:1000}),/CODEX_CALLBACK_STATE_MISMATCH/);
+ assert.equal(fake.find('account/login/cancel').params.loginId,'browser-login');assert.equal(runtime.getAuth(),null);
 });
 
 test('额度读取原样返回官方结果，不补造字段', async (t) => {
