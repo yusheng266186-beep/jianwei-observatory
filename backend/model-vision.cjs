@@ -1,7 +1,7 @@
 'use strict';
 const {routes,modelProfile}=require('./model-control.cjs');
 const MAX_IMAGE_CHARS=5200000,MAX_IMAGE_BYTES=3900000;
-const ATTACHABLE=new Set(['chat-completions','responses','anthropic','gemini']);
+const ATTACHABLE=new Set(['chat-completions','responses','anthropic','gemini','codex']);
 // Explicit known-model allowlist. Do not infer vision support from adapter
 // family alone: many gpt-* models are text-only, and a relay may expose a
 // model name that is not the same capability as the upstream model.

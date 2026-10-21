@@ -300,6 +300,13 @@ function createControl({store,jobStore,owner,env=process.env,now=Date.now,dispat
   if(!a||a.status!=='ready')throw failure('CODEX_ACCOUNT_REAUTH_REQUIRED',409);
   return {...generation,codexAccountId:id};
  }
- return {accounts,activate,begin,status,submitCallback,cancel,operation,queueAccount,run,withAccount,bind,registry};
+ async function bindAll(generations){
+  const result={...generations},keys=['generation','figureGeneration','repairGeneration'].filter(key=>result[key]?.provider==='openai-codex');
+  if(!keys.length)return result;
+  checkEnabled();const current=await registry();
+  for(const key of keys){const id=result[key].codexAccountId||current.activeId,a=current.accounts.find(a=>a.id===id);if(!a||a.status!=='ready')throw failure('CODEX_ACCOUNT_REAUTH_REQUIRED',409);result[key]={...result[key],codexAccountId:id};}
+  return result;
+ }
+ return {accounts,activate,begin,status,submitCallback,cancel,operation,queueAccount,run,withAccount,bind,bindAll,registry};
 }
 module.exports={createControl,secureStore,validAuth,identity,latest,prefix,numbered,safeError};

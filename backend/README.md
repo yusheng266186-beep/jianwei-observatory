@@ -1,8 +1,10 @@
 # 个性化辅导后端
 
-独立的云端 OpenAI 账号管理沿用现有教师会话，默认使用普通浏览器 OAuth；跨设备支持粘贴本次返回链接交回云端，设备码只作备用。原有 SIWC 继续独立运行，当前出题配置不自动切换。普通浏览器授权链接、回调状态校验和取消已在腾讯云实测通过，真实额度、唤醒与新通道出题须在所有者授权后继续验收。详见[云端 OAuth 接口、存储与部署边界](../docs/OPENAI-CLOUD-OAUTH-2026-10-21.md)。
+当前正式服务使用 `openai-codex` 云端官方账号通道。浏览器 OAuth、跨设备回调、切换账号、真实额度与手动唤醒集中在 `/admin/codex/*`；出题、学科复核、格式修复、图示与看图核对都使用同一官方适配器，并在任务提交时冻结账号。切换当前账号不改变已提交任务。`openai-chatgpt` 旧计划通道已退出公开目录，旧授权接口在启用新通道的正式环境返回 HTTP 410。历史代码与私有记录仅供兼容和审计，不再挂载旧面板。详见[整合与实测](../docs/WORKBENCH-UNIFIED-2026-10-22.md)。
 
-现有计划通道的官方账号接口：`GET /admin/openai/accounts`、`POST /admin/openai/authorize`、`GET /admin/openai/authorize/:id`、`POST /admin/openai/authorize/:id/cancel` 均使用现有教师会话；本机助手只向固定的 claim/complete capability 路由转发一次性授权信息。详见[授权接口与存储说明](../docs/OPENAI-ACCOUNT-WORKBENCH-2026-10-21.md)。API 函数与 Worker 都必须保留 `OPENAI_PROXY_CONFIG`、`OPENAI_XRAY_PATH` 和 `jianwei-openai-xray` 层；只给 Worker 配置代理不能完成网页发起的授权。授权码只交换一次，JWKS 临时失败可在原 15 分钟窗口内恢复，已验证或已激活的落盘恢复不会重复换码。
+鹈鹕比较接口：`GET/POST /admin/pelican`、`GET /admin/pelican/:id`、`POST /admin/pelican/:id/cancel`，均要求教师会话与来源校验。比较任务按模型串行分发为独立 Worker，重复查询或派发不会重复生成；可查看最近20轮。成功产物先保存候选，再落最终结果，原文和真实统计保留。模型 SVG 作为隔离图片呈现；正常注释、内部渐变与内部引用可用，脚本、外部引用与 foreignObject 不执行。
+
+API 与 Worker 均保留 `OPENAI_PROXY_CONFIG`、`OPENAI_XRAY_PATH` 和代理层，当前代理为 VLESS / Reality，只监听云端回环地址 `127.0.0.1:18080`。代理支持原有固定证书 TLS 线路与新的 Reality 验证；其他服务商及腾讯存储不改走此代理。代码部署保留环境变量、层、网络与超时配置。
 
 提示词版本 `subject-templates-20261021.13`，可运行 `node tools/export-training-prompts.cjs --out /绝对路径/新的导出目录` 导出实际编译内容。导出过程不调用模型、不读取账号密钥，教师选择以匿名示例覆盖。
 
@@ -111,7 +113,7 @@ ByteCat新分组的图片链接、精确存储主机放行及高清PNG容量修�
 
 `providers.json`、`model-profiles.json`、`model-adapter.cjs` 管理已授权的服务目录和协议；工作台分别选择题文、图示与校检模型及思考档位。目录数量和可用性会变化，配置存在不代表余额或实测通过。新任务冻结提供方、模型、适配、凭据引用和时限；旧任务不随工作台切换变化，也不自动换服务。
 
-`openai-siwc.cjs` 接入本项目独立的 ChatGPT 官方授权，支持账号实际可用的7个模型和low至ultra推理档位，两款Luna最高max；`openai-proxy.cjs`仅对固定官方接口使用云端回环代理，`openai-credentials.cjs`在加密私有控制前缀下串行续期并保留不可变凭据版本。访问令牌不注入HTTP函数或浏览器；代理核心通过腾讯云层保留，代码更新不得移除该层和专属环境配置。具体授权、部署、实测边界与维护命令见[官方授权接入](../docs/OPENAI-SIWC-2026-10-21.md)。
+历史实现 `openai-siwc.cjs` 已退休；当前使用 `codex-completion.cjs` → `codex-accounts.cjs` → `codex-runtime.cjs`。各模型推理档位以工作台目录为准；`openai-proxy.cjs`仅对固定官方接口使用云端回环代理，`openai-credentials.cjs`在加密私有控制前缀下串行续期并保留不可变凭据版本。访问令牌不注入HTTP函数或浏览器；代理核心通过腾讯云层保留，代码更新不得移除该层和专属环境配置。具体授权、部署、实测边界与维护命令见[官方授权接入](../docs/OPENAI-SIWC-2026-10-21.md)。
 
 猎豹词元工厂使用独立提供方`cheetah-gemini`、`gemini-3.8-flash`及Chat Completions流式协议。`CHEETAH_GEMINI_API_KEY`仅注入Worker，HTTP函数只声明提供方已配置。私有部署目录需有`cheetah-gemini.key`供后续维护复用；不能借用GLM或旧ByteCat密钥。详情见[线路接入记录](../docs/CHEETAH-GEMINI-2026-10-19.md)。
 

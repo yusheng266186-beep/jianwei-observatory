@@ -2034,3 +2034,62 @@ body[data-motion=calm] button{transition:none}
 @media(prefers-reduced-motion:reduce){
   .account-flow-inner,.account-flow-mark,.cloud-flow-inner,.cloud-flow-mark{animation:none}
 }
+
+/* Account, configuration and comparison share a single working rhythm. */
+.workbench-page .workbench-sections{display:flex;flex-wrap:wrap;gap:6px 12px;margin:0 0 var(--panel-gap);padding:8px 2px}
+.workbench-sections a{display:flex;align-items:center;gap:9px;padding:9px 12px;border-radius:12px;color:var(--muted);font-size:13px;transition:background var(--motion-control) var(--motion-ease),color var(--motion-control) var(--motion-ease)}
+.workbench-sections a:hover{background:#ffffff78;color:var(--ink);text-decoration:none}
+.workbench-sections a span{font-size:11px;letter-spacing:.08em;opacity:.65}
+.workbench-page :is(#model-studio,#cloud-accounts-panel,#support-title,#pelican-panel){scroll-margin-top:20px}
+.workbench-page .model-studio{display:grid;gap:var(--panel-gap)}
+.workbench-page .model-studio .workbench-brief{margin-bottom:0}
+.workbench-page .model-studio .work-section-head{padding-top:0}
+.workbench-page .cloud-intro{margin-bottom:14px;max-width:none}
+.workbench-page .cloud-intro p{font-size:13px;line-height:1.75;margin-bottom:0}
+.workbench-page .workbench-cloud{margin-bottom:24px}
+.workbench-page .pelican-panel{margin:24px 0}
+.pelican-composer{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:26px;padding-top:8px}
+.pelican-step{font-size:14px;font-weight:600}
+.pelican-candidates{display:flex;flex-wrap:wrap;gap:9px;min-height:44px;margin:12px 0}
+.pelican-chip{display:flex;align-items:center;gap:14px;padding:9px 10px 9px 14px;border-radius:14px;background:linear-gradient(140deg,#ffffffa8,#dfecf35c);box-shadow:inset 0 1px #fff9;max-width:100%}
+.pelican-chip>span{min-width:0}.pelican-chip b,.pelican-chip small{display:block;overflow-wrap:anywhere}.pelican-chip b{font-size:13px}.pelican-chip small{color:var(--muted);font-size:11px;margin-top:3px}
+.pelican-chip button{padding:3px 7px;min-height:30px;font-size:19px;background:transparent;box-shadow:none;flex:none}
+.pelican-empty{align-self:center;font-size:13px;color:var(--muted);margin:0}
+.pelican-start{border-left:1px solid var(--line);padding-left:26px;min-width:0}
+.pelican-start summary,.pelican-history summary,.pelican-source summary{cursor:pointer;font-size:13px;color:var(--muted);padding:10px 0}
+.pelican-prompt-label{display:grid;gap:8px;font-size:12px;color:var(--muted);margin-bottom:12px}
+.pelican-prompt-label textarea{width:100%;resize:vertical;min-height:100px;font:inherit;font-size:14px;line-height:1.7;color:var(--ink);padding:12px;border:0;border-radius:12px;background:#ffffff80;box-shadow:inset 0 1px 2px #2a52700a;outline-offset:3px}
+.pelican-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+.pelican-results{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.pelican-result{min-width:0;padding:20px;border-radius:16px;background:linear-gradient(140deg,#ffffff99,#f0f7fa55);box-shadow:inset 0 1px #fff9}
+.pelican-result header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.pelican-result header>div{min-width:0}.pelican-result header h3{font-size:17px;margin:5px 0;overflow-wrap:anywhere}.pelican-result header small{color:var(--muted);font-size:10px;letter-spacing:.12em}.pelican-result header p{font-size:12px;color:var(--muted);overflow-wrap:anywhere}
+.pelican-canvas{display:grid;place-items:center;aspect-ratio:4/3;border-radius:12px;background:#ffffffb0;overflow:hidden;padding:16px}
+.pelican-canvas p{font-size:13px;color:var(--muted);text-align:center;margin:0;line-height:1.7}
+.pelican-canvas img{max-width:100%;max-height:100%;width:100%;height:100%;object-fit:contain}
+.pelican-metrics{display:flex;flex-wrap:wrap;gap:10px 24px;margin:16px 0 10px}.pelican-metrics div{min-width:0}.pelican-metrics dt{font-size:11px;color:var(--muted)}.pelican-metrics dd{font-variant-numeric:tabular-nums;font-size:14px;margin:5px 0 0;overflow-wrap:anywhere}
+.pelican-download{font-size:12px}.pelican-source pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;overflow:auto;font-size:11px;padding:12px;border-radius:10px;background:#e7eff566}
+.pelican-history{margin-top:18px;border-top:1px solid var(--line)}
+[data-pelican-history]{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+[data-pelican-history] button{display:flex;justify-content:space-between;align-items:center;gap:14px;font-size:12px;text-align:left}
+[data-pelican-history] small{color:var(--muted);flex:none}
+@media(max-width:720px){.workbench-page .workbench-sections{gap:4px}.workbench-sections a{font-size:12px;padding:8px}.pelican-composer{grid-template-columns:minmax(0,1fr);gap:18px}.pelican-start{border-left:0;border-top:1px solid var(--line);padding:12px 0 0}.pelican-results{grid-template-columns:minmax(0,1fr)}.pelican-result{padding:16px}.pelican-prompt-label textarea{font-size:16px}[data-pelican-history]{grid-template-columns:minmax(0,1fr)}}
+@media(min-width:900px){
+ .workbench-page .workbench-brief{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);column-gap:30px}
+ .workbench-brief .brief-head{grid-column:1;grid-row:1;margin-bottom:0}
+ .workbench-brief .model-role-switch{grid-column:1;grid-row:2;margin-top:14px}
+ .workbench-brief .current{grid-column:2;grid-row:1/3;display:block;margin:0;padding:4px 0 0 28px;border-top:0;border-left:1px solid var(--line)}
+ .workbench-brief .current-side{margin-top:10px;text-align:left}
+ .workbench-brief .pipeline-row{grid-column:1/-1;margin-top:18px}
+}
+.pelican-panel .note{font-size:12px;line-height:1.8;color:var(--muted);margin:6px 0 10px}
+@media(min-width:900px){
+ .pelican-result:only-child{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);column-gap:24px;align-content:start}
+ .pelican-result:only-child>header{grid-column:1;grid-row:1}
+ .pelican-result:only-child>.pelican-canvas{grid-column:2;grid-row:1/5;max-height:360px;aspect-ratio:auto;min-height:260px}
+ .pelican-result:only-child>.pelican-metrics{grid-column:1;grid-row:2;align-self:start}
+ .pelican-result:only-child>.pelican-download{grid-column:1;grid-row:3;align-self:start}
+ .pelican-result:only-child>.pelican-source{grid-column:1;grid-row:4}
+}
+.selection-compare{display:flex;align-items:center;justify-content:space-between;gap:8px 12px;flex-wrap:wrap;margin-top:8px}
+.selection-compare button,.selection-compare a{font-size:11px}

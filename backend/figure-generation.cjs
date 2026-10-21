@@ -3,7 +3,7 @@ const {request}=require('./tencent.cjs'),{routes,modelProfile}=require('./model-
 const {parseModelJSON}=require('./model-json.cjs');
 async function structuredOnce(prompt,{generation,key,env=process.env,transport=request,onProgress,signal}={}){
  const route=routes[generation.provider],g={...generation,protocol:generation.protocol||route?.protocol,base:generation.base||route?.url,credentialRef:generation.credentialRef||route?.key};key=key||env[g.credentialRef];
- if(!route||!key)throw new Error('MODEL_NOT_CONFIGURED');
+ if(!route||g.protocol!=='codex'&&!key)throw new Error('MODEL_NOT_CONFIGURED');
  if(g.protocol==='kimi')return require('./kimi.cjs').completeKimi(prompt,{key,kind:g.provider.slice(5),model:g.model,effort:g.reasoningEffort||'max',transport,onProgress,signal});
  if(g.protocol!=='gemini')return require('./model-completion.cjs').completeRemote(prompt,g,{key,transport,onProgress,signal});
  return require('./model-completion.cjs').completeGemini(prompt,g,{key,transport,onProgress,signal});

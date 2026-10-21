@@ -568,7 +568,7 @@ export function createCloudAccountPanel({root,api,requests,session,onAuthRequire
     loadError='';needsAuth=false;
     if(data?.enabled!==true){flow=null;flowStamp='';resetCallback();}
     else if(!attempt&&flow?.state==='auth'){flow=null;flowStamp='';}
-    if(data)renderStatus(data.enabled===true?(data.accounts?.length?data.accounts.length+' 个云端账号 · 独立管理授权会话':'还没有云端官方账号'):'云端官方授权未启用，当前仍使用已配置的模型服务');
+    if(data)renderStatus(data.enabled===true?(data.accounts?.length?data.accounts.length+' 个云端账号 · 新出题使用当前账号':'还没有云端官方账号'):'云端官方授权未启用，当前仍使用已配置的模型服务');
     renderAll();
     if(data?.enabled===true&&attempt&&!needsAuth){
      if(!flow||flow.state==='auth'||flow.state==='starting')setFlow({...flow,state:'queued',title:'继续查询本次授权',text:'正在查询上次的官方授权进度…',expiresAt:attempt.expiresAt});
@@ -641,7 +641,7 @@ export function createCloudAccountPanel({root,api,requests,session,onAuthRequire
   if(needsAuth){renderAll();return;}
   const account=findAccount(result?.accountId)||(data?.accounts||[]).find(item=>item.active)||null;
   const isActive=!!account&&(account.active||String(account.id)===String(data?.activeId));
-  setFlow({state:'complete',title:'官方账号已更新',text:account?accountLabel(account)+' 已可用；'+(isActive?'该账号已保存在云端，可在此切换。':'可在账号列表中设为当前。')+'现有计划通道保持独立。':'云端已确认本次授权，账号列表已刷新。'});
+  setFlow({state:'complete',title:'官方账号已更新',text:account?accountLabel(account)+' 已可用；'+(isActive?'该账号已保存在云端，可在此切换。':'可在账号列表中设为当前。')+'新出题任务将使用当前账号，已提交的任务保持原账号。':'云端已确认本次授权，账号列表已刷新。'});
   renderStatus('官方授权已完成，云端账号列表已更新。');
   renderAll();
  }
@@ -746,7 +746,7 @@ export function createCloudAccountPanel({root,api,requests,session,onAuthRequire
    if(mark!==epoch||!requests.current(ticket)||!allowed())return;
    if(next&&Array.isArray(next.accounts))data={...data,...next,enabled:next.enabled??data?.enabled??true};
    else await load({quiet:true});
-   renderStatus('已切换当前账号：'+accountLabel(account)+'。现有计划通道保持独立。');
+   renderStatus('已切换当前账号：'+accountLabel(account)+'。新出题任务将使用当前账号，已提交的任务保持原账号。');
   }catch(error){
    if(mark!==epoch||!requests.current(ticket))return;
    if(authError(error)){authRequired(false);return;}

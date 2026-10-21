@@ -4,7 +4,11 @@ const http=require('node:http'),https=require('node:https'),tls=require('node:tl
 const destinations=new Map([['api.openai.com',new Set(['/v1/models','/v1/responses'])],['auth.openai.com',new Set(['/api/accounts/oauth/token','/.well-known/openid-configuration','/.well-known/jwks.json'])]]);
 const pause=ms=>new Promise(r=>setTimeout(r,ms));
 function checkedTarget(url){const u=new URL(url);if(u.protocol!=='https:'||u.username||u.password||u.search||u.hash||u.port&&!['443',''].includes(u.port)||!destinations.get(u.hostname)?.has(u.pathname))throw Error('OPENAI_DESTINATION_REJECTED');return u;}
-function checkedConfig(value){let c;try{c=typeof value==='string'?JSON.parse(value):structuredClone(value);}catch{throw Error('OPENAI_PROXY_CONFIG_INVALID');}const o=c?.outbounds?.[0],s=o?.streamSettings;if(c?.outbounds?.length!==1||o.protocol!=='hysteria'||s?.security!=='tls'||s.tlsSettings?.allowInsecure||!s.tlsSettings?.pinnedPeerCertSha256)throw Error('OPENAI_PROXY_CONFIG_INVALID');return {log:{loglevel:'none'},inbounds:[{listen:'127.0.0.1',port:18080,protocol:'http',tag:'openai-private'}],outbounds:[o]};}
+function checkedConfig(value){let c;try{c=typeof value==='string'?JSON.parse(value):structuredClone(value);}catch{throw Error('OPENAI_PROXY_CONFIG_INVALID');}const o=c?.outbounds?.[0],s=o?.streamSettings;
+ const pinnedTLS=o?.protocol==='hysteria'&&s?.security==='tls'&&!s.tlsSettings?.allowInsecure&&!!s.tlsSettings?.pinnedPeerCertSha256;
+ const reality=o?.protocol==='vless'&&s?.security==='reality'&&!!s.realitySettings?.serverName&&!!(s.realitySettings?.publicKey||s.realitySettings?.password)&&!s.realitySettings?.allowInsecure;
+ if(c?.outbounds?.length!==1||(!pinnedTLS&&!reality))throw Error('OPENAI_PROXY_CONFIG_INVALID');
+ return {log:{loglevel:'none'},inbounds:[{listen:'127.0.0.1',port:18080,protocol:'http',tag:'openai-private'}],outbounds:[o]};}
 function proxyRequest(url,{method='GET',headers={},body='',timeout=30000,deadlineMs=timeout,maxBytes=1024*1024,onChunk,signal,collectBody=true,proxyPort=18080}={}){
  let target;try{target=checkedTarget(url);if(!Number.isInteger(proxyPort)||proxyPort<1024||proxyPort>65535)throw Error('OPENAI_PROXY_PORT_INVALID');}catch(e){return Promise.reject(e);}
  return new Promise((resolve,reject)=>{let settled=false,timer,tunnel,socket,secure,requestFinished=false,tlsEstablished=false,responseHeadersReceived=false,responseBytes=0,responseStatus;const agent=new https.Agent({keepAlive:false});

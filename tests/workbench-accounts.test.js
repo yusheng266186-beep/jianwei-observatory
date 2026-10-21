@@ -38,16 +38,17 @@ test('账号状态、时间和错误都给出可读中文，未知错误不泄�
  assert.equal(accountErrorText({message:'自定义提示'}),'自定义提示');
 });
 
-test('账号面板不在浏览器持久化授权票据或令牌，登录后才由主页面加载',()=>{
+test('旧计划面板不再挂载或加载，历史助手代码仍不持久化凭据',()=>{
  const source=fs.readFileSync(new URL('../assets/workbench-accounts.js',import.meta.url),'utf8');
  const page=fs.readFileSync(new URL('../model-workbench.html',import.meta.url),'utf8');
  const main=fs.readFileSync(new URL('../assets/model-workbench.js',import.meta.url),'utf8');
  assert(!/localStorage|sessionStorage|indexedDB/.test(source),'account module must not persist secrets');
  assert(!/console\.(log|info|warn|error)/.test(source),'launch tickets must not be logged');
  assert(source.includes('accountHelperLaunch(result.launchUrl)'));
- assert(page.includes('id="account-flow"')&&page.includes('id="account-helper-download"'));
- assert(page.includes('node ~/Downloads/openai-auth-assistant.cjs'));
+ assert(!page.includes('id="legacy-accounts"'));
+ assert(!page.includes('id="account-helper-download"'));
+ assert(!main.includes("from './workbench-accounts.js'"));
  const loadLines=main.split('\n').filter(line=>line.includes('accountsPanel.load()'));
- assert.equal(loadLines.length,2,'accounts load after sign-in and after session restore only');
+ assert.equal(loadLines.length,0,'retired account panel must never be loaded');
  assert(loadLines.every(line=>line.includes('await load()')),'the model state is authenticated before accounts load');
 });

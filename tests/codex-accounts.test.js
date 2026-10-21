@@ -51,6 +51,15 @@ test('only one runtime may use an account refresh chain at a time',async()=>{
  release();assert.equal(await first,'first');
  assert.equal(await control.withAccount(accounts[0].id,async()=> 'next'),'next');
 });
+test('one enqueue freezes all official roles to one active account without touching other providers',async()=>{
+ const {control,accounts}=await setup(),g={provider:'openai-codex',model:'gpt-6.1-sol'},other={provider:'bytecat-image',model:'gpt-image-2'};
+ const bound=await control.bindAll({generation:g,figureGeneration:g,repairGeneration:g,imageGeneration:other});
+ for(const role of ['generation','figureGeneration','repairGeneration'])assert.equal(bound[role].codexAccountId,accounts[0].id);
+ assert.deepEqual(bound.imageGeneration,other);
+ await control.activate({accountId:accounts[1].id,expectedRevision:1});
+ const saved=await control.bindAll(bound);assert.equal(saved.figureGeneration.codexAccountId,accounts[0].id);
+ assert.equal((await control.bindAll({generation:g})).generation.codexAccountId,accounts[1].id);
+});
 test('a rotated credential is durably saved before its account lease is released',async()=>{
  const {control,store,accounts}=await setup(),a=accounts[0];
  await control.withAccount(a.id,rt=>rt.rotate());

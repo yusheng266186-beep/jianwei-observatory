@@ -1,0 +1,2 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {pelicanTime,pelicanImage} from '../assets/workbench-pelican.js';
+test('comparison does not turn unavailable timing into zero, or execute model markup',()=>{assert.equal(pelicanTime(null),'—');assert.equal(pelicanTime(1250),'1.3 秒');assert.match(pelicanImage('<svg viewBox="0 0 10 10"><circle r="3"/></svg>'),/^data:image\/svg\+xml/);assert.equal(pelicanImage('<svg onload="alert(1)"></svg>'),'');assert.equal(pelicanImage('<svg><image href="https://evil.example/x"/></svg>'),'');});

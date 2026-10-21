@@ -41,6 +41,9 @@ async function advanceRecovered(store,key,job,restored,{now,dispatch}){
 async function run(event,{store=new COSStore(),generator=generate,illustrator=generateIllustration,prober=require('./model-completion.cjs').probeModel,repairer=generate,contentReviewer,now=Date.now,modelStore,dispatch}={}){
  if(!event||!/^jobs\/[a-f0-9]{32}\/[a-f0-9-]{36}$/.test(event.key||''))throw new Error('INVALID_JOB_EVENT');
  const found=await store.get(event.key+'/meta.json'),job=found?.value;if(!job||await store.get(event.key+'/removed.json'))return {skipped:true};
+ if(job.type==='pelican'){
+  const owner=event.key.split('/')[1];return require('./pelican.cjs').createPelicanControl({store,owner,now,dispatch}).run(event.key,job);
+ }
  if(['codex-login','codex-quota','codex-wake'].includes(job.type)){
   const owner=event.key.split('/')[1],control=require('./codex-accounts.cjs').createControl({jobStore:store,owner,now,dispatch});
   if(job.deadline<now())return {skipped:true};return control.run(event.key,job);

@@ -16,7 +16,7 @@ const safeEqual=(a,b)=>{a=Buffer.from(String(a));b=Buffer.from(String(b));return
 const resumeFields=['status','error','failureDetail','resumeAvailable','requiresTextRegeneration','requiresImageRegeneration','contentReviewPipeline','figurePipeline','figureStage','figureQuestion','figureFailureCode','figureCompleted','figureTotal','figureRevision','groupRevision','groupIndex','groupCount','completedQuestions','repairRevision','deadlineAt','model','provider','reasoningEffort'];
 const resumeSummary=value=>Object.fromEntries(resumeFields.filter(key=>value?.[key]!==undefined).map(key=>[key,value[key]]));
 function read(req,{maxBytes=40000}={}){return new Promise((resolve,reject)=>{let size=0,chunks=[];req.on('data',c=>{size+=c.length;if(size>maxBytes){reject(error(413,'REQUEST_TOO_LARGE'));req.destroy();}else chunks.push(c);});req.on('end',()=>{try{resolve(JSON.parse(Buffer.concat(chunks).toString('utf8')||'{}'));}catch{reject(error(400,'INVALID_JSON'));}});req.on('error',reject);});}
-function createServer({store=new COSStore(),env=process.env,now=Date.now,dispatch=async()=>{},modelStore=store,authorizationControl,authorizationFactory,codexControl}={}){
+function createServer({store=new COSStore(),env=process.env,now=Date.now,dispatch=async()=>{},modelStore=store,authorizationControl,authorizationFactory,codexControl,pelicanControl}={}){
  const origins=(env.TRAINING_ORIGINS||'https://yusheng266186-beep.github.io').split(','),secret=env.TRAINING_SESSION_SECRET,totpSecret=env.TRAINING_TOTP_SECRET,owner=secret?hash(secret).slice(0,32):'';
  if(!secret||secret.length<32)throw new Error('AUTH_NOT_CONFIGURED');decodeSecret(totpSecret);
  const gate=hash(totpSecret).slice(0,20),control=createModelControl({store:modelStore,env,now}),usage=createUsageControl({store,controlStore:modelStore,owner,env,now});
@@ -26,6 +26,7 @@ function createServer({store=new COSStore(),env=process.env,now=Date.now,dispatc
  let authControl=authorizationControl;
  const authz=()=>authControl||(authControl=authorizationFactory?authorizationFactory({store,env,now}):require('./openai-authorization.cjs').createAuthorizationControl({env,now}));
  const codex=()=>codexControl||(codexControl=require('./codex-accounts.cjs').createControl({jobStore:store,owner,env,now,dispatch}));
+ const pelican=()=>pelicanControl||(pelicanControl=require('./pelican.cjs').createPelicanControl({store,owner,env,now,dispatch,bindGeneration:g=>codex().bind(g)}));
  const server=http.createServer(async(req,res)=>{
   const origin=req.headers.origin||'',allowed=!origin||origins.includes(origin);const headers={'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer',...(origin&&allowed?{'Access-Control-Allow-Origin':origin,Vary:'Origin','Access-Control-Allow-Methods':'GET, POST, OPTIONS','Access-Control-Allow-Headers':'Content-Type, Authorization, X-Request-ID','Access-Control-Max-Age':'600'}:{})};
   const send=(status,data)=>{if(res.destroyed||res.writableEnded)return;res.writeHead(status,headers);res.end(JSON.stringify(data));};
@@ -40,9 +41,18 @@ function createServer({store=new COSStore(),env=process.env,now=Date.now,dispatc
     if(!await store.create('auth-used/'+owner+'/'+gate+'/'+counter+'-'+hash(input.code.trim()).slice(0,20)+'.json',{at:now()}))throw error(401,'AUTH_REPLAY');
     const expires=now()+7*86400000,payload=Buffer.from(JSON.stringify({owner,gate,expires})).toString('base64url');return send(200,{token:payload+'.'+sign(payload),expires,authType:'totp'});
    }
+   if(env.OPENAI_CODEX_ENABLED==='true'&&url.pathname.startsWith('/openai/authorization/'))throw error(410,'LEGACY_AUTH_RETIRED');
    if(req.method==='POST'&&url.pathname==='/openai/authorization/claim')return send(200,await authz().claim(await read(req,{maxBytes:16384})));
    if(req.method==='POST'&&url.pathname==='/openai/authorization/complete')return send(200,await authz().complete(await read(req,{maxBytes:16384})));
    authenticate(req);
+   if(env.OPENAI_CODEX_ENABLED==='true'&&url.pathname.startsWith('/admin/openai/'))throw error(410,'LEGACY_AUTH_RETIRED');
+   if(url.pathname==='/admin/pelican'&&req.method==='GET')return send(200,await pelican().list());
+   if(url.pathname==='/admin/pelican'&&req.method==='POST')return send(202,await pelican().begin(await read(req,{maxBytes:100000}),req.headers['x-request-id']));
+   const pelicanRun=url.pathname.match(/^\/admin\/pelican\/([a-f0-9-]+)(\/cancel)?$/);
+   if(pelicanRun&&uuid.test(pelicanRun[1])){
+    if(!pelicanRun[2]&&req.method==='GET')return send(200,await pelican().status(pelicanRun[1]));
+    if(pelicanRun[2]&&req.method==='POST'){const input=await read(req,{maxBytes:1024});if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).length)throw error(400,'PELICAN_INPUT_INVALID');return send(200,await pelican().cancel(pelicanRun[1]));}
+   }
    if(url.pathname==='/admin/codex/accounts'&&req.method==='GET')return send(200,await codex().accounts());
    if(url.pathname==='/admin/codex/accounts/active'&&req.method==='POST')return send(200,await codex().activate(await read(req,{maxBytes:4096})));
    if(url.pathname==='/admin/codex/authorize'&&req.method==='POST')return send(202,await codex().begin(await read(req,{maxBytes:4096}),req.headers['x-request-id']));
@@ -62,7 +72,7 @@ function createServer({store=new COSStore(),env=process.env,now=Date.now,dispatc
    if(url.pathname==='/admin/usage'){if(req.method==='GET')return send(200,await usage.state());if(req.method==='POST')return send(200,await usage.apply(await read(req)));}
    if(env.TRAINING_MODEL_CONTROL==='true'&&url.pathname==='/admin/models'){if(req.method==='GET')return send(200,await control.state());if(req.method==='POST')return send(200,{current:await control.apply(await read(req))});}
    if(env.TRAINING_MODEL_CONTROL==='true'&&req.method==='POST'&&url.pathname==='/admin/probes'){
-    const id=String(req.headers['x-request-id']||'');if(!uuid.test(id))throw error(400,'REQUEST_ID_REQUIRED');const generation=snapshot(await read(req),env),key='jobs/'+owner+'/'+id,fingerprint=hash(JSON.stringify(generation)),saved=await store.get(key+'/meta.json');if(saved&&saved.value.fingerprint!==fingerprint)throw error(409,'REQUEST_ID_CONFLICT');const createdAt=saved?.value.createdAt||now();if(!saved)await reserveProbe(id,createdAt);if(!saved&&await store.create(key+'/meta.json',{id,type:'model-probe',fingerprint,generation,status:'queued',createdAt,deadline:createdAt+600000}))await dispatch(key);return send(202,{id,status:'queued',createdAt,...publicGeneration(generation)});
+    const id=String(req.headers['x-request-id']||'');if(!uuid.test(id))throw error(400,'REQUEST_ID_REQUIRED');const generation=await codex().bind(snapshot(await read(req),env)),key='jobs/'+owner+'/'+id,fingerprint=hash(JSON.stringify(generation)),saved=await store.get(key+'/meta.json');if(saved&&saved.value.fingerprint!==fingerprint)throw error(409,'REQUEST_ID_CONFLICT');const createdAt=saved?.value.createdAt||now();if(!saved)await reserveProbe(id,createdAt);if(!saved&&await store.create(key+'/meta.json',{id,type:'model-probe',fingerprint,generation,status:'queued',createdAt,deadline:createdAt+600000}))await dispatch(key);return send(202,{id,status:'queued',createdAt,...publicGeneration(generation)});
    }
    if(req.method==='POST'&&url.pathname==='/jobs/remove'){const input=await read(req);if(!input||Object.keys(input).some(k=>k!=='ids')||!Array.isArray(input.ids)||!input.ids.length||input.ids.length>100||input.ids.some(id=>typeof id!=='string'||!uuid.test(id)))throw error(400,'TRAINING_INPUT_INVALID');await Promise.all([...new Set(input.ids)].map(id=>store.create('jobs/'+owner+'/'+id+'/removed.json',{removedAt:now()})));return send(200,{removed:input.ids.length});}
    if(req.method==='GET'&&url.pathname==='/templates')return send(200,require('./templates.cjs').summary());
@@ -76,7 +86,7 @@ function createServer({store=new COSStore(),env=process.env,now=Date.now,dispatc
     if(saved&&saved.value.deadline<now())throw error(409,'JOB_EXPIRED');
     if(saved)return send(202,{id,status:'queued',createdAt:saved.value.createdAt,...(saved.value.generation?{model:saved.value.generation.model,provider:saved.value.generation.provider,reasoningEffort:saved.value.generation.reasoningEffort}:{})});
     const createdAt=now();
-    const metadata=async()=>({id,type,fingerprint,input,...(type==='illustration'?{imageGeneration:env.TRAINING_MODEL_CONTROL==='true'?await control.generation('image'):require('./image-providers.cjs').snapshot()}:{}),...(['exercise','figure-refresh'].includes(type)?{...(env.TRAINING_MODEL_CONTROL==='true'?await control.generations():{generation:generationProfile(env.TRAINING_PROVIDER||'gemini'),figureGeneration:generationProfile(env.TRAINING_PROVIDER||'gemini'),repairGeneration:generationProfile(env.TRAINING_PROVIDER||'gemini'),repairAttempts:1}),pipeline:2,...(type==='exercise'?{contentReview:1}:{}),...(sourceRequest?{sourceRequest}:{})}:{}),status:'queued',createdAt,deadline:createdAt+600000});
+    const metadata=async()=>({id,type,fingerprint,input,...(type==='illustration'?{imageGeneration:env.TRAINING_MODEL_CONTROL==='true'?await control.generation('image'):require('./image-providers.cjs').snapshot()}:{}),...(['exercise','figure-refresh'].includes(type)?{...(env.TRAINING_MODEL_CONTROL==='true'?await codex().bindAll(await control.generations()):{generation:generationProfile(env.TRAINING_PROVIDER||'gemini'),figureGeneration:generationProfile(env.TRAINING_PROVIDER||'gemini'),repairGeneration:generationProfile(env.TRAINING_PROVIDER||'gemini'),repairAttempts:1}),pipeline:2,...(type==='exercise'?{contentReview:1}:{}),...(sourceRequest?{sourceRequest}:{})}:{}),status:'queued',createdAt,deadline:createdAt+600000});
     let mediaCreated=false;
     if(media){
      const resolution=await resolveMediaJob({store,owner,sourceId:input.sourceId,questionId:input.questionId,type,id,fingerprint,redraw:input.redraw===true,now,at:createdAt,reserve:()=>usage.reserve(id,createdAt),accept:async()=>{mediaCreated=await store.create(key+'/meta.json',await metadata());}});
