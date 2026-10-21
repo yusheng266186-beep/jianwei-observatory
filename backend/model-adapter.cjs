@@ -15,6 +15,11 @@ function adaptModelBody(body,config,defaultEffort='standard',options={}){
   const cap=Math.min(p.maxTokens??128000,options.probe?8192:128000);
   const tokens=Math.min(cap,Math.max(Number(body.max_tokens)||3000,budgets[tier]));
   const effort=p.efforts[tier];
+  if(config.name==='openai-chatgpt'){
+    const output={model:config.model,stream:true,store:false,instructions:body.messages.filter(m=>m.role==='system').map(m=>m.content).join('\n\n'),input:body.messages.filter(m=>m.role!=='system').map(m=>({role:m.role,content:[{type:m.role==='assistant'?'output_text':'input_text',text:m.content}]}))};
+    if(effort!=='auto')output.reasoning={effort,summary:'auto'};
+    return output;
+  }
   if(route.protocol==='responses'){
     const output={model:config.model,stream:true,store:false,max_output_tokens:tokens,input:body.messages.map(m=>({role:m.role,content:[{type:m.role==='assistant'?'output_text':'input_text',text:m.content}]}))};
     if(effort!=='auto')output.reasoning={effort,summary:'auto'};

@@ -64,7 +64,9 @@
     "test:exercise-composer": "node tests/exercise-composer.cjs",
     "runtime:check": "node tools/runtime-assets.cjs",
     "runtime:prune": "node tools/runtime-assets.cjs --apply",
-    "runtime:record": "node tools/runtime-assets.cjs record"
+    "runtime:record": "node tools/runtime-assets.cjs record",
+    "openai:login": "node tools/openai-sign-in.cjs",
+    "openai:import": "node tools/import-openai-siwc.cjs"
   },
   "devDependencies": {
     "esbuild": "0.25.11",

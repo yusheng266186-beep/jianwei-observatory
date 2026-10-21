@@ -38,6 +38,7 @@ function parseResponse(response,protocol,options={}){
  return protocol==='chat-completions'?readCompletion(response.body,{protocol,key:options.key}):parseStream(response.body,protocol,options);
 }
 async function completeRemote(prompt,generation,{key,transport=request,probe=false,onProgress,signal}={}){
+ if(generation.provider==='openai-chatgpt')return require('./openai-siwc.cjs').complete(prompt,generation,{probe,onProgress,signal});
  const route=routes[generation.provider];if(!connectionMatches(generation)||!['chat-completions','anthropic','responses'].includes(generation.protocol)||!key)throw new Error('MODEL_NOT_CONFIGURED');
  const body=adaptModelBody({messages:[{role:'system',content:prompt.system},{role:'user',content:JSON.stringify(prompt.input)}],max_tokens:probe?256:32768,effort:generation.effort},{name:generation.provider,model:generation.model},generation.effort,{profile:generation.adapterProfile,probe});
  if(prompt.image)require('./model-vision.cjs').attachImage(body,generation.protocol,prompt.image);
