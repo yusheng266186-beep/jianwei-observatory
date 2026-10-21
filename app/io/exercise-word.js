@@ -10,7 +10,20 @@ import {exerciseFile} from './exercise-file-cache.js';
 const xml=value=>String(value??'').replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g,'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
 // Blank source lines are paragraph spacing, not extra Word paragraphs before
 // a page break; retaining those empty paragraphs can create a blank page.
-export const wordParagraphLines=value=>String(value).split('\n').filter(line=>line.trim());
+// Display math may contain real line breaks (aligned derivations). Splitting
+// those lines would leave unmatched $$ fragments that mathParts can only show
+// as TeX source, so keep each $$...$$ token intact in one Word paragraph.
+export const wordParagraphLines=value=>{
+ const text=String(value).replace(/\r\n?/g,'\n'),lines=[];let start=0,at=0;
+ while(at<text.length){
+  if(text[at]==='\\'){at+=text[at+1]==='\n'?1:2;continue;}
+  if(text[at]==='$'&&text[at+1]==='$'){const close=text.indexOf('$$',at+2);if(close>=0){at=close+2;continue;}}
+  if(text[at]==='\n'){const line=text.slice(start,at);if(line.trim())lines.push(line);start=++at;continue;}
+  at++;
+ }
+ const last=text.slice(start);if(last.trim())lines.push(last);
+ return lines;
+};
 // Word merges adjacent table elements when no paragraph separates them. That
 // can repeat the first table's header over an unrelated table on the next page.
 export function wordSeparateAdjacentTables(value){return String(value).replace(/(<\/w:tbl>)\s*(?=<w:tbl(?:\s|>))/g,'$1<w:p><w:pPr><w:keepNext/><w:spacing w:before="40" w:after="40" w:line="20" w:lineRule="exact"/></w:pPr><w:r><w:rPr><w:sz w:val="2"/></w:rPr><w:t xml:space="preserve"> </w:t></w:r></w:p>');}
@@ -22,7 +35,7 @@ let zipTask;
 async function zipLibrary(){if(!zipTask){const task=import('../../vendor/jszip.min.js').then(()=>{if(!window.JSZip)throw new Error('Word组件未能载入，请重试');return window.JSZip;});zipTask=task;task.catch(()=>{if(zipTask===task)zipTask=null;});}return zipTask;}
 export async function exerciseWord(record,{teacher=false,name=record.student?.name||'',classNo=record.student?.classNo??''}={}){
  if(!record.reviewedAt)throw new Error('请完成审题确认后输出正式练习。');requireExerciseQualityReview(record);
- const sheet=validateExerciseResult(record.sheet,record.request),key=JSON.stringify(['docx-v45-document-typography',record.request,sheet,teacher,name,classNo,{exerciseId:record.id}]);
+ const sheet=validateExerciseResult(record.sheet,record.request),key=JSON.stringify(['docx-v46-multiline-math',record.request,sheet,teacher,name,classNo,{exerciseId:record.id}]);
  const snapshot=structuredClone(record);return exerciseFile(key,()=>buildExerciseWord(snapshot,{teacher,name,classNo}));
 }
 async function buildExerciseWord(record,{teacher,name,classNo}){

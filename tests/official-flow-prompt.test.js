@@ -62,3 +62,9 @@ test('跨组实时原文保留当前组尾部，不让较早长稿挤掉最后�
  }
  const progress=(await store.get(key+'/progress.json')).value;assert(progress.outputText.length<=256000);assert(progress.outputText.endsWith('3'.repeat(80000)));assert(progress.outputText.includes('第4组'));
 });
+
+test('原稿JSON可解析不等于正文格式已合格，修复须落实本次公式或表格诊断',async()=>{const p=await generator.buildRepairPrompt(request,{output:JSON.stringify(sheet()),validation:'第1题公式分隔符缺失'});assert(p.system.includes('若本次诊断仅是JSON外说明或围栏'));assert(!p.system.includes('若原稿内JSON本身已符合Schema，只需'));assert.equal(p.input.repair.validation,'第1题公式分隔符缺失');});
+
+test('轻量续跑回执已完成时仍先拉取成稿，不能停在ready却无sheet的假完成状态',async()=>{const {mergeJobAcknowledgement,mergeJobSnapshot,pendingJob}=await import('../app/engine/exercise-jobs.js');const record={status:'failed',resumeAvailable:true};mergeJobAcknowledgement(record,{status:'ready',groupRevision:4,resumeAvailable:false},100);assert.equal(record.status,'running');assert(pendingJob(record));assert(!record.sheet);const data={status:'ready',groupRevision:4,sheet:sheet()};mergeJobSnapshot(record,data,200);record.sheet=data.sheet;assert.equal(record.status,'ready');assert(!pendingJob(record));assert.equal(record.sheet.questions.length,3);});
+
+test('英语变体既防漏判也防过宽，争议语体不能因不矛盾就自动扩大评分答案',async()=>{for(const template of ['targeted','variation','retest']){const input={...request,subject:'英语',questionTypes:['填空'],targets:['语法填空'],template};const author=await generator.buildExercisePrompt(input),r=await review.buildReviewPrompt(sheet(),input);assert(author.system.includes('不为展示多解而制造含混空格'));assert(r.system.includes('不将其自动加入满分答案'));assert(r.system.includes('不能删除确定成立的自然变体'));}});

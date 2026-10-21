@@ -28,6 +28,11 @@ export function mergeJobSnapshot(record,data,at=Date.now()){
  if(!data.error)delete record.failure;
  return old!==snapshot();
 }
+// POST acknowledgements contain state only. Even an already finished task
+// must be read through GET before the local document can be marked ready.
+export function mergeJobAcknowledgement(record,data,at=Date.now()){
+ return mergeJobSnapshot(record,data.status==='ready'?{...data,status:'running'}:data,at);
+}
 export function jobFigureCount(record){
  if(Number.isFinite(record.progress?.figureTotal))return record.progress.figureTotal;
  if(record.sheet?.questions)return record.sheet.questions.filter(q=>q.diagram||q.figureRequest).length;
