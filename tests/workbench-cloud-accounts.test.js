@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {CLOUD_AUTH_STORAGE,authorizationUrl,callbackUrl,verificationUrl,quotaRows,accountIdentity,operationStatusText,cloudTime,createCloudAccountPanel} from '../assets/workbench-cloud-accounts.js';
+import {CLOUD_AUTH_STORAGE,authorizationUrl,callbackUrl,verificationUrl,quotaRows,accountIdentity,operationStatusText,cloudTime,createCloudAccountPanel,callbackProgress,cloudErrorText} from '../assets/workbench-cloud-accounts.js';
 import {createRequestScope} from '../app/ui/request-scope.js';
 
 const resetAt=1760000000;
@@ -7,6 +7,10 @@ const expectedReset=new Date(resetAt*1000).toLocaleString('zh-CN',{timeZone:'Asi
 const ATTEMPT='11111111-1111-4111-8111-111111111111';
 const AUTH_URL='https://auth.openai.com/oauth/authorize?response_type=code&client_id=app_test&redirect_uri=http%3A%2F%2Flocalhost%3A1455%2Fauth%2Fcallback&scope=openid%20profile%20email%20offline_access&state=state-123&code_challenge=pkce-456&code_challenge_method=S256';
 const CALLBACK='http://localhost:1455/auth/callback?code=code-789&state=state-123';
+test('return progress shows real exchange, confirmation and saving stages with actionable errors',()=>{
+ assert.match(callbackProgress('received'),/等待云端/);assert.match(callbackProgress('exchanging'),/OpenAI/);assert.match(callbackProgress('confirming'),/完成登录确认/);assert.match(callbackProgress('saving'),/保存账号/);
+ assert.match(cloudErrorText({code:'CODEX_CALLBACK_CONFIRMATION_FAILED'}),/完成确认未成功/);assert.match(cloudErrorText({code:'CODEX_AUTHORIZATION_EXPIRED'}),/过期/);
+});
 
 test('官方登录链接只接受 auth.openai.com/oauth/authorize，且回调必须是 loopback /auth/callback',()=>{
  assert.equal(authorizationUrl(AUTH_URL),AUTH_URL);
@@ -431,6 +435,23 @@ test('刷新后只凭授权编号恢复浏览器等待页，不恢复或记录�
   assert.equal(second.input().value,'');
   assert(!second.storage.writes.some(([,value])=>value.includes('auth.openai.com')||value.includes('/auth/callback')));
  }finally{second.cleanup();}
+});
+
+test('a backend waiting response cannot keep an expired authorization spinning',async()=>{
+ const h=createHarness({storageMap:new Map([[CLOUD_AUTH_STORAGE,ATTEMPT]])});
+ try{
+  h.enqueue('/admin/codex/authorize/'+ATTEMPT,{id:ATTEMPT,status:'waiting',flow:'browser',authorizationUrl:AUTH_URL,callbackSubmitted:true,expiresAt:Date.now()-1000});
+  await h.panel.load();await wait(40);
+  assert.match(h.flow(),/授权已过期/);assert.equal(h.storage.map.size,0);assert(!h.flow().includes('正在完成账号授权'));
+ }finally{h.cleanup();}
+});
+test('restoring a submitted callback displays its actual completion checkpoint',async()=>{
+ const h=createHarness({storageMap:new Map([[CLOUD_AUTH_STORAGE,ATTEMPT]])});
+ try{
+  h.enqueue('/admin/codex/authorize/'+ATTEMPT,{id:ATTEMPT,status:'waiting',flow:'browser',authorizationUrl:AUTH_URL,callbackSubmitted:true,callbackStage:'confirming',expiresAt:Date.now()+60000});
+  await h.panel.load();await wait(40);
+  assert.match(h.status(),/完成登录确认/);assert.match(h.flow(),/完成登录确认/);assert(!h.flow().includes('官方账号已更新'));
+ }finally{h.cleanup();}
 });
 
 test('取消清空未提交回调与授权编号，设备码仅在起始备用入口使用',async()=>{

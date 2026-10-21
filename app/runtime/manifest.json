@@ -40,7 +40,7 @@
   ],
   "standalone": {
     "figures": "runtime/figure-library-EU3JHQHD.js",
-    "models": "runtime/model-workbench-G755574M.js"
+    "models": "runtime/model-workbench-X4V2LEZ7.js"
   },
   "files": [
     "app/runtime/prepare-NOKZSWUW.js",
@@ -88,10 +88,9 @@
     "app/runtime/shared-RMTIRWQZ.js",
     "app/runtime/shared-XT7OAR7V.js",
     "app/runtime/figure-library-EU3JHQHD.js",
-    "app/runtime/model-workbench-G755574M.js"
+    "app/runtime/model-workbench-X4V2LEZ7.js"
   ],
   "compatibility": [
-    "app/runtime/model-workbench-56DYZIDP.js",
-    "assets/model-workbench-684f2bce80e6.css"
+    "app/runtime/model-workbench-G755574M.js"
   ]
 }

@@ -15,10 +15,25 @@ test('manual returns are tied to this PKCE attempt, local port and callback path
  assert.throws(()=>oauth.callback(returned().replace('this-attempt-state','other-attempt'),auth()),/CODEX_CALLBACK_STATE_MISMATCH/);
  assert.throws(()=>oauth.callback(returned()+'&state=this-attempt-state',auth()),/CODEX_CALLBACK_STATE_MISMATCH/);
 });
-test('delivery calls only the runtime loopback listener and does not follow a success redirect',async()=>{
- let received,second=0;
- const server=http.createServer((req,res)=>{received=req.url;if(req.url==='/success')second++;res.writeHead(302,{Location:'https://example.invalid/success'});res.end('not returned');});
+test('delivery completes the same runtime success page without replaying the authorization code',async()=>{
+ const seen=[],stages=[];
+ const server=http.createServer((req,res)=>{seen.push(req.url);if(req.url.startsWith('/auth/callback'))res.writeHead(302,{Location:'/success?codex_streamlined_login=true'});else res.writeHead(200);res.end('not returned');});
  await new Promise(r=>server.listen(0,'127.0.0.1',r));
- try{const port=server.address().port;assert.equal(await oauth.deliver(returned(port),auth(port)),undefined);assert.equal(new URL(received,'http://test').searchParams.get('code'),'one-use-code');assert.equal(second,0);}
+ try{const port=server.address().port;assert.equal(await oauth.deliver(returned(port),auth(port),{onStage:stage=>stages.push(stage)}),undefined);assert.equal(seen.length,2);assert.equal(new URL(seen[0],'http://test').searchParams.get('code'),'one-use-code');assert.equal(seen[1],'/success?codex_streamlined_login=true');assert.deepEqual(stages,['confirming']);}
  finally{await new Promise(r=>server.close(r));}
+});
+test('success redirects cannot change host, port, scheme or path, nor redirect twice',async()=>{
+ for(const target of ['https://example.invalid/success','http://127.0.0.1:18080/success','//evil.test/success','/admin','/auth/callback?code=replayed','/success#fragment']){
+  let hits=0;const server=http.createServer((req,res)=>{hits++;res.writeHead(302,{Location:target});res.end();});await new Promise(r=>server.listen(0,'127.0.0.1',r));
+  try{const port=server.address().port;await assert.rejects(oauth.deliver(returned(port),auth(port)),/CODEX_CALLBACK_REDIRECT_INVALID/);assert.equal(hits,1);}
+  finally{await new Promise(r=>server.close(r));}
+ }
+ const seen=[],server=http.createServer((req,res)=>{seen.push(req.url);res.writeHead(302,{Location:'/success'});res.end();});await new Promise(r=>server.listen(0,'127.0.0.1',r));
+ try{const port=server.address().port;await assert.rejects(oauth.deliver(returned(port),auth(port)),/CODEX_CALLBACK_CONFIRMATION_FAILED/);assert.equal(seen.length,2);}
+ finally{await new Promise(r=>server.close(r));}
+});
+test('callback delivery has a bounded total wait and never retries a consumed code',async()=>{
+ let hits=0;const server=http.createServer(()=>{hits++;});await new Promise(r=>server.listen(0,'127.0.0.1',r));
+ try{const port=server.address().port;await assert.rejects(oauth.deliver(returned(port),auth(port),{timeoutMs:25}),/CODEX_CALLBACK_DELIVERY_FAILED/);assert.equal(hits,1);}
+ finally{server.closeAllConnections();await new Promise(r=>server.close(r));}
 });

@@ -29,6 +29,11 @@ const knownErrors={
  CODEX_ACCOUNT_NOT_FOUND:'这个账号已不在云端名单中，当前账号未改变。',
  CODEX_ACCOUNT_REAUTH_REQUIRED:'这个账号需要重新授权后才能继续使用。',
  CODEX_AUTHORIZATION_IN_PROGRESS:'官方授权正在完成验证，请稍候，结果会自动更新。',
+ CODEX_AUTHORIZATION_FAILED:'本次官方授权未完成，请重新开始；已有账号保留。',
+ CODEX_CALLBACK_REJECTED:'官方未接受本次返回链接，请重新发起登录；已有账号保留。',
+ CODEX_CALLBACK_DELIVERY_FAILED:'授权返回处理连接中断，请刷新账号名单确认结果；若未加入，请重新登录。',
+ CODEX_CALLBACK_REDIRECT_INVALID:'授权返回地址异常，本次登录未完成，请重新开始。',
+ CODEX_CALLBACK_CONFIRMATION_FAILED:'官方登录已返回，但完成确认未成功，请刷新账号名单后重试。',
  CODEX_RUNTIME_UNAVAILABLE:'云端官方连接暂时不可用，请稍后再试。',
  CODEX_AUTH_PERSIST_FAILED:'本次登录状态未能保存，请重新授权；已有出题配置保留。',
  CODEX_OPERATION_FAILED:'云端未完成本次账号操作，当前账号未改变。',
@@ -196,6 +201,10 @@ export function cloudErrorText(error){
  if(knownErrors[code])return knownErrors[code];
  if(/^CODEX_/.test(code))return '本次云端账号操作未完成，当前账号未改变，请稍后重试。';
  return error?.message||'本次云端账号操作未完成，请稍后重试。';
+}
+
+export function callbackProgress(stage){
+ return ({received:'已收到返回链接，等待云端处理。',exchanging:'正在与 OpenAI 确认本次登录。',confirming:'官方授权已返回，正在完成登录确认。',saving:'登录确认完成，正在保存账号。'})[stage]||'已收到返回链接，云端正在验证并保存账号。';
 }
 
 function safeId(value){
@@ -382,7 +391,7 @@ export function createCloudAccountPanel({root,api,requests,session,onAuthRequire
    const safe=authorizationUrl(flow.authorizationUrl),hasRaw=!!flow.authorizationUrl;
    const submitted=callbackPending||!!flow.callbackSubmitted;
    const link=active?(safe?'<div class="cloud-link"><a class="cloud-open" href="'+esc(safe)+'" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">打开官方登录页面 ↗</a><span>官方地址 · auth.openai.com</span></div>':hasRaw?'<p class="cloud-warning">官方登录链接未通过校验，已隐藏；请停止后重新开始。</p>':flow.state==='waiting'?'<p class="cloud-warning">官方登录链接尚未返回，请稍候或停止后重新开始。</p>':''):'';
-   const done=flow.state==='waiting'&&submitted?'<div class="cloud-callback-done"><span class="cloud-callback-done-mark" aria-hidden="true"></span><div><b>返回链接已提交</b><span>正在验证并保存账号，请稍候。</span></div>'+(callbackCompose?'':'<button type="button" class="quiet" data-cloud-callback-edit>重新粘贴链接</button>')+'</div>':'';
+   const done=flow.state==='waiting'&&submitted?'<div class="cloud-callback-done"><span class="cloud-callback-done-mark" aria-hidden="true"></span><div><b>返回链接已提交</b><span>'+esc(callbackProgress(flow.callbackStage))+'</span></div>'+(callbackCompose?'':'<button type="button" class="quiet" data-cloud-callback-edit>重新粘贴链接</button>')+'</div>':'';
    const zone=flow.state==='waiting'?'<div class="cloud-callback-zone" data-cloud-callback-slot>'+done+'</div>':'';
    const expiry=active?'<p class="cloud-expiry">'+(expires?'本次授权在 '+esc(expires)+' 前有效。':'有效期以官方页面为准。')+'</p>':'';
    body=link+zone+expiry;
@@ -466,7 +475,7 @@ export function createCloudAccountPanel({root,api,requests,session,onAuthRequire
   if(!flowNode)return;
   flowNode.hidden=!flow;
   if(!flow){flowStamp='';flowNode.innerHTML='';if(callbackForm?.parentNode)callbackForm.remove();return;}
-  const stamp=JSON.stringify([flow.kind,flow.state,flow.title,flow.text,flow.authorizationUrl,flow.callbackSubmitted,flow.verificationUrl,flow.userCode,flow.expiresAt,cancelBusy,callbackBusy,callbackPending,callbackCompose]);
+  const stamp=JSON.stringify([flow.kind,flow.state,flow.title,flow.text,flow.authorizationUrl,flow.callbackSubmitted,flow.callbackStage,flow.verificationUrl,flow.userCode,flow.expiresAt,cancelBusy,callbackBusy,callbackPending,callbackCompose]);
   if(stamp===flowStamp){attachCallbackForm();return;}
   flowStamp=stamp;
   const active=typeof document!=='undefined'?document.activeElement:null;
@@ -659,23 +668,24 @@ export function createCloudAccountPanel({root,api,requests,session,onAuthRequire
    if(result.status==='failed'){failAuth('failed',cloudErrorText({code:result.error||'CODEX_OPERATION_FAILED'}));return;}
    if(result.status==='cancelled'){failAuth('cancelled','本次授权已取消，当前账号未改变。');return;}
    if(result.status==='expired'){failAuth('expired','本次授权已过期，请重新开始；当前账号未改变。');return;}
+   if(attempt.expiresAt&&Date.now()>=attempt.expiresAt){failAuth('expired','本次授权已过期，请重新开始；已有账号保留。');return;}
    if(result.status==='waiting'){
     const kind=result?.flow==='device'?'device':result?.flow==='browser'?'browser':result.verificationUrl&&!result.authorizationUrl?'device':'browser',browser=kind==='browser';
     if(browser&&result.callbackSubmitted){callbackError='';callbackCompose=false;}
     setFlow({
      kind,state:'waiting',
      title:browser?(result.callbackSubmitted?'正在完成账号授权':'在官方浏览器完成登录'):'等待在官方页面确认',
-     text:browser?(result.callbackSubmitted?'已收到返回链接，云端正在验证并保存账号；结果会自动更新。':'打开官方页面登录并确认。若返回后提示无法访问，复制地址栏完整链接，回到这里粘贴提交即可。'):'请在官方页面输入设备码，并用现有 ChatGPT / OpenAI 账号确认；此页会自动查询结果。',
+     text:browser?(result.callbackSubmitted?callbackProgress(result.callbackStage):'打开官方页面登录并确认。若返回后提示无法访问，复制地址栏完整链接，回到这里粘贴提交即可。'):'请在官方页面输入设备码，并用现有 ChatGPT / OpenAI 账号确认；此页会自动查询结果。',
      authorizationUrl:browser?result.authorizationUrl:'',
      callbackSubmitted:browser&&!!result.callbackSubmitted,
+     callbackStage:browser?result.callbackStage:null,
      verificationUrl:browser?'':result.verificationUrl,
      userCode:browser?'':result.userCode,
      expiresAt:attempt.expiresAt
     });
-    renderStatus(browser?(result.callbackSubmitted?'已收到返回链接，正在验证并保存账号…':'等待在官方页面登录；完成后粘贴返回链接。'):'等待在官方页面确认，完成后会自动刷新账号。');
+    renderStatus(browser?(result.callbackSubmitted?callbackProgress(result.callbackStage):'等待在官方页面登录；完成后粘贴返回链接。'):'等待在官方页面确认，完成后会自动刷新账号。');
     renderAll();scheduleAuth(2500);return;
    }
-   if(attempt.expiresAt&&Date.now()>=attempt.expiresAt){failAuth('expired','本次授权已过期，请重新开始；当前账号未改变。');return;}
    const kind=result?.flow==='device'?'device':result?.flow==='browser'?'browser':flow?.kind==='device'?'device':'browser',browser=kind==='browser';
    setFlow({kind,state:'queued',title:browser?'正在准备官方登录页面':'正在准备官方设备码',text:browser?'云端正在生成一次性浏览器登录链接，请稍候…':'云端正在生成设备码，请稍候…',authorizationUrl:browser?result.authorizationUrl:'',verificationUrl:browser?'':result.verificationUrl,userCode:browser?'':result.userCode,expiresAt:attempt.expiresAt});
    renderStatus(browser?'云端正在准备官方登录页面…':'云端正在准备官方设备码…');

@@ -538,13 +538,17 @@ test('登录取消、超时与失败通知均映射明确错误并取消登录',
 });
 
 test('浏览器授权默认使用普通 OAuth，手动返回交给原运行时后才保存账号', async (t) => {
- let fake,received=0,callbackUrl,ready;
+ let fake,received=0,confirmed=0,callbackUrl,ready;
  const listener=http.createServer(async(req,res)=>{
-  received++;const u=new URL(req.url,'http://local');
+  const u=new URL(req.url,'http://local');
+  if(u.pathname==='/success'){
+   confirmed++;res.writeHead(200);res.end('success');
+   fake.notify('account/login/completed',{success:true,loginId:'browser-login'});return;
+  }
+  received++;
   assert.equal(u.searchParams.get('state'),'browser-state');assert.equal(u.searchParams.get('code'),'one-use-code');
   await fsp.writeFile(path.join(fake.spawn.spawnOptions.cwd,'auth.json'),JSON.stringify(AUTH),{mode:0o600});
   res.writeHead(302,{Location:'/success'});res.end();
-  fake.notify('account/login/completed',{success:true,loginId:'browser-login'});
  });
  await new Promise(r=>listener.listen(0,'127.0.0.1',r));t.after(()=>new Promise(r=>listener.close(r)));
  const port=listener.address().port,authUrl='https://auth.openai.com/oauth/authorize?'+new URLSearchParams({response_type:'code',client_id:'runtime-client',redirect_uri:'http://127.0.0.1:'+port+'/auth/callback',state:'browser-state',code_challenge:'runtime-pkce',code_challenge_method:'S256'});
@@ -553,7 +557,7 @@ test('浏览器授权默认使用普通 OAuth，手动返回交给原运行时�
  await waitFor(()=>ready);assert.equal(ready.authorizationUrl,authUrl);assert.equal(ready.flow,'browser');assert.equal(ready.userCode,undefined);
  assert.equal(started.runtime.getAuth(),null);
  callbackUrl='http://localhost:'+port+'/auth/callback?state=browser-state&code=one-use-code';
- const result=await pending;assert.equal(received,1);assert.equal(result.auth.tokens.access_token,AUTH.tokens.access_token);
+ const result=await pending;assert.equal(received,1);assert.equal(confirmed,1);assert.equal(result.auth.tokens.access_token,AUTH.tokens.access_token);
 });
 
 test('手动返回状态不匹配时取消当前浏览器登录，不交付账号', async (t) => {

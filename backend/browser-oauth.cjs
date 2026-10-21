@@ -35,17 +35,32 @@ function callback(value,authorizationUrl){
   redirect.search=q.toString();return redirect.href;
  }catch(e){if(e.message==='CODEX_CALLBACK_STATE_MISMATCH')throw e;throw failure('CODEX_CALLBACK_INVALID');}
 }
-function deliver(value,authorizationUrl,{signal,timeoutMs=15000}={}){
+function deliver(value,authorizationUrl,{signal,timeoutMs=60000,onStage}={}){
  const checked=new URL(callback(value,authorizationUrl));
- return new Promise((resolve,reject)=>{
-  const req=http.request({hostname:'127.0.0.1',port:checked.port,path:checked.pathname+checked.search,method:'GET',headers:{Host:checked.host},signal},res=>{
-   // The official listener may redirect to its success page. Do not follow it,
-   // and never return its response HTML or any OAuth values to callers.
-   res.resume();res.on('end',()=>res.statusCode>=200&&res.statusCode<400?resolve():reject(failure('CODEX_CALLBACK_REJECTED')));
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeoutMs);
+ const combined=signal?AbortSignal.any([signal,controller.signal]):controller.signal;
+ const get=url=>new Promise((resolve,reject)=>{
+  const req=http.request({hostname:'127.0.0.1',port:checked.port,path:url.pathname+url.search,method:'GET',headers:{Host:checked.host},signal:combined},res=>{
+   res.resume();res.on('end',()=>resolve({status:res.statusCode,location:res.headers.location}));
    res.on('error',()=>reject(failure('CODEX_CALLBACK_DELIVERY_FAILED')));
+   res.on('aborted',()=>reject(failure('CODEX_CALLBACK_DELIVERY_FAILED')));
   });
-  req.setTimeout(timeoutMs,()=>req.destroy());
   req.on('error',()=>reject(failure('CODEX_CALLBACK_DELIVERY_FAILED')));req.end();
  });
+ return (async()=>{
+  try{
+   const response=await get(checked);
+   if(response.status>=300&&response.status<400){
+    // The official runtime persists the token at /auth/callback, but emits
+    // account/login/completed only after /success is visited. Reproduce the
+    // browser's final hop; never follow arbitrary hosts, ports or paths.
+    let next;try{next=new URL(response.location,checked);}catch{throw failure('CODEX_CALLBACK_REDIRECT_INVALID');}
+    if(next.protocol!=='http:'||!['127.0.0.1','localhost'].includes(next.hostname)||next.port!==checked.port||next.username||next.password||next.pathname!=='/success'||next.hash)throw failure('CODEX_CALLBACK_REDIRECT_INVALID');
+    await onStage?.('confirming');
+    const success=await get(next);
+    if(success.status<200||success.status>=300)throw failure('CODEX_CALLBACK_CONFIRMATION_FAILED');
+   }else if(response.status<200||response.status>=300)throw failure('CODEX_CALLBACK_REJECTED');
+  }finally{clearTimeout(timer);}
+ })();
 }
 module.exports={authorization,callback,deliver};

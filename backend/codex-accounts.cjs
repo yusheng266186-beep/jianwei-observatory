@@ -41,7 +41,7 @@ function identity(account,auth){
 const safeError=error=>{
  const code=error?.message||'';
  if(code==='LOGIN_CANCELLED'||error?.name==='AbortError')return 'JOB_CANCELLED';
- if(code==='LOGIN_TIMEOUT')return 'CODEX_OPERATION_EXPIRED';
+ if(code==='LOGIN_TIMEOUT'||code==='LOGIN_FAILED'&&/timed out/i.test(error?.diagnostic?.reason||''))return 'CODEX_AUTHORIZATION_EXPIRED';
  if(code==='LOGIN_FAILED')return 'CODEX_AUTHORIZATION_FAILED';
  if(code==='LOGIN_URL_UNTRUSTED')return 'CODEX_AUTHORIZATION_URL_INVALID';
  return /^(CODEX_[A-Z_]{2,60}|MODEL_(?:AUTH_FAILED|RATE_LIMIT|UPSTREAM_TIMEOUT|REQUEST_FAILED|INCOMPLETE)|JOB_CANCELLED)$/.test(code)?code:'CODEX_RUNTIME_UNAVAILABLE';
@@ -156,11 +156,25 @@ function createControl({store,jobStore,owner,env=process.env,now=Date.now,dispat
   let result=(await vault().get(base+'result.json'))?.value;const terminal=(await vault().get(base+'terminal.json'))?.value;
   if(result?.status==='complete')return {id,expiresAt:request.deadline,...result};
   if(terminal?.status==='cancelled')return {id,status:'cancelled',expiresAt:request.deadline};
+  // A verified recovery is separate from the immutable original failure.
+  // It must point to a committed, same-owner repair of this exact attempt.
+  const recovered=(await vault().get(base+'recovered.json'))?.value;
+  if(recovered?.status==='complete'&&recovered.officialQuotaVerified&&uuid.test(recovered.id||'')&&accountId.test(recovered.accountId||'')){
+   const repairBase=prefix+'attempts/'+recovered.id+'/',repair=(await vault().get(repairBase+'request.json'))?.value,saved=(await vault().get(repairBase+'result.json'))?.value;
+   if(repair?.owner===owner&&repair.sourceAttempt===id&&saved?.status==='complete'&&saved.accountId===recovered.accountId)return {id,status:'complete',accountId:recovered.accountId,finishedAt:saved.finishedAt,expiresAt:request.deadline,recovered:true};
+  }
   if(result)return {id,expiresAt:request.deadline,...result};
   if(await vault().get(base+'candidate.json')){await recoverLogin(id,request);result=(await vault().get(base+'result.json'))?.value;if(result)return {id,expiresAt:request.deadline,...result};}
   if(now()>request.deadline)return {id,status:'expired',expiresAt:request.deadline};
   const browser=(await vault().get(base+'browser.json'))?.value;
-  if(browser)return {id,status:'waiting',flow:'browser',expiresAt:request.deadline,authorizationUrl:browser.authorizationUrl,callbackSubmitted:!!await vault().get(base+'callback.json')};
+  if(browser){
+   const expiresAt=Number.isFinite(browser.at)?Math.min(request.deadline,browser.at+600000):request.deadline;
+   if(now()>expiresAt)return {id,status:'expired',flow:'browser',expiresAt};
+   const submitted=(await vault().get(base+'callback.json'))?.value;
+   let callbackStage=submitted?'received':null,stageAt=submitted?.at;
+   for(const stage of ['exchanging','confirming','saving']){const checkpoint=(await vault().get(base+'stage-'+stage+'.json'))?.value;if(checkpoint){callbackStage=stage;stageAt=checkpoint.at;}}
+   return {id,status:'waiting',flow:'browser',expiresAt,authorizationUrl:browser.authorizationUrl,callbackSubmitted:!!submitted,...(callbackStage?{callbackStage,stageAt}:{})};
+  }
   const device=(await vault().get(base+'device.json'))?.value;
   return {id,status:device?'waiting':'queued',flow:request.flow||'device',expiresAt:request.deadline,...(device?{verificationUrl:device.verificationUrl,userCode:device.userCode}:{})};
  }
@@ -242,6 +256,7 @@ function createControl({store,jobStore,owner,env=process.env,now=Date.now,dispat
     let cancelled=false,nextCancelRead=0,nextCallbackRead=0;
     const result=await runtime({timeoutMs:Math.max(1000,Math.min(840000,job.deadline-now()-15000)),onAuth:async auth=>{if(validAuth(auth))await vault().create(base+'candidate-'+hash(JSON.stringify(auth))+'.json',{auth,at:now()});}},rt=>methods().login(rt,{
      flow:request.flow||'device',deadlineMs:Math.max(1000,Math.min(840000,job.deadline-now()-15000)),
+     onStage:async stage=>{if(['exchanging','confirming','saving'].includes(stage))await vault().create(base+'stage-'+stage+'.json',{at:now()}).catch(()=>{});},
      isCancelled:async()=>{if(now()>=nextCancelRead){cancelled=!!await vault().get(base+'terminal.json');nextCancelRead=now()+1200;}return cancelled;},
      readCallback:async()=>{if(now()<nextCallbackRead)return null;nextCallbackRead=now()+1200;return (await vault().get(base+'callback.json'))?.value.callbackUrl||null;},
      onReady:async ready=>{

@@ -4,7 +4,7 @@ import {createRequire} from 'node:module';
 import crypto from 'node:crypto';
 const require=createRequire(import.meta.url);
 const {MemoryStore}=require('../backend/store.cjs');
-const {createControl,identity,numbered,latest,validAuth}=require('../backend/codex-accounts.cjs');
+const {createControl,identity,numbered,latest,validAuth,safeError}=require('../backend/codex-accounts.cjs');
 const env={OPENAI_CODEX_ENABLED:'true'},owner='a'.repeat(32);
 const authFor=n=>({auth_mode:'chatgpt',OPENAI_API_KEY:null,tokens:{account_id:'workspace-'+n,access_token:'private-access-'+n,refresh_token:'private-refresh-'+n,id_token:'private-id-'+n}});
 const info=n=>({type:'chatgpt',email:'teacher'+n+'@example.test',planType:'plus'});
@@ -122,6 +122,37 @@ test('an expired browser attempt rejects returns and a request id cannot switch 
  await assert.rejects(control.begin({mode:'add',flow:'device'},id),/REQUEST_ID_CONFLICT/);
  const future=createControl({store,jobStore:jobs,owner,env,now:()=>Date.now()+900000});
  await assert.rejects(future.submitCallback(id,{callbackUrl:browserReturn}),/CODEX_AUTHORIZATION_EXPIRED/);
+});
+test('authorization progress distinguishes exchange, success confirmation and persistence',async()=>{
+ const {control,store}=await setup(),id=crypto.randomUUID(),base='openai-codex/attempts/'+id+'/';await control.begin({mode:'add'},id);
+ await store.create(base+'browser.json',{authorizationUrl:browserUrl,at:Date.now()});await control.submitCallback(id,{callbackUrl:browserReturn});
+ assert.equal((await control.status(id)).callbackStage,'received');
+ for(const stage of ['exchanging','confirming','saving']){
+  await store.create(base+'stage-'+stage+'.json',{at:Date.now()});const value=await control.status(id);assert.equal(value.callbackStage,stage);assert(!JSON.stringify(value).includes('one-use-code'));
+ }
+});
+test('a transient progress-checkpoint failure does not discard a successful OAuth grant',async()=>{
+ const {store,jobs}=await setup(),id=crypto.randomUUID(),auth=authFor(3),create=store.create.bind(store);
+ store.create=async(key,value)=>{if(/\/stage-/.test(key))throw Error('STORE_UNAVAILABLE');return create(key,value);};
+ const control=createControl({store,jobStore:jobs,owner,env,network:fn=>fn(),runtimeFactory:async options=>({getAuth:()=>auth,close:async()=>options.onAuth(auth)}),runtimeMethods:{login:async(rt,options)=>{
+  await options.onReady({flow:'browser',authorizationUrl:browserUrl});await options.onStage('confirming');await options.onStage('saving');return {account:info(3),auth};
+ }}});
+ await control.begin({mode:'add'},id);const key='jobs/'+owner+'/'+id;assert.equal((await control.run(key,(await jobs.get(key+'/meta.json')).value)).ok,true);assert.equal((await control.status(id)).status,'complete');
+});
+test('browser login follows the runtime ten-minute lifetime instead of waiting past expiry',async()=>{
+ const {store,jobs}=await setup(),id=crypto.randomUUID(),at=Date.now();
+ const control=createControl({store,jobStore:jobs,owner,env,now:()=>at});await control.begin({mode:'add'},id);await store.create('openai-codex/attempts/'+id+'/browser.json',{authorizationUrl:browserUrl,at});
+ const later=createControl({store,jobStore:jobs,owner,env,now:()=>at+600001});assert.equal((await later.status(id)).status,'expired');
+ assert.equal(safeError(Object.assign(Error('LOGIN_FAILED'),{diagnostic:{reason:'Login timed out'}})),'CODEX_AUTHORIZATION_EXPIRED');
+});
+test('a repaired original attempt requires a same-owner, committed recovery and never overrides cancellation',async()=>{
+ const {control,store,accounts}=await setup(),id=crypto.randomUUID(),repair=crypto.randomUUID(),base='openai-codex/attempts/'+id+'/',repairBase='openai-codex/attempts/'+repair+'/';await control.begin({mode:'add'},id);
+ await store.create(base+'result.json',{status:'failed',error:'CODEX_AUTHORIZATION_FAILED'});
+ await store.create(base+'recovered.json',{id:repair,status:'complete',accountId:accounts[0].id,officialQuotaVerified:true});
+ assert.equal((await control.status(id)).status,'failed');
+ await store.create(repairBase+'request.json',{owner,sourceAttempt:id});await store.create(repairBase+'result.json',{status:'complete',accountId:accounts[0].id,finishedAt:123});
+ const value=await control.status(id);assert.equal(value.status,'complete');assert.equal(value.recovered,true);assert.equal(value.id,id);
+ await store.create(base+'terminal.json',{status:'cancelled'});assert.equal((await control.status(id)).status,'cancelled');
 });
 test('SIWC and other provider settings are left untouched and API-key auth is rejected',async()=>{
  const {control,store,accounts}=await setup();

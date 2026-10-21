@@ -764,7 +764,7 @@ async function waitForLoginOutcome(completed, isCancelled, timeoutMs, state, onP
 async function login(runtime, options = {}) {
   const state = states.get(runtime);
   if (!state) throw fail('MODEL_NOT_CONFIGURED', { kind: 'runtime' });
-  const { onReady = null, isCancelled = null, readCallback = null, flow = 'browser', deadlineMs = LOGIN_TIMEOUT_MS } = options || {};
+  const { onReady = null, onStage = null, isCancelled = null, readCallback = null, flow = 'browser', deadlineMs = LOGIN_TIMEOUT_MS } = options || {};
   if (onReady !== null && typeof onReady !== 'function') throw new TypeError('onReady must be a function');
   if (isCancelled !== null && typeof isCancelled !== 'function') throw new TypeError('isCancelled must be a function');
   if (readCallback !== null && typeof readCallback !== 'function') throw new TypeError('readCallback must be a function');
@@ -838,7 +838,7 @@ async function login(runtime, options = {}) {
       const callbackUrl=await readCallback();
       if(!callbackUrl)return;
       delivered=true;
-      try{await require('./browser-oauth.cjs').deliver(callbackUrl,ready.authorizationUrl,{signal:state.signal});}
+      try{await onStage?.('exchanging');await require('./browser-oauth.cjs').deliver(callbackUrl,ready.authorizationUrl,{signal:state.signal,onStage});}
       catch(e){await cancelLogin(state,loginId);throw e;}
     }:null;
     const outcome = await waitForLoginOutcome(completed, isCancelled, remaining, state,pollCallback);
@@ -870,6 +870,7 @@ async function login(runtime, options = {}) {
     if (!account || account.type !== 'chatgpt') throw fail('MODEL_AUTH_FAILED', { kind: 'login', reason: 'chatgpt-account-required' });
     const auth = await waitForAuth(state, 2000);
     if (!auth) throw fail('MODEL_AUTH_FAILED', { kind: 'login', reason: 'auth-not-written' });
+    await onStage?.('saving');
     return { account, auth };
   } finally {
     for (const cleanup of cleanups.splice(0)) safeCleanup(cleanup);
