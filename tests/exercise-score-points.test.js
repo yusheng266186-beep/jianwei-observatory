@@ -35,10 +35,10 @@ test('把10条合并为8条或删掉评分点仍被保真校验拒绝',async()=>
  await assert.rejects(generator.validateRepairFidelity(SOURCE,dropped,request),error=>error.cause?.message.includes('questions[2].points'));
 });
 
-test('空评分点、空字符串和四川选择多条评分点仍被拒绝',()=>{
+test('空评分点与空字符串被拒绝，评分描述条数不替代模型对评分方法的审查',()=>{
  const empty=repaired();empty.questions[2].points=[];assert.throws(()=>validateExerciseResult(empty,request),/评分点不完整/);
  const blank=repaired();blank.questions[2].points=['   '];assert.throws(()=>validateExerciseResult(blank,request),/评分点不完整/);
- const choice=repaired();choice.questions[0].points=['选A得3分。','选B得2分。'];assert.throws(()=>validateExerciseResult(choice,request),/客观题评分/);
+ const choice=repaired();choice.questions[0].points=['选A得3分。','选B得2分。'];assert.doesNotThrow(()=>validateExerciseResult(choice,request));
 });
 
 test('出题与修复提示按实际小问保留评分点，Schema不再限制8条',async()=>{

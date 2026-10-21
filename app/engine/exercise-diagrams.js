@@ -50,16 +50,14 @@ export function validateExerciseDiagram(d){
 export function validateGeneratedExerciseFigures(sheet,request,{allowRequests=false}={}){
  for(const q of sheet.questions){
   const d=q.diagram,studentText=[q.stem,...q.choices].join('\n');
-  if(!d&&!(allowRequests&&q.figureRequest)&&/(?:如图所示|如下图|下图[为所是]|图中[的所甲乙丙丁ABCD]|见图|曲线[甲乙丙丁ⅠⅡⅢ])/u.test(studentText))throw new Error('第'+q.id+'题引用了未提供的图示。');
+  // Whether prose really depends on a missing figure needs context. A keyword
+  // also occurs in quotations, text descriptions and student drawing tasks.
   if(!d)continue;validateExerciseDiagram(d);
   const labels=[d.xLabel,d.yLabel,...(d.series||[]).map(s=>s.label),...(d.nodes||[]).map(n=>n.label),...(d.edges||[]).map(e=>e.label)].filter(Boolean);
   if(labels.some(s=>/[$\\]/.test(s)))throw new Error('第'+q.id+'题的图中标签须使用可直接显示的文字。');
-  if(d.model&&!['数学','物理'].includes(request.subject))throw new Error('第'+q.id+'题的标准模型不适用于当前学科。');
-  if(d.kind==='science'){if(d.spec.family==='mechanics'&&d.spec.model==='conveyor'&&!Object.hasOwn(d.spec,'blockPosition'))throw new Error('第'+q.id+'题的传送带图须明确物块的初始位置blockPosition。');const subjects={conic:['数学'],optics:['物理'],'uniform-field':['物理'],pedigree:['生物'],'ocean-currents':['地理'],strata:['地理'],mechanics:['物理'],circuit:['物理'],molecule:['化学','生物'],'molecular-model':['化学','生物'],crystal:['化学'],cell:['生物'],photosynthesis:['生物'],dna:['生物'],terrain:['地理'],climate:['地理']};if(!subjects[d.spec.family].includes(request.subject))throw new Error('第'+q.id+'题的学科图示与当前科目不符。');}
-  if(request.subject!=='化学')continue;
-  if(d.kind==='apparatus'&&d.nodes.some(n=>!n.equipment))throw new Error('第'+q.id+'题的实验装置未指定具体仪器和导管。');
-  if(d.kind==='flow'&&/(?:仪器名称|仪器的名称|长[进导管]|短[出导管]|插入液面|液面[上下]|三[颈口]烧瓶)/u.test(q.stem))throw new Error('第'+q.id+'题不能用流程框代替考查结构的实验装置。');
-  if(d.kind==='plot')for(const s of d.series){if(s.label.length>14||s.points.some((p,i)=>i&&p[0]<s.points[i-1][0])||new Set(s.points.map(p=>p.join(','))).size<2)throw new Error('第'+q.id+'题的变化曲线标注或横坐标顺序不完整。');}
+  if(d.kind==='science'&&d.spec.family==='mechanics'&&d.spec.model==='conveyor'&&!Object.hasOwn(d.spec,'blockPosition'))throw new Error('第'+q.id+'题的传送带图须明确物块的初始位置blockPosition。');
+  // Interdisciplinary figures and alternative representations are legitimate.
+  // Structure/type safety remains above; subject correctness is model-reviewed.
  }
  return sheet;
 }

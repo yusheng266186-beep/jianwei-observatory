@@ -33,20 +33,20 @@ test('排空气法空集气瓶允许长管，原样绘制空瓶及长短导管�
  assert.match(guidance.diagramGuide('化学'),/排空气法的空集气瓶.*liquidLevel:0/);
  assert.match(guidance.diagramGuide('化学'),/严禁为了满足模板而添加液体/);
 });
-test('具体仪器、液位及端口生成完整矢量气路，旧示意图可阅读但不能作为新装置题通过',()=>{
+test('具体仪器、液位及端口完整绘制，其他受控表示的语义由模型审核',()=>{
  assert.deepEqual(validateExerciseDiagram(laboratory),laboratory);assert.doesNotThrow(()=>validateGeneratedExerciseFigures({questions:[question(laboratory)]},{subject:'化学'}));
  const svg=exerciseDiagramSVG(laboratory);assert(svg.includes('data-equipment="three-neck-flask"'));assert.equal((svg.match(/data-equipment=/g)||[]).length,4);assert(svg.includes('clipPath'));assert(!svg.includes('undefined'));
  const second=exerciseDiagramSVG(laboratory),id=svg.match(/clipPath id="([^"]+)/)[1];assert(!second.includes('id="'+id+'"'));
- const legacy={...laboratory,nodes:laboratory.nodes.map(({equipment,liquidLevel,inlet,outlet,additionFunnel,...n})=>n),edges:laboratory.edges.map(e=>({...e,type:'arrow'}))};assert.doesNotThrow(()=>validateExerciseDiagram(legacy));assert.throws(()=>validateGeneratedExerciseFigures({questions:[question(legacy)]},{subject:'化学'}),/具体仪器/);
+ const legacy={...laboratory,nodes:laboratory.nodes.map(({equipment,liquidLevel,inlet,outlet,additionFunnel,...n})=>n),edges:laboratory.edges.map(e=>({...e,type:'arrow'}))};assert.doesNotThrow(()=>validateExerciseDiagram(legacy));assert.doesNotThrow(()=>validateGeneratedExerciseFigures({questions:[question(legacy)]},{subject:'化学'}));
 });
 test('装置气路拒绝不足液位的浸液导管、重复端口、重叠仪器及不支持的仪器，不猜测补图',()=>{
  for(const mutate of [d=>{d.nodes[1].inlet='long';d.nodes[1].liquidLevel=10;},d=>d.edges.push({...d.edges[0]}),d=>d.nodes[1].x=23,d=>d.nodes[0].equipment='condenser',d=>d.edges[0].type='line']){const d=structuredClone(laboratory);mutate(d);assert.throws(()=>validateExerciseDiagram(d));}
 });
-test('新题引用缺图、流程框冒充结构图或化学曲线横坐标倒序时不能通过，完整数据表与绘图任务可不附图',()=>{
- assert.throws(()=>validateGeneratedExerciseFigures({questions:[question(undefined)]},{subject:'化学'}),/未提供/);
- const flow={kind:'flow',caption:'流程',description:'实验流程',nodes:[{id:'a',x:50,y:50,label:'A',shape:'block'}],edges:[]};assert.throws(()=>validateGeneratedExerciseFigures({questions:[{...question(flow),stem:'写出图中仪器名称。'}]},{subject:'化学'}),/流程框/);
+test('图示关键词和曲线表达只作模型审查线索，不凭类型和关键词推断题意',()=>{
+ assert.doesNotThrow(()=>validateGeneratedExerciseFigures({questions:[question(undefined)]},{subject:'化学'}));
+ const flow={kind:'flow',caption:'流程',description:'实验流程',nodes:[{id:'a',x:50,y:50,label:'A',shape:'block'}],edges:[]};assert.doesNotThrow(()=>validateGeneratedExerciseFigures({questions:[{...question(flow),stem:'写出图中仪器名称。'}]},{subject:'化学'}));
  assert.doesNotThrow(()=>validateGeneratedExerciseFigures({questions:[{id:1,stem:'根据表中数据绘制变化图。',choices:[]}]},{subject:'化学'}));
- const bad=structuredClone(changePlot);bad.series[0].points.reverse();assert.throws(()=>validateGeneratedExerciseFigures({questions:[question(bad)]},{subject:'化学'}),/横坐标/);
+ const bad=structuredClone(changePlot);bad.series[0].points.reverse();assert.doesNotThrow(()=>validateGeneratedExerciseFigures({questions:[question(bad)]},{subject:'化学'}));
  assert.doesNotThrow(()=>validateGeneratedExerciseFigures({questions:[question(changePlot)]},{subject:'化学'}));const svg=exerciseDiagramSVG(changePlot);assert(svg.includes('stroke-dasharray="7 4"'));assert.equal((svg.match(/polyline/g)||[]).length,2);
 });
 test('立体模型按真实顶点和面生成棱与遮挡，不接受伪装的圆锥或错误尺寸',()=>{

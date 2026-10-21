@@ -39,8 +39,8 @@ test('生物图示拒绝细胞类型冲突、重复结构、错误DNA配对，�
  const d=get('dna');d.spec.top='?TGCCGTA';const svg=exerciseDiagramSVG(d);assert(svg.includes('>?</text>'));assert.equal((svg.match(/stroke-dasharray="2 2"/g)||[]).length,18);
  const cell=get('cell');cell.spec.parts=[{id:'nucleus',label:'甲'}];const rendered=exerciseDiagramSVG(cell);assert(!rendered.includes('叶绿体'));assert(!rendered.includes('线粒体'));
 });
-test('学科图示不跨科冒用；模型未给定传送方向时不加入方向箭头',()=>{
- assert.throws(()=>validateGeneratedExerciseFigures({questions:[{id:1,stem:'图示',choices:[],diagram:get('dna')}]},{subject:'物理'}),/科目/);
+test('图示允许合理跨科应用；未给定传送方向不加入方向箭头',()=>{
+ assert.doesNotThrow(()=>validateGeneratedExerciseFigures({questions:[{id:1,stem:'图示',choices:[],diagram:get('dna')}]},{subject:'物理'}));
  reject('mechanics',s=>s.angle=60,/倾角|物理模型/);reject('mechanics',s=>{s.model='horizontal-block';s.direction='right';},/方向/);
 });
 test('传送带初始位置由明确参数绘制，新图缺少位置时不通过；长标签不溢出结构边界',()=>{

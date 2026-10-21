@@ -16,7 +16,9 @@ function repairFailure(error){
 }
 function eligible(error){
  return error?.message==='MODEL_CONTENT_INVALID'&&error.diagnostic?.completeSignal===true&&typeof error.output==='string'&&error.output.trim().length>0&&error.output.length<=256000&&
-  (error.cause instanceof SyntaxError||/格式修复改动了有效原稿|JSON正文前|JSON|转义|选项字段未完整返回|未按约定输出公式或正文格式|数据表列数不一致|建议作答行数无效/.test(error.cause?.message||''));
+  // All complete document validation failures reach the repair model. A list
+  // of familiar messages used to leave other recoverable formats at a dead end.
+  !/非教学内容|文档处理容量|插图总量/.test(error.cause?.message||'');
 }
 async function removed(store,key,manifest){return !!(await store.get(key+'/removed.json')||manifest.group&&await store.get(parentKey(key,manifest.group.parentId)+'/removed.json'));}
 async function latest(store,key){let low=0,high=1;const first=await store.get(attemptPath(key,0));if(!first)return null;while(await store.get(attemptPath(key,high))){low=high;high=high*2+1;}while(high-low>1){const n=Math.floor((low+high)/2);if(await store.get(attemptPath(key,n)))low=n;else high=n;}return {attempt:low,...(low?(await store.get(attemptPath(key,low))).value:first.value)};}

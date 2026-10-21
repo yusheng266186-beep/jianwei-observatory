@@ -1,6 +1,5 @@
 import {exerciseFigureParts} from './exercise-figure-layout.js';
 import {exerciseTableFormatIssues} from './exercise-rich-blocks.js';
-import {hasExerciseDraft} from './exercise-quality.js';
 import {validateExerciseDiagram,exerciseDiagramSchema,validateGeneratedExerciseFigures,EXERCISE_IMAGE_MAX_CHARS} from './exercise-diagrams.js';
 export {validateGeneratedExerciseFigures};
 // Shared browser/server boundary. Student identity never belongs in this request.
@@ -96,7 +95,7 @@ export function validateExerciseResult(value,request,{allowPendingFigures=false,
  for(const [i,q] of value.questions.entries()){
   if(q&&typeof q==='object')for(const [field,label,limit] of [['stem','题干'],['answer','答案'],['analysis','解析']])if(!text(q[field],limit))throw new Error('第'+(i+1)+'题的'+label+'未完整返回。');
   if(q&&typeof q==='object'&&!Array.isArray(q.choices))throw new Error('第'+(i+1)+'题的选项字段未完整返回，非选择题也须返回空数组。');
-  if(!keys(q,['id','level','type','stem','choices','answer','analysis','points','maxScore','minutes','diagram','target','figureRequest','figureLayout','answerLines'])||q.id!==i+1||!levels.includes(q.level)||!types.includes(q.type)||!text(q.stem,stemLimit)||!text(q.answer)||!text(q.analysis)||!Array.isArray(q.choices)||!Array.isArray(q.points)||!q.points.length||q.points.some(p=>!text(p))||!Number.isInteger(q.maxScore)||q.maxScore<1||q.maxScore>25||!Number.isInteger(q.minutes)||q.minutes<1||q.minutes>30)throw new Error('第'+(i+1)+'题的题干、答案、解析或评分点不完整。');
+  if(!keys(q,['id','level','type','stem','choices','answer','analysis','points','maxScore','minutes','diagram','target','figureRequest','figureLayout','answerLines'])||q.id!==i+1||!levels.includes(q.level)||!types.includes(q.type)||!text(q.stem,stemLimit)||!text(q.answer)||!text(q.analysis)||!Array.isArray(q.choices)||!Array.isArray(q.points)||!q.points.length||q.points.some(p=>!text(p))||!Number.isSafeInteger(q.maxScore)||q.maxScore<1||!Number.isSafeInteger(q.minutes)||q.minutes<1)throw new Error('第'+(i+1)+'题的题干、答案、解析或评分点不完整。');
   if(q.answerLines!==undefined&&(!Number.isInteger(q.answerLines)||q.answerLines<0||q.answerLines>48))throw new Error('第'+(i+1)+'题的建议作答行数无效。');
   if(q.target!==undefined&&!text(q.target,200)||request.targets?.length&&!request.targets.includes(q.target))throw new Error('第'+(i+1)+'题未对应已选训练点。');
   if(request.questionTypes?.length&&!request.questionTypes.includes(q.type))throw new Error('第'+(i+1)+'题不符合所选题型。');
@@ -106,9 +105,11 @@ export function validateExerciseResult(value,request,{allowPendingFigures=false,
   if(q.figureRequest){validateExerciseFigureRequest(q.figureRequest);if(!allowPendingFigures&&!q.diagram)throw new Error('第'+(i+1)+'题的必要图示尚未完成。');}
   for(const [label,values] of [['题干',[q.stem]],['答案',[q.answer]],['解析',[q.analysis]],['选项',q.choices],['评分点',q.points]])if(values.some(s=>typeof s==='string'&&!formatted(s)))throw new Error('第'+(i+1)+'题的'+label+'未按约定输出公式或正文格式。');
   if(requireStructuredTables&&[q.stem,q.answer,q.analysis,...q.choices,...q.points].some(s=>exerciseTableFormatIssues(s).length))throw new Error('第'+(i+1)+'题的数据表列数不一致，请重新生成。');
-  if(requireFinalAnalysis&&[q.answer,q.analysis,...q.points].some(hasExerciseDraft))throw new Error('第'+(i+1)+'题的解析仍含未完成改题草稿，请重新生成。');
+  // Draft-like phrases can be quotations or legitimate error analysis. They
+  // are review hints, not proof that the model failed to finish its answer.
   const choice=['选择','多选'].includes(q.type);
-  if(request.examStyle==='sichuan-gaokao'&&choice&&q.points.length!==1)throw new Error('第'+(i+1)+'题的客观题评分须按选项计分，不拆分解题过程。');
+  // Scoring prose may use multiple lines. Subject review checks the scoring
+  // method; the number of strings is not a Gaokao rule.
   if(choice&&(q.choices.length!==4||q.choices.some(c=>!text(c))||new Set(q.choices).size!==4||!(q.type==='选择'?/^[ABCD]$/:/^(?:AB|AC|AD|BC|BD|CD|ABC|ABD|ACD|BCD|ABCD)$/).test(q.answer)))throw new Error('第'+(i+1)+'题的选项或答案不符合题型要求。');
   if(!choice&&q.choices.length)throw new Error('非选择题不能附带选项。');
   const stem=q.stem.replace(/\s/g,'');if(stems.has(stem))throw new Error('练习中存在重复题目。');stems.add(stem);
@@ -117,11 +118,8 @@ export function validateExerciseResult(value,request,{allowPendingFigures=false,
  }
  if(request.targets?.some(t=>!value.questions.some(q=>q.target===t)))throw new Error('练习没有覆盖全部已选训练点。');
  if(request.questionTypes?.some(t=>!value.questions.some(q=>q.type===t)))throw new Error('练习没有覆盖全部所选题型。');
- const profile=difficultyProfile(request.difficulty),required=request.difficulty==='适度提升'?['基础','巩固']:profile.required;
- if(required.some(level=>!value.questions.some(q=>q.level===level)))throw new Error('题目梯度与所选难度不匹配。');
- if(request.difficulty==='基础起步'&&value.questions.some(q=>q.level==='迁移'))throw new Error('基础起步练习不应包含迁移题。');
- if(request.difficulty==='拓展挑战'&&value.questions.filter(q=>q.level==='迁移').length<Math.ceil(request.count/2))throw new Error('拓展挑战练习应以迁移题为主。');
- const minutes=value.questions.reduce((n,q)=>n+q.minutes,0);if(minutes>request.minutes*1.5||minutes<request.minutes*.5)throw new Error('题目预计用时与训练时长不匹配。');
+ // Difficulty labels and estimated minutes are advisory metadata. The review
+ // model judges the actual content against the teacher's requested difficulty.
  return value;
 }
 export function exerciseEvidence(atlas,{sid,exam,plan,subject='数学'}={}){
@@ -132,7 +130,7 @@ export function exerciseEvidence(atlas,{sid,exam,plan,subject='数学'}={}){
 }
 export const exerciseSchema={type:'object',additionalProperties:false,required:['title','objective','questions'],properties:{title:{type:'string'},objective:{type:'string'},questions:{type:'array',items:{type:'object',additionalProperties:false,required:['id','level','type','stem','choices','answer','analysis','points','maxScore','minutes'],properties:{id:{type:'integer'},level:{type:'string',enum:levels},type:{type:'string',enum:types},stem:{type:'string'},choices:{type:'array',items:{type:'string'}},answer:{type:'string'},analysis:{type:'string'},points:{type:'array',items:{type:'string'}},maxScore:{type:'integer'},minutes:{type:'integer'},answerLines:{type:'integer',minimum:0,maximum:48,description:'建议的手写作答行数，每行约6.35毫米；选择、多选、填空为0，其余按实际解答、推导、分小问及作图所需空间估计，不能按题干长度留白。'},target:{type:'string',maxLength:200},diagram:exerciseDiagramSchema,figureRequest:exerciseFigureRequestSchema}}}}};
 
-export function exerciseSchemaFor(request,{separateFigures=false}={}){const schema=structuredClone(exerciseSchema),q=schema.properties.questions;q.minItems=q.maxItems=request.count;Object.assign(q.items.properties.id,{minimum:1,maximum:request.count});Object.assign(q.items.properties.maxScore,{minimum:1,maximum:25});Object.assign(q.items.properties.minutes,{minimum:1,maximum:30});Object.assign(q.items.properties.choices,{maxItems:4});Object.assign(q.items.properties.points,{minItems:1});if(request.targets?.length){q.items.required.push('target');q.items.properties.target.enum=[...request.targets];}else delete q.items.properties.target;q.items.properties.type.enum=request.questionTypes?.length?[...request.questionTypes]:[...exerciseQuestionTypes(request.subject)];for(const [field,limit] of Object.entries({title:100,objective:500}))schema.properties[field].description='非空文本，最多'+limit+'字符。';for(const field of ['stem','answer','analysis'])q.items.properties[field].description=field==='stem'?'完整提供必要材料、已知条件与设问。':'完整非空文本，结论明确，必要推导不得为凑字数而截断。';q.items.properties.choices.items.description='每项非空且可独立阅读。';q.items.properties.points.items.description='每项非空，写明得分点和分值。';if(request.visuals==='none'||separateFigures)delete q.items.properties.diagram;if(request.visuals==='none'||!separateFigures)delete q.items.properties.figureRequest;
+export function exerciseSchemaFor(request,{separateFigures=false}={}){const schema=structuredClone(exerciseSchema),q=schema.properties.questions;q.minItems=q.maxItems=request.count;Object.assign(q.items.properties.id,{minimum:1,maximum:request.count});Object.assign(q.items.properties.maxScore,{minimum:1});Object.assign(q.items.properties.minutes,{minimum:1});Object.assign(q.items.properties.choices,{maxItems:4});Object.assign(q.items.properties.points,{minItems:1});if(request.targets?.length){q.items.required.push('target');q.items.properties.target.enum=[...request.targets];}else delete q.items.properties.target;q.items.properties.type.enum=request.questionTypes?.length?[...request.questionTypes]:[...exerciseQuestionTypes(request.subject)];for(const [field,limit] of Object.entries({title:100,objective:500}))schema.properties[field].description='非空文本，最多'+limit+'字符。';for(const field of ['stem','answer','analysis'])q.items.properties[field].description=field==='stem'?'完整提供必要材料、已知条件与设问。':'完整非空文本，结论明确，必要推导不得为凑字数而截断。';q.items.properties.choices.items.description='每项非空且可独立阅读。';q.items.properties.points.items.description='每项非空，写明得分点和分值。';if(request.visuals==='none'||separateFigures)delete q.items.properties.diagram;if(request.visuals==='none'||!separateFigures)delete q.items.properties.figureRequest;
  if(request.answerSpaceVersion===1)q.items.required.push('answerLines');else delete q.items.properties.answerLines;
  const answerChoices=['A','B','C','D'],multiAnswers=['AB','AC','AD','BC','BD','CD','ABC','ABD','ACD','BCD','ABCD'],available=q.items.properties.type.enum,constructed=available.filter(t=>!['选择','多选'].includes(t));q.items.anyOf=[];
  if(available.includes('选择'))q.items.anyOf.push({properties:{type:{enum:['选择']},choices:{minItems:4,maxItems:4},answer:{enum:answerChoices}}});

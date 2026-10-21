@@ -56,7 +56,8 @@ async function save(store,key,job,result,options={}){
 }
 async function recover(store,key,job,options={}){
  try{await active(store,key,job);}catch(e){if(e.message==='JOB_CANCELLED')return null;throw e;}
- const candidate=(await store.get(key+'/delivery-candidate.json'))?.value;if(!candidate)return null;
+ const candidate=(await store.get(key+'/delivery-candidate.json'))?.value;
+ if(!candidate){await recoverQueued(store,key,job,options);return null;}
  if(candidate.version!==1)throw Error('JOB_RESULT_CONFLICT');
  if(candidate.stage==='content'&&await store.get(key+'/content-review-manifest.json'))return {status:'running',contentReviewPipeline:true};
  if(candidate.stage==='figures'&&await store.get(key+'/figure-manifest.json'))return {status:'running',figurePipeline:true};
@@ -64,4 +65,13 @@ async function recover(store,key,job,options={}){
  catch(e){if(e.message==='JOB_CANCELLED')return null;if(!transient(e)&&e.message!=='RESULT_SAVE_PENDING')throw e;
   return {status:'running',deliveryPending:true,deadlineAt:(options.now||Date.now)()+930000};}
 }
-module.exports={active,createVerified,checkpoint,commit,save,recover,storageFailure};
+async function recoverQueued(store,key,job,{now=Date.now,dispatch}={}){
+ const at=now();if(typeof dispatch!=='function'||!Number.isFinite(job?.createdAt)||!Number.isFinite(job?.deadline)||at-job.createdAt<20000||job.deadline<at)return false;
+ const [run,result,removed]=await Promise.all(['run','result','removed'].map(name=>store.get(key+'/'+name+'.json')));if(run||result||removed)return false;
+ // Re-dispatch the same immutable job, once per window. The worker's run lock
+ // still permits only one paid model call, even after a lost trigger or ack.
+ const receipt=key+'/dispatch-recovery/'+Math.floor(at/30000)+'.json';
+ if(!await store.create(receipt,{at}))return false;
+ try{await dispatch(key);return true;}catch{return false;}
+}
+module.exports={active,createVerified,checkpoint,commit,save,recover,recoverQueued,storageFailure};

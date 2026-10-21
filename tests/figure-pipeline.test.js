@@ -10,7 +10,7 @@ async function drain(ctx,options={}){let calls=0;while(ctx.queue.length){assert(
 test('出题阶段只输出图示委托，必要图未完成时不允许导出；题干位置、宽度与前置Schema完整保留',async()=>{
  const sheet=document(),p=await generator.buildExercisePrompt(input,{separateFigures:true});assert(p.schema.properties.questions.items.properties.figureRequest);assert(!p.schema.properties.questions.items.properties.diagram);assert.match(p.system,/不绘图、不输出diagram/);assert.match(p.system,/图片插在该段之后/);assert.doesNotThrow(()=>validateExerciseResult(sheet,input,{allowPendingFigures:true}));assert.throws(()=>validateExerciseResult(sheet,input),/必要图示/);
  const parts=exerciseFigureParts(sheet.questions[0]);assert.equal(parts.before,placement.after);assert.equal(parts.after,'已知底面长3、宽2、高2，写出一组平行棱。');assert.equal(parts.width,400);assert.equal(exerciseFigurePositions(sheet.questions[0]).length,2);
- const changed=structuredClone(sheet);changed.questions[0].stem='修改后的题干';assert.throws(()=>validateExerciseResult(changed,input,{allowPendingFigures:true}),/插入位置/);
+ const changed=structuredClone(sheet);changed.questions[0].stem='修改后的题干';assert.doesNotThrow(()=>validateExerciseResult(changed,input,{allowPendingFigures:true}));assert(exerciseFigureParts(changed.questions[0]).placementFallback);
 });
 test('云端分步持久化，出题只执行一次，图示与核对由独立事件完成，重复查询和重开不重复计费调用',async()=>{
  const ctx=await setup();let textCalls=0;const original=document();await worker.run({key:ctx.key},{...ctx,generator:async(_,o)=>{textCalls++;assert(o.separateFigures);o.onProgress({draftSource:JSON.stringify(original)});return {sheet:original,model:g.model};}});assert.equal(textCalls,1);assert.equal((await pipeline.snapshot(ctx.store,ctx.key,ctx)).status,'running');assert.equal(ctx.queue.length,1);assert.equal(await ctx.store.get(ctx.key+'/result.json'),null);

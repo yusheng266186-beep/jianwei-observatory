@@ -47,8 +47,8 @@ test('配置两次修复可从第二轮修正稿继续，已经失败的模型�
  await worker.run({key:first},{...s,repairer:async()=>{assert.fail('重放不能再次调用');}});
  await worker.run({key:s.queue.shift()},{...s,repairer:async input=>output(input)});assert.equal((await repair.snapshot(s.store,s.key)).formatRepair.attempts,2);
 });
-test('断流、不完整输出、余额错误及未完成题意不触发格式修复；关闭自动修复保留失败',async()=>{
- for(const error of [Error('MODEL_CONNECTION_LOST'),Error('MODEL_INCOMPLETE'),Error('MODEL_BALANCE_REQUIRED'),Object.assign(invalid(request),{cause:Error('练习中存在重复题目。')}),Object.assign(invalid(request),{diagnostic:{completeSignal:false}})]){
+test('断流、不完整输出和余额错误不触发内容修复；关闭自动修复保留失败',async()=>{
+ for(const error of [Error('MODEL_CONNECTION_LOST'),Error('MODEL_INCOMPLETE'),Error('MODEL_BALANCE_REQUIRED'),Object.assign(invalid(request),{diagnostic:{completeSignal:false}})]){
   const s=await setup();await worker.run({key:s.key},{...s,generator:async()=>{throw error;}});assert.equal(s.queue.length,0);assert.equal((await s.store.get(s.key+'/result.json')).value.status,'failed');
  }
  const s=await setup({repairAttempts:0});await worker.run({key:s.key},{...s,generator:async()=>{throw invalid(request);}});assert.equal(s.queue.length,0);

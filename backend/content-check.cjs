@@ -136,6 +136,11 @@ async function buildReviewPrompt(sheet,input,options={}){
   :!separateFigures
    ?'integratedFigures 模式下，diagram 由独立图示环节负责。不得新增、删除或改写 diagram；图示与题干矛盾时报告 issue，无法在不改图的前提下修正则 approved=false。'
    :'pendingFigures 模式下，题目 Schema 不含 diagram，只有 figureRequest。patch 不得出现 diagram；不得删除原题已有的 figureRequest，也不得通过删除图示条件来规避问题。只有题干已有明确图示引用且缺图是确定错误时，才可补充 figureRequest；不得为美化或改变考点新增图示。figureRequest 的 caption、requirements、knownData、labels、precision、placement 可以精确修正，但不得泄露待求答案或改变已知条件。';
+ const programChecks=contentGuards(sheet,input),{hasExerciseDraft}=await import('./exercise-quality.mjs');
+ for(const q of sheet.questions){
+  if(hasExerciseDraft([q.answer,q.analysis,...(q.points||[])].join('\n')))programChecks.push({questionId:q.id,code:'draft-hint',reason:'出现类似改题草稿的措辞，请结合上下文判断；引用或已经完成的分析不算错误，真正未完成的答案请按原条件完善。'});
+  if(!q.diagram&&!q.figureRequest&&/如图所示|如下图|图中[的所甲乙丙丁ABCD]/u.test(q.stem))programChecks.push({questionId:q.id,code:'figure-hint',reason:'出现图示用语但未附图示委托。请确认是否真正依赖图片；引用、已给文字描述或要求学生作图无需强行配图。确实缺必要图时按原条件补充figureRequest。'});
+ }
  const system=[
   '【环节职责】',
   '你是中国高中'+input.subject+'学科的独立内容复核教师。本环节只复核题组内容本身，不是格式修复，不处理JSON转义、字段名、表格列数、LaTeX分隔符或排版；输入成稿被视为已通过格式契约。不要输出格式修复说明，也不要把格式问题混入学科修订。',
@@ -164,7 +169,7 @@ async function buildReviewPrompt(sheet,input,options={}){
   'issues每项为{questionId,reason,severity}，severity用block或review；corrections 每项恰好 {questionId, reason, patch}，patch只含实际改变的允许字段，未改字段不回传；questionId为原题id，不得重复。不得同时输出patch与replacement。',
   'patch为精确字段修订：只回传发生变化的stem、choices、answer、analysis、points、figureRequest或answerLines，以Schema中实际存在者为限；数组有变化时回传该数组完整内容。不回传id、type、level、target、maxScore、minutes或未改动的题目全文。程序将保留全部未改字段并按原契约复查，不改变题型、考点、条件和分值。replacement仅为旧任务兼容字段，新输出使用patch。',
   '本次最多 '+count+' 条 corrections、'+count*2+' 条 issues；超出即视为无效输出。',
-  'programChecks是窄范围程序复查发现的明确冲突，请逐项独立核对和处理，不照搬提示，也不删条件、改满分或改考点来规避。对不适用的检查说明可核对的理由；真正错误必须修正。',
+  'programChecks是程序提供的候选线索，可能因关键词、引用或特殊情境而不适用。请结合完整题意独立判断，不照搬提示或凭关键词判错；真正错误应按原条件修正，误报不改原题，也不添加新条件。',
   '【学科复核清单】',
   subjectReviewRules(input.subject),
   '【本题组学科边界】',
@@ -175,7 +180,7 @@ async function buildReviewPrompt(sheet,input,options={}){
  ].join('\n');
  return {
   system,
-  input:{task:'subject-content-review',subject:input.subject,count,figureMode:separateFigures?'pendingFigures':'integratedFigures',request:Object.fromEntries(Object.entries(input).filter(([k])=>!['evidence','basis'].includes(k)).map(([k,v])=>[k,structuredClone(v)])),sheet:structuredClone(sheet),programChecks:contentGuards(sheet,input),...(groupScope?{groupScope}:{}),...(options.feedback?{previousReview:options.feedback}:{}),...(options.candidate?{previousCandidate:options.candidate}:{}),...(options.formatSource?{originalFormatSource:options.formatSource}:{} )},
+  input:{task:'subject-content-review',subject:input.subject,count,figureMode:separateFigures?'pendingFigures':'integratedFigures',request:Object.fromEntries(Object.entries(input).filter(([k])=>!['evidence','basis'].includes(k)).map(([k,v])=>[k,structuredClone(v)])),sheet:structuredClone(sheet),programChecks,...(groupScope?{groupScope}:{}),...(options.feedback?{previousReview:options.feedback}:{}),...(options.candidate?{previousCandidate:options.candidate}:{}),...(options.formatSource?{originalFormatSource:options.formatSource}:{} )},
   schema:reviewSchemaFor(input,questionSchema),
   questionSchema,
   separateFigures,
@@ -348,7 +353,11 @@ async function reviewContent(sheet,input,options={}){
  let validated;
  try{validated=await generator.validateOutput(JSON.stringify(reviewed.sheet),input,{separateFigures,usage,groupScope:prompt.groupScope});}
  catch(cause){throw invalid('最终题目未通过与出题相同的契约校验：'+(cause?.cause?.message||cause?.message||'未知错误'),{cause,candidate:reviewed.sheet});}
- const remaining=contentGuards(validated,input);if(remaining.length)throw Object.assign(Error('CONTENT_REVIEW_FAILED'),{notes:groupIssues(remaining),candidate:validated,output,diagnostic:{kind:'content-review',phase:'guard-failed'}});
+ const remaining=contentGuards(validated,input),definite=remaining.filter(issue=>issue.code==='score-sum');
+ if(definite.length)throw Object.assign(Error('CONTENT_REVIEW_FAILED'),{notes:groupIssues(definite),candidate:validated,output,diagnostic:{kind:'content-review',phase:'guard-failed'}});
+ // Keyword-based hints do not overrule a model that reviewed the full context.
+ // Keep them visible to the teacher without treating them as proven errors.
+ for(const note of groupIssues(remaining.filter(issue=>issue.code!=='score-sum')))if(!notes.some(n=>n.questionId===note.questionId&&n.issues?.join('；')===note.issues.join('；')))notes.push({...note,unresolved:true});
  onProgress?.({phase:'content-reviewed',changeCount:reviewed.changes.length});
  return {...metadata,approved:true,sheet:validated,changes:reviewed.changes,notes,usage,model,reviewScope:REVIEW_SCOPE,reviewDisclaimer:REVIEW_DISCLAIMER,templateVersion:prompt.templateVersion,templateId:prompt.templateId};
 }

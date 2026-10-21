@@ -27,26 +27,26 @@ test('完整长解答可按新规则重新校验原稿，截断、格式错误�
  const store=new stores.MemoryStore(),key='jobs/test/recovery',request={...input,difficulty:'基础巩固',minutes:15},sheet={title:'完整练习',objective:'求导训练',questions:Array.from({length:3},(_,i)=>({id:i+1,level:i?'巩固':'基础',type:'填空',stem:'求第'+i+'个函数的导数。',choices:[],answer:'完整证明。'.repeat(600),analysis:'使用求导法则。',points:['结果正确得5分。'],maxScore:5,minutes:5}))},failed={status:'failed',error:'MODEL_CONTENT_INVALID',finishedAt:10000};
  await store.create(key+'/diagnostic.json',{raw:JSON.stringify(sheet)});const original=JSON.stringify(sheet);const ready=await recovery.revalidateResult(store,key,{type:'exercise',input:request},failed);assert.equal(ready.status,'ready');assert.equal(JSON.stringify(ready.sheet),original);assert.equal((await recovery.revalidateResult(store,key,{type:'exercise',input:request},{...failed,error:'MODEL_INCOMPLETE'})).status,'failed');
  await store.create('truncated/diagnostic.json',{raw:JSON.stringify(sheet),truncated:true});assert.equal((await recovery.revalidateResult(store,'truncated',{type:'exercise',input:request},failed)).status,'failed');
- for(const [name,mutate] of [['draft',s=>s.questions[0].analysis='等等，重新核算，若我们把选项改为另一个数。'],['table',s=>s.questions[0].stem='| A | B |\n| - | - | - |\n| 1 | 2 |']]){const invalid=structuredClone(sheet);mutate(invalid);await store.create(name+'/diagnostic.json',{raw:JSON.stringify(invalid)});assert.equal((await recovery.revalidateResult(store,name,{type:'exercise',input:request},failed)).status,'failed');}
+ for(const [name,mutate] of [['draft',s=>s.questions[0].analysis='等等，重新核算，若我们把选项改为另一个数。'],['table',s=>s.questions[0].stem='| A | B |\n| - | - | - |\n| 1 | 2 |']]){const invalid=structuredClone(sheet);mutate(invalid);await store.create(name+'/diagnostic.json',{raw:JSON.stringify(invalid)});assert.equal((await recovery.revalidateResult(store,name,{type:'exercise',input:request},failed)).status,name==='draft'?'ready':'failed');}
  const bad=structuredClone(sheet);bad.questions[0].answer='\\sqrt{2}';await store.create('bad-format/diagnostic.json',{raw:JSON.stringify(bad)});assert.equal((await recovery.revalidateResult(store,'bad-format',{type:'exercise',input:request},failed)).status,'failed');
  const diagram=structuredClone(sheet);diagram.questions[0].diagram={kind:'illustration',prompt:'物理模型图'};await store.create('bad-diagram/diagnostic.json',{raw:JSON.stringify(diagram)});assert.equal((await recovery.revalidateResult(store,'bad-diagram',{type:'exercise',input:request},failed)).status,'failed');
 });
 
 const recoveryRequest={...input,visuals:'vector',minutes:15,difficulty:'基础巩固'};
 const recoverySheet=()=>({title:'完整练习',objective:'求导训练',questions:Array.from({length:3},(_,i)=>({id:i+1,level:i?'巩固':'基础',type:'填空',stem:'求第'+i+'个函数的导数。',choices:[],answer:'完整答案。',analysis:'使用求导法则。',points:['结果正确得5分。'],maxScore:5,minutes:5}))});
-test('历史恢复执行完整图题语义检查，如图无图不能写入ready',async()=>{
+test('历史格式恢复不凭图示关键词判断题意，保留原题供审阅',async()=>{
  const store=new stores.MemoryStore(),key='jobs/test/recovery-missing-figure',sheet=recoverySheet();sheet.questions[0].stem='函数图像如图所示，求导数。';
  await store.create(key+'/diagnostic.json',{raw:JSON.stringify(sheet)});
  const result=await recovery.revalidateResult(store,key,{type:'exercise',input:recoveryRequest},{status:'failed',error:'MODEL_CONTENT_INVALID',finishedAt:10000});
- assert.equal(result.status,'failed');assert.equal(await store.get(key+'/recovered.json'),null);
+ assert.equal(result.status,'ready');assert.deepEqual(result.sheet,sheet);
 });
-test('历史恢复拒绝学科不匹配图示和图中坏公式标签',async()=>{
+test('历史恢复接受跨科受控图示，仍拒绝不能正常显示的公式标签',async()=>{
  const store=new stores.MemoryStore(),circuit={kind:'science',caption:'电路',description:'电源与电阻串联。',spec:{family:'circuit',nodes:[{id:'a',x:100,y:100},{id:'b',x:300,y:100}],branches:[{from:'a',to:'b',component:'resistor',label:'R'}]}},plot={kind:'plot',caption:'函数图像',description:'一条直线。',xLabel:'$x$',yLabel:'y',xRange:[0,1],yRange:[0,1],series:[{label:'y',points:[[0,0],[1,1]]}]};
  for(const [name,diagram] of [['subject',circuit],['label',plot]]){
   const key='jobs/test/recovery-'+name,sheet=recoverySheet();sheet.questions[0].diagram=diagram;
   await store.create(key+'/diagnostic.json',{raw:JSON.stringify(sheet)});
   const result=await recovery.revalidateResult(store,key,{type:'exercise',input:recoveryRequest},{status:'failed',error:'MODEL_CONTENT_INVALID',finishedAt:10000});
-  assert.equal(result.status,'failed');assert.equal(await store.get(key+'/recovered.json'),null);
+  assert.equal(result.status,name==='subject'?'ready':'failed');if(name==='label')assert.equal(await store.get(key+'/recovered.json'),null);
  }
 });
 test('pipeline2待独立图示的恢复接续完整图示流程，不直接ready漏图',async()=>{
