@@ -1648,7 +1648,7 @@ body[data-motion=calm] button{transition:none}
 .work-section-head p{margin:0;max-width:54ch;font-size:10.5px;line-height:1.75;color:var(--muted);overflow-wrap:anywhere}
 .support-head{margin-top:2px}
 
-/* Cloud OpenAI OAuth accounts: no local helper, device code stays in memory. */
+/* Cloud OpenAI OAuth accounts: browser callback stays in memory. */
 .workbench-cloud{min-width:0}
 .cloud-head{align-items:flex-start}
 .cloud-head>div{flex:1 1 320px}
@@ -1728,7 +1728,7 @@ body[data-motion=calm] button{transition:none}
 .cloud-empty b{display:block;font-size:12.5px;font-weight:550;line-height:1.6;color:var(--ink)}
 .cloud-empty p{margin:3px 0 0;font-size:10.5px;line-height:1.75;color:var(--muted);overflow-wrap:anywhere}
 
-/* Device-code flow: one in-memory state, copy feedback and a verified link. */
+/* Browser OAuth first: official page, manual callback handoff, device fallback. */
 .cloud-flow{margin-top:13px;min-width:0}
 .cloud-flow-inner{
   padding:13px 15px;border:1px solid #ffffffa8;border-radius:var(--radius-inner);
@@ -1781,6 +1781,42 @@ body[data-motion=calm] button{transition:none}
 .cloud-expiry{margin:8px 0 0;font-size:9.5px;line-height:1.7;color:var(--muted);overflow-wrap:anywhere}
 .cloud-warning{margin:8px 0 0;font-size:9.5px;line-height:1.72;color:#9b493c;overflow-wrap:anywhere}
 .cloud-safe{margin:9px 0 0;font-size:9.5px;line-height:1.7;color:var(--muted);overflow-wrap:anywhere}
+.cloud-callback-zone{margin-top:10px;min-width:0}
+.cloud-callback{display:grid;gap:6px;margin:0;min-width:0}
+.cloud-callback-label{font-size:10.5px;line-height:1.6;color:var(--ink)}
+.cloud-callback-line{display:flex;align-items:stretch;gap:6px;flex-wrap:wrap;min-width:0}
+.cloud-callback-input{
+  flex:1 1 240px;min-width:0;min-height:36px;padding:7px 10px;
+  border:1px solid #ffffffb0;border-radius:var(--radius-control);
+  background:#ffffffe0;box-shadow:var(--material-inset-shadow);
+  color:var(--ink);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:10.5px;line-height:1.5;white-space:nowrap;overflow-x:auto;text-overflow:clip;
+  transition:border-color var(--motion-control) var(--motion-ease),box-shadow var(--motion-control) var(--motion-ease);
+}
+.cloud-callback-input::placeholder{color:#7d94a8;font-family:inherit}
+.cloud-callback-input:focus{outline:none;border-color:#8fb3cf;box-shadow:var(--material-inset-shadow),0 0 0 3px #244f7014}
+.cloud-callback-input:disabled{opacity:.62}
+.cloud-callback-submit{flex:0 0 auto;min-height:36px;padding:6px 12px;font-size:10.5px;white-space:normal}
+.cloud-callback-help{margin:0;font-size:9.5px;line-height:1.65;color:var(--muted);overflow-wrap:anywhere}
+.cloud-callback-error{margin:0;font-size:9.5px;line-height:1.65;color:#9b493c;overflow-wrap:anywhere}
+.cloud-callback-error[hidden]{display:none}
+.cloud-callback-done{display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap;padding:9px 11px;border-radius:var(--radius-inner);background:#ffffff70;box-shadow:var(--material-inset-shadow)}
+.cloud-callback-done-mark{flex:none;width:7px;height:7px;margin-top:5px;border-radius:50%;background:#3f7b62;box-shadow:0 0 0 3px #3f7b6214}
+.cloud-callback-done div{flex:1 1 190px;min-width:0}
+.cloud-callback-done b{display:block;font-size:10.5px;font-weight:550;line-height:1.6;color:var(--ink)}
+.cloud-callback-done span{display:block;margin-top:1px;font-size:9.5px;line-height:1.65;color:var(--muted);overflow-wrap:anywhere}
+.cloud-callback-done>button{flex:none;min-height:28px;padding:3px 8px;font-size:10px}
+.cloud-fallback{margin-top:10px;min-width:0}
+.cloud-fallback summary{
+  display:inline-flex;align-items:center;gap:5px;min-height:30px;padding:3px 8px;
+  list-style:none;cursor:pointer;border-radius:var(--radius-control);
+  color:var(--muted);font-size:9.5px;line-height:1.6;
+  transition:background-color var(--motion-control) var(--motion-ease),color var(--motion-control) var(--motion-ease);
+}
+.cloud-fallback summary::-webkit-details-marker{display:none}
+.cloud-fallback summary:hover{background:#ffffff6b;color:var(--ink)}
+.cloud-fallback p{margin:4px 0 0;padding:0 2px;font-size:9.5px;line-height:1.7;color:var(--muted);overflow-wrap:anywhere}
+.cloud-fallback button{margin-top:7px;min-height:32px;padding:5px 10px;font-size:10.5px}
 .cloud-op-state{margin:10px 0 0;font-size:10px;line-height:1.7;color:var(--muted);overflow-wrap:anywhere}
 .cloud-op-state:empty{display:none}
 
@@ -1987,6 +2023,12 @@ body[data-motion=calm] button{transition:none}
   .cloud-flow-head>button{margin-left:19px}
   .cloud-device{width:100%}
   .cloud-device-code{font-size:15px}
+  .cloud-callback-line{display:grid;grid-template-columns:minmax(0,1fr)}
+  .cloud-callback-input{font-size:16px;min-height:44px}
+  .cloud-callback-submit{width:100%}
+  .cloud-callback-done{gap:6px 8px}
+  .cloud-callback-done>button{margin-left:15px}
+  .cloud-fallback summary{font-size:10px}
   .secondary-count{display:none}
 }
 @media(prefers-reduced-motion:reduce){

@@ -1,6 +1,8 @@
-// Cloud OpenAI OAuth accounts. The browser never receives an OAuth token, and
-// the only value persisted here is the authorization attempt id, so a reload
-// can resume polling without keeping a device code or credential.
+// Cloud OpenAI OAuth accounts. The default flow is the official browser OAuth
+// page; when its loopback callback is unreachable from the cloud page, the
+// teacher copies the complete callback URL back here. The browser never receives
+// an OAuth token, and the only value persisted is the authorization attempt id,
+// so a reload can resume polling without keeping a callback or credential.
 import {esc} from '../app/ui/html.js';
 
 export const CLOUD_AUTH_STORAGE='jianwei-cloud-auth-attempt';
@@ -45,8 +47,9 @@ const numeric=value=>{
 const percentText=value=>Number.isFinite(value)?String(Math.round(value*10)/10).replace(/\.0$/,'')+'%':'未返回';
 const minuteText=value=>!Number.isFinite(value)?'未返回':value>=1440&&value%1440===0?value/1440+' 天':value>=60&&value%60===0?value/60+' 小时':Math.round(value*10)/10+' 分钟';
 
-// Only the exact official device page is allowed. No other host, protocol,
-// port, credentials, query string or fragment may reach an anchor href.
+// Only the exact official device page is allowed for the optional fallback.
+// No other host, protocol, port, credentials, query string or fragment may
+// reach an anchor href.
 export function verificationUrl(value){
  const raw=String(value??'');
  if(raw!==raw.trim()||raw.includes('?')||raw.includes('#'))return '';
@@ -55,6 +58,53 @@ export function verificationUrl(value){
   if(url.protocol!=='https:'||url.hostname!=='auth.openai.com'||url.port)return '';
   if(url.username||url.password)return '';
   if(url.pathname!=='/codex/device'||url.search||url.hash)return '';
+  return url.href;
+ }catch{return '';}
+}
+
+const LOOPBACK_HOSTS=new Set(['localhost','127.0.0.1','[::1]']);
+
+function loopbackCallback(value){
+ try{
+  const url=new URL(String(value??''));
+  if(url.protocol!=='http:'&&url.protocol!=='https:')return false;
+  if(!LOOPBACK_HOSTS.has(url.hostname))return false;
+  if(url.username||url.password||url.search||url.hash)return false;
+  return url.pathname==='/auth/callback';
+ }catch{return false;}
+}
+
+// Only the real official authorization endpoint may become an anchor href.
+// The redirect must be a loopback /auth/callback, and the request must carry
+// exactly one state and one PKCE challenge.
+export function authorizationUrl(value){
+ const raw=String(value??'');
+ if(raw!==raw.trim()||raw.includes('#'))return '';
+ try{
+  const url=new URL(raw);
+  if(url.protocol!=='https:'||url.hostname!=='auth.openai.com'||url.port)return '';
+  if(url.username||url.password||url.pathname!=='/oauth/authorize'||url.hash)return '';
+  const state=url.searchParams.getAll('state'),challenge=url.searchParams.getAll('code_challenge'),redirect=url.searchParams.getAll('redirect_uri');
+  if(state.length!==1||!state[0]||challenge.length!==1||!challenge[0]||redirect.length!==1)return '';
+  if(!loopbackCallback(redirect[0]))return '';
+  return url.href;
+ }catch{return '';}
+}
+
+// The browser returns to a loopback address that the cloud page cannot receive.
+// Accept only that callback shape, with exactly one non-empty code and state.
+// The backend still verifies both against the current attempt.
+export function callbackUrl(value){
+ const raw=String(value??'').trim();
+ if(!raw||raw.includes('#')||/\s/.test(raw))return '';
+ try{
+  const url=new URL(raw);
+  if(url.protocol!=='http:'&&url.protocol!=='https:')return '';
+  if(!LOOPBACK_HOSTS.has(url.hostname))return '';
+  if(url.username||url.password||url.pathname!=='/auth/callback'||url.hash)return '';
+  if(url.searchParams.has('error'))return '';
+  const code=url.searchParams.getAll('code'),state=url.searchParams.getAll('state');
+  if(code.length!==1||!code[0]||state.length!==1||!state[0])return '';
   return url.href;
  }catch{return '';}
 }
@@ -184,12 +234,13 @@ async function writeClipboard(text){
 export function createCloudAccountPanel({root,api,requests,session,onAuthRequired,wakeDefaults}){
  if(!root)return {load:async()=>{},forget(){},resume(){},render(){}};
  const node=id=>root.querySelector('#'+id);
- const statusNode=node('cloud-accounts-status'),listNode=node('cloud-account-list'),flowNode=node('cloud-auth-flow'),opNode=node('cloud-op-state'),addButton=node('cloud-account-add'),refreshButton=node('cloud-account-refresh');
+ const statusNode=node('cloud-accounts-status'),listNode=node('cloud-account-list'),flowNode=node('cloud-auth-flow'),opNode=node('cloud-op-state'),addButton=node('cloud-account-add'),refreshButton=node('cloud-account-refresh'),deviceFallback=node('cloud-device-fallback'),deviceButton=node('cloud-device-start');
  let data=null,loadError='',loading=null,active=true,busy=false;
  let attempt=null,flow=null,authBusy=false,cancelBusy=false,needsAuth=false;
  let operation=null,lastOperation='';
  let epoch=0,authEpoch=0,opEpoch=0,authTimer=0,opTimer=0,authAttempts=0,opAttempts=0;
- let flowStamp='';
+ let flowStamp='',callbackForm=null,callbackInput=null,callbackErrorNode=null,callbackSubmit=null;
+ let callbackBusy=false,callbackPending=false,callbackCompose=false,callbackError='';
 
  try{
   const saved=safeId(localStorage.getItem(CLOUD_AUTH_STORAGE));
@@ -211,8 +262,15 @@ export function createCloudAccountPanel({root,api,requests,session,onAuthRequire
  function rememberAttempt(id){
   try{if(id)localStorage.setItem(CLOUD_AUTH_STORAGE,id);else localStorage.removeItem(CLOUD_AUTH_STORAGE);}catch{}
  }
+ function resetCallback({keepInput=false}={}){
+  callbackBusy=false;callbackPending=false;callbackCompose=false;callbackError='';
+  if(callbackInput&&!keepInput)callbackInput.value='';
+  updateCallbackForm();
+ }
  function clearAttempt(){
-  clearTimeout(authTimer);authTimer=0;attempt=null;authBusy=false;authAttempts=0;rememberAttempt('');
+  clearTimeout(authTimer);authTimer=0;attempt=null;authBusy=false;authAttempts=0;
+  resetCallback();
+  rememberAttempt('');
  }
  function stopAuth(){
   authEpoch++;clearAttempt();
@@ -301,7 +359,7 @@ export function createCloudAccountPanel({root,api,requests,session,onAuthRequire
   }
   const accounts=Array.isArray(data.accounts)?data.accounts:[];
   if(!accounts.length){
-   listNode.innerHTML='<div class="cloud-empty"><b>还没有云端官方账号</b><p>点上方“添加账号”，使用现有 ChatGPT / OpenAI 账号在官方页面确认；授权成功后才会加入。</p></div>';
+   listNode.innerHTML='<div class="cloud-empty"><b>还没有云端官方账号</b><p>点上方“添加账号”，在官方浏览器页面登录；若浏览器无法跳回本机，再把完整回调链接粘贴回本页。授权成功后才会加入。</p></div>';
    return;
   }
   const current=accounts.find(account=>account.active||String(account.id)===String(data.activeId))||null;
@@ -311,31 +369,151 @@ export function createCloudAccountPanel({root,api,requests,session,onAuthRequire
 
  function flowHTML(){
   if(!flow)return '';
-  const safe=verificationUrl(flow.verificationUrl),hasRaw=!!flow.verificationUrl;
-  const code=flow.userCode?String(flow.userCode):'';
+  const kind=flow.kind==='device'?'device':'browser',browser=kind==='browser';
   const expires=flow.expiresAt?cloudTime(flow.expiresAt):'';
-  const busy=FLOW_BUSY.has(flow.state);
-  const dismiss=FLOW_TERMINAL.has(flow.state)?'<button type="button" class="quiet" data-cloud-dismiss>关闭</button>':!busy&&flow.state!=='auth'?'<button type="button" class="quiet" data-cloud-dismiss>关闭</button>':'';
+  const busy=FLOW_BUSY.has(flow.state),active=['starting','queued','waiting'].includes(flow.state);
+  const dismiss=FLOW_TERMINAL.has(flow.state)||(!busy&&flow.state!=='auth')?'<button type="button" class="quiet" data-cloud-dismiss>关闭</button>':'';
   const cancel=busy&&attempt?'<button type="button" class="quiet" data-cloud-cancel'+(cancelBusy?' disabled':'')+'>停止本次授权</button>':'';
-  const stage=flow.state==='complete'?3:flow.state==='waiting'?2:1;
-  const steps=['auth','failed','cancelled','expired'].includes(flow.state)?'':'<ol class="cloud-flow-steps">'+['云端创建本次授权','在官方页面确认设备码','账号更新并可切换'].map((label,index)=>'<li class="'+(flow.state==='complete'||index+1<stage?'is-done':index+1===stage?'is-current':'')+'">'+esc(label)+'</li>').join('')+'</ol>';
-  const device=code?'<div class="cloud-device"><span class="cloud-device-label">设备码</span><code class="cloud-device-code">'+esc(code)+'</code><button type="button" class="cloud-copy" data-cloud-copy>复制设备码</button></div>':'';
-  const link=safe?'<div class="cloud-link"><a class="cloud-open" href="'+esc(safe)+'" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">打开官方授权页面 ↗</a><span>'+esc(safe)+'</span></div>':hasRaw?'<p class="cloud-warning">官方链接未通过校验，已隐藏；请停止后重试。</p>':flow.state==='waiting'?'<p class="cloud-warning">官方页面链接尚未返回，请稍候或停止后重新开始。</p>':'';
-  const expiry=(flow.state==='queued'||flow.state==='waiting')?'<p class="cloud-expiry">'+(expires?'设备码在 '+esc(expires)+' 前有效。':'有效期以官方页面为准。')+'</p>':'';
+  const stage=flow.state==='complete'||browser&&(flow.callbackSubmitted||callbackPending)?3:flow.state==='waiting'?2:1;
+  const labels=browser?['打开官方登录页面','完成登录后粘贴返回链接','云端确认并保存账号']:['云端创建本次授权','在官方页面输入设备码','账号更新并可切换'];
+  const steps=['auth','failed','cancelled','expired'].includes(flow.state)?'':'<ol class="cloud-flow-steps">'+labels.map((label,index)=>'<li class="'+(flow.state==='complete'||index+1<stage?'is-done':index+1===stage?'is-current':'')+'">'+esc(label)+'</li>').join('')+'</ol>';
+  let body='';
+  if(browser){
+   const safe=authorizationUrl(flow.authorizationUrl),hasRaw=!!flow.authorizationUrl;
+   const submitted=callbackPending||!!flow.callbackSubmitted;
+   const link=active?(safe?'<div class="cloud-link"><a class="cloud-open" href="'+esc(safe)+'" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">打开官方登录页面 ↗</a><span>官方地址 · auth.openai.com</span></div>':hasRaw?'<p class="cloud-warning">官方登录链接未通过校验，已隐藏；请停止后重新开始。</p>':flow.state==='waiting'?'<p class="cloud-warning">官方登录链接尚未返回，请稍候或停止后重新开始。</p>':''):'';
+   const done=flow.state==='waiting'&&submitted?'<div class="cloud-callback-done"><span class="cloud-callback-done-mark" aria-hidden="true"></span><div><b>返回链接已提交</b><span>正在验证并保存账号，请稍候。</span></div>'+(callbackCompose?'':'<button type="button" class="quiet" data-cloud-callback-edit>重新粘贴链接</button>')+'</div>':'';
+   const zone=flow.state==='waiting'?'<div class="cloud-callback-zone" data-cloud-callback-slot>'+done+'</div>':'';
+   const expiry=active?'<p class="cloud-expiry">'+(expires?'本次授权在 '+esc(expires)+' 前有效。':'有效期以官方页面为准。')+'</p>':'';
+   body=link+zone+expiry;
+  }else{
+   const safe=verificationUrl(flow.verificationUrl),hasRaw=!!flow.verificationUrl;
+   const code=flow.userCode?String(flow.userCode):'';
+   const device=code?'<div class="cloud-device"><span class="cloud-device-label">设备码</span><code class="cloud-device-code">'+esc(code)+'</code><button type="button" class="cloud-copy" data-cloud-copy>复制设备码</button></div>':'';
+   const link=active?(safe?'<div class="cloud-link"><a class="cloud-open" href="'+esc(safe)+'" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">打开官方授权页面 ↗</a><span>'+esc(safe)+'</span></div>':hasRaw?'<p class="cloud-warning">官方链接未通过校验，已隐藏；请停止后重试。</p>':flow.state==='waiting'?'<p class="cloud-warning">官方页面链接尚未返回，请稍候或停止后重新开始。</p>':''):'';
+   const expiry=active?'<p class="cloud-expiry">'+(expires?'设备码在 '+esc(expires)+' 前有效。':'有效期以官方页面为准。')+'</p>':'';
+   body=device+link+expiry;
+  }
   return '<div class="cloud-flow-inner is-'+esc(flow.state)+'" role="status" aria-live="polite">'+
    '<div class="cloud-flow-head"><span class="cloud-flow-mark" aria-hidden="true"></span><div class="cloud-flow-copy"><b>'+esc(flow.title||'')+'</b><p>'+esc(flow.text||'')+'</p></div>'+cancel+dismiss+'</div>'+
-   steps+device+link+expiry+
-   '<p class="cloud-safe">本页不保存令牌、设备码或密码；刷新后只凭本次授权编号继续查询。</p>'+
+   steps+body+
+   '<p class="cloud-safe">'+(browser?'返回链接仅用于本次授权，不保存在浏览器中。':'本页不保存令牌、设备码或密码；刷新后只凭本次授权编号继续查询。')+'</p>'+
   '</div>';
+ }
+
+ function updateCallbackForm(){
+  if(!callbackForm)return;
+  const disabled=callbackBusy||callbackPending;
+  if(callbackInput){callbackInput.disabled=disabled;callbackInput.setAttribute('aria-invalid',callbackError?'true':'false');}
+  if(callbackSubmit)callbackSubmit.disabled=disabled;
+  if(callbackErrorNode){callbackErrorNode.textContent=callbackError;callbackErrorNode.hidden=!callbackError;}
+ }
+ function ensureCallbackForm(){
+  if(callbackForm||typeof document==='undefined')return callbackForm;
+  const form=document.createElement('form');
+  form.className='cloud-callback';
+  form.noValidate=true;
+  form.setAttribute('data-cloud-callback-form','');
+  const label=document.createElement('label');
+  label.className='cloud-callback-label';
+  label.htmlFor='cloud-callback-url';
+  label.textContent='完成登录后，粘贴浏览器地址栏里的完整链接';
+  const line=document.createElement('div');
+  line.className='cloud-callback-line';
+  const input=document.createElement('input');
+  input.type='url';
+  input.id='cloud-callback-url';
+  input.className='cloud-callback-input';
+  input.placeholder='http://localhost:1455/auth/callback?code=…&state=…';
+  input.setAttribute('autocomplete','off');
+  input.setAttribute('autocapitalize','off');
+  input.setAttribute('spellcheck','false');
+  input.setAttribute('inputmode','url');
+  input.setAttribute('aria-describedby','cloud-callback-help');
+  const button=document.createElement('button');
+  button.type='submit';
+  button.className='primary cloud-callback-submit';
+  button.setAttribute('data-cloud-callback-submit','');
+  button.textContent='提交并完成授权';
+  line.appendChild(input);line.appendChild(button);
+  const help=document.createElement('p');
+  help.id='cloud-callback-help';
+  help.className='cloud-callback-help';
+  help.textContent='粘贴授权确认后地址栏中的完整返回链接；提交后会自动清空。';
+  const error=document.createElement('p');
+  error.className='cloud-callback-error';
+  error.setAttribute('data-cloud-callback-error','');
+  error.setAttribute('role','alert');
+  error.hidden=true;
+  form.appendChild(label);form.appendChild(line);form.appendChild(help);form.appendChild(error);
+  form.addEventListener('submit',event=>{event.preventDefault();return submitCallback();});
+  callbackForm=form;callbackInput=input;callbackErrorNode=error;callbackSubmit=button;
+  updateCallbackForm();
+  return form;
+ }
+ function attachCallbackForm(){
+  if(!flowNode||!flow)return;
+  const slot=flowNode.querySelector('[data-cloud-callback-slot]');
+  const show=flow.kind!=='device'&&flow.state==='waiting'&&((!flow.callbackSubmitted&&!callbackPending)||callbackCompose);
+  const form=show?ensureCallbackForm():callbackForm;
+  if(!form)return;
+  if(show&&slot){
+   if(form.parentNode!==slot)slot.appendChild(form);
+  }else if(form.parentNode){form.remove();}
+  updateCallbackForm();
  }
  function renderFlow(){
   if(!flowNode)return;
   flowNode.hidden=!flow;
-  if(!flow){flowStamp='';flowNode.innerHTML='';return;}
-  const stamp=JSON.stringify([flow.state,flow.title,flow.text,flow.verificationUrl,flow.userCode,flow.expiresAt,cancelBusy]);
-  if(stamp===flowStamp)return;
+  if(!flow){flowStamp='';flowNode.innerHTML='';if(callbackForm?.parentNode)callbackForm.remove();return;}
+  const stamp=JSON.stringify([flow.kind,flow.state,flow.title,flow.text,flow.authorizationUrl,flow.callbackSubmitted,flow.verificationUrl,flow.userCode,flow.expiresAt,cancelBusy,callbackBusy,callbackPending,callbackCompose]);
+  if(stamp===flowStamp){attachCallbackForm();return;}
   flowStamp=stamp;
+  const active=typeof document!=='undefined'?document.activeElement:null;
+  const focusedElement=active&&active.closest?.('[data-cloud-callback-form]')?active:null;
+  const focusedInput=focusedElement===callbackInput?callbackInput:null;
+  const start=focusedInput?focusedInput.selectionStart:0,end=focusedInput?focusedInput.selectionEnd:0;
   flowNode.innerHTML=flowHTML();
+  attachCallbackForm();
+  if(focusedElement?.isConnected){
+   try{
+    focusedElement.focus({preventScroll:true});
+    if(focusedInput)focusedInput.setSelectionRange(start,end);
+   }catch{}
+  }
+ }
+ function callbackFailureText(error){
+  if([400,409,422].includes(error?.status)||['CODEX_AUTHORIZATION_CONFLICT','CODEX_CALLBACK_INVALID','CODEX_AUTHORIZATION_CALLBACK_INVALID','REQUEST_ID_CONFLICT'].includes(error?.code))return '云端未接受这次回调：请确认粘贴的是刚刚完成登录后地址栏里的完整链接（含 code 与 state），且不要重复提交；若已提交，请稍候等待确认，或刷新后重试。';
+  return (cloudErrorText(error)||'本次回调未提交。')+' 请重新复制完整回调链接后再试。';
+ }
+ async function submitCallback(){
+  if(!attempt||!flow||flow.kind==='device'||flow.state!=='waiting'||callbackBusy||callbackPending)return;
+  const value=callbackInput?callbackInput.value:'';
+  const callback=callbackUrl(value);
+  if(!callback){
+   callbackError='请粘贴完成登录后地址栏里的完整回调链接（需包含 code 与 state），不要粘贴官方登录页链接。';
+   updateCallbackForm();
+   renderStatus('回调链接未通过本地校验，请重新复制完整链接。',true);
+   return;
+  }
+  const mark=authEpoch,id=attempt.id,ticket=requests.begin('cloud-auth-callback');
+  callbackBusy=true;callbackError='';
+  if(callbackInput)callbackInput.value='';
+  renderFlow();renderStatus('正在提交回调链接，等待云端校验…');
+  try{
+   await api('/admin/codex/authorize/'+encodeURIComponent(id)+'/callback',{method:'POST',id:requestId(),body:{callbackUrl:callback},keepSession:true});
+   if(mark!==authEpoch||!requests.current(ticket)||!allowed()||!attempt||!flow||flow.state!=='waiting'){callbackBusy=false;updateCallbackForm();return;}
+   callbackBusy=false;callbackPending=true;callbackCompose=false;
+   renderStatus('回调已提交，正在等待云端确认；确认前不会显示成功。');
+   renderAll();scheduleAuth(0);
+  }catch(error){
+   if(mark!==authEpoch||!requests.current(ticket)){callbackBusy=false;updateCallbackForm();return;}
+   callbackBusy=false;callbackPending=false;
+   if(authError(error)){callbackError='';if(callbackInput&&!callbackInput.value)callbackInput.value=callback;authRequired(true);return;}
+   callbackError=callbackFailureText(error);callbackCompose=true;
+   renderStatus(callbackError,true);
+   renderFlow();
+  }
  }
  function setFlow(next){flow=next;renderFlow();}
  function renderOperation(){
@@ -345,20 +523,22 @@ export function createCloudAccountPanel({root,api,requests,session,onAuthRequire
   opNode.hidden=!text;
  }
  function updateActions(){
-  const enabled=data?.enabled===true;
-  if(addButton){addButton.hidden=!enabled;addButton.disabled=!enabled||busy||authBusy||!!attempt||!!operation||needsAuth;}
+  const enabled=data?.enabled===true,idle=enabled&&!attempt&&!operation&&!busy&&!authBusy&&!needsAuth&&allowed();
+  if(addButton){addButton.hidden=!enabled;addButton.disabled=!idle;}
   if(refreshButton)refreshButton.disabled=!allowed()||busy||authBusy||!!operation;
+  if(deviceFallback)deviceFallback.hidden=!(idle&&!flow);
+  if(deviceButton)deviceButton.disabled=!(idle&&!flow);
  }
  function renderAll(){renderList();renderFlow();renderOperation();updateActions();}
  function render(){renderAll();}
 
  function authRequired(forAttempt=true){
-  needsAuth=true;authBusy=false;cancelBusy=false;
+  needsAuth=true;authBusy=false;cancelBusy=false;callbackBusy=false;callbackError='';
   if(!data)loadError='教师验证已过期，重新输入动态验证码后加载云端账号。';
   clearTimeout(authTimer);authTimer=0;clearTimeout(opTimer);opTimer=0;
   if(forAttempt&&(attempt||flow)){
    const previous=flow&&['starting','queued','waiting','cancelling','auth'].includes(flow.state)?flow:{state:'auth'};
-   setFlow({...previous,state:'auth',title:'教师验证已过期',text:'重新输入动态验证码后，本次授权会继续查询；设备码可能仍在有效期内。'});
+   setFlow({...previous,state:'auth',title:'教师验证已过期',text:'重新输入动态验证码后，本次授权会继续查询；本次授权可能仍在有效期内。'});
   }
   renderStatus('教师验证已过期，请重新输入动态验证码；云端账号与本次授权进度会保留。',true);
   renderAll();
@@ -377,11 +557,12 @@ export function createCloudAccountPanel({root,api,requests,session,onAuthRequire
     if(mark!==epoch||!requests.current(ticket)||!allowed())return null;
     data=next&&typeof next==='object'?next:null;
     loadError='';needsAuth=false;
-    if(data?.enabled!==true||(!attempt&&flow?.state==='auth')){flow=null;flowStamp='';}
+    if(data?.enabled!==true){flow=null;flowStamp='';resetCallback();}
+    else if(!attempt&&flow?.state==='auth'){flow=null;flowStamp='';}
     if(data)renderStatus(data.enabled===true?(data.accounts?.length?data.accounts.length+' 个云端账号 · 独立管理授权会话':'还没有云端官方账号'):'云端官方授权未启用，当前仍使用已配置的模型服务');
     renderAll();
     if(data?.enabled===true&&attempt&&!needsAuth){
-     if(!flow||['starting','queued','waiting','auth'].includes(flow.state))setFlow({...flow,state:'queued',title:'继续查询本次授权',text:'正在查询上次的官方授权进度…',expiresAt:attempt.expiresAt});
+     if(!flow||flow.state==='auth'||flow.state==='starting')setFlow({...flow,state:'queued',title:'继续查询本次授权',text:'正在查询上次的官方授权进度…',expiresAt:attempt.expiresAt});
      scheduleAuth(0);
     }
     if(data?.enabled===true&&operation?.id&&!opTimer)scheduleOperation(0);
@@ -398,16 +579,16 @@ export function createCloudAccountPanel({root,api,requests,session,onAuthRequire
   return loading;
  }
 
- async function begin(mode,accountId){
+ async function begin(mode,accountId,flowType='browser'){
   if(!data||data.enabled!==true||busy||authBusy||needsAuth)return;
   stopAuth();
-  const mark=authEpoch;
+  const mark=authEpoch,kind=flowType==='device'?'device':'browser',browser=kind==='browser';
   authBusy=true;cancelBusy=false;needsAuth=false;
-  setFlow({state:'starting',title:mode==='add'?'正在添加 OpenAI 账号':'正在重新授权',text:'正在向云端申请一次性授权，请稍候…'});
-  renderStatus('正在申请 OpenAI 官方授权…');
+  setFlow({kind,state:'starting',title:mode==='add'?'正在添加 OpenAI 账号':'正在重新授权',text:browser?'正在向云端申请浏览器登录链接，请稍候…':'正在向云端申请备用设备码，请稍候…'});
+  renderStatus(browser?'正在申请 OpenAI 官方浏览器授权…':'正在申请 OpenAI 官方设备码…');
   renderAll();
   try{
-   const result=await api('/admin/codex/authorize',{method:'POST',id:requestId(),body:mode==='add'?{mode:'add'}:{mode:'reauthorize',accountId},keepSession:true});
+   const result=await api('/admin/codex/authorize',{method:'POST',id:requestId(),body:{...(mode==='add'?{mode:'add'}:{mode:'reauthorize',accountId}),flow:kind},keepSession:true});
    if(mark!==authEpoch||!allowed()){
     authBusy=false;renderAll();return;
    }
@@ -416,9 +597,19 @@ export function createCloudAccountPanel({root,api,requests,session,onAuthRequire
    attempt={id,expiresAt:deadline(result.expiresAt)};
    rememberAttempt(id);
    authBusy=false;
-   const state=result.status==='waiting'?'waiting':'queued';
-   setFlow({state,title:state==='waiting'?'等待在官方页面确认':'正在准备官方页面',text:state==='waiting'?'请在官方页面输入设备码并确认；此页会自动查询结果，无需本机助手。':'云端正在生成设备码，请稍候…',expiresAt:attempt.expiresAt});
-   renderStatus(state==='waiting'?'等待在官方页面确认，完成后会自动刷新账号。':'云端正在准备官方设备码…');
+   const state=result.status==='waiting'?'waiting':'queued',replyKind=result?.flow==='device'||result?.flow==='browser'?result.flow:kind,repliedBrowser=replyKind==='browser';
+   const waiting=state==='waiting';
+   setFlow({
+    kind:replyKind,state,
+    title:repliedBrowser?(waiting?'在官方浏览器完成登录':'正在准备官方登录页面'):(waiting?'等待在官方页面确认':'正在准备官方设备码'),
+    text:repliedBrowser?(waiting?'打开官方页面登录并确认。若返回后提示无法访问，复制地址栏完整链接，回到这里粘贴提交即可。':'云端正在生成一次性浏览器登录链接，请稍候…'):(waiting?'请在官方页面输入设备码并确认；此页会自动查询结果。':'云端正在生成设备码，请稍候…'),
+    authorizationUrl:repliedBrowser?result.authorizationUrl:'',
+    callbackSubmitted:repliedBrowser&&!!result.callbackSubmitted,
+    verificationUrl:replyKind==='device'?result.verificationUrl:'',
+    userCode:replyKind==='device'?result.userCode:'',
+    expiresAt:attempt.expiresAt
+   });
+   renderStatus(repliedBrowser?(waiting?'等待在官方页面登录；完成后粘贴返回链接。':'云端正在准备官方登录页面…'):(waiting?'等待在官方页面确认，完成后会自动刷新账号。':'云端正在准备官方设备码…'));
    renderAll();
    scheduleAuth(600);
   }catch(error){
@@ -469,13 +660,25 @@ export function createCloudAccountPanel({root,api,requests,session,onAuthRequire
    if(result.status==='cancelled'){failAuth('cancelled','本次授权已取消，当前账号未改变。');return;}
    if(result.status==='expired'){failAuth('expired','本次授权已过期，请重新开始；当前账号未改变。');return;}
    if(result.status==='waiting'){
-    setFlow({state:'waiting',title:'等待在官方页面确认',text:'请在官方页面输入设备码，并用现有 ChatGPT / OpenAI 账号确认。此页会自动查询结果，无需本机助手。',verificationUrl:result.verificationUrl,userCode:result.userCode,expiresAt:attempt.expiresAt});
-    renderStatus('等待在官方页面确认，完成后会自动刷新账号。');
+    const kind=result?.flow==='device'?'device':result?.flow==='browser'?'browser':result.verificationUrl&&!result.authorizationUrl?'device':'browser',browser=kind==='browser';
+    if(browser&&result.callbackSubmitted){callbackError='';callbackCompose=false;}
+    setFlow({
+     kind,state:'waiting',
+     title:browser?(result.callbackSubmitted?'正在完成账号授权':'在官方浏览器完成登录'):'等待在官方页面确认',
+     text:browser?(result.callbackSubmitted?'已收到返回链接，云端正在验证并保存账号；结果会自动更新。':'打开官方页面登录并确认。若返回后提示无法访问，复制地址栏完整链接，回到这里粘贴提交即可。'):'请在官方页面输入设备码，并用现有 ChatGPT / OpenAI 账号确认；此页会自动查询结果。',
+     authorizationUrl:browser?result.authorizationUrl:'',
+     callbackSubmitted:browser&&!!result.callbackSubmitted,
+     verificationUrl:browser?'':result.verificationUrl,
+     userCode:browser?'':result.userCode,
+     expiresAt:attempt.expiresAt
+    });
+    renderStatus(browser?(result.callbackSubmitted?'已收到返回链接，正在验证并保存账号…':'等待在官方页面登录；完成后粘贴返回链接。'):'等待在官方页面确认，完成后会自动刷新账号。');
     renderAll();scheduleAuth(2500);return;
    }
    if(attempt.expiresAt&&Date.now()>=attempt.expiresAt){failAuth('expired','本次授权已过期，请重新开始；当前账号未改变。');return;}
-   setFlow({state:'queued',title:'正在准备官方页面',text:'云端正在生成设备码，请稍候…',verificationUrl:result.verificationUrl,userCode:result.userCode,expiresAt:attempt.expiresAt});
-   renderStatus('云端正在准备官方设备码…');
+   const kind=result?.flow==='device'?'device':result?.flow==='browser'?'browser':flow?.kind==='device'?'device':'browser',browser=kind==='browser';
+   setFlow({kind,state:'queued',title:browser?'正在准备官方登录页面':'正在准备官方设备码',text:browser?'云端正在生成一次性浏览器登录链接，请稍候…':'云端正在生成设备码，请稍候…',authorizationUrl:browser?result.authorizationUrl:'',verificationUrl:browser?'':result.verificationUrl,userCode:browser?'':result.userCode,expiresAt:attempt.expiresAt});
+   renderStatus(browser?'云端正在准备官方登录页面…':'云端正在准备官方设备码…');
    renderAll();scheduleAuth(2000);
   }catch(error){
    if(mark!==authEpoch||!requests.current(ticket))return;
@@ -493,6 +696,7 @@ export function createCloudAccountPanel({root,api,requests,session,onAuthRequire
   authEpoch++;
   const id=attempt.id,mark=authEpoch,ticket=requests.begin('cloud-cancel');
   cancelBusy=true;clearTimeout(authTimer);authTimer=0;
+  resetCallback();
   if(flow)setFlow({...flow,title:'正在停止本次授权',text:'正在通知云端取消，请稍候…'});
   renderStatus('正在停止本次授权…');
   renderAll();
@@ -645,21 +849,26 @@ export function createCloudAccountPanel({root,api,requests,session,onAuthRequire
    const text=flow?.userCode?String(flow.userCode):'';
    if(!text)return;
    const original=copy.textContent;
-   writeClipboard(text).then(()=>{copy.textContent='已复制';copy.classList.add('is-copied');}).catch(()=>{copy.textContent='请手动选择';}).finally(()=>setTimeout(()=>{if(copy.isConnected){copy.textContent=original;copy.classList.remove('is-copied');}},1600));
+   return writeClipboard(text).then(()=>{copy.textContent='已复制';copy.classList.add('is-copied');}).catch(()=>{copy.textContent='请手动选择';}).finally(()=>setTimeout(()=>{if(copy.isConnected){copy.textContent=original;copy.classList.remove('is-copied');}},1600));
+  }
+  if(event.target.closest('[data-cloud-callback-edit]')){
+   callbackPending=false;callbackCompose=true;callbackError='';renderFlow();
+   try{callbackInput?.focus({preventScroll:true});}catch{}
    return;
   }
-  if(event.target.closest('[data-cloud-cancel]')){cancelAuth();return;}
-  if(event.target.closest('[data-cloud-dismiss]')){flow=null;renderFlow();return;}
-  if(event.target.closest('#cloud-account-add')){begin('add');return;}
-  if(event.target.closest('#cloud-account-refresh')){load({quiet:false});return;}
+  if(event.target.closest('[data-cloud-cancel]')){return cancelAuth();}
+  if(event.target.closest('[data-cloud-dismiss]')){flow=null;resetCallback();renderAll();return;}
+  if(event.target.closest('#cloud-account-add')){return begin('add');}
+  if(event.target.closest('#cloud-account-refresh')){return load({quiet:false});}
+  if(event.target.closest('#cloud-device-start')){return begin('add',undefined,'device');}
   const activeButton=event.target.closest('[data-cloud-active]');
-  if(activeButton){setActive(activeButton.dataset.cloudActive);return;}
+  if(activeButton){return setActive(activeButton.dataset.cloudActive);}
   const reauth=event.target.closest('[data-cloud-reauth]');
-  if(reauth){begin('reauthorize',reauth.dataset.cloudReauth);return;}
+  if(reauth){return begin('reauthorize',reauth.dataset.cloudReauth);}
   const quota=event.target.closest('[data-cloud-quota]');
-  if(quota){refreshQuota(quota.dataset.cloudQuota);return;}
+  if(quota){return refreshQuota(quota.dataset.cloudQuota);}
   const wake=event.target.closest('[data-cloud-wake]');
-  if(wake){wakeAccount(wake.dataset.cloudWake);return;}
+  if(wake){return wakeAccount(wake.dataset.cloudWake);}
  });
 
  function forget(){
@@ -668,6 +877,7 @@ export function createCloudAccountPanel({root,api,requests,session,onAuthRequire
   if(operation&&!operation.id)operation=null;
   busy=false;authBusy=false;cancelBusy=false;needsAuth=false;loading=null;loadError='';
   lastOperation='';flowStamp='';
+  resetCallback();
   if(statusNode){statusNode.textContent=data||attempt?'登录后继续查询云端官方账号。':'登录后加载云端官方账号。';statusNode.classList.remove('is-error');}
   updateActions();
  }
