@@ -14,7 +14,7 @@ test('流式与非流式Gemini截断均只发送一次，不把半份文档伪�
 });
 test('正常STOP不替代文档完整性校验，不修补缺失的题目或JSON',async()=>{let calls=0;await assert.rejects(generator.generate(input,{key:'test-only',onProgress:()=>{},transport:async(url,options)=>{calls++;options.onChunk(event({candidates:[{content:{parts:[{text:'{"questions":['}]},finishReason:'STOP'}]}));return{status:200,body:''};}}),e=>e.message==='MODEL_CONTENT_INVALID'&&e.diagnostic.kind==='document'&&e.diagnostic.completeSignal);assert.equal(calls,1);});
 test('命题提示提供一次JSON编码的完整字段示例，解码后公式反斜杠与真实换行正确',async()=>{
- const p=await generator.buildExercisePrompt(input),source=p.system.split('完整字段编码示例（仅说明格式，不是本次试题）：')[1].split('。提交前逐字段核对')[0],sample=JSON.parse(source);assert(sample.analysis.includes('$e=\\sqrt{3}$'));assert(sample.analysis.includes('\n'));assert(!sample.analysis.includes('\\n'));assert(!sample.stem.includes('\\quad'));assert.equal(p.template.version,'subject-templates-20261020.10');
+ const p=await generator.buildExercisePrompt(input),source=p.system.split('完整字段编码示例（仅说明格式，不是本次试题）：')[1].split('。提交前逐字段核对')[0],sample=JSON.parse(source);assert(sample.analysis.includes('$e=\\sqrt{3}$'));assert(sample.analysis.includes('\n'));assert(!sample.analysis.includes('\\n'));assert(!sample.stem.includes('\\quad'));assert.equal(p.template.version,'subject-templates-20261021.11');
 });
 import stores from '../backend/store.cjs';import worker from '../backend/worker.cjs';import diagnostic from '../backend/completion-diagnostics.cjs';import figures from '../backend/figure-pipeline.cjs';import {solidFigures} from './fixtures/exercise-figures.js';
 test('云端保留停止原因与用量，教师反馈不泄露原始响应，截断不重试付费请求',async()=>{

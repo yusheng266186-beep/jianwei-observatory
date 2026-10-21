@@ -1,6 +1,6 @@
 'use strict';
 const {curriculumBoundary}=require('./curriculum-boundaries.cjs');
-const version='subject-templates-20261020.10';
+const version='subject-templates-20261021.11';
 const templates={
  '语文':{focus:'阅读信息筛选、语言运用与表达',diagrams:['flow','bars'],rule:[
   '材料：现代文用完整原创材料，阅读同材料题组材料逐字一致；古诗文给足文本与必要注释，不让作答依赖未给出的背景；原创诗文标明自拟，不伪造作者、出处或摘编。',
@@ -96,7 +96,7 @@ const sichuanSubjects={
  '地理':'地理按单项选择和综合分析等非选择题组织，非选择题在Schema中用简答承载；图表、区域材料及空间尺度完整，设问围绕特征、成因、过程、影响等规范任务，不用孤立术语解释、地名连线或无材料问答代替试题。'
 };
 const diagramRule='图示可选：仅当本题考查确需图示且能准确绘制时配图；语文、语言材料阅读、纯代数运算等不因开放SVG权限而强行添加流程图、装饰图或答案提示图，整份练习可以没有图。';
-const examRuleFor=subject=>[sichuanRule,sichuanSubjects[subject],curriculumBoundary(subject),diagramRule].join('\n');
+const examRuleFor=subject=>[sichuanRule,sichuanSubjects[subject],curriculumBoundary(subject),require('./subject-scoring.cjs').subjectScoringGuide(subject),diagramRule].join('\n');
 const strategies={
  targeted:{label:'薄弱点专项',rule:'围绕教师已确认的targets和focus，先概念后应用；每题target明确，不按evidence未选项扩大知识点；题数不足时优先保证已选目标覆盖，不拆散完整题组。'},
  variation:{label:'同类变式',rule:'保留核心方法，改变情境、已知条件或设问角度；题数允许时使用不止一种设问，但不为凑设问拆散七选五、语法填空等完整题组；答案逐题独立验证，不把数字换皮当迁移。'},

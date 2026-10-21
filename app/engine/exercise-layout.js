@@ -12,3 +12,7 @@ export function alignExerciseLine(fragments){
  const baseline=Math.max(...fragments.map(f=>f.ascent)),depth=Math.max(...fragments.map(f=>f.descent));
  return {columns:fragments.map(f=>({width:f.width,stack:[f.node],margin:[0,baseline-f.ascent,0,0]})),columnGap:0,margin:[0,1,0,Math.max(3,16-baseline-depth)]};
 }
+
+// pdfmake multiplies the font's ascent/descent height, not the CSS em size.
+// Convert physical leading so Songti prose doesn't become looser than formula rows.
+export const exercisePDFLineHeight=(metrics,leading=1.4,measuredSize=11)=>measuredSize*leading/(metrics.ascent+metrics.descent);
