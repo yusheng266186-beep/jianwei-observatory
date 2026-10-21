@@ -16,7 +16,7 @@ const safeEqual=(a,b)=>{a=Buffer.from(String(a));b=Buffer.from(String(b));return
 const resumeFields=['status','error','failureDetail','resumeAvailable','requiresTextRegeneration','requiresImageRegeneration','contentReviewPipeline','figurePipeline','figureStage','figureQuestion','figureFailureCode','figureCompleted','figureTotal','figureRevision','groupRevision','groupIndex','groupCount','completedQuestions','repairRevision','deadlineAt','model','provider','reasoningEffort'];
 const resumeSummary=value=>Object.fromEntries(resumeFields.filter(key=>value?.[key]!==undefined).map(key=>[key,value[key]]));
 function read(req,{maxBytes=40000}={}){return new Promise((resolve,reject)=>{let size=0,chunks=[];req.on('data',c=>{size+=c.length;if(size>maxBytes){reject(error(413,'REQUEST_TOO_LARGE'));req.destroy();}else chunks.push(c);});req.on('end',()=>{try{resolve(JSON.parse(Buffer.concat(chunks).toString('utf8')||'{}'));}catch{reject(error(400,'INVALID_JSON'));}});req.on('error',reject);});}
-function createServer({store=new COSStore(),env=process.env,now=Date.now,dispatch=async()=>{},modelStore=store,authorizationControl,authorizationFactory}={}){
+function createServer({store=new COSStore(),env=process.env,now=Date.now,dispatch=async()=>{},modelStore=store,authorizationControl,authorizationFactory,codexControl}={}){
  const origins=(env.TRAINING_ORIGINS||'https://yusheng266186-beep.github.io').split(','),secret=env.TRAINING_SESSION_SECRET,totpSecret=env.TRAINING_TOTP_SECRET,owner=secret?hash(secret).slice(0,32):'';
  if(!secret||secret.length<32)throw new Error('AUTH_NOT_CONFIGURED');decodeSecret(totpSecret);
  const gate=hash(totpSecret).slice(0,20),control=createModelControl({store:modelStore,env,now}),usage=createUsageControl({store,controlStore:modelStore,owner,env,now});
@@ -25,6 +25,7 @@ function createServer({store=new COSStore(),env=process.env,now=Date.now,dispatc
  const authenticate=req=>{const token=(req.headers.authorization||'').replace(/^Bearer /,''),parts=token.split('.'),[payload,signature]=parts;if(parts.length!==2||!payload||!signature||!safeEqual(sign(payload),signature))throw error(401,'AUTH_REQUIRED');let data;try{data=JSON.parse(Buffer.from(payload,'base64url'));}catch{throw error(401,'AUTH_REQUIRED');}if(data.owner!==owner||data.gate!==gate||!Number.isFinite(data.expires)||data.expires<now())throw error(401,'AUTH_EXPIRED');return data;};
  let authControl=authorizationControl;
  const authz=()=>authControl||(authControl=authorizationFactory?authorizationFactory({store,env,now}):require('./openai-authorization.cjs').createAuthorizationControl({env,now}));
+ const codex=()=>codexControl||(codexControl=require('./codex-accounts.cjs').createControl({jobStore:store,owner,env,now,dispatch}));
  const server=http.createServer(async(req,res)=>{
   const origin=req.headers.origin||'',allowed=!origin||origins.includes(origin);const headers={'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer',...(origin&&allowed?{'Access-Control-Allow-Origin':origin,Vary:'Origin','Access-Control-Allow-Methods':'GET, POST, OPTIONS','Access-Control-Allow-Headers':'Content-Type, Authorization, X-Request-ID','Access-Control-Max-Age':'600'}:{})};
   const send=(status,data)=>{if(res.destroyed||res.writableEnded)return;res.writeHead(status,headers);res.end(JSON.stringify(data));};
@@ -42,6 +43,15 @@ function createServer({store=new COSStore(),env=process.env,now=Date.now,dispatc
    if(req.method==='POST'&&url.pathname==='/openai/authorization/claim')return send(200,await authz().claim(await read(req,{maxBytes:16384})));
    if(req.method==='POST'&&url.pathname==='/openai/authorization/complete')return send(200,await authz().complete(await read(req,{maxBytes:16384})));
    authenticate(req);
+   if(url.pathname==='/admin/codex/accounts'&&req.method==='GET')return send(200,await codex().accounts());
+   if(url.pathname==='/admin/codex/accounts/active'&&req.method==='POST')return send(200,await codex().activate(await read(req,{maxBytes:4096})));
+   if(url.pathname==='/admin/codex/authorize'&&req.method==='POST')return send(202,await codex().begin(await read(req,{maxBytes:4096}),req.headers['x-request-id']));
+   const codexAttempt=url.pathname.match(/^\/admin\/codex\/authorize\/([a-f0-9-]+)(\/cancel)?$/);
+   if(codexAttempt&&uuid.test(codexAttempt[1])){if(!codexAttempt[2]&&req.method==='GET')return send(200,await codex().status(codexAttempt[1]));if(codexAttempt[2]&&req.method==='POST'){const input=await read(req,{maxBytes:1024});if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).length)throw error(400,'CODEX_INPUT_INVALID');return send(200,await codex().cancel(codexAttempt[1]));}}
+   const codexAccount=url.pathname.match(/^\/admin\/codex\/accounts\/([a-f0-9]{32})\/(quota|wake)$/);
+   if(codexAccount&&req.method==='POST')return send(202,await codex().queueAccount(codexAccount[1],codexAccount[2],await read(req,{maxBytes:4096}),req.headers['x-request-id']));
+   const codexOperation=url.pathname.match(/^\/admin\/codex\/operations\/([a-f0-9-]+)$/);
+   if(codexOperation&&uuid.test(codexOperation[1])&&req.method==='GET')return send(200,await codex().operation(codexOperation[1]));
    if(url.pathname==='/admin/openai/accounts'&&req.method==='GET')return send(200,await authz().accounts());
    if(url.pathname==='/admin/openai/authorize'&&req.method==='POST')return send(200,await authz().begin(await read(req,{maxBytes:4096})));
    const openaiAttempt=url.pathname.match(/^\/admin\/openai\/authorize\/([a-f0-9-]+)(\/cancel)?$/);if(openaiAttempt&&uuid.test(openaiAttempt[1])){if(!openaiAttempt[2]&&req.method==='GET')return send(200,await authz().status(openaiAttempt[1]));if(openaiAttempt[2]&&req.method==='POST'){const body=await read(req,{maxBytes:1024});if(Object.keys(body).length)throw error(400,'TRAINING_INPUT_INVALID');return send(200,await authz().cancel(openaiAttempt[1]));}}

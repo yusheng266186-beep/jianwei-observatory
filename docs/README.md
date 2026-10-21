@@ -1,5 +1,6 @@
 # 文档总索引
 
+- [OpenAI 云端 OAuth 账号管理与原有计划通道的关系（2026-10-21）](OPENAI-CLOUD-OAUTH-2026-10-21.md)
 - [教师页底部核对与自适应排版（2026-10-21）](TEACHER-BOTTOM-REVIEW-2026-10-21.md)
 - [Cockpit 调研、跨设备授权缺口与云端账号方案（2026-10-21）](COCKPIT-REMOTE-ACCOUNT-REVIEW-2026-10-21.md)
 

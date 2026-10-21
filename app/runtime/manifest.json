@@ -31,7 +31,7 @@
   "landing": "assets/landing-8e0095cb7b55.css",
   "styles": [
     "assets/figure-library-20349b898c28.css",
-    "assets/model-workbench-8a71aa1cc53f.css",
+    "assets/model-workbench-684f2bce80e6.css",
     "styles/fields-a6e6da17cff4.css",
     "styles/reading-fonts-daadf771f13d.css",
     "styles/refinement-931faf8c3de1.css",
@@ -40,7 +40,7 @@
   ],
   "standalone": {
     "figures": "runtime/figure-library-EU3JHQHD.js",
-    "models": "runtime/model-workbench-QOST56IR.js"
+    "models": "runtime/model-workbench-56DYZIDP.js"
   },
   "files": [
     "app/runtime/prepare-NOKZSWUW.js",
@@ -88,11 +88,10 @@
     "app/runtime/shared-RMTIRWQZ.js",
     "app/runtime/shared-XT7OAR7V.js",
     "app/runtime/figure-library-EU3JHQHD.js",
-    "app/runtime/model-workbench-QOST56IR.js"
+    "app/runtime/model-workbench-56DYZIDP.js"
   ],
   "compatibility": [
-    "app/runtime/main-7CLPAC5H.js",
-    "app/runtime/shared-6JIC4AZK.js",
-    "assets/runtime-f783189b3d6d.css"
+    "app/runtime/model-workbench-QOST56IR.js",
+    "assets/model-workbench-8a71aa1cc53f.css"
   ]
 }

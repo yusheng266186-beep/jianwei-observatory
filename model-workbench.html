@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="referrer" content="no-referrer">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; connect-src https://1459223409-4t5ckc9dro.ap-chengdu.tencentscf.com; img-src 'self' data:; base-uri 'self'; form-action 'self'">
-<title>模型工作台 · 荣县一中</title><link rel="stylesheet" href="./assets/model-workbench-8a71aa1cc53f.css"><link rel="stylesheet" href="./styles/fields-a6e6da17cff4.css"><link rel="stylesheet" href="./styles/wheels-907315f6eddb.css"><link rel="stylesheet" href="./styles/refinement-931faf8c3de1.css"><link rel="stylesheet" href="./styles/reading-fonts-daadf771f13d.css"><link rel="stylesheet" href="./styles/visual-language-3c0502e6eb8a.css"><link rel="icon" type="image/png" href="./assets/school-crest-192.png?v=entry-v1">
-<script type="module" src="./app/runtime/model-workbench-QOST56IR.js"></script>
+<title>模型工作台 · 荣县一中</title><link rel="stylesheet" href="./assets/model-workbench-684f2bce80e6.css"><link rel="stylesheet" href="./styles/fields-a6e6da17cff4.css"><link rel="stylesheet" href="./styles/wheels-907315f6eddb.css"><link rel="stylesheet" href="./styles/refinement-931faf8c3de1.css"><link rel="stylesheet" href="./styles/reading-fonts-daadf771f13d.css"><link rel="stylesheet" href="./styles/visual-language-3c0502e6eb8a.css"><link rel="icon" type="image/png" href="./assets/school-crest-192.png?v=entry-v1">
+<script type="module" src="./app/runtime/model-workbench-56DYZIDP.js"></script>
 </head>
 <body class="workbench-page">
 <div class="ambient" aria-hidden="true"></div>
@@ -49,7 +49,33 @@
 <p id="message" class="message" role="status" hidden></p>
 
 <div id="workspace" hidden>
-  <section class="glass workbench-accounts panel" id="accounts-panel" aria-labelledby="accounts-title">
+  <section class="glass workbench-cloud panel" id="cloud-accounts-panel" aria-labelledby="cloud-accounts-title">
+    <header class="panel-head cloud-head">
+      <div>
+        <span class="eyebrow">OPENAI / 官方授权 · 跨设备登录</span>
+        <h2 id="cloud-accounts-title">OpenAI 官方授权</h2>
+        <p id="cloud-accounts-status" role="status" aria-live="polite">登录后加载云端官方账号。</p>
+      </div>
+      <div class="cloud-actions">
+        <button type="button" id="cloud-account-refresh" class="quiet" disabled>刷新名单 ↻</button>
+        <button type="button" id="cloud-account-add" class="primary" hidden>添加账号</button>
+      </div>
+    </header>
+    <div class="cloud-intro">
+      <p><b>无需本机助手。</b>使用现有 ChatGPT / OpenAI 账号，在官方页面完成 OAuth 确认；手机和电脑看到的是同一份云端账号。</p>
+      <p>不需要另行注册账号。本页只保存本次授权的查询编号；不保存令牌、设备码或密码。</p>
+    </div>
+    <div id="cloud-account-list" class="cloud-account-list" aria-label="云端官方账号"></div>
+    <section id="cloud-auth-flow" class="cloud-flow" hidden aria-live="polite"></section>
+    <p id="cloud-op-state" class="cloud-op-state" role="status" aria-live="polite"></p>
+  </section>
+
+  <details class="glass workbench-legacy" id="legacy-accounts">
+    <summary class="legacy-summary">
+      <span><b>现有计划通道</b><small>本机 127.0.0.1 授权助手 · 旧版流程，按需展开</small></span>
+      <span class="legacy-badge">保留</span>
+    </summary>
+  <section class="workbench-accounts panel" id="accounts-panel" aria-labelledby="accounts-title">
     <header class="panel-head accounts-head">
       <div>
         <span class="eyebrow">ACCOUNT / 官方账号</span>
@@ -82,6 +108,7 @@
       <p>账号令牌只在云端校验和保存；本页不保存 OAuth 令牌，也不读取其他工具的凭据。失败或取消时，当前账号保持不变。</p>
     </details>
   </section>
+  </details>
 
   <section class="glass model-role-panel panel workbench-brief" aria-labelledby="brief-title">
     <header class="panel-head brief-head">

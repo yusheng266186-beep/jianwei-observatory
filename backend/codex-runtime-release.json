@@ -1,0 +1,10 @@
+{
+  "version": "0.163.0",
+  "package": "@openai/codex@0.163.0-linux-x64",
+  "target": "x86_64-unknown-linux-musl",
+  "integrity": "sha512-uwRaOsrYogLQhcxAM/GoeWrw0QIWEMRo7c9gM8sKAviVkZQHlu9kRLJ5PkufbV+ABGjyZgIwiFdJ0LCJ0N6e8w==",
+  "files": {
+    "bin/codex": "399ff69c431c066e40de318fba45c2b07f45a76b19939d247ee4828fc70c4215",
+    "bin/codex-code-mode-host": "8724d73ec190536233ab4628d24a071bfbcf27e5124f08fe35129f26fe48b916"
+  }
+}
