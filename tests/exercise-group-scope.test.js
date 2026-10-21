@@ -101,6 +101,14 @@ test('学科复核接收冻结scope，不要求单组重复全卷目标，也不
  const reviewed=await contentCheck.reviewContent(documentFor(context,'第2组').sheet,part.input,{groupScope:context,complete:async capturedPrompt=>{captured=capturedPrompt;return {output:JSON.stringify({approved:true,issues:[],corrections:[]}),model:profile.model,usage:{input:1,output:1}};}});
  assert.equal(reviewed.approved,true);assert.deepEqual(captured.input.groupScope,context);
 });
+test('分组复核允许有依据修正明确分值，不新增maxScore冻结闸门',async()=>{
+ const part=groups.plan(request)[1],context=priorContext(),prompt=await contentCheck.buildReviewPrompt(documentFor(context,'第2组').sheet,part.input,{groupScope:context});
+ assert.match(prompt.system,/固定题号、题型和训练点不动/);
+ assert.match(prompt.system,/只有确认原分值与学科题型计分规则矛盾或小问合计有误时/);
+ assert.match(prompt.system,/reason须写明原值、正确值和依据/);
+ assert(!prompt.system.includes('不得新增、删除或改派题目、target、type、level、maxScore、minutes'));
+ assert(!context.slots.some(slot=>Object.hasOwn(slot,'maxScore')));
+});
 test('格式修复只保真原稿，不因整卷覆盖重新命题或把摘要当系统指令',async()=>{
  const part=groups.plan(request)[1],context=priorContext(),source=JSON.stringify(documentFor(context,'第2组').sheet),prompt=await generator.buildRepairPrompt(part.input,{output:source,validation:'字段格式错误'},{groupScope:context});
  assert.deepEqual(prompt.input.groupScope,context);

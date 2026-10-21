@@ -1,5 +1,9 @@
 # 个性化辅导后端
 
+工作台现在管理官方账号：`GET /admin/openai/accounts`、`POST /admin/openai/authorize`、`GET /admin/openai/authorize/:id`、`POST /admin/openai/authorize/:id/cancel` 均使用现有教师会话；本机助手只向固定的 claim/complete capability 路由转发一次性授权信息。详见[授权接口与存储说明](../docs/OPENAI-ACCOUNT-WORKBENCH-2026-10-21.md)。API 函数与 Worker 都必须保留 `OPENAI_PROXY_CONFIG`、`OPENAI_XRAY_PATH` 和 `jianwei-openai-xray` 层；只给 Worker 配置代理不能完成网页发起的授权。授权码只交换一次，JWKS 临时失败可在原 15 分钟窗口内恢复，已验证或已激活的落盘恢复不会重复换码。
+
+提示词版本 `subject-templates-20261021.13`，可运行 `node tools/export-training-prompts.cjs --out /绝对路径/新的导出目录` 导出实际编译内容。导出过程不调用模型、不读取账号密钥，教师选择以匿名示例覆盖。
+
 命题与学科复核共用 `teacher-brief.cjs` 核对教师要求；文字Schema去掉重复的逐题字段副本，传输Schema及冻结槽位不变。总分说明不再重复计分，格式修复保留真实诊断；续绘幂等与轻量续跑响应保持完整结果可恢复。详见[本轮目标与验收](../docs/OFFICIAL-GENERATION-IMPROVEMENT-2026-10-21.md)。
 
 各科出题与学科复核共用`subject-scoring.cjs`，示例按学科设置分值；前后端支持正常小数计分，确认的分值错误可声明后同步修订评分点，作文互斥分档不做求和拦截。见[学科计分与文档排版](../docs/DOCUMENT-POLISH-2026-10-21.md)。

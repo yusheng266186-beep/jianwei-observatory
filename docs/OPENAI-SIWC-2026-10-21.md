@@ -43,7 +43,7 @@ ChatGPT 套餐额度与账号共享，不等于无限调用。官方返回套餐
 
 ## 维护与重新授权
 
-授权与导入工具只由维护者在本机执行，不部署到网页，不对外接收凭据。私有目录必须在仓库外；其中复用 `tencent.credentials.json`、`jianwei-openai-host.json` 与 `jianwei-openai-siwc.json`。`OPENAI_ACCOUNT_FILE` 可指定本地独立记录文件名，不能含路径；不会通过换文件自动切换云端账号。
+早期维护者授权与导入命令保留。现在也可从模型工作台添加、重新授权与切换账号；无密钥本机助手只转发一次性回调，令牌在云端验证和保存，网页不接收原始令牌。私有目录必须在仓库外；其中复用 `tencent.credentials.json`、`jianwei-openai-host.json` 与 `jianwei-openai-siwc.json`。`OPENAI_ACCOUNT_FILE` 可指定本地独立记录文件名，不能含路径；不会通过换文件自动切换云端账号。
 
 ```sh
 TRAINING_PRIVATE_DIR=/absolute/private/directory npm run openai:login
@@ -59,7 +59,7 @@ npm run openai:import
 
 导入工具只接收已验证、未过期的授权记录，使用专属腾讯云凭据写入加密控制前缀，并标记云端拥有续期。它不会改变工作台的模型选择，也不会把其他账号静默覆盖到现有注册。
 
-Worker配置应保留 `OPENAI_PROXY_CONFIG`、`OPENAI_XRAY_PATH`、`OPENAI_SIWC_ENABLED=true` 与已绑定代理核心层；HTTP函数仅在 `TRAINING_CONFIGURED_PROVIDERS` 声明 `openai-chatgpt`，不持上游账号令牌。代码更新应保留现有环境、层、角色、网络、TOTP及控制区；不要用旧的初始化命令覆盖生产设置。
+Worker 与 HTTP API 都应保留 `OPENAI_PROXY_CONFIG`、`OPENAI_XRAY_PATH`、`OPENAI_SIWC_ENABLED=true` 与已绑定代理核心层；HTTP API 用于官方授权码交换及 JWKS 校验。两者都在 `TRAINING_CONFIGURED_PROVIDERS` 声明 `openai-chatgpt`，账号令牌保存在私有加密存储。代码更新应保留现有环境、层、角色、网络、TOTP及控制区；不要用旧的初始化命令覆盖生产设置。
 
 需要停用时先停止选择该提供方，再在 ChatGPT 设置中撤销本项目授权；删除本地试题缓存并不撤销官方授权。代理网络可达与账号实际权限、服务资格、套餐可用性需要分别确认。
 

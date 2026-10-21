@@ -1,5 +1,9 @@
 # 文档总索引
 
+- [工作台、教师布局与本机授权助手（2026-10-21）](WORKBENCH-TEACHER-2026-10-21.md)
+- [官方多账号授权接口与使用边界](OPENAI-ACCOUNT-WORKBENCH-2026-10-21.md)
+- [十科完整提示词导出与复核方式](PROMPT-EXPORT-2026-10-21.md)
+
 - [官方通道出题优化：教师选择、题型计分、流程和验收](OFFICIAL-GENERATION-IMPROVEMENT-2026-10-21.md)
 
 - [ChatGPT 官方授权、云端代理与实际出题验证（2026-10-21）](OPENAI-SIWC-2026-10-21.md)

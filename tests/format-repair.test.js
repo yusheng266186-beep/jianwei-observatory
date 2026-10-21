@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import worker from '../backend/worker.cjs';
 import repair from '../backend/format-repair.cjs';
+import contentReview from '../backend/content-review.cjs';
 import generator from '../backend/generator.cjs';
 import models from '../backend/model-control.cjs';
 import stores from '../backend/store.cjs';
@@ -16,6 +17,15 @@ const request={subject:'数学',grade:'高三',curriculum:'已学函数与导数
 const profile=models.snapshot({provider:'wefucke-gpt',model:'gpt-6.1-sol',effort:'deep'},{WEFUCKE_GPT_API_KEY:'unit-only'});
 const output=input=>({sheet:{title:'函数练习',objective:input.focus,questions:Array.from({length:input.count},(_,i)=>({id:i+1,level:i?'巩固':'基础',type:'填空',target:input.targets?.[0],stem:'已知 $f(x)=x^2$，求 $f('+i+')$ 的值。',choices:[],answer:'$'+i*i+'$',analysis:'将自变量代入函数解析式得结果。',points:['正确得5分。'],maxScore:5,minutes:5}))},model:profile.model,provider:profile.provider,usage:{input:10,output:20,thinking:30}});
 const invalid=input=>Object.assign(Error('MODEL_CONTENT_INVALID'),{cause:Error('模型在JSON正文前夹带说明文字。'),output:'我会先核对题目。'+JSON.stringify(output(input).sheet),diagnostic:{kind:'document',completeSignal:true,usage:{input:5,output:6,thinking:7}}});
+test('旧任务补齐原本空缺的评分依据后进入学科复核，不能直接作为纯格式修复交付',async()=>{
+ const s=await setup({contentReview:0}),source=output(request).sheet;source.questions[0].points=[];
+ const bad=Object.assign(Error('MODEL_CONTENT_INVALID'),{cause:Error('第1题评分点为空'),output:JSON.stringify(source),diagnostic:{kind:'document',completeSignal:true}});
+ await worker.run({key:s.key},{...s,generator:async()=>{throw bad;}});
+ await worker.run({key:s.queue[0]},{...s,repairer:async input=>output(input)});
+ const state=await contentReview.snapshot(s.store,s.key,{now:s.now,dispatch:s.dispatch});
+ assert.equal(state.contentReviewPipeline,true);assert.equal(await s.store.get(s.key+'/result.json'),null);
+ const reviewSource=(await s.store.get(s.key+'/content-review-source.json')).value;assert.equal(reviewSource.repairFidelity.filledPoints,1);
+});
 async function setup(extra={}){const store=new stores.MemoryStore(),queue=[],key='jobs/'+'a'.repeat(32)+'/'+crypto.randomUUID(),now=()=>at;let at=Date.now();const job={id:key.split('/').at(-1),type:'exercise',input:request,generation:profile,repairGeneration:profile,repairAttempts:1,pipeline:2,createdAt:at,deadline:at+600000,...extra};await store.create(key+'/meta.json',job);return{store,queue,key,job,now,advance:ms=>at+=ms,dispatch:async key=>queue.push(key)};}
 test('完整但格式失败的题组独立修复，原稿保存，沿用冻结的出题模型并通过同一校验',async()=>{
  const s=await setup(),bad=invalid(request);let calls=0;
@@ -187,6 +197,26 @@ test('保真比较接受公式分隔与表格列修复，仍拒绝数字和条�
  const changed=structuredClone(tableFixed);changed.questions[1].stem=changed.questions[1].stem.replace('| 1 |','| 3 |');
  await assert.rejects(generator.validateRepairFidelity(JSON.stringify(source),changed,request));
  for(const mutate of [s=>s.questions[0].maxScore=6,s=>s.questions[0].answer='$9$',s=>s.questions[0].points=['正确得9分。'],s=>s.questions[0].target='其他训练点']){const draft=structuredClone(tableFixed);mutate(draft);await assert.rejects(generator.validateRepairFidelity(JSON.stringify(source),draft,request));}
+});
+test('空评分点可按原条件与maxScore补齐，非空评分点和原条件仍受保真保护',async()=>{
+ const source=output(request).sheet;source.questions[0].points=[];
+ const filled=structuredClone(source);filled.questions[0].points=['结果正确得5分。'];
+ const report=await generator.validateRepairFidelity(JSON.stringify(source),filled,request);
+ assert.equal(report.verified,true);assert.equal(report.filledPoints,1);
+ const changedStem=structuredClone(source);changedStem.questions[0].stem+='新增条件。';changedStem.questions[0].points=['结果正确得5分。'];
+ await assert.rejects(generator.validateRepairFidelity(JSON.stringify(source),changedStem,request),e=>e.cause?.message.includes('questions[0].stem'));
+ const changedAnswer=structuredClone(source);changedAnswer.questions[0].answer='另一个答案。';changedAnswer.questions[0].points=['结果正确得5分。'];
+ await assert.rejects(generator.validateRepairFidelity(JSON.stringify(source),changedAnswer,request),e=>e.cause?.message.includes('questions[0].answer'));
+ const rescored=structuredClone(source);rescored.questions[0].maxScore=6;rescored.questions[0].points=['结果正确得6分。'];
+ await assert.rejects(generator.validateRepairFidelity(JSON.stringify(source),rescored,request),e=>e.cause?.message.includes('questions[0].maxScore'));
+ const emptyStem=structuredClone(source);emptyStem.questions[0].stem='';emptyStem.questions[0].points=['结果正确得5分。'];
+ await assert.rejects(generator.validateRepairFidelity(JSON.stringify(source),emptyStem,request),/MODEL_CONTENT_INVALID/);
+ const missingSource=output(request).sheet;delete missingSource.questions[0].points;missingSource.questions[0].stem='';
+ const missingFilled=structuredClone(missingSource);missingFilled.questions[0].points=['结果正确得5分。'];
+ await assert.rejects(generator.validateRepairFidelity(JSON.stringify(missingSource),missingFilled,request),e=>e.cause?.message.includes('questions[0].points'));
+ const existing=output(request).sheet;existing.questions[0].points=['结果正确得5分。'];
+ const changedExisting=structuredClone(existing);changedExisting.questions[0].points=['结果正确得4分。'];
+ await assert.rejects(generator.validateRepairFidelity(JSON.stringify(existing),changedExisting,request),e=>e.cause?.message.includes('questions[0].points'));
 });
 test('老任务缺少独立source文件时仍从第0轮原稿恢复基准',async()=>{
  const s=await setup(),source=output(request).sheet;source.questions[0].stem+='原有条件。';

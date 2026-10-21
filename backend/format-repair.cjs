@@ -76,7 +76,10 @@ async function deliver(store,key,manifest,list,{now,dispatch}){
  const active=list.at(-1),repaired=active.result;if(!repaired?.sheet||await removed(store,key,manifest))return null;
  const usage={...manifest.originalUsage};for(const field of ['input','output','thinking'])usage[field]=(usage[field]||0)+list.reduce((n,row)=>n+(row.result?.usage?.[field]||0),0);
  const result={...repaired,model:manifest.generation.model,provider:manifest.generation.provider,reasoningEffort:manifest.generation.reasoningEffort,usage,formatRepair:{attempts:active.attempt+1,model:manifest.repairGeneration.model,provider:manifest.repairGeneration.provider,reasoningEffort:manifest.repairGeneration.reasoningEffort,...(active.result?.repairFidelity?{fidelity:active.result.repairFidelity}:{})}};
- if(manifest.contentReview){await require('./content-review.cjs').begin(store,key,{...manifest,createdAt:manifest.createdAt},result,{now,dispatch});return require('./content-review.cjs').snapshot(store,key,{now,dispatch});}
+ // Filling an absent marking basis is a content addition, even on an older
+ // task that predates routine subject review. Review that narrow case before
+ // delivery; a format-only repair still follows its original task settings.
+ if(manifest.contentReview||repaired.repairFidelity?.filledPoints){await require('./content-review.cjs').begin(store,key,{...manifest,contentReview:1,createdAt:manifest.createdAt},result,{now,dispatch});return require('./content-review.cjs').snapshot(store,key,{now,dispatch});}
  if(manifest.pipeline===2&&result.sheet.questions.some(q=>q.figureRequest)){
   const figures=require('./figure-pipeline.cjs');await figures.begin(store,key,{input:manifest.input,generation:manifest.generation,imageGeneration:manifest.imageGeneration,figureGeneration:manifest.figureGeneration,pipeline:2,group:manifest.group,...(manifest.groupContext?{groupContext:manifest.groupContext}:{})},result,{now,dispatch});return figures.snapshot(store,key,{now,dispatch});
  }

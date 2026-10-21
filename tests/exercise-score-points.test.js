@@ -46,6 +46,8 @@ test('出题与修复提示按实际小问保留评分点，Schema不再限制8�
  const repair=await generator.buildRepairPrompt(request,{output:SOURCE,validation:'第1题的解析未按约定输出公式或正文格式。'});
  assert.match(exercise.system,/评分点条数按实际小问、步骤或评分维度确定/);
  assert.match(repair.system,/不得为压缩条数合并/);
+ assert.match(repair.system,/原稿评分点为空或缺失/);
+ assert.match(repair.system,/新增对应评分依据/);
  assert.equal(exercise.schema.properties.questions.items.properties.points.maxItems,undefined);
  assert.equal(repair.schema.properties.questions.items.properties.points.maxItems,undefined);
 });

@@ -168,3 +168,85 @@ body[data-surface=paper] #exercise-content .exercise-writing-card{background:var
 
 /* Data belongs in a shared, readable table in preview and both exports. */
 .exercise-data-table{max-width:100%;min-width:0;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin;scrollbar-color:#7092aa55 transparent;margin:14px 0;border-radius:10px;border:1px solid var(--line,#7596ab30);background:#ffffff36}.exercise-data-table table{width:100%;min-width:0;table-layout:fixed;border-collapse:collapse;font-size:12px;line-height:1.65}.exercise-data-table th,.exercise-data-table td{padding:10px 7px;text-align:center;vertical-align:middle;overflow-wrap:anywhere;border:1px solid #7898ae26}.exercise-data-table th{font-weight:500;background:#d8e7f244}.exercise-data-table.is-wide table{min-width:560px}.exercise-data-table.is-wide tr>:first-child{width:8%}.exercise-data-table td{font-variant-numeric:tabular-nums}.exercise-data-table:focus-visible{outline:2px solid #7092aa;outline-offset:3px}.exercise-data-table .exercise-formula{max-width:100%}@media(max-width:600px){.exercise-data-table.is-wide table{min-width:620px}}
+
+/* ── 2026-10-21 setup clarity: visible request board, balanced wide layout. */
+.exercise-request-brief-slot{min-width:0}
+.exercise-request-brief{
+  min-width:0;
+  padding:17px 19px;
+  border:1px solid #ffffffb3;
+  border-radius:var(--radius-panel);
+  background:linear-gradient(138deg,#ffffff80,#edf6fb36),var(--surface-control);
+  box-shadow:var(--material-inset-shadow);
+}
+.exercise-request-brief-head{display:flex;align-items:flex-start;justify-content:space-between;gap:7px 20px;flex-wrap:wrap}
+.exercise-request-brief-head h3{margin:4px 0 0;font-size:17px;line-height:1.55;font-weight:550}
+.exercise-request-brief-head p{margin:0;max-width:48ch;font-size:10.5px;line-height:1.8;color:var(--muted);align-self:flex-end}
+.exercise-request-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:11px}
+.exercise-request-chip{
+  display:inline-flex;align-items:center;min-height:25px;padding:3px 9px;
+  border:1px solid #ffffff9e;border-radius:999px;
+  background:var(--surface-control);box-shadow:var(--material-inset-shadow);
+  font-size:10.5px;line-height:1.55;color:var(--school-blue);
+  overflow-wrap:anywhere;
+}
+.exercise-request-chip.is-warn{border-color:#d5b18b40;background:#fff8efe0;color:#8a6338}
+.exercise-request-brief .exercise-selection-summary{
+  margin:12px 0 0;padding:11px 0 0;border-top:1px solid #7093b51c;
+  background:none;box-shadow:none;
+}
+.exercise-request-brief dl{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));
+  gap:7px 24px;margin:0;
+}
+.exercise-request-brief dl>div{
+  display:grid;grid-template-columns:82px minmax(0,1fr);gap:9px;
+  min-width:0;margin:0;font-size:11.5px;line-height:1.78;
+}
+.exercise-request-brief dt{color:var(--muted);white-space:normal;overflow-wrap:anywhere}
+.exercise-request-brief dd{margin:0;min-width:0;overflow-wrap:anywhere;white-space:pre-line}
+.exercise-request-note{margin:11px 0 0;font-size:10.5px;line-height:1.8;color:var(--muted);overflow-wrap:anywhere}
+.exercise-focus-grid{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(300px,.92fr);gap:24px;align-items:start;min-width:0}
+.exercise-focus-picker,.exercise-focus-editor{min-width:0}
+.exercise-focus-editor .exercise-focus-field{margin:0}
+.exercise-focus-editor .exercise-supplement{margin-top:18px;padding-top:15px;border-top:1px solid #7093b51c}
+.exercise-option-help{margin:-4px 0 10px;font-size:10.5px;line-height:1.75;color:var(--muted)}
+.exercise-type-count{margin:9px 0 0;padding:7px 10px;border-radius:9px;background:var(--surface-control);box-shadow:var(--material-inset-shadow);font-size:10px;line-height:1.75;color:var(--muted);overflow-wrap:anywhere}
+.exercise-submit-guide{grid-area:guide;min-width:0}
+.exercise-submit-guide b{display:block;font-size:12px;font-weight:550;line-height:1.7}
+.exercise-submit-guide p{margin:3px 0 0;font-size:10.5px;line-height:1.75;color:var(--muted)}
+#exercise-content .exercise-compose-summary{grid-template-columns:minmax(0,1fr) minmax(250px,.55fr);grid-template-areas:'guide connection' 'evidence connection' 'note connection';align-items:start;gap:12px 26px}
+#exercise-content .exercise-compose-summary>.exercise-evidence{grid-area:evidence;margin:0}
+#exercise-content .exercise-compose-summary>.report-help{grid-area:note;margin:0}
+#exercise-content .exercise-compose-summary .exercise-connection{grid-area:connection}
+@media(min-width:1080px){
+  #exercise-dialog[data-exercise-view=compose]{width:min(1180px,calc(100vw - 28px))}
+  #exercise-dialog[data-exercise-view=compose] .exercise-compose{
+    grid-template-columns:minmax(0,1fr) 330px;
+    grid-template-areas:'brief brief' 'scope settings' 'focus settings' 'confirmation confirmation';
+  }
+  .exercise-request-brief-slot{grid-area:brief}
+}
+@media(max-width:1079px){
+  #exercise-content .exercise-compose-summary{grid-template-columns:minmax(0,1fr);grid-template-areas:'guide' 'evidence' 'note' 'connection';gap:10px}
+}
+@media(max-width:759px){
+  .exercise-focus-grid{grid-template-columns:minmax(0,1fr);gap:18px}
+  .exercise-focus-editor .exercise-focus-field{margin-top:0}
+}
+@media(max-width:600px){
+  .exercise-request-brief{padding:15px 15px}
+  .exercise-request-brief-head h3{font-size:16px}
+  .exercise-request-brief-head p{font-size:10px;max-width:none}
+  .exercise-request-brief dl{grid-template-columns:minmax(0,1fr);gap:6px}
+  .exercise-request-brief dl>div{grid-template-columns:86px minmax(0,1fr)}
+  .exercise-request-chip{font-size:10px;padding:3px 8px}
+  .exercise-focus-editor .exercise-supplement{margin-top:15px;padding-top:13px}
+  #exercise-content .exercise-compose-summary .exercise-connection{padding:14px 0 0;border-left:0;border-top:1px solid #7093b51c}
+}
+@media(max-width:440px){
+  .exercise-request-brief dl{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px 14px}
+  .exercise-request-brief dl>div{grid-template-columns:minmax(0,1fr);gap:1px}
+  .exercise-request-brief dd{font-size:10.5px;line-height:1.7}
+  .exercise-request-brief dt{font-size:9.5px;line-height:1.6}
+}
