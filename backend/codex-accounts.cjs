@@ -107,7 +107,7 @@ function createControl({store,jobStore,owner,env=process.env,now=Date.now,dispat
  async function runtime(options,fn){
   const create=runtimeFactory||require('./codex-runtime.cjs').createRuntime;
   const run=async()=>{
-   let finalAuth=options.auth,rt;const controller=new AbortController(),signal=options.signal?AbortSignal.any([options.signal,controller.signal]):controller.signal,timer=setTimeout(()=>controller.abort(),options.timeoutMs||840000);timer.unref?.();
+   let finalAuth=options.auth,rt;const controller=new AbortController(),signal=options.signal?AbortSignal.any([options.signal,controller.signal]):controller.signal,timer=setTimeout(()=>controller.abort(),options.timeoutMs||840000);
    try{rt=await create({binaryPath:env.OPENAI_CODEX_BINARY,proxyUrl:'http://127.0.0.1:18080',...options,signal,onAuth:async auth=>{await options.onAuth?.(auth);finalAuth=structuredClone(auth);}});let value,error;try{value=await fn(rt);}catch(e){error=e;}try{await rt.close();}catch(e){error=e;}if(controller.signal.aborted&&!options.signal?.aborted)throw failure('MODEL_UPSTREAM_TIMEOUT');if(error)throw error;if(value?.auth)value.auth=finalAuth||value.auth;return value;}finally{clearTimeout(timer);}
   };
   return (network||require('./openai-proxy.cjs').withProxy)(run);

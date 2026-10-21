@@ -263,7 +263,8 @@ function callWithState(state, method, params, options = {}) {
       state.pending.delete(id);
       reject(fail('MODEL_UPSTREAM_TIMEOUT', { kind: 'rpc', method, timeoutMs }));
     }, timeoutMs);
-    timer.unref?.();
+    // A pending RPC owns its deadline even when a mocked or closing child has
+    // no referenced I/O handles. Keep the timer alive until reply/timeout.
     state.pending.set(id, { resolve, reject, timer, method });
     try {
       send(state, { jsonrpc: '2.0', id, method, ...(params === undefined ? {} : { params }) });
@@ -728,7 +729,6 @@ async function waitForLoginOutcome(completed, isCancelled, timeoutMs, state) {
   let closeOff = null;
   const timeout = new Promise((resolve) => {
     timer = setTimeout(() => resolve({ type: 'timeout' }), timeoutMs);
-    timer.unref?.();
   });
   const closed = new Promise((resolve) => {
     closeOff = onClose(state, (reason) => {
@@ -1211,7 +1211,6 @@ async function complete(runtime, prompt, generation, options = {}) {
       timedOut = true;
       failNow(fail('MODEL_UPSTREAM_TIMEOUT', { kind: 'complete', timeoutMs }));
     }, timeoutMs);
-    deadlineTimer.unref?.();
 
     const turnParams = {
       threadId,
