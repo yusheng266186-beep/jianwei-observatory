@@ -61,4 +61,4 @@ node tools/package-codex-layer.cjs --package-dir /path/to/official/package --out
 node --test tests/browser-oauth.test.js tests/codex-accounts.test.js tests/codex-runtime.test.js tests/workbench-cloud-accounts.test.js
 ```
 
-本轮交互参考：[Cockpit 浏览器 OAuth 实现](https://github.com/jlcodes99/cockpit-tools/blob/ad7304b3b48d5db8870c46c3448a9a8799f51d33/src-tauri/src/modules/codex_oauth.rs)。没有读取或复制其中保存的真实账号凭据。
+本轮交互参考：[Cockpit 浏览器 OAuth 实现](https://github.com/jlcodes99/cockpit-tools/blob/main/src-tauri/src/modules/codex_oauth.rs)，本次读取的文件内容 SHA 为 `ad7304b3b48d5db8870c46c3448a9a8799f51d33`。没有读取或复制其中保存的真实账号凭据。
