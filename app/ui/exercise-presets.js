@@ -36,6 +36,12 @@ export function exerciseScopeModules(subject,curriculum=''){
  const choices=[...new Set([...(modules[subject]||[]),...exercisePresets(subject).modules])],selected=curriculum.slice(prefix.length).split('、').map(s=>s.trim()).filter(Boolean);
  return selected.length&&selected.every(m=>choices.includes(m))?[...new Set(selected.map(m=>m==='平面向量与立体几何'?'向量与几何':m))]:[];
 }
+// Add the selected knowledge groups to a recognised module list. Existing
+// modules stay in place; a free-text or special scope is never replaced.
+export function exerciseScopeWithGroups(subject,curriculum,groups=[]){
+ const existing=exerciseScopeModules(subject,curriculum);if(!existing.length)return curriculum;
+ return '高中'+subject+'已学内容：'+[...new Set([...existing,...groups.filter(Boolean)])].join('、');
+}
 export function exerciseScopeMatches(subject,curriculum,knowledge){
  const selected=exerciseScopeModules(subject,curriculum);if(!selected.length)return [];
  return knowledge.filter(label=>selected.some(module=>{const pattern=scopeTerms[subject]?.find(([m])=>m===module||module==='向量与几何'&&m==='平面向量与立体几何')?.[1],group=exerciseCatalog(subject).groups.find(g=>g.name===module),terms=[module,...(group?.topics||[])];return pattern?pattern.test(label):terms.some(t=>label.includes(t)||t.includes(label));}));

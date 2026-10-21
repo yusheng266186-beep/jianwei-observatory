@@ -15,7 +15,7 @@ test('各科出题与学科复核收到同一计分指南，示例不再向所�
  for(const [subject,score] of Object.entries({语文:3,数学:5,英语:2.5,日语:2.5,物理:4,化学:3,生物:3,历史:3,政治:3,地理:3})){
   const request={...input,subject,questionTypes:['选择']},prompt=await generator.buildExercisePrompt(request),review=await reviewer.buildReviewPrompt(sheet,request);
   assert(prompt.system.includes('【题型与分值】'));assert(review.system.includes('【题型与分值】'));
-  const shape=JSON.parse(prompt.system.match(/输出形状：(.*?)。完整Schema：/s)[1]);assert.equal(shape.questions[0].maxScore,score);
+  const shape=JSON.parse(prompt.system.match(/输出形状：(.*?)。字段Schema\（逐题差异按逐题安排\）：/s)[1]);assert.equal(shape.questions[0].maxScore,score);
  }
 });
 test('学科复核可以修正错误的分值并同步评分点，保留题型与题文',async()=>{

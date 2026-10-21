@@ -152,6 +152,9 @@ test('integratedFigures keeps the existing diagram immutable and does not delete
  const result=await reviewContent(sheet,physicsInput,{separateFigures:false,complete:async()=>completion({approved:true,issues:[{questionId:2,reason:'答案需要补充。'}],corrections:[{questionId:2,reason:'补充答案。',replacement:omitted}]})});
  assert.deepEqual(result.sheet.questions[1].diagram,question.diagram);
  assert.equal(result.sheet.questions[1].answer,question.answer+' ');
+ const echoed=clone(question);echoed.answer=question.answer+' ';
+ const legacy=await reviewContent(sheet,physicsInput,{separateFigures:false,complete:async()=>completion({approved:true,issues:[],corrections:[{questionId:2,reason:'补充答案表达，原图保持。',replacement:echoed}]})});
+ assert.deepEqual(legacy.sheet.questions[1].diagram,question.diagram);
 });
 
 test('unknown ids, duplicate corrections, empty reasons, extra keys, fake changes and non-JSON are rejected',async()=>{

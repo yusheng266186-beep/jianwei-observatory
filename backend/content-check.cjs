@@ -17,7 +17,7 @@ const GENERAL_REVIEW_RULES=[
  '理科逐项核对量纲、单位、数量级、有效数字、边界与极端情形；文科核对证据、时序、概念、材料对应与论证边界。',
  '四川高考范围是硬边界：允许原创情境，但不得引入大学、竞赛或超纲知识；题型、设问方式、作答方式和评分方式须符合四川高考。',
  '只报告可公开核对的结论：错误是什么、依据是什么、应改为什么；不要输出内部思维链、试算草稿、改题过程或无法核对的推测。',
- '发现可能影响作答但无法确定的问题时，按 issue 报告并保守处理；不能静默放行，也不能编造依据。'
+ '无法确定的疑虑给出依据并列为review建议；只有确认影响作答的错误才列为block，不因缺乏依据的推测否决，也不编造条件。'
 ].join('\n');
 
 const SUBJECT_REVIEW_RULES={
@@ -104,7 +104,7 @@ function completionMetadata(completion){
 function reviewSchemaFor(input,questionSchema){
  const count=input?.count;
  if(!Number.isInteger(count)||count<1)throw Error('CONTENT_REVIEW_INPUT_INVALID');
- const issue={type:'object',additionalProperties:false,required:['questionId','reason'],properties:{questionId:{type:'integer',minimum:1,maximum:count},reason:{type:'string',minLength:1,maxLength:MAX_REASON},severity:{type:'string',enum:['block','review']}}};
+ const issue={type:'object',additionalProperties:false,required:['questionId','reason','severity'],properties:{questionId:{type:'integer',minimum:1,maximum:count},reason:{type:'string',minLength:1,maxLength:MAX_REASON},severity:{type:'string',enum:['block','review']}}};
  return {
   type:'object',
   additionalProperties:false,
@@ -133,7 +133,7 @@ async function buildReviewPrompt(sheet,input,options={}){
  const figureRule=input.visuals==='none'
   ?'本次不允许任何图示：题目 Schema 不含 diagram 或 figureRequest。不得新增图示字段，也不得让题干依赖未提供的图；若原题依赖缺失图示，报告 issue 而不是自行补图。'
   :!separateFigures
-   ?'integratedFigures 模式下，diagram 由独立图示环节负责。不得新增、删除或改写 diagram；图示与题干矛盾时报告 issue，无法在不改图的前提下修正则 approved=false。'
+   ?'integratedFigures 模式下，diagram 已在出题阶段生成，没有后续图示环节。不得新增、删除或改写 diagram；图示与题干矛盾时报告 issue，无法在不改图的前提下修正则 approved=false。'
    :'pendingFigures 模式下，题目 Schema 不含 diagram，只有 figureRequest。patch 不得出现 diagram；不得删除原题已有的 figureRequest，也不得通过删除图示条件来规避问题。只有题干已有明确图示引用且缺图是确定错误时，才可补充 figureRequest；不得为美化或改变考点新增图示。figureRequest 的 caption、requirements、knownData、labels、precision、placement 可以精确修正，但不得泄露待求答案或改变已知条件。';
  const programChecks=contentGuards(sheet,input),{hasExerciseDraft}=await import('./exercise-quality.mjs');
  for(const q of sheet.questions){
@@ -171,6 +171,7 @@ async function buildReviewPrompt(sheet,input,options={}){
   'programChecks是程序提供的候选线索，可能因关键词、引用或特殊情境而不适用。请结合完整题意独立判断，不照搬提示或凭关键词判错；真正错误应按原条件修正，误报不改原题，也不添加新条件。',
   '【学科复核清单】',
   subjectReviewRules(input.subject),
+  require('./teacher-brief.cjs').teacherBriefGuide({review:true}),
   '【本题组学科边界】',
   '以下规则仅用于判断原题是否越界或失准，不据此重新命题或补写整份题组：',
   built.template.rule,
@@ -221,8 +222,11 @@ function parseReviewOutput(output,sheet,input,questionSchema,invalid){
   const reason=reasonText(correction.reason);
   if(!reason)throw invalid('corrections['+index+'].reason 不能为空且不得超过'+MAX_REASON+'字。');
   if(!isRecord(correction.replacement))throw invalid('corrections['+index+'].replacement 必须是完整题目对象。');
-  const allowed=Object.keys(questionSchema.properties||{});
-  for(const key of Object.keys(correction.replacement))if(!allowed.includes(key)){
+  const original=questionsById.get(correction.questionId),allowed=Object.keys(questionSchema.properties||{});
+  // Legacy whole-question replacements may echo existing figure metadata.
+  // Permit the exact original only, just as sparse patches preserve it.
+  for(const key of ['diagram','figureLayout'])if(Object.hasOwn(correction.replacement,key)&&!isDeepStrictEqual(correction.replacement[key],original[key]))throw invalid('第'+correction.questionId+'题的 '+key+' 不得新增或改写。');
+  for(const key of Object.keys(correction.replacement))if(!allowed.includes(key)&&!['diagram','figureLayout'].includes(key)){
    if(key==='diagram')throw invalid('第'+correction.questionId+'题的 replacement 不得包含 diagram；本次图示由独立环节负责或不允许图示。');
    throw invalid('第'+correction.questionId+'题的 replacement 包含 Schema 外字段 '+key+'。');
   }

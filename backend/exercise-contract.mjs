@@ -95,7 +95,8 @@ export function validateExerciseResult(value,request,{allowPendingFigures=false,
  for(const [i,q] of value.questions.entries()){
   if(q&&typeof q==='object')for(const [field,label,limit] of [['stem','题干'],['answer','答案'],['analysis','解析']])if(!text(q[field],limit))throw new Error('第'+(i+1)+'题的'+label+'未完整返回。');
   if(q&&typeof q==='object'&&!Array.isArray(q.choices))throw new Error('第'+(i+1)+'题的选项字段未完整返回，非选择题也须返回空数组。');
-  if(!keys(q,['id','level','type','stem','choices','answer','analysis','points','maxScore','minutes','diagram','target','figureRequest','figureLayout','answerLines'])||q.id!==i+1||!levels.includes(q.level)||!types.includes(q.type)||!text(q.stem,stemLimit)||!text(q.answer)||!text(q.analysis)||!Array.isArray(q.choices)||!Array.isArray(q.points)||!q.points.length||q.points.some(p=>!text(p))||!Number.isFinite(q.maxScore)||q.maxScore<=0||!Number.isSafeInteger(q.minutes)||q.minutes<1)throw new Error('第'+(i+1)+'题的题干、答案、解析或评分点不完整。');
+  if(!keys(q,['id','level','type','stem','choices','answer','analysis','points','maxScore','minutes','diagram','target','figureRequest','figureLayout','answerLines'])||q.id!==i+1||!levels.includes(q.level)||!types.includes(q.type)||!text(q.stem,stemLimit)||!text(q.answer)||!text(q.analysis)||!Array.isArray(q.choices)||!Array.isArray(q.points)||!q.points.length||q.points.some(p=>!text(p))||!Number.isFinite(q.maxScore)||q.maxScore<=0)throw new Error('第'+(i+1)+'题的题干、答案、解析或评分点不完整。');
+  if(!Number.isSafeInteger(q.minutes)||q.minutes<1)throw new Error('第'+(i+1)+'题的预计用时须为正整数分钟。');
   if(q.answerLines!==undefined&&(!Number.isInteger(q.answerLines)||q.answerLines<0||q.answerLines>48))throw new Error('第'+(i+1)+'题的建议作答行数无效。');
   if(q.target!==undefined&&!text(q.target,200)||request.targets?.length&&!request.targets.includes(q.target))throw new Error('第'+(i+1)+'题未对应已选训练点。');
   if(request.questionTypes?.length&&!request.questionTypes.includes(q.type))throw new Error('第'+(i+1)+'题不符合所选题型。');

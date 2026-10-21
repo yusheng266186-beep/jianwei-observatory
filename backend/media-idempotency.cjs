@@ -18,8 +18,12 @@ async function latestSlot(store,prefix){
 
 async function mediaJobState(store,key,meta,now=Date.now()){
  if(await store.get(key+'/removed.json'))return {status:'failed',error:'JOB_REMOVED'};
- const result=await store.get(key+'/result.json');
- if(result?.value){const value=result.value;return {status:value.status==='ready'?'ready':'failed',...(value.error?{error:value.error}:{}),...(value.failureDetail?{failureDetail:value.failureDetail}:{})};}
+ // A resumed redraw keeps its failed first attempt in result.json and writes the
+ // completed payload to recovered.json. Prefer a ready payload from either path
+ // so a finished redraw is never reported as failed, which would invite another
+ // paid image call. Removal, failure and expiry checks below stay unchanged.
+ const recovered=await store.get(key+'/recovered.json'),result=await store.get(key+'/result.json'),value=recovered?.value?.status==='ready'?recovered.value:result?.value?.status==='ready'?result.value:recovered?.value||result?.value;
+ if(value)return {status:value.status==='ready'?'ready':'failed',...(value.error?{error:value.error}:{}),...(value.failureDetail?{failureDetail:value.failureDetail}:{})};
  const progress=(await store.get(key+'/progress.json'))?.value;
  if(progress?.phase==='removed')return {status:'failed',error:'JOB_CANCELLED'};
  if(progress?.phase==='failed'||progress?.figureStage?.status==='failed')return {status:'failed',error:progress.figureStage?.error||'FIGURE_FAILED'};

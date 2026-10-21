@@ -6,7 +6,7 @@ function contentGuards(sheet,input){
  for(const q of sheet.questions||[]){
   if(!['选择','多选','写作'].includes(q.type)&&q.points?.length){
    const marks=q.points.map(p=>{
-    if(/每|每[答写点项个]|每.{0,5}[得给]\s*\d|扣|酌|最多|至多|任选|任答|不超过|或.{0,6}\d+\s*分|其余|共计|合计/.test(p))return null;
+    if(/每|每[答写点项个]|每.{0,5}[得给]\s*\d|扣|酌|最多|至多|任选|任答|不超过|或.{0,6}\d+\s*分|其余|共计|合计|满分|总分|(?:本题)?共\s*\d+(?:\.\d+)?\s*分/.test(p))return null;
     const matches=[...p.matchAll(/(\d+(?:\.\d+)?)\s*分/g)];return matches.length===1?Number(matches[0][1]):null;
    });
    if(marks.every(n=>n!==null)&&Math.abs(marks.reduce((n,x)=>n+x,0)-q.maxScore)>.001)add(q,'score-sum','逐项明确给出的评分分值合计为'+marks.reduce((n,x)=>n+x,0)+'分，与满分'+q.maxScore+'分不一致，请结合题型核对总分和各评分点，只有确认原分值有误才同步修正。');

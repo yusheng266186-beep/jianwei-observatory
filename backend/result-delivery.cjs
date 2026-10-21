@@ -62,7 +62,16 @@ async function recover(store,key,job,options={}){
  if(candidate.stage==='content'&&await store.get(key+'/content-review-manifest.json'))return {status:'running',contentReviewPipeline:true};
  if(candidate.stage==='figures'&&await store.get(key+'/figure-manifest.json'))return {status:'running',figurePipeline:true};
  try{return await commit(store,key,job,candidate,options);}
- catch(e){if(e.message==='JOB_CANCELLED')return null;if(!transient(e)&&e.message!=='RESULT_SAVE_PENDING')throw e;
+ catch(e){if(e.message==='JOB_CANCELLED')return null;
+  // Recovery is a read of an already committed job, not permission to replace
+  // its final content with a different candidate. Keep the first ready result
+  // authoritative; strict conflict checks on new writes remain unchanged.
+  if(e.message==='JOB_RESULT_CONFLICT'){
+   await active(store,key,job);
+   const saved=(await store.get(key+'/recovered.json'))?.value||(await store.get(key+'/result.json'))?.value;
+   if(saved?.status==='ready')return saved;
+  }
+  if(!transient(e)&&e.message!=='RESULT_SAVE_PENDING')throw e;
   return {status:'running',deliveryPending:true,deadlineAt:(options.now||Date.now)()+930000};}
 }
 async function recoverQueued(store,key,job,{now=Date.now,dispatch}={}){

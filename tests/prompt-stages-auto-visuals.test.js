@@ -28,7 +28,7 @@ test('十科、三策略、四配图方式分别编译出题与修复提示，�
   assert.equal(author.stage,'exercise');assert.equal(repair.stage,'repair');assert.deepEqual(author.schema,repair.schema);
   assert.match(author.system,/三者的交集/);assert.match(author.system,/所有已选训练点至少覆盖一次/);assert.match(author.system,/教师确认的训练目标，不声称由考试发现/);
   assert.match(repair.system,/最初原稿是所有轮次唯一保真基准/);assert(!repair.system.includes('【训练策略与难度】'));assert(!repair.system.includes('重设计整题'));assert(!repair.system.includes('逐题安排（'));assert(!repair.system.includes('完整字段编码示例'));
-  const example=JSON.parse(author.system.split('输出形状：')[1].split('。完整Schema：')[0]);assert.equal(example.questions[0].level,'迁移');
+  const example=JSON.parse(author.system.split('输出形状：')[1].split('。字段Schema（逐题差异按逐题安排）：')[0]);assert.equal(example.questions[0].level,'迁移');
   if(subject!=='数学')assert(!author.system.includes('幂函数求导法则'));
   if(visuals==='none')assert(!author.schema.properties.questions.items.properties.figureRequest);else assert(author.schema.properties.questions.items.properties.figureRequest);
   if(visuals==='auto')assert.match(author.system,/无需图就省略图示字段/);

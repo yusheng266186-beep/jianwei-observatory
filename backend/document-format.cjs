@@ -8,9 +8,9 @@ const samples={
   analysis:'第①点对应材料中按年代摆放和讲述来历的内容；第②点对应经营者与读者交流的内容。\n分点作答，先概括再说明材料依据。'
  },
  '数学':{
-  stem:"已知 $f(x)=x^2$，求 $f'(x)$。",
-  answer:"$f'(x)=2x$。",
-  analysis:"由幂函数求导法则得 $f'(x)=2x$。\n若结果为根式，则写为 $e=\\sqrt{3}$，中文标点放在公式之外。"
+  stem:"已知 $f(x)=x^2+\\sqrt{3}x$，求 $f'(x)$。",
+  answer:"$f'(x)=2x+\\sqrt{3}$。",
+  analysis:"由和函数的求导法则分别求导。\n由幂函数和一次函数求导法则得 $f'(x)=2x+\\sqrt{3}$，其中根式为常数。"
  },
  '英语':{
   stem:'Read the passage and choose the best answer.\n\nLast spring, our class visited a small community garden. The gardener showed us how kitchen waste becomes soil, and we planted seedlings in boxes made from old wood.\n\nWhat did the writer learn from the visit?',
@@ -54,7 +54,7 @@ const samples={
   analysis:'气温比较为27.5℃与3.2℃，降水比较为168mm与42mm。不能仅由两个月的数据确定全年气候类型或成因。\n数据为示意值，结论限于表中所给信息。'
  }
 };
-const encoding='JSON只编码一次：输出是一层JSON对象，不是包含JSON的字符串；每个文本字段只进行一次JSON字符串编码。JSON源码中的每个LaTeX命令反斜杠必须恰好写为两个反斜杠，解码后才是一个；不能在同一字段混用单个、两个或四个反斜杠，也不能用反斜杠直接连接ce、begin、text等命令。重点核查triangle、text、times、right、frac、beta等命令，不能被JSON解码成制表、回车、换页或退格字符；长解析中重复出现的化学式也须使用相同的一次编码。段落在JSON源码中用换行转义，解码后是真正换行，不能残留字面反斜杠n。所有公式及环境完整放入成对的$...$或$$...$$内，包括题干、选项、答案、解析、评分点和表格单元格。';
+const encoding='JSON只编码一次：输出是一层JSON对象，不是包含JSON的字符串。按JSON.stringify的编码规则，每个LaTeX命令的一个反斜杠在JSON源码中写为两个；LaTeX矩阵换行本来需要两个反斜杠，因此在JSON源码中写为四个，这不是重复编码。禁止裸露的单反斜杠命令，尤其是triangle、text、times、right、frac、beta、ce、begin，避免被解码为制表、回车、换页或退格字符。普通段落在JSON中用换行转义，解码后为真实换行，不残留字面的反斜杠n。公式及环境完整放入成对的$...$或$$...$$中，选择题的纯公式选项也一样；中文标点放在公式外，普通英文和日文不加数学分隔符。长推导按步骤分行，单位与符号在同一学科保持一致。';
 const tables='数据表统一用Markdown竖线表：表头下一行必须有分隔行，每行列数相同，表前后各有空行，表格本身不能包在公式环境内；不要用LaTeX的array、tabular、hline画数据表。矩阵或数学推导确需array时才使用，并将整个环境包在$$...$$中；禁止裸露的begin/end/hline排版命令。';
 const prose='正文使用普通段落，不使用Markdown加粗星号、井号标题或HTML标记；小标题可用纯文本独占一行。自拟材料不得附上未经核对的真实作者、书名或摘编出处来制造来源。学生稿只保留题干、选项和干净留白：选择题不加作答横线；数理化等填空采用自然设问，不追加横线，只有英语、日语语篇填空及语文默写必需的编号空位可以保留；主观题按实际书写量留白，不印行号、作答标签或整行装饰线。';
 function subjectNotes(subject){
@@ -68,7 +68,7 @@ function subjectNotes(subject){
 function documentFormatGuide(subject,{includeExample=true}={}){
  const sample=samples[subject]||samples['数学'];
  return [encoding,tables,prose,...subjectNotes(subject)].join('\n')
-  +(includeExample?'\n完整字段编码示例（仅说明格式，不是本次试题）：'+JSON.stringify(sample):'')
-  +'。提交前逐字段核对反斜杠、换行、公式分隔符和表格列数，直接输出可解析、可预览的最终稿，不添加生成后修复的说明。';
+  +(includeExample?'\n字段内容编码示例（仅展示正文编码，必填字段及结构见Schema，不是本次试题）：'+JSON.stringify(sample):'')
+  +'。提交前逐字段核对反斜杠、换行、公式分隔符和表格列数，一次输出成稿，直接提供可解析、可预览的最终稿，不添加生成后修复的说明。';
 }
 module.exports={documentFormatGuide};

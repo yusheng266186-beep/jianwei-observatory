@@ -19,6 +19,12 @@ function jobEnvelope(value){
    const {image,...diagram}=question.diagram;artifacts.images.push(question.id);return {...question,diagram};
   })};
  }
+ // A figure refresh returns its image at the top level instead of under
+ // sheet.questions. Keep the same authenticated chunk route so the image is
+ // omitted from the JSON body rather than failing the whole response.
+ if(bytes(result)>RESPONSE_BUDGET&&value.diagram?.image&&Number.isInteger(value.questionId)){
+  const {image,...diagram}=value.diagram;artifacts.diagram=value.questionId;result.diagram=diagram;
+ }
  result.artifacts=artifacts;
  if(bytes(result)>RESPONSE_BUDGET)throw new Error('RESPONSE_CAPACITY');
  return result;

@@ -44,7 +44,7 @@ test('空评分点与空字符串被拒绝，评分描述条数不替代模型�
 test('出题与修复提示按实际小问保留评分点，Schema不再限制8条',async()=>{
  const exercise=await generator.buildExercisePrompt(request);
  const repair=await generator.buildRepairPrompt(request,{output:SOURCE,validation:'第1题的解析未按约定输出公式或正文格式。'});
- assert.match(exercise.system,/条数按实际小问和得分步骤确定，可以有多条/);
+ assert.match(exercise.system,/评分点条数按实际小问、步骤或评分维度确定/);
  assert.match(repair.system,/不得为压缩条数合并/);
  assert.equal(exercise.schema.properties.questions.items.properties.points.maxItems,undefined);
  assert.equal(repair.schema.properties.questions.items.properties.points.maxItems,undefined);

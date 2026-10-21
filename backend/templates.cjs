@@ -1,6 +1,6 @@
 'use strict';
 const {curriculumBoundary}=require('./curriculum-boundaries.cjs');
-const version='subject-templates-20261021.11';
+const version='subject-templates-20261021.12';
 const templates={
  '语文':{focus:'阅读信息筛选、语言运用与表达',diagrams:['flow','bars'],rule:[
   '材料：现代文用完整原创材料，阅读同材料题组材料逐字一致；古诗文给足文本与必要注释，不让作答依赖未给出的背景；原创诗文标明自拟，不伪造作者、出处或摘编。',

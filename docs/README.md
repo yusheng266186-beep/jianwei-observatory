@@ -1,5 +1,7 @@
 # 文档总索引
 
+- [官方通道出题优化：教师选择、题型计分、流程和验收](OFFICIAL-GENERATION-IMPROVEMENT-2026-10-21.md)
+
 - [ChatGPT 官方授权、云端代理与实际出题验证（2026-10-21）](OPENAI-SIWC-2026-10-21.md)
 
 - [Kimi K2.8 接入与 K3 三档思考强度（2026-10-20）](KIMI-K28-AND-EFFORT-2026-10-20.md)

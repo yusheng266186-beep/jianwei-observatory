@@ -53,7 +53,7 @@ async function begin(store,key,job,error,{now=Date.now,dispatch}={}){
  const existing=(await store.get(key+'/result.json'))?.value;
  if(!['exercise','exercise-part'].includes(job.type)||!eligible(error)||limit<1||existing&&existing.error!=='MODEL_CONTENT_INVALID')return false;
  const generation=job.generation||require('./generator.cjs').generationProfile();
- const originalValidation=!/^\s*\{/.test(error.output)&&error.output.includes('{')?'模型在JSON正文前夹带说明文字。':String(error.cause.message).slice(0,1200);
+ const originalValidation=String(error.cause?.message||'成稿格式不符合要求').slice(0,1200);
  const manifest={version:1,input:job.input,generation,imageGeneration:job.imageGeneration,repairGeneration:job.repairGeneration||generation,limit:Math.min(limit,5),pipeline:job.pipeline,contentReview:job.contentReview,figureGeneration:job.figureGeneration||generation,...(job.group?{group:job.group}:{}),...(job.groupContext?{groupContext:job.groupContext}:{}),createdAt:now(),originalUsage:error.diagnostic?.usage||{},originalValidation};
  if(await removed(store,key,manifest))return false;
  await store.create(key+'/format-repair-source.json',{output:error.output,validation:manifest.originalValidation,createdAt:now()});
