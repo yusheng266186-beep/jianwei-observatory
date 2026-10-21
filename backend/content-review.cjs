@@ -17,7 +17,7 @@ async function ensure(store,key,manifest,n,{now=Date.now,dispatch=async()=>{}}={
 async function begin(store,key,job,draft,options={}){
  if(!job.contentReview)return false;
  await delivery.createVerified(store,key+'/content-review-source.json',draft,{check:()=>delivery.active(store,key,job)});
- await delivery.createVerified(store,key+'/content-review-manifest.json',{version:1,job,...(job.groupContext?{groupContext:job.groupContext}:{}),createdAt:job.createdAt},{check:()=>delivery.active(store,key,job)});
+ await delivery.createVerified(store,key+'/content-review-manifest.json',{version:2,job,...(job.groupContext?{groupContext:job.groupContext}:{}),createdAt:job.createdAt},{check:()=>delivery.active(store,key,job)});
  await store.create(key+'/content-review-progress.json',(await store.get(key+'/progress.json'))?.value||{});
  const manifest=(await store.get(key+'/content-review-manifest.json')).value;
  await ensure(store,key,manifest,0,options);return true;
@@ -38,7 +38,11 @@ async function snapshot(store,key,{now=Date.now,dispatch=async()=>{}}={}){
  const manifest=(await store.get(key+'/content-review-manifest.json'))?.value;if(!manifest||await store.get(key+'/figure-manifest.json'))return null;
  try{await active(store,key,manifest);}catch(e){if(e.message==='JOB_CANCELLED')return null;throw e;}
  const ready=(await store.get(key+'/recovered.json'))?.value||(await store.get(key+'/result.json'))?.value;if(ready?.status==='ready')return ready;
- const s=await state(store,key,manifest,{now,dispatch});await publish(store,key,manifest,s,now);
+ let s=await state(store,key,manifest,{now,dispatch});
+ // A model rejection is feedback for one targeted correction, not an
+ // immediate dead end. Transport/auth failures do not trigger paid retries.
+ if(manifest.version>=2&&s.n===0&&s.status==='failed'&&s.result?.correctionAvailable){await ensure(store,key,manifest,1,{now,dispatch});s=await state(store,key,manifest,{now,dispatch});}
+ await publish(store,key,manifest,s,now);
  if(s.status==='ready'){
   const source=(await store.get(key+'/content-review-source.json')).value,review=s.result;
   const usage={};for(const k of ['input','output','thinking'])usage[k]=(source.usage?.[k]||0)+(review.usage?.[k]||0);
@@ -69,7 +73,7 @@ async function runStep(store,key,job,{now=Date.now,dispatch=async()=>{},reviewer
   const prior=job.review.attempt>0?(await store.get(parentKey(parent,childId(parent,job.review.attempt-1))+'/diagnostic.json'))?.value:null;
   const formatSource=source.formatRepair?.fidelity?.verified===false?(await store.get(parent+'/format-repair-source.json'))?.value?.output:undefined;
   const groupScope=job.groupContext||manifest.groupContext||manifest.job.groupContext;
-  const result=await reviewer(structuredClone(source.sheet),manifest.job.input,{generation:job.generation,separateFigures:manifest.job.pipeline===2,signal:controller.signal,onProgress:progress.update,...(groupScope?{groupScope}:{}),...(prior?{feedback:{notes:prior.notes,detail:prior.detail,validation:prior.validation},candidate:prior.candidate}:{}),...(formatSource?{formatSource}:{})});
+  const result=await reviewer(structuredClone(source.sheet),manifest.job.input,{generation:job.generation,separateFigures:manifest.job.pipeline===2,signal:controller.signal,onProgress:progress.update,...(groupScope?{groupScope}:{}),...(prior?{feedback:{error:prior.category,notes:prior.notes,detail:prior.detail,validation:prior.validation,previousOutput:prior.raw?.slice(0,48000),instruction:'针对上述具体错误修订，保留原稿正确部分；不要重新命题或原样重复已确认错误。'},candidate:prior.candidate}:{}),...(formatSource?{formatSource}:{})});
   require('./content-check.cjs').validateReviewResult(source.sheet,result);
   await require('./generator.cjs').validateOutput(JSON.stringify(result.sheet),manifest.job.input,{separateFigures:manifest.job.pipeline===2,usage:result.usage,...(groupScope?{groupScope}:{})});
   await active(store,parent,manifest);if(controller.signal.aborted)throw Error('JOB_CANCELLED');
@@ -83,7 +87,7 @@ async function runStep(store,key,job,{now=Date.now,dispatch=async()=>{},reviewer
   const code=serviceFailures[error.message]?error.message:['CONTENT_REVIEW_FAILED','CONTENT_REVIEW_INVALID'].includes(error.message)?error.message:'CONTENT_REVIEW_INTERRUPTED';
   const officialDetail=require('./upstream-event.cjs').userFailureDetail(error);
   const detail=officialDetail||(code==='CONTENT_REVIEW_FAILED'?'学科复核发现尚未解决的问题。'+(error.notes||[]).map(n=>'第'+n.questionId+'题：'+(n.reason||(n.issues||[]).join('；'))).join('；'):code==='CONTENT_REVIEW_INVALID'?'学科复核回复未符合契约。'+String(error.detail||error.cause?.message||'').slice(0,240):serviceFailures[code]||'学科复核连接未完成。');
-  await store.create(key+'/result.json',{status:'failed',error:code,notes:error.notes||[],failureDetail:detail.slice(0,1600)+'原始题文保留；继续时只重试复核，不重新出题。',finishedAt:now()});
+  await store.create(key+'/result.json',{status:'failed',error:code,notes:error.notes||[],...(['CONTENT_REVIEW_FAILED','CONTENT_REVIEW_INVALID'].includes(code)&&typeof error.output==='string'&&error.output.trim()?{correctionAvailable:true}:{}),failureDetail:detail.slice(0,1600)+'原始题文保留；继续时只重试复核，不重新出题。',finishedAt:now()});
  }
  await snapshot(store,parent,{now,dispatch});
  if(manifest.job.group)await require('./exercise-groups.cjs').advance(store,parentKey(parent,manifest.job.group.parentId),{now,dispatch});

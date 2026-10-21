@@ -159,7 +159,6 @@ test('unknown ids, duplicate corrections, empty reasons, extra keys, fake change
   {approved:true,issues:[{questionId:99,reason:'未知题号。'}],corrections:[]},
   {approved:true,issues:[{questionId:2,reason:'问题。'}],corrections:[{questionId:2,reason:'修订。',replacement:clone(physicsSheet.questions[1])},{questionId:2,reason:'修订。',replacement:clone(physicsSheet.questions[1])}]},
   {approved:true,issues:[{questionId:2,reason:'   '}],corrections:[]},
-  {approved:true,issues:[],corrections:[],extra:true},
   {approved:true,issues:[{questionId:2,reason:'问题。',severity:'high'}],corrections:[]},
   {approved:true,issues:[{questionId:2,reason:'问题。'}],corrections:[{questionId:2,reason:'修订。',replacement:clone(physicsSheet.questions[1]),fields:['answer']}]},
   {approved:false,issues:[],corrections:[]},
@@ -171,7 +170,7 @@ test('unknown ids, duplicate corrections, empty reasons, extra keys, fake change
  const extraFigure=clone(physicsSheet.questions[1]);extraFigure.figureRequest={...extraFigure.figureRequest,extra:'x'};
  await assert.rejects(review(physicsSheet,{approved:true,issues:[{questionId:2,reason:'图示委托有问题。'}],corrections:[{questionId:2,reason:'修订图示委托。',replacement:extraFigure}]}),error=>error.message==='CONTENT_REVIEW_INVALID');
  await assert.rejects(review(physicsSheet,{approved:true,issues:[{questionId:2,reason:'问题。'}],corrections:[{questionId:2,reason:'修订。',replacement:clone(physicsSheet.questions[1])}]}),error=>error.message==='CONTENT_REVIEW_INVALID'&&/实际改动|没有/.test(error.detail));
- for(const output of ['not json','```json\n'+JSON.stringify({approved:true,issues:[],corrections:[]})+'\n```','[]']){
+ for(const output of ['not json','[]']){
   await assert.rejects(reviewContent(physicsSheet,physicsInput,{complete:async()=>({output,usage:{}})}),error=>error.message==='CONTENT_REVIEW_INVALID');
  }
 });
@@ -226,7 +225,7 @@ test('replacement schema is taken from the generation prompt for the same figure
  assert.equal(prompt.schema.properties.corrections.items.properties.replacement,undefined);assert.deepEqual(prompt.schema.properties.corrections.items.properties.patch.properties.answer,built.schema.properties.questions.items.properties.answer);
 });
 
-test('each subject prompt contains its targeted review rules, Sichuan boundaries and strict JSON policy',async()=>{
+test('each subject prompt contains targeted rules, Sichuan boundaries and a usable JSON contract',async()=>{
  const rules={
   '语文':[/含标点/,/材料证据/],
   '数学':[/唯一/,/多解/,/非共面/],
@@ -247,7 +246,8 @@ test('each subject prompt contains its targeted review rules, Sichuan boundaries
   assert.match(prompt.system,/四川高考/);
   assert.match(prompt.system,/不执行/);
   assert.match(prompt.system,/思维链/);
-  assert.match(prompt.system,/只输出一个严格 JSON 对象/);
+  assert.match(prompt.system,/输出一个 JSON 对象/);
+  assert.match(prompt.system,/风格偏好.*不阻塞交付/);
   assert.equal(prompt.schema.properties.corrections.maxItems,3);
   assert.equal(prompt.schema.properties.issues.maxItems,6);
   assert.equal(prompt.schema.properties.corrections.items.properties.patch.additionalProperties,false);

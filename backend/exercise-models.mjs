@@ -20,8 +20,10 @@ export function validateExerciseModel(d){
 // drawing cannot pass as a folded or rotated solid by changing its caption.
 function validateSpatialFrame(m){
  const fail=()=>{throw Error('空间线框须给出4–12个非共面三维顶点、对应标签和不重复的有效棱。');};
- if(!Array.isArray(m.vertices)||m.vertices.length!==m.labels.length||m.vertices.some(v=>!Array.isArray(v)||v.length!==3||v.some(n=>!Number.isFinite(n)||Math.abs(n)>1000))||m.labels.some(x=>!x))fail();
- if(new Set(m.labels).size!==m.labels.length)throw Error('空间线框labels必须全局唯一。同名顶点须在views中复用同一vertices下标，不能为每幅分图复制C、B或D。');
+ if(!Array.isArray(m.vertices)||m.vertices.length!==m.labels.length)throw Error('空间顶点与labels须逐项对应；辅助点可使用空字符串标签。');
+ if(m.vertices.some(v=>!Array.isArray(v)||v.length!==3||v.some(n=>!Number.isFinite(n)||Math.abs(n)>1000)))throw Error('空间顶点须提供有限的三维数值坐标。');
+ const named=m.labels.filter(Boolean);
+ if(new Set(named).size!==named.length)throw Error('空间线框labels必须全局唯一（空标签辅助点除外）。同名顶点须在views中复用同一vertices下标，不能为每幅分图复制C、B或D。');
  const ps=m.vertices,span=Math.max(...[0,1,2].map(i=>Math.max(...ps.map(p=>p[i]))-Math.min(...ps.map(p=>p[i]))));if(span<.001)fail();
  let volume=0;for(let a=1;a<ps.length;a++)for(let b=a+1;b<ps.length;b++)for(let c=b+1;c<ps.length;c++){
   const [u,v,w]=[ps[a],ps[b],ps[c]].map(p=>p.map((n,i)=>n-ps[0][i]));volume=Math.max(volume,Math.abs(u[0]*(v[1]*w[2]-v[2]*w[1])-u[1]*(v[0]*w[2]-v[2]*w[0])+u[2]*(v[0]*w[1]-v[1]*w[0])));

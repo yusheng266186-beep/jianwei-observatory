@@ -35,7 +35,7 @@ export function exerciseSubjects(atlas,{sid,exam}={}){
 }
 // The model produces the final document structure. Parsing never rewrites text,
 // fixes escaping, renames fields, or adds formula markers after generation.
-export function parseExerciseJSON(source){return JSON.parse(source);}
+export function parseExerciseJSON(source){const text=source.trim(),fence=text.match(/^```(?:json)?\s*\n([\s\S]*?)\n```$/i);return JSON.parse(fence?fence[1]:text);}
 const formatted=text=>!/[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(text)&&text.split(/(\$\$[\s\S]*?\$\$|\$[^$\n]+\$)/g).every((part,i)=>i%2?!/[\t\r]/.test(part):!(/\\[A-Za-z{}]/.test(part)));
 
 export const EXERCISE_QUESTION_TYPES=['填空','选择','多选','解答','简答','阅读','写作','实验','计算','翻译'];

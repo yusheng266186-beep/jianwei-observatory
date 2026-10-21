@@ -1,5 +1,6 @@
 'use strict';
 const {request}=require('./tencent.cjs'),{routes,modelProfile}=require('./model-control.cjs'),vision=require('./model-vision.cjs');
+const {parseModelJSON}=require('./model-json.cjs');
 async function structuredOnce(prompt,{generation,key,env=process.env,transport=request,onProgress,signal}={}){
  const route=routes[generation.provider],g={...generation,protocol:generation.protocol||route?.protocol,base:generation.base||route?.url,credentialRef:generation.credentialRef||route?.key};key=key||env[g.credentialRef];
  if(!route||!key)throw new Error('MODEL_NOT_CONFIGURED');
@@ -10,7 +11,7 @@ async function structuredOnce(prompt,{generation,key,env=process.env,transport=r
 // Retry only an explicit transient upstream rejection, never a broken stream
 // whose generation may already have been billed. The durable parent keeps text.
 async function structured(prompt,options={}){
- prompt={...prompt,system:prompt.system+'\n输出JSON Schema（required字段必须全部给出；无文字标签用空字符串，不省略字段）：'+JSON.stringify(prompt.schema)+'\n只输出JSON，首字符为{，末字符为}，绝不输出代码围栏。'};
+ prompt={...prompt,system:prompt.system+'\n输出JSON Schema（required字段必须全部给出；无文字标签用空字符串）：'+JSON.stringify(prompt.schema)+'\n只输出JSON，首字符为{，末字符为}，绝不输出代码围栏。'};
  for(let attempt=0;;attempt++){try{return await structuredOnce(prompt,options);}catch(error){
   if(attempt||options.signal?.aborted||![502,503,529].includes(error.diagnostic?.status))throw error;
   await new Promise((resolve,reject)=>{const abort=()=>{clearTimeout(timer);reject(new Error('JOB_CANCELLED'));},timer=setTimeout(()=>{options.signal?.removeEventListener('abort',abort);resolve();},1500);options.signal?.addEventListener('abort',abort,{once:true});});
@@ -20,13 +21,29 @@ const questionData=(q,input)=>({subject:input.subject,curriculum:input.curriculu
 async function planFigure(q,input,options={}){
  const diagrams=await import('./exercise-diagrams.mjs'),schema={type:'object',additionalProperties:false,required:['diagram'],properties:{diagram:diagrams.exerciseDiagramSchema}};
  const system=require('./figure-prompt-guidance.cjs').figurePlanPrompt(input.subject);
- const completion=await (options.complete||structured)({system,input:{...questionData(q,input),visuals:input.visuals,feedback:options.feedback||null,...(options.previousDiagram?{previousDiagram:options.previousDiagram}:{})},schema},options);
+ const completion=await (options.complete||structured)({system,input:{...questionData(q,input),visuals:input.visuals,feedback:options.feedback||null,...(options.previousDiagram?{previousDiagram:options.previousDiagram}:{}),...(options.previousReview?{previousReview:options.previousReview}:{})},schema},options);
  const diagram=await parseFigurePlan(completion.output,q,input);
  return {...completion,diagram,output:undefined};
 }
 async function parseFigurePlan(output,q,input){
  const diagrams=await import('./exercise-diagrams.mjs');
- try{if(input.visuals==='none')throw Error('本次不配图，不能生成图示。');const result=JSON.parse(output);if(!result||Object.keys(result).length!==1||!result.diagram)throw Error('图示输出结构无效。');diagrams.validateExerciseDiagram(result.diagram);const spatialFold=input.subject==='数学'&&/翻折|折起/.test(q.stem)&&/平面|空间/.test(q.stem)&&/空间|翻折后|折后|不同.{0,3}平面/.test(q.figureRequest?.requirements||'');if(spatialFold&&!['spatial-frame','cuboid','right-triangular-prism','rectangular-pyramid'].includes(result.diagram.model?.id))throw Error('翻折后的空间图必须使用真实非共面三维模型，不能用二维drawing或节点坐标冒充。');if(result.diagram.kind==='illustration'&&(!['auto','hybrid'].includes(input.visuals)||q.figureRequest?.precision==='exact'))throw Error('本题需要精确矢量图，不允许改用生图。');diagrams.validateGeneratedExerciseFigures({questions:[{...q,diagram:result.diagram}]},input);return result.diagram;}catch(cause){throw Object.assign(new Error('FIGURE_PLAN_INVALID'),{cause,output});}
+ try{
+  if(input.visuals==='none')throw Error('本次不配图，不能生成图示。');
+  const result=parseModelJSON(output),diagram=structuredClone(result?.diagram||result);
+  if(!diagram||typeof diagram!=='object'||Array.isArray(diagram))throw Error('图示输出结构无效。');
+  // Empty display metadata is optional; no scientific coordinates or labels
+  // are inferred. Unknown diagram fields still go through the safe renderer.
+  if(diagram.caption===undefined)diagram.caption='';
+  if(diagram.description===undefined)diagram.description='';
+  for(const edge of diagram.edges||[])if(edge.label===undefined)edge.label='';
+  for(const edge of diagram.model?.links||[])if(edge.hidden===undefined)edge.hidden=false;
+  diagrams.validateExerciseDiagram(diagram);
+  if(diagram.kind==='illustration'&&(!['auto','hybrid'].includes(input.visuals)||q.figureRequest?.precision==='exact'))throw Error('本题需要精确矢量图，不允许改用生图。');
+  // A custom projected drawing can express spatial relationships correctly;
+  // correctness is reviewed from the full question, not guessed from its kind.
+  diagrams.validateGeneratedExerciseFigures({questions:[{...q,diagram}]},input);
+  return diagram;
+ }catch(cause){throw Object.assign(new Error('FIGURE_PLAN_INVALID'),{cause,output});}
 }
 async function reviewFigure(q,input,diagram,options={}){
  const schema={type:'object',additionalProperties:false,required:['approved','issues'],properties:{approved:{type:'boolean'},issues:{type:'array',maxItems:12,items:{type:'string',maxLength:400}},contentIssues:{type:'array',maxItems:8,items:{type:'string',maxLength:400}},layoutNotes:{type:'array',maxItems:8,items:{type:'string',maxLength:400}}}};
@@ -39,10 +56,22 @@ async function reviewFigure(q,input,diagram,options={}){
  const raster=diagram.kind==='illustration',pixels=!!(raster&&diagram.image&&vision.supportsImage(capability));
  if(pixels)(await import('./exercise-diagrams.mjs')).validateExerciseDiagram(diagram);
  const copy=structuredClone(diagram);if(copy.image)delete copy.image;
- const parse=completion=>{let result;try{result=JSON.parse(completion.output);if(!result||Object.keys(result).some(k=>!['approved','issues','contentIssues','layoutNotes'].includes(k))||typeof result.approved!=='boolean'||!Array.isArray(result.issues)||result.issues.length>12||result.issues.some(s=>typeof s!=='string'||s.length>400)||result.approved&&result.issues.length||!result.approved&&!result.issues.length||result.contentIssues!==undefined&&(!Array.isArray(result.contentIssues)||result.contentIssues.length>8||result.contentIssues.some(s=>typeof s!=='string'||!s||s.length>400))||result.layoutNotes!==undefined&&(!Array.isArray(result.layoutNotes)||result.layoutNotes.length>8||result.layoutNotes.some(s=>typeof s!=='string'||!s||s.length>400)))throw Error('图题核对结果不完整。');}catch(cause){throw Object.assign(new Error('FIGURE_REVIEW_INVALID'),{cause,output:completion.output});}return {...completion,...result,layoutNotes:result.layoutNotes||[],contentIssues:result.contentIssues||[],output:undefined};};
+ const parse=completion=>{
+  try{
+   const result=parseModelJSON(completion.output);
+   if(!result||typeof result.approved!=='boolean')throw Error('图题核对缺少明确的approved判定。');
+   const issues=result.issues===undefined?[]:result.issues,contentIssues=result.contentIssues===undefined?[]:result.contentIssues,layoutNotes=result.layoutNotes===undefined?[]:result.layoutNotes;
+   for(const [name,items]of Object.entries({issues,contentIssues,layoutNotes}))if(!Array.isArray(items)||items.length>24||items.some(s=>typeof s!=='string'||!s.trim()||s.length>1600))throw Error(name+'须为简短意见数组。');
+   const approved=result.approved||!issues.length&&layoutNotes.length>0&&!contentIssues.length;
+   if(!approved&&!issues.length)throw Error('未通过的图示须说明具体原因。');
+   // Trust an explicit approval. Non-blocking observations remain visible,
+   // rather than rejecting a correct figure for an optional display detail.
+   return {...completion,approved,issues:approved?[]:issues,contentIssues,layoutNotes:[...layoutNotes,...(approved?issues:[])],output:undefined};
+  }catch(cause){throw Object.assign(new Error('FIGURE_REVIEW_INVALID'),{cause,output:completion.output});}
+ };
  const run=async withPixels=>{
   const reviewSystem=require('./figure-prompt-guidance.cjs').figureReviewPrompt(input.subject,{pixels:withPixels,illustration:raster});
-  const completion=await (options.complete||structured)({...(withPixels?{image:diagram.image}:{}),system:reviewSystem,input:{...questionData(q,input),diagram:copy,feedback:options.feedback||null,...(options.previousDiagram?{previousDiagram:options.previousDiagram}:{})},schema},options);
+  const completion=await (options.complete||structured)({...(withPixels?{image:diagram.image}:{}),system:reviewSystem,input:{...questionData(q,input),diagram:copy,feedback:options.feedback||null,...(options.previousDiagram?{previousDiagram:options.previousDiagram}:{}),...(options.previousReview?{previousReview:options.previousReview}:{})},schema},options);
   return {...parse(completion),reviewScope:withPixels?'pixels':(raster?'brief':'vector-source')};
  };
  if(!pixels)return run(false);
