@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {wordParagraphLines} from '../app/io/exercise-word.js';
-import {mathMLToOffice} from '../app/io/exercise-word-math.js';
+import {wordMathNeedsVector} from '../app/io/exercise-word-math.js';
 import {mathParts} from '../app/io/exercise-math.js';
 import {exerciseRichBlocks} from '../app/engine/exercise-rich-blocks.js';
 // Exact excerpt from the 2026-10-21 official-flow audit (数学-result.json,
@@ -20,18 +20,23 @@ d_{n+1}
 \end{aligned}$$
 所以从 $d_2$ 起，数列为首项 $\dfrac1{16}$、公比 $-\dfrac14$ 的等比数列。`;
 const textOf=line=>mathParts(line).filter(part=>!part.latex).map(part=>part.text).join('');
-const node=(localName,children=[],attributes={},textContent='')=>({localName,children,textContent,getAttribute:name=>attributes[name]??null});
-test('aligned MathML becomes an OMML matrix with its right/left alignment points',()=>{
- const leaf=(tag,text)=>node(tag,[],{},text),
-  cell=(...children)=>node('mtd',children,{},children.map(child=>child.textContent).join('')),
-  row=(...cells)=>node('mtr',cells,{},cells.map(child=>child.textContent).join('')),
-  table=node('mtable',[row(cell(leaf('mi','d')),cell(leaf('mo','='),leaf('mn','1')))],{columnalign:'right left'}),
-  omml=mathMLToOffice(node('math',[table]));
- assert.match(omml,/^<m:oMath><m:m><m:mPr><m:mcs>/);
- assert.match(omml,/<m:mc><m:mcPr><m:count m:val="1"\/><m:mcJc m:val="right"\/><\/m:mcPr><\/m:mc><m:mc><m:mcPr><m:count m:val="1"\/><m:mcJc m:val="left"\/><\/m:mcPr><\/m:mc><\/m:mcs><\/m:mPr>/);
- assert.match(omml,/<m:mr><m:e><m:r><m:t xml:space="preserve">d<\/m:t><\/m:r><\/m:e>/);
- const plain=mathMLToOffice(node('math',[node('mtable',[row(cell(leaf('mi','x')))])]));
- assert.doesNotMatch(plain,/m:mPr/);
+test('multiline derivation environments take the existing vector fallback',()=>{
+ // inline() checks this helper before tex2mml, so true means the MathJax SVG
+ // already prepared by mathSVG is embedded as one image instead of an OMML matrix.
+ for(const env of ['aligned','alignedat','align','align*','alignat','alignat*','gathered','gather','gather*','split','multline','multline*','eqnarray','eqnarray*'])
+  assert.equal(wordMathNeedsVector(`\\begin{${env}}\na&=b\\\\\nc&=d\n\\end{${env}}`),true,env);
+ assert.equal(wordMathNeedsVector('\\begin {aligned}\na&=b\n\\end {aligned}'),true);
+ const display=wordParagraphLines(auditAnalysis).filter(line=>line.trim().startsWith('$$')),
+  aligned=mathParts(display.find(line=>line.includes('\\begin{aligned}')))[0].latex,
+  simple=mathParts(display.find(line=>!line.includes('\\begin{aligned}')))[0].latex;
+ assert.equal(wordMathNeedsVector(aligned),true);
+ assert.equal(wordMathNeedsVector(simple),false);
+});
+test('ordinary single-line formulas still convert to native OMML',()=>{
+ for(const latex of [String.raw`p_{n+2}=\frac12p_{n+1}+\frac14p_n`,String.raw`\sqrt{x^2+y^2}`,String.raw`\left(\frac{a}{b}\right)^2`,String.raw`\begin{pmatrix}1&2\\3&4\end{pmatrix}`,String.raw`\ce{CO2}`])
+  assert.equal(wordMathNeedsVector(latex),false,latex);
+ assert.equal(wordMathNeedsVector(String.raw`\ce{CO2 <=> CO}`),true);
+ assert.equal(wordMathNeedsVector(String.raw`\begin{array}{cc}a&b\\\hline c&d\end{array}`),true);
 });
 test('audit aligned derivation reaches Word as one complete display-math token',()=>{
  const lines=wordParagraphLines(auditAnalysis),aligned=lines.find(line=>line.includes('\\begin{aligned}'));

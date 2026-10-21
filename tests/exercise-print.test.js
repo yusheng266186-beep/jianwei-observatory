@@ -36,6 +36,18 @@ test('不同材料、短通用提示和不完整段落不合并；仅合并连�
 
 test('Word短解答的适量留白随题干，不产生只有作答空行的末页；长留白仍可分页',async()=>{const {wordAnswerSpaceParagraphs}=await import('../app/io/exercise-word.js');const q={type:'解答',stem:'求通项并证明结论。',choices:[],answerLines:14};const short=wordAnswerSpaceParagraphs(q,'数学');assert.equal((short.match(/w:keepNext/g)||[]).length,13);assert.equal([...short.matchAll(/w:line="(\d+)"/g)].reduce((n,m)=>n+Number(m[1]),0),14*18*20);const long=wordAnswerSpaceParagraphs({...q,answerLines:48},'数学');assert(!long.includes('w:keepNext'));assert.equal((long.match(/w:pStyle/g)||[]).length,48);assert(!wordAnswerSpaceParagraphs({...q,stem:'完整长材料。'.repeat(300)},'数学').includes('w:keepNext'));});
 
+test('稍长的纯文字遗传题与完整作答区同行，密集换行和公式仍可流动',async()=>{
+ const {exerciseKeepWritingTogether:keep}=await import('../app/engine/exercise-print.js');
+ const stem='以下为原创遗传分析情境。某单基因遗传病为常染色体隐性遗传病，正常等位基因为A，致病等位基因为a，完全外显，无新突变。不同家庭的遗传事件相互独立，配子随机结合，各次生育相互独立；子代为男、女的概率各为1/2，性别与该基因的遗传相互独立。\n甲为表型正常的男性，乙为表型正常的女性。甲的父母均表型正常，甲有一名患病同胞；乙的父母也均表型正常，乙也有一名患病同胞。甲、乙两个家庭之间无亲缘关系。甲与乙婚后生育了一名表型正常的女儿丙。丙成年后与表型正常的男性丁婚配，已知丁的父亲患该病。\n请用A、a表示相关基因型，写出必要的概率计算依据。\n（1）分别确定甲的双亲、乙的双亲的基因型，并求甲、乙各自为携带者的概率。（3分）\n（2）甲、乙生育的一个孩子患病的概率是多少？已知女儿丙表型正常，求丙为携带者的概率，并写出从正常子代中计算该概率的依据。（4分）\n（3）确定丁的基因型，求丙、丁生育的第一个孩子为患病男孩的概率。（3分）';
+ const q={type:'简答',stem,choices:[],answerLines:12};
+ assert.equal(stem.length,407);assert(keep(q,'生物'));assert.equal(exerciseAnswerSpaceHeight(q,'生物'),216);
+ assert(!keep({...q,stem:'密集材料。'.repeat(7)+'\n'+('密集材料。'.repeat(7)+'\n').repeat(15),answerLines:16},'生物'));
+ for(const extra of ['$x^2$','\n| 数据 | 数值 |',String.raw`\begin{aligned}a&=b\end{aligned}`])assert(!keep({...q,stem:stem+extra},'生物'));
+ assert(!keep({...q,diagram:{kind:'plot'}},'生物'));assert(!keep({...q,answerLines:17},'生物'));
+ const {wordAnswerSpaceParagraphs}=await import('../app/io/exercise-word.js'),word=wordAnswerSpaceParagraphs(q,'生物');
+ assert.equal((word.match(/w:keepNext/g)||[]).length,11);assert.equal([...word.matchAll(/w:line="(\d+)"/g)].reduce((n,m)=>n+Number(m[1]),0),216*20);
+});
+
 
 test('教师解析和评分标题在页尾先换页，普通正文仍可自由流动，短题不引入强制分页',async()=>{
  const {exercisePageBreakBefore}=await import('../app/engine/exercise-print.js');

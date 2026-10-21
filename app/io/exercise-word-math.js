@@ -1,7 +1,11 @@
 const xml=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
 // mhchem builds reaction arrows from overlapping glyphs. OMML cannot preserve
 // that TeX spacing reliably; keep the original vector rather than alter an arrow.
-export const wordMathNeedsVector=latex=>/\\ce\{[^}]*?(?:<=>|<->|->|<-|=>|<=)/.test(latex)||/\\begin\{array\}/.test(latex)&&/\\hline|\|/.test(latex);
+// Multi-row display environments do not survive the MathML-to-OMML matrix
+// conversion in real Word/LibreOffice output (rows disappear, empty operands
+// become red ¿). Keep the preview/PDF vector for those; simple single-line
+// formulas still use editable native Office math.
+export const wordMathNeedsVector=latex=>/\\begin\s*\{(?:alignedat|aligned|alignat|align|gathered|gather|split|multline|eqnarray)\*?\}/.test(latex)||/\\ce\{[^}]*?(?:<=>|<->|->|<-|=>|<=)/.test(latex)||/\\begin\{array\}/.test(latex)&&/\\hline|\|/.test(latex);
 // MathML from the same local MathJax TeX parser used in preview. Native Office
 // math keeps fractions, powers, roots, matrices and limits editable in Word.
 export function mathMLToOffice(root){
@@ -18,14 +22,7 @@ export function mathMLToOffice(root){
   if(tag==='mfrac')return '<m:f><m:fPr><m:type m:val="'+(node.getAttribute('linethickness')==='0'?'noBar':'bar')+'"/></m:fPr>'+slot('num',c(0))+slot('den',c(1))+'</m:f>';
   if(tag==='msqrt'||tag==='mroot')return '<m:rad><m:radPr>'+(tag==='msqrt'?'<m:degHide m:val="1"/>':'')+'</m:radPr>'+slot('deg',tag==='mroot'?c(1):'')+slot('e',tag==='mroot'?c(0):all())+'</m:rad>';
   if(tag==='mfenced')return '<m:d><m:dPr><m:begChr m:val="'+xml(node.getAttribute('open')??'(')+'"/><m:endChr m:val="'+xml(node.getAttribute('close')??')')+'"/><m:sepChr m:val="'+xml(node.getAttribute('separators')??',')+'"/></m:dPr>'+kids.map(n=>slot('e',convert(n))).join('')+'</m:d>';
-  if(tag==='mtable'){
-   // MathJax marks aligned derivations with columnalign="right left". OMML
-   // matrices center each cell by default, which would break the alignment
-   // points, so carry the column justification over to the matrix properties.
-   const columns=Math.max(1,...kids.map(row=>row.children.length)),marks=(node.getAttribute('columnalign')||'').trim().split(/\s+/).filter(Boolean),
-    mpr=marks.length?'<m:mPr><m:mcs>'+Array.from({length:columns},(_,i)=>{const value=marks[i]??marks[marks.length-1];return '<m:mc><m:mcPr><m:count m:val="1"/><m:mcJc m:val="'+(['left','right','center'].includes(value)?value:'center')+'"/></m:mcPr></m:mc>';}).join('')+'</m:mcs></m:mPr>':'';
-   return '<m:m>'+mpr+kids.map(row=>'<m:mr>'+[...row.children].map(cell=>slot('e',convert(cell))).join('')+'</m:mr>').join('')+'</m:m>';
-  }
+  if(tag==='mtable')return '<m:m>'+kids.map(row=>'<m:mr>'+[...row.children].map(cell=>slot('e',convert(cell))).join('')+'</m:mr>').join('')+'</m:m>';
   if(['mtd','mtr','mlabeledtr'].includes(tag))return all();
   if(tag==='mover'&&node.getAttribute('accent')==='true'&&kids[1]?.textContent.length===1)return '<m:acc><m:accPr><m:chr m:val="'+xml(kids[1].textContent)+'"/></m:accPr>'+slot('e',c(0))+'</m:acc>';
   if(tag==='mover')return slot('limUpp',slot('e',c(0))+slot('lim',c(1)));

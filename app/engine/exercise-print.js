@@ -58,10 +58,18 @@ export function exerciseAnswerSpaceHeight(question,subject){
  return lines*18;
 }
 export function exerciseWritingRows(height){const rows=[];while(height>0){const part=Math.min(18,height);rows.push(part);height-=part;}return rows;}
-// A compact subjective prompt plus at most sixteen handwriting rows fits on a
-// fresh A4 page. Keeping only this bounded case avoids an orphan blank page;
-// lengthy passages, diagrams and larger writing areas can still flow normally.
-export const exerciseKeepWritingTogether=(q,subject)=>exerciseKeepPromptTogether(q)&&String(q.stem||'').length<=400&&exerciseAnswerSpaceHeight(q,subject)<=288;
+// Keep a bounded prompt and its writing area on a fresh page. A character-count
+// cliff split a 407-character genetics prompt from all twelve answer rows. For
+// slightly longer plain prose, estimate wrapped lines and reserve heading space;
+// tables, display math, diagrams and long writing areas remain free to flow.
+export function exerciseKeepWritingTogether(q,subject){
+ const stem=String(q.stem||''),space=exerciseAnswerSpaceHeight(q,subject);
+ if(!exerciseKeepPromptTogether(q)||space>288)return false;
+ if(stem.length<=400)return true;
+ if(/\$|\\\(|\\\[|\\begin\s*\{|^\s*(?:\||`)/m.test(stem)||(q.choices||[]).length)return false;
+ const lines=stem.split('\n').reduce((total,line)=>total+Math.max(1,Math.ceil([...line].reduce((width,c)=>width+(c.charCodeAt(0)>255?1:.6),0)/38)),0);
+ return lines*18+72+space<=650;
+}
 import {exerciseFigureParts} from './exercise-figure-layout.js';
 export {exerciseFigureParts};
 // A single terrain map is naturally taller than a two-panel diagram. Keep its
