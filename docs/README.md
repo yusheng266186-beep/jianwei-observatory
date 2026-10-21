@@ -1,5 +1,8 @@
 # 文档总索引
 
+- [教师页底部核对与自适应排版（2026-10-21）](TEACHER-BOTTOM-REVIEW-2026-10-21.md)
+- [Cockpit 调研、跨设备授权缺口与云端账号方案（2026-10-21）](COCKPIT-REMOTE-ACCOUNT-REVIEW-2026-10-21.md)
+
 - [工作台、教师布局与本机授权助手（2026-10-21）](WORKBENCH-TEACHER-2026-10-21.md)
 - [官方多账号授权接口与使用边界](OPENAI-ACCOUNT-WORKBENCH-2026-10-21.md)
 - [十科完整提示词导出与复核方式](PROMPT-EXPORT-2026-10-21.md)
