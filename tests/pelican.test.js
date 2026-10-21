@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import {createRequire} from 'node:module';
-const require=createRequire(import.meta.url),{MemoryStore}=require('../backend/store.cjs'),{createPelicanControl,safeSVG}=require('../backend/pelican.cjs');
+const require=createRequire(import.meta.url),{MemoryStore}=require('../backend/store.cjs'),{createPelicanControl,safeSVG,defaultComplete}=require('../backend/pelican.cjs');
 const owner='a'.repeat(32),env={OPENAI_CODEX_ENABLED:'true'},pick={provider:'openai-codex',model:'gpt-6.1-sol',effort:'medium'},svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="20"/></svg>';
 test('comparison serializes candidates, preserves real timings and resumes without another model call',async()=>{
  const store=new MemoryStore(),dispatched=[];let time=1000,calls=0;
@@ -32,4 +32,13 @@ test('a saved drawing can finish delivery after storage failure without paying f
  const store=new MemoryStore(),keys=[];let calls=0,failed=false;const create=store.create.bind(store);store.create=async(k,v)=>{if(k.endsWith('/result.json')&&!failed){failed=true;throw Error('STORE_UNAVAILABLE');}return create(k,v);};
  const c=createPelicanControl({store,owner,env,dispatch:async k=>keys.push(k),complete:async()=>{calls++;return {output:svg};}}),id=crypto.randomUUID();await c.begin({candidates:[pick]},id);
  const k=keys[0],job=(await store.get(k+'/meta.json')).value;await assert.rejects(c.run(k,job),/STORE_UNAVAILABLE/);await c.run(k,job);assert.equal((await c.status(id)).status,'ready');assert.equal(calls,1);
+});
+test('native Gemini and Kimi comparisons use the required SVG string schema rather than an exercise schema',async()=>{
+ const {snapshot}=require('../backend/model-control.cjs'),payload=JSON.stringify({svg});
+ for(const selection of [{provider:'gemini',model:'gemini-3.8-flash',effort:'deep'},{provider:'kimi-code',model:'k3',effort:'deep'}]){
+  const env={GEMINI_API_KEY:'test-only',KIMI_API_KEY:'test-only'},g=snapshot(selection,env);let body;
+  const result=await defaultComplete({system:'画骑车的鹈鹕',input:{}},g,{env,transport:async(u,o)=>{body=JSON.parse(o.body);return {status:200,body:JSON.stringify(g.protocol==='gemini'?{candidates:[{content:{parts:[{text:payload}]},finishReason:'STOP'}]}:{choices:[{message:{content:payload},finish_reason:'stop'}]})};}});
+  const schema=g.protocol==='gemini'?body.generationConfig.responseJsonSchema:body.response_format.json_schema.schema;
+  assert.deepEqual(schema.required,['svg']);assert.equal(schema.properties.svg.type,'string');assert.equal(safeSVG(result.output),svg);
+ }
 });

@@ -5,6 +5,7 @@ const uuid=/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
 const DEFAULT_PROMPT='绘制一只骑自行车的鹈鹕。用完整、自包含的 SVG 表现清晰的鸟喙、身体、双轮、车架与脚踏关系，构图协调。直接输出 SVG，不引用外部资源，不使用脚本、foreignObject 或动画。';
 const fail=(code,status=400)=>Object.assign(Error(code),{status});
 function safeSVG(output){
+ try{const parsed=JSON.parse(String(output));if(typeof parsed?.svg==='string')output=parsed.svg;}catch{}
  let svg=String(output).match(/<svg\b[\s\S]*?<\/svg\s*>/i)?.[0];
  if(svg)svg=svg.replace(/<!--[\s\S]*?-->/g,'');
  if(!svg||svg.length>200000||/<(?:script|foreignObject|iframe|image|animate|set|a)\b|\bon\w+\s*=|<!|<\?|@import/i.test(svg))return null;
@@ -16,6 +17,7 @@ function safeSVG(output){
 async function latest(store,base){let low=0,high=1;const k=n=>base+'/'+String(n).padStart(10,'0')+'.json';while(await store.get(k(high))){low=high;high=high*2+1;}while(high-low>1){const mid=Math.floor((high+low)/2);if(await store.get(k(mid)))low=mid;else high=mid;}return {revision:low,value:low?(await store.get(k(low))).value:[]};}
 async function defaultComplete(prompt,generation,options){
  const methods=require('./model-completion.cjs'),key=options.env[generation.credentialRef];
+ if(['gemini','kimi'].includes(generation.protocol))prompt={...prompt,system:prompt.system+'\n传输格式：将完整SVG放在JSON对象的svg字符串字段中，仅返回该JSON对象。',schema:{type:'object',properties:{svg:{type:'string'}},required:['svg'],additionalProperties:false}};
  if(generation.protocol==='gemini')return methods.completeGemini(prompt,generation,{...options,key});
  if(generation.protocol==='kimi')return require('./kimi.cjs').completeKimi(prompt,{...options,key,kind:'code',model:generation.model,effort:generation.reasoningEffort});
  return methods.completeRemote(prompt,generation,{...options,key});
@@ -89,4 +91,4 @@ function createPelicanControl({store,owner,env=process.env,now=Date.now,dispatch
  }
  return {begin,status,list,cancel,run};
 }
-module.exports={createPelicanControl,safeSVG,DEFAULT_PROMPT};
+module.exports={createPelicanControl,safeSVG,DEFAULT_PROMPT,defaultComplete};
