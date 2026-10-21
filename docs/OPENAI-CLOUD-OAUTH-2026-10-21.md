@@ -32,6 +32,27 @@
 
 ## 维护与验证
 
+2026-10-21 腾讯云正式服务实测：发起设备码任务成功，约 **5.03 秒**取得官方链接与一次性代码；主动取消成功，Worker 确认取消并正常退出。未新增真实账号，原计划授权账号和模型配置保持一致。API/Worker 两份代码包各69文件与源码逐字节一致，内存仍为256MB，时限仍为60秒/900秒。981项单元测试通过；320px、390px、1440px 的匿名界面检查无横向溢出。
+
+尚未由账号所有者完成本次新通道的实际授权，因此**没有声称真实额度、手动唤醒或新通道出题已实测成功**。现有计划通道的历史生成验证继续有效，两者不能混为一次验收。
+
+### 管理接口
+
+以下接口均要求现有教师 Bearer 会话并受来源校验。POST 使用 `X-Request-ID` 保持任务幂等；同编号不同请求返回409。设备码与账号凭据不会进入公开资源或普通生成进度。
+
+| 接口 | 用途 |
+| --- | --- |
+| `GET /admin/codex/accounts` | 账号名单、当前选择、最近官方额度快照 |
+| `POST /admin/codex/accounts/active` | `{accountId, expectedRevision}`，切换本通道当前账号 |
+| `POST /admin/codex/authorize` | `{mode:'add'}` 或 `{mode:'reauthorize',accountId}`，创建后台授权任务 |
+| `GET /admin/codex/authorize/:id` | 查询排队、设备码等待、完成、取消、失败或到期；已确认候选可继续保存 |
+| `POST /admin/codex/authorize/:id/cancel` | 取消等待；提交已取得终态锁时返回409，避免假报取消 |
+| `POST /admin/codex/accounts/:id/quota` | 创建官方额度读取任务，不调用模型 |
+| `POST /admin/codex/accounts/:id/wake` | `{model,effort}`，创建一次手动轻量推理 |
+| `GET /admin/codex/operations/:id` | 查询额度/唤醒任务的真实结果 |
+
+新增配置为 `OPENAI_CODEX_ENABLED=true`、`OPENAI_CODEX_BINARY=/opt/jianwei-codex/bin/codex`；执行层 `jianwei-openai-codex:1` 只挂载 Worker。API 与 Worker 保留原有代理、TOTP、角色和其他服务配置，不能用完整环境覆盖方式重新部署。
+
 ```sh
 node tools/package-codex-layer.cjs --package-dir /path/to/official/package --out /path/to/layer.zip
 node --test tests/codex-accounts.test.js tests/codex-runtime.test.js tests/workbench-cloud-accounts.test.js

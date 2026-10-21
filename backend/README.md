@@ -1,6 +1,8 @@
 # 个性化辅导后端
 
-工作台现在管理官方账号：`GET /admin/openai/accounts`、`POST /admin/openai/authorize`、`GET /admin/openai/authorize/:id`、`POST /admin/openai/authorize/:id/cancel` 均使用现有教师会话；本机助手只向固定的 claim/complete capability 路由转发一次性授权信息。详见[授权接口与存储说明](../docs/OPENAI-ACCOUNT-WORKBENCH-2026-10-21.md)。API 函数与 Worker 都必须保留 `OPENAI_PROXY_CONFIG`、`OPENAI_XRAY_PATH` 和 `jianwei-openai-xray` 层；只给 Worker 配置代理不能完成网页发起的授权。授权码只交换一次，JWKS 临时失败可在原 15 分钟窗口内恢复，已验证或已激活的落盘恢复不会重复换码。
+新增独立的云端 OpenAI OAuth 账号管理，`/admin/codex/*` 使用现有教师会话，可在任意设备发起官方设备码授权。原有 SIWC 继续独立运行，当前出题配置不自动切换。设备码发起/取消已在腾讯云实测通过，真实额度、唤醒与新通道出题须在所有者授权后继续验收。详见[云端 OAuth 接口、存储与部署边界](../docs/OPENAI-CLOUD-OAUTH-2026-10-21.md)。
+
+现有计划通道的官方账号接口：`GET /admin/openai/accounts`、`POST /admin/openai/authorize`、`GET /admin/openai/authorize/:id`、`POST /admin/openai/authorize/:id/cancel` 均使用现有教师会话；本机助手只向固定的 claim/complete capability 路由转发一次性授权信息。详见[授权接口与存储说明](../docs/OPENAI-ACCOUNT-WORKBENCH-2026-10-21.md)。API 函数与 Worker 都必须保留 `OPENAI_PROXY_CONFIG`、`OPENAI_XRAY_PATH` 和 `jianwei-openai-xray` 层；只给 Worker 配置代理不能完成网页发起的授权。授权码只交换一次，JWKS 临时失败可在原 15 分钟窗口内恢复，已验证或已激活的落盘恢复不会重复换码。
 
 提示词版本 `subject-templates-20261021.13`，可运行 `node tools/export-training-prompts.cjs --out /绝对路径/新的导出目录` 导出实际编译内容。导出过程不调用模型、不读取账号密钥，教师选择以匿名示例覆盖。
 
