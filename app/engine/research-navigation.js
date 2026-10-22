@@ -1,5 +1,15 @@
 const scenes=new Set(['board','class','papers','people','follow','library']);
 const field='jianweiResearch';
+// WebKit limits pushState + replaceState calls in short bursts. A history
+// checkpoint must never prevent a teacher's next navigation from rendering.
+export function replaceResearchHistory(history,url,state){
+ try{if(JSON.stringify(history.state)===JSON.stringify(state))return false;history.replaceState(state,'',url);return true;}catch{return false;}
+}
+export function pushResearchHistory(history,location,hash){
+ if(location.hash===hash)return 'same';
+ try{history.pushState(null,'',hash);return 'pushed';}
+ catch{try{location.hash=hash;return 'native';}catch{return 'unavailable';}}
+}
 export function researchPath(scene,values={}) {
  if(!scenes.has(scene))return '#board';
  if(scene==='class')return '#class/'+(values.no||'')+'/'+values.tab;

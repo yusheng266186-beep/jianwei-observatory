@@ -1,5 +1,5 @@
 {
-  "main": "runtime/main-JUV4O6OP.js",
+  "main": "runtime/main-IJBR6E73.js",
   "storage": "runtime/storage-IBPL74JR.js",
   "prepare": "runtime/prepare-I725DOMJ.js",
   "importer": "app/runtime/importer-HRELRSPH.js",
@@ -87,7 +87,7 @@
     "app/runtime/shared-B2TDQ3D3.js",
     "app/runtime/shared-S3IIO5LF.js",
     "app/runtime/shared-FLK274R7.js",
-    "app/runtime/main-JUV4O6OP.js",
+    "app/runtime/main-IJBR6E73.js",
     "app/runtime/shared-DETJMWBD.js",
     "app/runtime/shared-XW2GN74H.js",
     "app/runtime/shared-F43TXK24.js",
@@ -123,8 +123,5 @@
     "app/runtime/shared-RMTIRWQZ.js",
     "app/runtime/figure-library-EU3JHQHD.js",
     "app/runtime/model-workbench-72P4PMCX.js"
-  ],
-  "compatibility": [
-    "assets/runtime-finish-e06eb4a0e3d9.css"
   ]
 }

@@ -1,5 +1,17 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {researchPath,researchStudySnapshot,researchHistoryState,researchHistoryStudy,researchHistoryConditions} from '../app/engine/research-navigation.js';
+import {replaceResearchHistory,pushResearchHistory,researchPath,researchStudySnapshot,researchHistoryState,researchHistoryStudy,researchHistoryConditions} from '../app/engine/research-navigation.js';
+test('相同研究状态不重复写历史；历史限额不抛出到界面切换流程',()=>{
+ let writes=0;const history={state:{keep:1},replaceState(value){writes++;this.state=value;}};
+ assert.equal(replaceResearchHistory(history,'#board',{keep:1}),false);assert.equal(writes,0);
+ assert.equal(replaceResearchHistory(history,'#board',{keep:2}),true);assert.equal(writes,1);
+ history.replaceState=()=>{throw new DOMException('limited','SecurityError');};assert.equal(replaceResearchHistory(history,'#board',{keep:3}),false);
+});
+test('pushState 受限时回退原生地址导航，保留目标地址且不阻止绘制',()=>{
+ const history={pushState(){throw new DOMException('limited','SecurityError');}},location={hash:'#papers'};
+ assert.equal(pushResearchHistory(history,location,'#people'),'native');assert.equal(location.hash,'#people');assert.equal(pushResearchHistory(history,location,'#people'),'same');
+ assert.equal(pushResearchHistory({pushState(){}},{hash:'#board'},'#follow'),'pushed');
+ const blocked={get hash(){return '#board';},set hash(value){throw Error('blocked');}};assert.equal(pushResearchHistory(history,blocked,'#follow'),'unavailable');
+});
 const options=(study,trail=[])=>({scope:'workspace-A',hash:researchPath(study.scene,study.values),study,trail});
 const entry=()=>({scene:'class',values:{no:4,tab:'history',exam:'51',exams:['51'],search:'甲，乙',matrix:'rank',matrixOrder:'up'},position:{top:720,section:'matrix',offset:104,details:[{key:'id:rows',open:true}],tables:[{key:'roster',left:200,top:514}]},drawer:{type:'person',sid:'student-1',exam:'51',tab:'questions'},drawerTop:390,drawerTables:[{key:'answers',left:32,top:220}]});
 test('历史条目保留本次考次、筛选、双向读表位置和观察状态，之后的修改不覆盖旧条目',()=>{const study=entry(),original=structuredClone(study),opts=options(study),state=researchHistoryState(null,opts);study.values.exam='52';study.values.exams.push('52');study.position.tables[0].top=0;study.drawer.tab='overview';const restored=researchHistoryStudy(state,opts);assert.deepEqual(restored.study,original);restored.study.values.search='';assert.equal(researchHistoryStudy(state,opts).study.values.search,'甲，乙');});

@@ -5,7 +5,7 @@ import {installCommittedInput} from './ui/committed-input.js';
 import {tableReadingPositions,restoreTableReadingPositions,disclosurePositions,restoreDisclosurePositions} from './ui/study-position.js';
 import {ensureFeatureStyles,ensureSceneStyles} from './ui/feature-styles.js';
 import {isRuntimeLoadError,runtimeFailureMessage} from './ui/runtime-recovery.js';
-import {researchPath,researchStudySnapshot,researchHistoryState,researchHistoryStudy,researchHistoryConditions} from './engine/research-navigation.js';
+import {replaceResearchHistory,pushResearchHistory,researchPath,researchStudySnapshot,researchHistoryState,researchHistoryStudy,researchHistoryConditions} from './engine/research-navigation.js';
 import {researchObservationList} from './engine/research-roster.js';
 import {syncPracticeFeedbackPlans} from './engine/exercise-feedback.js';
 import {recordPageTiming} from './engine/runtime-diagnostics.js';
@@ -170,13 +170,13 @@ function archiveStudy(study=studyNow()) {
 }
 function checkpointNavigation(study=studyNow()) {
   if(historyRestoring||!study||researchPath(study.scene,study.values)!==location.hash)return;
-  try{history.replaceState(researchHistoryState(history.state,{scope:navigationScope,hash:location.hash,study,trail:researchTrail}),'',location.href);}catch{/* Browser history quotas must not interrupt research or local saves. */}
+  try{replaceResearchHistory(history,location.href,researchHistoryState(history.state,{scope:navigationScope,hash:location.hash,study,trail:researchTrail}));}catch{/* Browser history quotas must not interrupt research or local saves. */}
 }
 function checkpointConditions(){
   if(historyRestoring||!paintedStudy)return;
   // Save the small condition snapshot immediately; DOM reading positions keep
   // their debounced checkpoint, so typing never forces a layout measurement.
-  try{const state=researchHistoryConditions(history.state,{scope:navigationScope,hash:location.hash,scene:current,values:books[current],painted:paintedStudy,trail:researchTrail});if(state)history.replaceState(state,'',location.href);}catch{/* Preserve typing and navigation when history storage is unavailable. */}
+  try{const state=researchHistoryConditions(history.state,{scope:navigationScope,hash:location.hash,scene:current,values:books[current],painted:paintedStudy,trail:researchTrail});if(state)replaceResearchHistory(history,location.href,state);}catch{/* Preserve typing and navigation when history storage is unavailable. */}
 }
 const researchCheckpoint=createCheckpointScheduler({snapshot:()=>studyNow(),checkpoint:study=>checkpointNavigation(study),archive:study=>archiveStudy(study)});
 function scheduleResearch(){researchCheckpoint.schedule();}
@@ -260,7 +260,7 @@ function go(scene,values={},resetScroll=false,{root=false,recordTrail=true}={}) 
   const object=scene+'|'+(scene==='people'?nextValues.sid:scene==='papers'?nextValues.key:scene==='class'?nextValues.no:'');
   closeReader();if(resetScroll||scene!==current||object!==sceneObject(scene)){pagePositions.delete(object);scrollResets.add(object);}
   Object.assign(books[scene],values);current=scene;persistBooks();
-  const next=path(scene);if(location.hash!==next)history.pushState(null,'',next);paint(true);
+  const next=path(scene);pushResearchHistory(history,location,next);paint(true);
 }
 function warmScene(scene){if(hasMaterials(atlas.data)){loadScene(scene).catch(()=>{});ensureSceneStyles(scene,books[scene]).catch(()=>{});if(['follow','library'].includes(scene))warmExerciseCenter();}}
 function prepareReports(){ensureFeatureStyles('reports').catch(()=>{});warmReportFonts().catch(()=>{});warmPDFWorker();warmPDFViewer().catch(()=>{});}
