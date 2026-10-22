@@ -49,7 +49,7 @@
       "feature": "exercises"
     },
     {
-      "file": "assets/runtime-finish-e06eb4a0e3d9.css",
+      "file": "assets/runtime-finish-58c08b85b68b.css",
       "feature": ""
     }
   ],
@@ -57,14 +57,14 @@
     "assets/figure-library-20349b898c28.css",
     "assets/model-workbench-50ab61a061f6.css",
     "assets/runtime-exercises-bb140abdcba3.css",
-    "assets/runtime-finish-e06eb4a0e3d9.css",
+    "assets/runtime-finish-58c08b85b68b.css",
     "assets/runtime-foundation-e51449e9d6c2.css",
     "assets/runtime-report-reading-daa030bab1b8.css",
     "assets/runtime-research-38d914cd29cc.css",
     "styles/fields-a6e6da17cff4.css",
     "styles/reading-fonts-daadf771f13d.css",
     "styles/refinement-931faf8c3de1.css",
-    "styles/visual-language-3c0502e6eb8a.css",
+    "styles/visual-language-498e033a94dd.css",
     "styles/wheels-907315f6eddb.css"
   ],
   "standalone": {
@@ -123,5 +123,8 @@
     "app/runtime/shared-RMTIRWQZ.js",
     "app/runtime/figure-library-EU3JHQHD.js",
     "app/runtime/model-workbench-72P4PMCX.js"
+  ],
+  "compatibility": [
+    "assets/runtime-finish-e06eb4a0e3d9.css"
   ]
 }
