@@ -6,6 +6,7 @@ import {workspaceBackup} from '../app/data/backup.js';
 import {loadOutputVendor} from '../app/io/vendor-loader.js';
 import {scheduleIdleWork} from '../app/ui/idle-work.js';
 import {exerciseIdentity} from '../app/engine/exercise-identity.js';
+import {createResizeWork} from '../app/ui/resize-work.js';
 const require=createRequire(import.meta.url),{createProgressWriter}=require('../backend/progress.cjs');
 
 function storage(values,{failCurrent=false,failLegacy=false}={}){
@@ -68,4 +69,10 @@ test('可选组件按空闲片段加载，输入未完成时让出，取消后�
 });
 test('试题列表优先读取已保存学生信息，无需逐卡查询完整成绩索引',()=>{
  const atlas={materialAt(){throw Error('unnecessary lookup');},people:new Map(),exam:()=>({label:'本场'})};const record={sid:'one',exam:'52',student:{name:'匿名',classNo:4,examLabel:'第二场'}};assert.deepEqual(exerciseIdentity(atlas,record),{name:'匿名',classNo:4,exam:'第二场'});
+});
+test('尺寸通知本轮不修改布局，同一元素合并到下一帧，已移除元素不再更新',()=>{
+ const frames=new Map(),seen=[];let serial=0;
+ const batch=createResizeWork((node,kind)=>seen.push([node.id,kind]),{requestFrame:fn=>(frames.set(++serial,fn),serial),cancelFrame:id=>frames.delete(id)});
+ const node={id:'chart',isConnected:true},removed={id:'old',isConnected:false};for(let i=0;i<20;i++)batch.add(node,'plot');batch.add(removed,'table');assert.deepEqual(seen,[]);assert.equal(frames.size,1);
+ const [id,frame]=frames.entries().next().value;frames.delete(id);frame();assert.deepEqual(seen,[['chart','plot']]);batch.add(node,'rail');batch.cancel();assert.equal(frames.size,0);
 });

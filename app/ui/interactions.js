@@ -4,6 +4,7 @@ import {motion,finishAnimation,moveIndicator} from './motion.js?v=runtime-v45';
 import {springFrame} from './spring-motion.js';
 import {positionSpreadLabels} from './plots.js?v=runtime-v45';
 import {paperMapLayout} from '../engine/paper-structure.js?v=runtime-v45';
+import {createResizeWork} from './resize-work.js';
 let motionPreference=()=>false,resizeObserver,plotObserver,railObserver,drawerHeaderObserver,revealObserver,tooltipTarget=null,tooltipOriginal=null,tooltipFrame=0,outlineFrame=0,drawerOutlineFrame=0,pointerFrame=0,outline=null,outlineEntries=[];
 const observedTables=new Set(),observedPlots=new Set(),observedReveals=new Set(),revealed=new WeakSet();
 const selectionRails=new Set(),railStates=new WeakMap();
@@ -210,10 +211,11 @@ export function installInteractions({reducedMotion}) {
   document.fonts?.addEventListener('loadingdone',fontsReady);
   document.fonts?.ready.then(fontsReady);
   if('IntersectionObserver' in window)layoutObserver=new IntersectionObserver(entries=>{for(const entry of entries)if(entry.isIntersecting){const kind=pendingLayouts.get(entry.target);pendingLayouts.delete(entry.target);layoutObserver.unobserve(entry.target);if(kind)layoutWork(entry.target,kind);}},{rootMargin:'240px 0px'});
-  if('ResizeObserver' in window)resizeObserver=new ResizeObserver(entries=>{for(const entry of entries)prioritizeLayout(entry.target,'table');});
-  if('ResizeObserver' in window)plotObserver=new ResizeObserver(entries=>{for(const entry of entries)prioritizeLayout(entry.target,'plot');});
-  if('ResizeObserver' in window)railObserver=new ResizeObserver(entries=>{for(const entry of entries)if(entry.target.isConnected)selectionRail(entry.target);});
-  if('ResizeObserver' in window){drawerHeaderObserver=new ResizeObserver(refreshDrawerSections);const header=document.querySelector('#research-drawer .drawer-top');if(header)drawerHeaderObserver.observe(header);}
+  const resized=createResizeWork((target,kind)=>{if(kind==='rail')selectionRail(target);else if(kind==='drawer')refreshDrawerSections();else prioritizeLayout(target,kind);});
+  if('ResizeObserver' in window)resizeObserver=new ResizeObserver(entries=>{for(const entry of entries)resized.add(entry.target,'table');});
+  if('ResizeObserver' in window)plotObserver=new ResizeObserver(entries=>{for(const entry of entries)resized.add(entry.target,'plot');});
+  if('ResizeObserver' in window)railObserver=new ResizeObserver(entries=>{for(const entry of entries)resized.add(entry.target,'rail');});
+  if('ResizeObserver' in window){drawerHeaderObserver=new ResizeObserver(()=>{const header=document.querySelector('#research-drawer .drawer-top');if(header)resized.add(header,'drawer');});const header=document.querySelector('#research-drawer .drawer-top');if(header)drawerHeaderObserver.observe(header);}
   if('IntersectionObserver' in window)revealObserver=new IntersectionObserver(entries=>{let order=0;for(const entry of entries)if(entry.isIntersecting){revealObserver.unobserve(entry.target);observedReveals.delete(entry.target);if(!motionPreference())entry.target.animate([{opacity:entry.target.matches('.block,.follow-workbench')?1:.94,translate:'0px 6px'},{opacity:1,translate:'0px 0px'}],{...motion.arrive,delay:Math.min(order++,3)*16,fill:'backwards'});}},{rootMargin:'0px 0px -25px 0px',threshold:.06});
   document.addEventListener('scroll',event=>{if(event.target?.matches?.('.goal-cards[data-scroll-key]')){galleryOffsets.set(event.target.dataset.scrollKey,event.target.scrollLeft);hideTooltip();}else if(event.target?.matches?.('.paper-profile-scroll')){refreshPaperProfiles();hideTooltip();}else if(event.target?.matches?.('.table-scroll'))refreshTable(event.target.closest?.('.table-frame'));else {hideTooltip();if(event.target?.matches?.('#research-drawer,.drawer-body')){cancelAnimationFrame(drawerOutlineFrame);drawerOutlineFrame=requestAnimationFrame(refreshDrawerSections);}else if(event.target===document||event.target===document.documentElement){cancelAnimationFrame(outlineFrame);outlineFrame=requestAnimationFrame(()=>{const scrolled=String(window.scrollY>18);if(document.body.dataset.scrolled!==scrolled)document.body.dataset.scrolled=scrolled;refreshOutline();});}}},{capture:true,passive:true});
   installDisclosures(document,{reducedMotion:motionPreference,onSettled:details=>{for(const frame of details.querySelectorAll('.table-frame'))refreshTable(frame);}});
