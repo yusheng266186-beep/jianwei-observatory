@@ -2,7 +2,8 @@
 const crypto=require('node:crypto');
 const {snapshot}=require('./model-control.cjs');
 const uuid=/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
-const DEFAULT_PROMPT='绘制一只骑自行车的鹈鹕。用完整、自包含的 SVG 表现清晰的鸟喙、身体、双轮、车架与脚踏关系，构图协调。直接输出 SVG，不引用外部资源，不使用脚本、foreignObject 或动画。';
+const promptDefinition=require('./pelican-prompt.json'),{extractDocument}=require('./pelican-document.cjs');
+const DEFAULT_PROMPT=promptDefinition.prompt;
 const fail=(code,status=400)=>Object.assign(Error(code),{status});
 function safeSVG(output){
  try{const parsed=JSON.parse(String(output));if(typeof parsed?.svg==='string')output=parsed.svg;}catch{}
@@ -17,7 +18,7 @@ function safeSVG(output){
 async function latest(store,base){let low=0,high=1;const k=n=>base+'/'+String(n).padStart(10,'0')+'.json';while(await store.get(k(high))){low=high;high=high*2+1;}while(high-low>1){const mid=Math.floor((high+low)/2);if(await store.get(k(mid)))low=mid;else high=mid;}return {revision:low,value:low?(await store.get(k(low))).value:[]};}
 async function defaultComplete(prompt,generation,options){
  const methods=require('./model-completion.cjs'),key=options.env[generation.credentialRef];
- if(['gemini','kimi'].includes(generation.protocol))prompt={...prompt,system:prompt.system+'\n传输格式：将完整SVG放在JSON对象的svg字符串字段中，仅返回该JSON对象。',schema:{type:'object',properties:{svg:{type:'string'}},required:['svg'],additionalProperties:false}};
+ if(prompt.outputFormat!=='html'&&['gemini','kimi'].includes(generation.protocol))prompt={...prompt,system:prompt.system+'\n传输格式：将完整SVG放在JSON对象的svg字符串字段中，仅返回该JSON对象。',schema:{type:'object',properties:{svg:{type:'string'}},required:['svg'],additionalProperties:false}};
  if(generation.protocol==='gemini')return methods.completeGemini(prompt,generation,{...options,key});
  if(generation.protocol==='kimi')return require('./kimi.cjs').completeKimi(prompt,{...options,key,kind:'code',model:generation.model,effort:generation.reasoningEffort});
  return methods.completeRemote(prompt,generation,{...options,key});
@@ -35,7 +36,7 @@ function createPelicanControl({store,owner,env=process.env,now=Date.now,dispatch
    const done=await store.get(k+'/result.json');if(done)continue;
    const old=(await store.get(k+'/meta.json'))?.value;
    if(old&&old.deadline<now()){await store.create(k+'/result.json',{status:'failed',error:'NETWORK_TIMEOUT',finishedAt:now()});continue;}
-   if(!old)await store.create(k+'/meta.json',{id:candidate.id,type:'pelican',parentId:m.id,generation:candidate.generation,prompt:m.prompt,createdAt:now(),deadline:now()+890000,status:'queued'});
+   if(!old)await store.create(k+'/meta.json',{id:candidate.id,type:'pelican',parentId:m.id,generation:candidate.generation,prompt:m.prompt,...(m.promptVersion?{promptVersion:m.promptVersion,deliveryInstructions:m.deliveryInstructions}:{}),createdAt:now(),deadline:now()+890000,status:'queued'});
    // Re-dispatching an accepted child is safe: run.json is create-once.
    if(!await store.get(k+'/run.json'))await dispatch(k);
    return;
@@ -46,12 +47,13 @@ function createPelicanControl({store,owner,env=process.env,now=Date.now,dispatch
   const candidates=[];
   for(const c of m.candidates){const k=child(c.id),result=(await store.get(k+'/result.json'))?.value,run=(await store.get(k+'/run.json'))?.value,progress=(await store.get(k+'/progress.json'))?.value;
    const row={id:c.id,selection:{provider:c.generation.provider,model:c.generation.model,effort:c.generation.effort},label:c.generation.model,status:result?.status||(cancelled?'cancelled':run?'running':'queued'),...(result||{})};
-   if(result?.status==='ready'&&!row.svg){const svg=safeSVG(row.output);if(svg){row.svg=svg;delete row.renderWarning;}}
+   if(result?.status==='ready'&&!row.html){const doc=extractDocument(row.output||row.svg||'');if(doc){Object.assign(row,doc);delete row.renderWarning;}}
+   if(result?.status==='ready'&&!row.html&&!row.svg){const svg=safeSVG(row.output);if(svg){row.svg=svg;delete row.renderWarning;}}
    if(!result&&run){row.phase=progress?.phase||'thinking';row.elapsedMs=Math.max(0,now()-run.startedAt);row.firstOutputMs=progress?.firstOutputMs??null;if(!brief)row.output=progress?.draftSource||'';}
-   if(brief){delete row.output;delete row.svg;}candidates.push(row);
+   if(brief){delete row.output;delete row.svg;delete row.html;}candidates.push(row);
   }
   const pending=candidates.some(r=>['queued','running'].includes(r.status)),ready=candidates.filter(r=>r.status==='ready').length;
-  return {id,createdAt:m.createdAt,prompt:m.prompt,status:cancelled?'cancelled':pending?'running':ready===candidates.length?'ready':ready?'partial':'failed',candidates};
+  return {id,createdAt:m.createdAt,prompt:m.prompt,promptVersion:m.promptVersion||'legacy-svg',deliveryInstructions:m.deliveryInstructions||null,status:cancelled?'cancelled':pending?'running':ready===candidates.length?'ready':ready?'partial':'failed',candidates};
  }
  async function begin(input,id){
   if(!uuid.test(id||''))throw fail('REQUEST_ID_REQUIRED');
@@ -61,7 +63,7 @@ function createPelicanControl({store,owner,env=process.env,now=Date.now,dispatch
   const existing=(await store.get(key(id)+'/manifest.json'))?.value;
   if(existing){if(existing.fingerprint!==fingerprint)throw fail('REQUEST_ID_CONFLICT',409);await register(existing);return status(id);}
   const candidates=[];for(const s of unique)candidates.push({id:crypto.randomUUID(),generation:await bindGeneration(snapshot(s,env))});
-  const m={id,fingerprint,prompt,candidates,createdAt:now()};
+  const m={id,fingerprint,prompt,promptVersion:promptDefinition.version,deliveryInstructions:promptDefinition.deliveryInstructions,candidates,createdAt:now()};
   if(!await store.create(key(id)+'/manifest.json',m))return begin(input,id);
   await register(m);return status(id);
  }
@@ -80,10 +82,11 @@ function createPelicanControl({store,owner,env=process.env,now=Date.now,dispatch
   try{
    if(job.deadline<startedAt)throw Error('NETWORK_TIMEOUT');
    const onProgress=async value=>{const text=typeof value.draftSource==='string'?value.draftSource:'';if(text&&text!==previous&&firstOutputMs===null)firstOutputMs=Math.max(0,now()-startedAt);if(now()-lastSave>1500){lastSave=now();previous=text;await store.progress(k+'/progress.json',{phase:value.phase||'thinking',draftSource:text.slice(0,200000),firstOutputMs,updatedAt:now()}).catch(()=>{});}};
-   const result=await complete({system:job.prompt,input:{task:'输出自包含SVG，禁止外部资源。'}},job.generation,{onProgress,signal:controller.signal,env});
+   const request=job.promptVersion?{system:job.deliveryInstructions,inputText:job.prompt,outputFormat:'html'}:{system:job.prompt,input:{task:'输出自包含SVG，禁止外部资源。'}};
+   const result=await complete(request,job.generation,{onProgress,signal:controller.signal,env});
    if(controller.signal.aborted||await store.get(k+'/removed.json'))throw Error('JOB_CANCELLED');
-   const output=String(result.output||'').slice(0,200000),svg=safeSVG(output),u=result.usage;
-   const finished={status:'ready',output,...(svg?{svg}:{renderWarning:'模型未返回可安全预览的自包含 SVG，请查看原文。'}),latencyMs:Math.max(0,now()-startedAt),firstOutputMs,usage:u?{input:Number.isFinite(u.input)?u.input:null,output:Number.isFinite(u.output)?u.output:null,thinking:Number.isFinite(u.thinking)?u.thinking:null}:null,finishedAt:now()};
+   const output=String(result.output||'').slice(0,200000),doc=extractDocument(output),svg=!doc?safeSVG(output):null,u=result.usage;
+   const finished={status:'ready',output,...(doc?doc:svg?{svg}:{renderWarning:'模型未返回完整HTML文档，可查看模型原文。'}),latencyMs:Math.max(0,now()-startedAt),firstOutputMs,usage:u?{input:Number.isFinite(u.input)?u.input:null,output:Number.isFinite(u.output)?u.output:null,thinking:Number.isFinite(u.thinking)?u.thinking:null}:null,finishedAt:now()};
    await store.create(k+'/delivery-candidate.json',finished);await store.create(k+'/result.json',finished);
   }catch(e){if(/^(STORE_UNAVAILABLE|CODEX_AUTH_PERSIST_FAILED)$/.test(e.message))throw e;const error=/^[A-Z][A-Z0-9_]{2,70}$/.test(e.message)?e.message:'MODEL_REQUEST_FAILED';await store.create(k+'/result.json',{status:error==='JOB_CANCELLED'?'cancelled':'failed',error,latencyMs:Math.max(0,now()-startedAt),firstOutputMs,finishedAt:now()});}
   finally{clearInterval(timer);}

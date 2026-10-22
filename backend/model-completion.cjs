@@ -41,7 +41,7 @@ async function completeRemote(prompt,generation,{key,transport=request,probe=fal
  if(generation.provider==='openai-codex')return require('./codex-completion.cjs').complete(prompt,generation,{probe,onProgress,signal});
  if(generation.provider==='openai-chatgpt')return require('./openai-siwc.cjs').complete(prompt,generation,{probe,onProgress,signal});
  const route=routes[generation.provider];if(!connectionMatches(generation)||!['chat-completions','anthropic','responses'].includes(generation.protocol)||!key)throw new Error('MODEL_NOT_CONFIGURED');
- const body=adaptModelBody({messages:[{role:'system',content:prompt.system},{role:'user',content:JSON.stringify(prompt.input)}],max_tokens:probe?256:32768,effort:generation.effort},{name:generation.provider,model:generation.model},generation.effort,{profile:generation.adapterProfile,probe});
+ const body=adaptModelBody({messages:[{role:'system',content:prompt.system},{role:'user',content:typeof prompt.inputText==='string'?prompt.inputText:JSON.stringify(prompt.input)}],max_tokens:probe?256:32768,effort:generation.effort},{name:generation.provider,model:generation.model},generation.effort,{profile:generation.adapterProfile,probe});
  if(prompt.image)require('./model-vision.cjs').attachImage(body,generation.protocol,prompt.image);
  const protocol=generation.protocol,suffix=protocol==='anthropic'?'/v1/messages':protocol==='responses'?'/responses':'/chat/completions';
  const reader=require('./stream-reader.cjs').createStreamReader(protocol),progress=onProgress?require('./progress.cjs').streamProgress(protocol,onProgress):null;
@@ -52,8 +52,8 @@ async function completeRemote(prompt,generation,{key,transport=request,probe=fal
 async function completeGemini(prompt,generation,{key,transport=request,onProgress,signal,probe=false}={}){
  if(!connectionMatches(generation)||generation.protocol!=='gemini'||!key)throw new Error('MODEL_NOT_CONFIGURED');
  const reader=require('./stream-reader.cjs').createStreamReader('gemini'),progress=onProgress?require('./progress.cjs').streamProgress('gemini',onProgress):null;
- const body=prompt.body?JSON.parse(prompt.body):{systemInstruction:{parts:[{text:prompt.system}]},contents:[{role:'user',parts:[{text:JSON.stringify(prompt.input)}]}],generationConfig:{temperature:.2,maxOutputTokens:65536,responseMimeType:'application/json',responseJsonSchema:prompt.schema}};
- body.contents.at(-1).parts.push({text:require('./prompt-policy.cjs').outputReminder(prompt)});
+ const body=prompt.body?JSON.parse(prompt.body):{systemInstruction:{parts:[{text:prompt.system}]},contents:[{role:'user',parts:[{text:typeof prompt.inputText==='string'?prompt.inputText:JSON.stringify(prompt.input)}]}],generationConfig:{temperature:.2,maxOutputTokens:65536,...(prompt.outputFormat==='html'?{responseMimeType:'text/plain'}:{responseMimeType:'application/json',responseJsonSchema:prompt.schema})}};
+ if(prompt.outputFormat!=='html')body.contents.at(-1).parts.push({text:require('./prompt-policy.cjs').outputReminder(prompt)});
  if(prompt.image)require('./model-vision.cjs').attachImage(body,'gemini',prompt.image);
  if(probe)body.generationConfig.maxOutputTokens=8192;
  body.generationConfig.thinkingConfig={thinkingLevel:generation.reasoningEffort||'high',...(onProgress?{includeThoughts:true}:{})};

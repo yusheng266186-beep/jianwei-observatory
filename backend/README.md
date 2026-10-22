@@ -47,7 +47,7 @@
 | `model-control.cjs`、`providers.json`、`model-profiles.json` | 模型目录、配置版本、职责快照和协议参数 |
 | `codex-completion.cjs`、`codex-accounts.cjs`、`codex-runtime.cjs` | 当前官方账号的生成适配、凭据租约与官方运行时 |
 | `openai-proxy.cjs` | 官方通道的私有回环代理 |
-| `pelican.cjs` | 同题模型绘图比较及结果恢复 |
+| `pelican.cjs`、`pelican-document.cjs`、`pelican-prompt.json` | 同题HTML动画比较、完整文档提取、原版提示词与结果恢复 |
 | `exercise-*.mjs` | 从前端同步的训练契约和图示等共享规则 |
 
 <a id="pipeline"></a>
@@ -138,10 +138,12 @@
 | --- | --- |
 | `GET /admin/pelican` | 最近20轮比较的摘要 |
 | `POST /admin/pelican` | 创建1–8个模型的同题绘图比较，要求请求UUID |
-| `GET /admin/pelican/:id` | 查询逐模型进度、SVG、原文及实际统计 |
+| `GET /admin/pelican/:id` | 查询逐模型进度、HTML/SVG文档、原文及实际统计 |
 | `POST /admin/pelican/:id/cancel` | 停止本轮，保留已完成结果 |
 
-比较按模型串行派发，各项是独立Worker任务。原文、首段正文时间、总耗时和上游用量分别保存；缺失值不填造成0，单项失败不丢掉其他结果。Gemini和Kimi原生接口使用仅含 `svg` 字符串的传输Schema，官方运行时可直接返回SVG。SVG作为隔离图片呈现，保留正常注释和内部渐变，不执行脚本、外部引用或 `foreignObject`。
+比较按模型串行派发，各项是独立Worker任务。原文、首段正文时间、总耗时和上游用量分别保存；缺失值不填造成0，单项失败不丢掉其他结果。新任务冻结 `promptVersion`、用户提示词与交付指令，默认与 Cockpit Tools 1.3.73 对应常量逐字一致，直接发送原文，不套练习JSON或SVG字符串Schema。Gemini请求使用 `text/plain`，Kimi不附加练习 `response_format`；普通练习仍使用各自原有格式。完整HTML及闭合代码围栏可提取为 `html` 与 `kind`，缺少完整文档时保留模型原文。历史SVG任务沿用原请求和结果，不自动重新计费调用。
+
+浏览器通过独立预览页和双层 `sandbox="allow-scripts"` iframe 播放HTML，支持CSS、JavaScript及SVG动画，不授予同源权限。模型文档无法访问工作台账号、DOM或存储，预览CSP禁止联网和子框架。工作台自身仍保持禁止内联脚本的CSP；文档下载保留模型原稿。实现、来源及完整提示词见[HTML动画比较说明](../docs/PELICAN-HTML-2026-10-22.md)。
 
 <a id="models"></a>
 ## 模型、提示词与图示

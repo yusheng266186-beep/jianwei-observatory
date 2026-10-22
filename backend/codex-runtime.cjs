@@ -996,7 +996,11 @@ async function complete(runtime, prompt, generation, options = {}) {
   if (signal && signal.aborted) throw cancelledError();
 
   let inputText;
-  if (prompt.input === undefined) inputText = '';
+  if (prompt.inputText !== undefined) {
+    if (typeof prompt.inputText !== 'string') throw fail('MODEL_CONTENT_INVALID', { kind: 'prompt-input' });
+    inputText = prompt.inputText;
+  }
+  else if (prompt.input === undefined) inputText = '';
   else {
     try {
       inputText = JSON.stringify(prompt.input);

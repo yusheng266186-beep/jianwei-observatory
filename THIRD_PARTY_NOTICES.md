@@ -14,3 +14,7 @@ The project serves the following libraries and fonts locally. Their retained lic
 Libraries read/export workbooks, create DOCX archives, render mathematical notation, generate PDFs and display PDF previews. Font subsets support the reading interface and Songti document output. No external font service or analytics service is requested by the application.
 
 Development dependencies are declared and pinned in `package.json` and `package-lock.json`; esbuild builds the static runtime, and Playwright supports separate browser regression scripts. These development packages are not shipped as the site's runtime.
+
+## Cockpit Tools pelican prompt text
+
+The user prompt and delivery instructions in `backend/pelican-prompt.json` (also the default user prompt in `assets/pelican-prompt.js`) are reproduced verbatim from [jlcodes99/cockpit-tools v1.3.73](https://github.com/jlcodes99/cockpit-tools/tree/v1.3.73), commit `5330f75ae6b3c39fbd72f528ac2188207047d49a`, specifically `src/types/codexPelican.ts` and `src-tauri/src/modules/codex_pelican_transport.rs`. The upstream project states [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) terms. These reproduced texts retain those terms and attribution to the upstream contributors; no changes have been made to the copied prompt text. The surrounding task handling and preview integration are independently implemented for this project. See [implementation and provenance](docs/PELICAN-HTML-2026-10-22.md).

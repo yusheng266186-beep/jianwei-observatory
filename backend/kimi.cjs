@@ -37,10 +37,10 @@ function readCompletion(source,options={}){
  if(!done||finish!=='stop'||!output.trim())throw Object.assign(new Error('MODEL_INCOMPLETE'),{diagnostic:{kind:'completion',finishReason:finish||'missing',streamComplete:done,usage}});
  return {output,usage:{input:usage.prompt_tokens||0,output:usage.completion_tokens||0,thinking:usage.completion_tokens_details?.reasoning_tokens||0}};
 }
-async function completeKimi({input,system,schema},{key,kind='platform',model,effort='max',transport=request,probe=false,onProgress,signal}={}){
+async function completeKimi({input,inputText,outputFormat,system,schema},{key,kind='platform',model,effort='max',transport=request,probe=false,onProgress,signal}={}){
  const profile=kimiProfile(kind,model);if(!key)throw new Error('MODEL_NOT_CONFIGURED');
  if(!['low','high','max'].includes(effort))throw new Error('MODEL_SELECTION_INVALID');
- const body=JSON.stringify({model:profile.model,reasoning_effort:effort,max_completion_tokens:probe?4096:131072,messages:[{role:'system',content:system},{role:'user',content:JSON.stringify(input)}],response_format:{type:'json_schema',json_schema:{name:'student_exercise',strict:true,schema:kimiExerciseSchema(schema)}},stream:true,stream_options:{include_usage:true}});
+ const body=JSON.stringify({model:profile.model,reasoning_effort:effort,max_completion_tokens:probe?4096:131072,messages:[{role:'system',content:system},{role:'user',content:typeof inputText==='string'?inputText:JSON.stringify(input)}],...(outputFormat==='html'?{}:{response_format:{type:'json_schema',json_schema:{name:'student_exercise',strict:true,schema:kimiExerciseSchema(schema)}}}),stream:true,stream_options:{include_usage:true}});
  const reader=require('./stream-reader.cjs').createStreamReader('kimi'),progress=onProgress?require('./progress.cjs').streamProgress('kimi',onProgress):null;
  const response=await transport(profile.base+'/chat/completions',{method:'POST',body,headers:{'Content-Type':'application/json',Authorization:'Bearer '+key,'User-Agent':USER_AGENT},timeout:probe?45000:840000,deadlineMs:probe?45000:840000,maxBytes:64*1024*1024,collectBody:false,signal,onChunk:chunk=>{reader.write(chunk);progress?.(chunk);}});
  if(response.status!==200)throw httpError(response,key);

@@ -653,6 +653,14 @@ test('文本流只转发官方 summary/text delta，最终输出取 completed �
   assert.equal(fs.existsSync(imagePath), false);
 });
 
+test('HTML 比较逐字发送 Cockpit 原始用户提示词及交付指令，不加 JSON 包装', async (t) => {
+ const definition=JSON.parse(fs.readFileSync(new URL('../backend/pelican-prompt.json',import.meta.url),'utf8'));
+ const {runtime,fake}=await startTurn(t,{turn:{id:'turn-1',status:'completed',items:[{type:'agentMessage',id:'msg-1',text:'<html></html>',phase:'final_answer'}]}});
+ await complete(runtime,{system:definition.deliveryInstructions,inputText:definition.prompt,outputFormat:'html'},{model:'gpt-6.1-sol',reasoningEffort:'high'});
+ assert.equal(fake.find('thread/start').params.baseInstructions,definition.deliveryInstructions);
+ assert.deepEqual(fake.find('turn/start').params.input,[{type:'text',text:definition.prompt}]);
+});
+
 test('失败、拒绝、空输出与工具调用均映射明确错误', async (t) => {
   const cases = [
     ['认证失败', { id: 'turn-1', status: 'failed', items: [], error: { message: 'unauthorized' } }, 'MODEL_AUTH_FAILED'],

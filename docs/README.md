@@ -11,6 +11,7 @@
 | 本地开发、发布、迁移或回退 | [部署维护手册](DEPLOYMENT.md)及[README开发章节](../README.md#development) |
 | 维护HTTP、Worker、账号、模型或额度 | [后端手册](../backend/README.md) |
 | 了解当前官方通道、模型比较与代理 | [2026-10-22工作台整合](WORKBENCH-UNIFIED-2026-10-22.md) |
+| 核对鹈鹕测智原版提示词与HTML动画预览 | [Cockpit原版提示词与HTML预览](PELICAN-HTML-2026-10-22.md) |
 | 排查浏览器授权完成后一直等待 | [OAuth完成确认与恢复](BROWSER-OAUTH-COMPLETION-FIX-2026-10-22.md) |
 | 导出完整的云端前置提示词 | [提示词导出与复核](PROMPT-EXPORT-2026-10-21.md) |
 | 查看生成、格式、题型及评分的改进 | [官方通道出题与验收](OFFICIAL-GENERATION-IMPROVEMENT-2026-10-21.md) |
@@ -30,8 +31,9 @@
 下面列出本目录全部专题和说明快照；有日期的专题在各组内按日期从新到旧排列，无日期的早期专题保留原文件名。展开对应主题即可查阅。
 
 <details>
-<summary>模型、账号与工作台（15篇）</summary>
+<summary>模型、账号与工作台（16篇）</summary>
 
+- [鹈鹕测智：原版提示词与HTML动画 · 2026-10-22](PELICAN-HTML-2026-10-22.md)
 - [模型工作台整合 · 2026-10-22](WORKBENCH-UNIFIED-2026-10-22.md)
 - [浏览器授权等待不结束：修复与恢复](BROWSER-OAUTH-COMPLETION-FIX-2026-10-22.md) · 2026-10-22
 - [工作台与教师设置页维护 · 2026-10-21](WORKBENCH-TEACHER-2026-10-21.md)

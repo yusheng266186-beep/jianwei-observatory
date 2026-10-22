@@ -14,11 +14,11 @@ test('comparison serializes candidates, preserves real timings and resumes witho
  await control.begin(input,id);await control.run(first,job);assert.equal(calls,2);assert.equal((await control.list()).runs.length,1);assert(!JSON.stringify(await control.list()).includes('<svg'));
  await assert.rejects(control.begin({candidates:[pick],prompt:'different'},id),/REQUEST_ID_CONFLICT/);
 });
-test('one failed comparison does not discard a successful model result; unsafe output is text only',async()=>{
+test('one failed comparison retains another model’s animated document for sandbox rendering',async()=>{
  const store=new MemoryStore(),keys=[];let calls=0;const c=createPelicanControl({store,owner,env,dispatch:async k=>keys.push(k),complete:async()=>{if(calls++===0)throw Error('MODEL_AUTH_FAILED');return {output:'<svg><script>alert(1)</script></svg>'};}}),id=crypto.randomUUID();
  await c.begin({candidates:[pick,{...pick,effort:'high'}]},id);
  for(let i=0;i<2;i++)await c.run(keys[i],(await store.get(keys[i]+'/meta.json')).value);
- const r=await c.status(id);assert.equal(r.status,'partial');assert.equal(r.candidates[0].error,'MODEL_AUTH_FAILED');assert.equal(r.candidates[1].svg,undefined);assert(r.candidates[1].renderWarning);assert.equal(r.candidates[1].firstOutputMs,null);assert.equal(r.candidates[1].usage,null);
+ const r=await c.status(id);assert.equal(r.status,'partial');assert.equal(r.candidates[0].error,'MODEL_AUTH_FAILED');assert.equal(r.candidates[1].html,'<svg><script>alert(1)</script></svg>');assert.equal(r.candidates[1].kind,'svg');assert.equal(r.candidates[1].firstOutputMs,null);assert.equal(r.candidates[1].usage,null);
  assert.equal(safeSVG(svg),svg);for(const bad of ['<svg onload="x"></svg>','<svg><use href="https://x"/></svg>','<svg><path style="fill:url(https://x)"/></svg>'])assert.equal(safeSVG(bad),null);
  assert(safeSVG('<svg><!-- the bicycle --><defs><linearGradient id="g"/></defs><path fill="url(#g)"/></svg>'));
 });
