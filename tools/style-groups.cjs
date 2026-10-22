@@ -5,8 +5,9 @@ const groups=[
  // reports.css also contains shared teaching-plan and follow-page controls.
  group('foundation','',['base','journey','glass','reading-fonts','typography','questions','material','reports','controls','question-glass']),
  group('report-reading','reports',['report-reading']),
- group('papers','papers',['paper-material']),
- group('runtime','',['runtime']),
+ // Question/knowledge drawers and personal-question cards also use this sheet
+ // when opened directly from class or student research, before visiting papers.
+ group('research','',['paper-material','runtime']),
  group('exercises','exercises',['exercises','exercise-center','exercise-feedback']),
  group('finish','',['research-continuity','archive','fields','wheels','refinement','visual-language'])
 ];

@@ -19,6 +19,6 @@ export function ensureFeatureStyles(feature,{document:doc=globalThis.document,..
 }
 export function sceneStyleFeatures(scene,values={}){
  // Follow's entry and the library's collection navigation share exercise UI.
- return scene==='papers'?['papers']:scene==='follow'?['exercises']:scene==='library'?['exercises',...(values.tab==='reports'?['reports']:[])]:[];
+ return scene==='follow'?['exercises']:scene==='library'?['exercises',...(values.tab==='reports'?['reports']:[])]:[];
 }
 export const ensureSceneStyles=(scene,values)=>Promise.all(sceneStyleFeatures(scene,values).map(feature=>ensureFeatureStyles(feature)));

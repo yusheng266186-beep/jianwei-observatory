@@ -1,5 +1,5 @@
 {
-  "main": "runtime/main-ZZAZU4V3.js",
+  "main": "runtime/main-VKHYVHDK.js",
   "storage": "runtime/storage-QF5WNAP5.js",
   "prepare": "runtime/prepare-URUUUWSB.js",
   "importer": "app/runtime/importer-B4QXMGYP.js",
@@ -41,11 +41,7 @@
       "feature": "reports"
     },
     {
-      "file": "assets/runtime-papers-7f16c53f2508.css",
-      "feature": "papers"
-    },
-    {
-      "file": "assets/runtime-runtime-4d786a93211a.css",
+      "file": "assets/runtime-research-38d914cd29cc.css",
       "feature": ""
     },
     {
@@ -63,9 +59,8 @@
     "assets/runtime-exercises-bb140abdcba3.css",
     "assets/runtime-finish-4c991c3f4e61.css",
     "assets/runtime-foundation-e51449e9d6c2.css",
-    "assets/runtime-papers-7f16c53f2508.css",
     "assets/runtime-report-reading-daa030bab1b8.css",
-    "assets/runtime-runtime-4d786a93211a.css",
+    "assets/runtime-research-38d914cd29cc.css",
     "styles/fields-a6e6da17cff4.css",
     "styles/reading-fonts-daadf771f13d.css",
     "styles/refinement-931faf8c3de1.css",
@@ -92,7 +87,7 @@
     "app/runtime/shared-PXKZPDZL.js",
     "app/runtime/shared-S3IIO5LF.js",
     "app/runtime/shared-FLK274R7.js",
-    "app/runtime/main-ZZAZU4V3.js",
+    "app/runtime/main-VKHYVHDK.js",
     "app/runtime/shared-ANF6O23H.js",
     "app/runtime/shared-GJ4PEHDZ.js",
     "app/runtime/shared-F43TXK24.js",
@@ -128,5 +123,10 @@
     "app/runtime/shared-RMTIRWQZ.js",
     "app/runtime/figure-library-EU3JHQHD.js",
     "app/runtime/model-workbench-TADWZLBD.js"
+  ],
+  "compatibility": [
+    "app/runtime/main-ZZAZU4V3.js",
+    "assets/runtime-papers-7f16c53f2508.css",
+    "assets/runtime-runtime-4d786a93211a.css"
   ]
 }
