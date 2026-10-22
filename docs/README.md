@@ -17,6 +17,7 @@
 | 查看生成、格式、题型及评分的改进 | [官方通道出题与验收](OFFICIAL-GENERATION-IMPROVEMENT-2026-10-21.md) |
 | 查看PDF/Word纸面规则 | [文档排版与学科计分](DOCUMENT-POLISH-2026-10-21.md) |
 | 查看构建产物清理与旧资源兼容 | [导入与构建维护](IMPORT-AND-BUILD-MAINTENANCE-2026-10-18.md) |
+| 排查试题中心首次打开、存储恢复及Word等待 | [启动、恢复与交互优化](STARTUP-RESILIENCE-2026-10-22.md) |
 
 ## 当前状态与阅读原则
 

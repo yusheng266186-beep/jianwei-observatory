@@ -7,6 +7,7 @@ import {exerciseDiagramSVG} from './exercise-diagram.js';
 import {mathMLToOffice,mathMLTableToWord,wordMathNeedsVector} from './exercise-word-math.js';
 import {exerciseRichBlocks,exerciseTableWidths} from '../engine/exercise-rich-blocks.js';
 import {exerciseFile} from './exercise-file-cache.js';
+import {zipVendor} from './vendor-loader.js';
 const xml=value=>String(value??'').replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g,'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
 // Blank source lines are paragraph spacing, not extra Word paragraphs before
 // a page break; retaining those empty paragraphs can create a blank page.
@@ -31,8 +32,7 @@ export function wordSeparateAdjacentTables(value){return String(value).replace(/
 // with its prompt so a trailing page cannot contain only invisible blank rows.
 // Larger writing areas must remain splittable; the requested height is retained.
 export function wordAnswerSpaceParagraphs(question,subject){const height=exerciseAnswerSpaceHeight(question,subject),rows=exerciseWritingRows(height),keep=exerciseKeepWritingTogether(question,subject);return rows.map((part,i)=>'<w:p><w:pPr><w:pStyle w:val="AnswerSpace"/>'+(keep&&i<rows.length-1?'<w:keepNext/>':'')+'<w:spacing w:before="0" w:after="0" w:line="'+Math.round(part*20)+'" w:lineRule="exact"/></w:pPr><w:r><w:rPr><w:sz w:val="2"/></w:rPr><w:t xml:space="preserve"> </w:t></w:r></w:p>').join('');}
-let zipTask;
-async function zipLibrary(){if(!zipTask){const task=import('../../vendor/jszip.min.js').then(()=>{if(!window.JSZip)throw new Error('Word组件未能载入，请重试');return window.JSZip;});zipTask=task;task.catch(()=>{if(zipTask===task)zipTask=null;});}return zipTask;}
+const zipLibrary=zipVendor;
 export async function exerciseWord(record,{teacher=false,name=record.student?.name||'',classNo=record.student?.classNo??''}={}){
  if(!record.reviewedAt)throw new Error('请完成审题确认后输出正式练习。');requireExerciseQualityReview(record);
  const sheet=validateExerciseResult(record.sheet,record.request),key=JSON.stringify(['docx-v47-vector-multiline-math',record.request,sheet,teacher,name,classNo,{exerciseId:record.id}]);

@@ -1,7 +1,7 @@
 // Twelve-step smoke journey through the current, import-first product flow.
 // Requires a local static server; AUDIT_URL and CHROMIUM_PATH are optional.
 const {settings:openReportSettings}=require('./paper-preview-helpers.cjs');
-const {chromium}=require('playwright');
+const {chromium,webkit}=require('playwright');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
@@ -14,7 +14,8 @@ const material=path.join(output,'hengji-fixture.json');
 fs.writeFileSync(material,JSON.stringify(fixture));
 
 async function run(){
- const browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_PATH||(fs.existsSync('/usr/bin/chromium')?'/usr/bin/chromium':undefined),args:['--no-sandbox']});
+ const engine=process.env.AUDIT_BROWSER==='webkit'?webkit:chromium;
+ const browser=await engine.launch(engine===webkit?{headless:true}:{headless:true,executablePath:process.env.CHROMIUM_PATH||(fs.existsSync('/usr/bin/chromium')?'/usr/bin/chromium':undefined),args:['--no-sandbox']});
  const checks=[],errors=[],failed=[];let page;
  try{
   const context=await browser.newContext({viewport:{width:1440,height:1000},reducedMotion:'reduce',acceptDownloads:true});

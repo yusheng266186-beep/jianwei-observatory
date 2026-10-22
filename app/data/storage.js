@@ -42,10 +42,12 @@ export function update(key,reduce){
 }
 export function writePrepared(entries){const ready=Promise.resolve(entries);ready.catch(()=>{});const operation=writes.then(async()=>{const entries=await ready,result=await access(null,null,true,DB,TABLE,entries);savedHint(entries);return result;});writes=operation.catch(()=>{});return operation;}
 export async function readWorkspace(){
- let current=null;try{current=await access(['dataset','prepared']);}catch{}
+ // A failed read is not an empty database. In particular, do not clear the
+ // startup hint or attempt a migration while IndexedDB is temporarily blocked.
+ const current=await access(['dataset','prepared']);
  if(current?.dataset)return {dataset:current.dataset,prepared:current.prepared?.version===PREPARED_VERSION,stamp:current.prepared?.stamp??null,origin:'saved'};
  if(STORAGE_SCOPE){remember('workspacePresent',false);return {dataset:null,prepared:false,origin:'empty'};}
- try{const legacy=await access('dataset',null,false,'jianwei-local','workspace');if(legacy)return {dataset:legacy,prepared:false,origin:'migrated'};}catch{}
+ const legacy=await access('dataset',null,false,'jianwei-local','workspace');if(legacy)return {dataset:legacy,prepared:false,origin:'migrated'};
  remember('workspacePresent',false);return {dataset:null,prepared:false,origin:'empty'};
 }
 function containsKey(db,table,key){
@@ -56,7 +58,7 @@ export async function inspectWorkspace(){
  const saved=await containsKey(await open(),TABLE,'dataset');
  if(saved){remember('workspacePresent',true);return {stored:true,origin:'saved'};}
  if(STORAGE_SCOPE)return {stored:false,origin:'empty'};
- try{if(await containsKey(await open('jianwei-local'),'workspace','dataset'))return {stored:true,origin:'migrated'};}catch{}
+ if(await containsKey(await open('jianwei-local'),'workspace','dataset'))return {stored:true,origin:'migrated'};
  return {stored:false,origin:'empty'};
 }
 // A concurrent import wins; background migration cannot overwrite newer data.

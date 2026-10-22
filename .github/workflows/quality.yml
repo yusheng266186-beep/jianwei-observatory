@@ -24,6 +24,10 @@ jobs:
   browser-smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, webkit]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -31,8 +35,10 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      - run: npx playwright install --with-deps ${{ matrix.browser }}
       - name: Run the twelve-step browser smoke journey
+        env:
+          AUDIT_BROWSER: ${{ matrix.browser }}
         run: |
           python3 -m http.server 4173 --bind 127.0.0.1 > "$RUNNER_TEMP/browser-smoke-server.log" 2>&1 &
           server_pid=$!
@@ -42,7 +48,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: browser-smoke-results
+          name: browser-smoke-${{ matrix.browser }}-results
           path: |
             .audit-output/hengji-audit-results.json
             .audit-output/hengji-*.png

@@ -36,6 +36,7 @@ import {Atlas} from './engine/atlas.js?v=runtime-v45';
 import {loadScene} from './scenes/load.js?v=runtime-v45';
 import {SUBJECTS} from './data/compat.js?v=runtime-v45';
 import {access,write,update as updateStored,savePreparedVersioned,STORAGE_SCOPE} from './data/storage.js';
+import {workspaceBackup} from './data/backup.js';
 import {hydrate,save,saveWorkspace,restoreDataset,hasMaterials,preference,remember,previous,emptyDataset,loadNotebook,loadPlans} from './data/workspace.js?v=runtime-v45';
 import {prepareDataset,prepareMaterial} from './data/preparation.js?v=runtime-v45';
 import {remapScopedContext,mergeStudentIdentities} from './data/identity.js?v=runtime-v45';
@@ -77,9 +78,10 @@ function warmWorkspace(){
  async function next(deadline){
   if(generation!==backgroundGeneration||!hasMaterials(atlas.data)||document.hidden)return;
   if(navigator.scheduling?.isInputPending?.()){schedule(next);return;}
-  const scene=scenes.shift();if(!scene)return;
+  if(deadline&&deadline.timeRemaining()<8){schedule(next);return;}
+  const scene=scenes.shift();if(!scene){warmExerciseCenter();return;}
   try{const module=await loadScene(scene);if(generation!==backgroundGeneration)return;const key=viewKey(scene);if(!sceneViews.has(key))retainView(key,module.render(atlas,structuredClone(books[scene]),session));}catch{}
-  if(scenes.length)schedule(next);
+  schedule(next);
  }
  function schedule(job){if('requestIdleCallback' in window)requestIdleCallback(job);else setTimeout(job,100);}
  schedule(next);
@@ -254,7 +256,7 @@ function go(scene,values={},resetScroll=false,{root=false,recordTrail=true}={}) 
   Object.assign(books[scene],values);current=scene;persistBooks();
   const next=path(scene);if(location.hash!==next)history.pushState(null,'',next);paint(true);
 }
-function warmScene(scene){if(hasMaterials(atlas.data)){loadScene(scene).catch(()=>{});if(scene==='follow')exerciseModule().catch(()=>{});}}
+function warmScene(scene){if(hasMaterials(atlas.data)){loadScene(scene).catch(()=>{});if(['follow','library'].includes(scene))warmExerciseCenter();}}
 function prepareReports(){warmReportFonts().catch(()=>{});warmPDFWorker();warmPDFViewer().catch(()=>{});}
 function openEntry(scene){
   const values={board:{mode:'overview',search:'',page:1},class:{tab:'snapshot',search:'',page:1},papers:{key:'',shelfExam:atlas.latest,shelfSubject:'all'},people:{sid:'',...directoryDefaults},library:{tab:'materials'}}[scene]||{};
@@ -392,10 +394,11 @@ function workspaceSnapshot(){return structuredClone({...atlas.data,plans:session
 async function backupWorkspace(){
  archiveStudy();flushWorkspaceInput();
  await Promise.allSettled([datasetSaving,plansSaving,persistNotebook()]);
- const live=exerciseStudioTask?await(await exerciseStudioTask).backupSnapshot():null;
- const saved=await access(['exercises','exerciseSavedSetups','exerciseComposerDrafts']),{savedExerciseSetups}=await import('./engine/exercise-setups.js');
- const source={...saved,...(live||{})};
- download(JSON.stringify({...workspaceSnapshot(),exercises:source.exercises||[],exerciseSavedSetups:savedExerciseSetups(saved.exerciseSavedSetups),exerciseComposerDrafts:source.exerciseComposerDrafts?.version===1?source.exerciseComposerDrafts:{version:1,requests:[],focuses:[],bases:[],applied:[]}}),SITE_NAME+'-完整工作区-'+new Date().toLocaleDateString('sv-SE',{timeZone:'Asia/Shanghai'})+'.json','application/json');
+ let live=null;try{live=exerciseStudioTask?await(await exerciseStudioTask).backupSnapshot():null;}catch{}
+ const {savedExerciseSetups}=await import('./engine/exercise-setups.js');
+ const result=await workspaceBackup(workspaceSnapshot(),{live,read:()=>access(['exercises','exerciseSavedSetups','exerciseComposerDrafts']),setups:savedExerciseSetups});
+ download(JSON.stringify(result.payload),SITE_NAME+(result.complete?'-完整工作区-':'-当前可恢复资料-')+new Date().toLocaleDateString('sv-SE',{timeZone:'Asia/Shanghai'})+'.json','application/json');
+ if(!result.complete)notify('已导出当前可恢复资料。部分练习或模板暂未读到，请保留本页，存储恢复后再下载完整备份。');
 }
 function recordNoteDraft(note){if(!noteJournal.record(note))storageNotice('note-draft','判断仍在当前页面，本机草稿暂存空间不足。请下载完整备份保留记录。');}
 function evidenceSaveState(note,value,error=false){for(const button of stage().querySelectorAll('[data-cmd=notebook-retry]'))if(button.dataset.id===note.id)button.hidden=!error;const count=stage().querySelector('[data-notebook-written]');if(count)count.textContent=session.notebook.filter(n=>n.note?.trim()).length+'份已有教师判断';for(const node of stage().querySelectorAll('[data-evidence-save]'))if(node.dataset.evidenceSave===note.id){node.textContent=value;node.dataset.state=error?'error':value==='已保存到本机'?'saved':'saving';}}
@@ -728,6 +731,11 @@ function addFollow(sid,exam,tier) {
 }
 let planDraft=null,planUI={},planSearchTimer,planControls,reportReader;
 let exerciseStudioTask,exerciseModuleTask,exerciseOpenRequest=0;
+let exerciseWarmTask;
+function warmExerciseCenter(){
+ if(exerciseWarmTask||!hasMaterials(atlas.data)||document.hidden)return;
+ exerciseWarmTask=exerciseStudio().then(studio=>studio.preload()).catch(()=>{exerciseWarmTask=null;});
+}
 function exerciseModule(){if(!exerciseModuleTask){const task=import('./ui/exercise-studio.js');exerciseModuleTask=task;task.catch(()=>{if(exerciseModuleTask===task)exerciseModuleTask=null;});}return exerciseModuleTask;}
 
 function exerciseStudio(){
@@ -740,7 +748,12 @@ function exerciseStudio(){
  }}));exerciseStudioTask=task;task.catch(()=>{if(exerciseStudioTask===task)exerciseStudioTask=null;});}
  return exerciseStudioTask;
 }
-async function mountExerciseCenter(){const host=stage().querySelector('#exercise-center');if(!host)return;try{const studio=await exerciseStudio();if(host.isConnected)await studio.mountCenter(host);}catch(error){if(host.isConnected)host.innerHTML='<h2>试题中心暂时未能打开</h2><p>'+esc(runtimeFailureMessage(error))+'</p>'+button(isRuntimeLoadError(error)?'刷新并继续':'重新打开',isRuntimeLoadError(error)?'reload':'exercise-center',{},'outline');}}
+const centerMounts=new WeakMap();
+function mountExerciseCenter(){
+ const host=stage().querySelector('#exercise-center');if(!host)return Promise.resolve();if(centerMounts.has(host))return centerMounts.get(host);
+ const started=performance.now(),task=(async()=>{try{const studio=await exerciseStudio();if(host.isConnected){await studio.mountCenter(host);host.dataset.centerReady='true';host.dataset.centerLoadMs=String(Math.round(performance.now()-started));}}catch(error){if(host.isConnected)host.innerHTML='<h2>试题中心暂时未能打开</h2><p>'+esc(runtimeFailureMessage(error))+'</p>'+button(isRuntimeLoadError(error)?'刷新并继续':'重新打开',isRuntimeLoadError(error)?'reload':'exercise-center',{},'outline');}})();
+ centerMounts.set(host,task);task.finally(()=>{if(centerMounts.get(host)===task)centerMounts.delete(host);});return task;
+}
 
 async function openExercises(context={}){
  const attempt=++exerciseOpenRequest,dialog=document.getElementById('exercise-dialog'),content=document.getElementById('exercise-content');
@@ -1157,7 +1170,7 @@ export async function mount(boot=null) {
   const startRevision=revision;
   stage().setAttribute('aria-busy','true');
   try {
-    const [materials,notebook,storedPlans]=await Promise.all([hydrate(boot),loadNotebook().catch(()=>[]),loadPlans().catch(()=>null)]);
+    const [materials,notebook,storedPlans]=await Promise.all([hydrate(boot),loadNotebook(),loadPlans()]);
     if(startRevision!==revision)return;
     const loadedNotebook=notebook||[];
     notebookBase=structuredClone(loadedNotebook);session.notebook=noteJournal.restore(loadedNotebook);
@@ -1174,5 +1187,5 @@ export async function mount(boot=null) {
     if(Object.keys(noteJournal.drafts).length||Object.keys(noteJournal.textDrafts).length){persistNotebook().catch(()=>storageNotice('note-draft','教师判断已从本机草稿恢复，请下载完整备份保留记录。'));}if(materials.origin==='migrated')notify('原工作区材料已恢复');
     window.dispatchEvent(new Event('hengji:workspace-ready'));
     if(preference('exercisePending',false))setTimeout(()=>exerciseStudio().then(studio=>studio.resume()).catch(()=>{}),0);
-  }catch(error){if(startRevision!==revision)return;await paint();notify('材料尚未载入：'+error.message+'，可直接导入原表。');}
+  }catch(error){if(startRevision!==revision)return;stage().setAttribute('aria-busy','false');stage().innerHTML='<section class="block workspace-recovery" role="alert"><span class="overline">本机资料</span><h1>资料暂未读入</h1><p>已保存的材料与记录保留原状，请重新读取后继续。</p><p>'+esc(error.message)+'</p>'+button('重新读取资料','reload',{},'accent')+'</section>';}
 }

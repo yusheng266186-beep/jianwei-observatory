@@ -9,25 +9,16 @@ import {esc,number,percent,signed} from '../ui/html.js?v=runtime-v45';
 import {SITE_NAME,CREST_URL} from '../brand.js?v=runtime-v45';
 import {chartFontRules} from '../ui/font-export.js?v=runtime-v45';
 import {worksheetNames} from './sheet-names.js?v=runtime-v45';
+import {workbookVendor,zipVendor} from './vendor-loader.js';
 export function download(content,name,type='application/octet-stream') {
   const blob=content instanceof Blob?content:new Blob([content],{type}),url=URL.createObjectURL(blob),anchor=document.createElement('a');
   anchor.href=url;anchor.download=name;anchor.click();setTimeout(()=>URL.revokeObjectURL(url),5000);
 }
-let loaded;
 export async function vendors() {
-  if(!loaded){
-    const attempt=Promise.all([['xlsx.full.min.js','XLSX'],['jszip.min.js','JSZip']].map(([file,global])=>window[global]?Promise.resolve():new Promise((resolve,reject)=>{
-      const script=document.createElement('script'),timer=setTimeout(()=>finish(new Error('导出组件载入超时，请重试')),15000);
-      let done=false;
-      const finish=error=>{if(done)return;done=true;clearTimeout(timer);script.onload=null;script.onerror=null;if(error){script.remove();reject(error);}else resolve();};
-      script.src=new URL('../../vendor/'+file,import.meta.url);script.onload=()=>finish(window[global]?null:new Error('导出组件未能初始化，请重试'));script.onerror=()=>finish(new Error('导出组件暂时无法载入，请重试'));document.head.append(script);
-    })));
-    loaded=attempt;attempt.catch(()=>{if(loaded===attempt)loaded=null;});
-  }
-  await loaded;return {XLSX:window.XLSX,JSZip:window.JSZip};
+ const [XLSX,JSZip]=await Promise.all([workbookVendor(),zipVendor()]);return {XLSX,JSZip};
 }
 export async function excel(sheets,name=SITE_NAME+'-分析材料') {
-  const {XLSX}=await vendors(),book=XLSX.utils.book_new();
+  const XLSX=await workbookVendor(),book=XLSX.utils.book_new();
   const entries=Object.entries(sheets),names=worksheetNames(entries.map(([label])=>label));
   for(const [index,[,rows]] of entries.entries()) {
     const sheet=XLSX.utils.aoa_to_sheet(rows);sheet['!cols']=(rows[0]||[]).map((_,i)=>({wch:i===0?24:16}));
@@ -63,7 +54,7 @@ export function evidence(title,subtitle,sections,sheets={}) {return {title,subti
 export async function print(report,previewBlob=null) {const {printPDF}=await import('./paper-print.js?v=runtime-v45');await printPDF(previewBlob||await pdfBlob(report));}
 export async function word(report) {
  report=selectedReport(report);
- const {JSZip}=await vendors(),zip=new JSZip();for(const [name,content] of Object.entries(wordFiles(report)))zip.file(name,content);
+ const JSZip=await zipVendor(),zip=new JSZip();for(const [name,content] of Object.entries(wordFiles(report)))zip.file(name,content);
  download(await zip.generateAsync({type:'blob'}),report.title+'.docx');
 }
 // Preview and download share the exact same immutable PDF bytes. Bound the cache
