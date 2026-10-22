@@ -11,7 +11,7 @@ function selectedReleases(registry,now=Date.now()){
  const releases=[...(registry.releases||[])].sort((a,b)=>Date.parse(b.publishedAt)-Date.parse(a.publishedAt));
  return releases.filter((r,i)=>i<3||now-Date.parse(r.publishedAt)<7*86400000);
 }
-function safeAsset(file){return /^(?:app\/runtime\/[\w-]+\.js|assets\/(?:runtime|landing|model-workbench|figure-library)-[a-f\d]{12}\.css|styles\/(?:fields|wheels|refinement|reading-fonts|visual-language)-[a-f\d]{12}\.css)$/.test(file);}
+function safeAsset(file){return /^(?:app\/runtime\/[\w-]+\.js|assets\/(?:runtime(?:-[a-z]+)*|landing|model-workbench|figure-library)-[a-f\d]{12}\.css|styles\/(?:fields|wheels|refinement|reading-fonts|visual-language)-[a-f\d]{12}\.css)$/.test(file);}
 function plan(root,manifest,registry,{now=Date.now(),staged=new Map()}={}){
  const keep=new Set(assetFiles(manifest));for(const release of selectedReleases(registry,now))for(const f of release.files)keep.add(f);
  for(const file of keep){if(!safeAsset(file))throw Error('Unexpected retained asset: '+file);if(!staged.has(file)&&!fs.existsSync(path.join(root,file)))throw Error('Retained dependency missing: '+file);}

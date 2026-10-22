@@ -18,6 +18,7 @@
 | 查看PDF/Word纸面规则 | [文档排版与学科计分](DOCUMENT-POLISH-2026-10-21.md) |
 | 查看构建产物清理与旧资源兼容 | [导入与构建维护](IMPORT-AND-BUILD-MAINTENANCE-2026-10-18.md) |
 | 排查试题中心首次打开、存储恢复及Word等待 | [启动、恢复与交互优化](STARTUP-RESILIENCE-2026-10-22.md) |
+| 维护样式分包、多科导出及大数据/移动键盘回归 | [样式、文档与跨端回归](STYLE-DOCUMENT-REGRESSION-2026-10-22.md) |
 
 ## 当前状态与阅读原则
 
@@ -147,8 +148,9 @@
 </details>
 
 <details>
-<summary>视觉、动效、响应式与性能（28篇）</summary>
+<summary>视觉、动效、响应式与性能（29篇）</summary>
 
+- [样式按需加载与跨端文档回归](STYLE-DOCUMENT-REGRESSION-2026-10-22.md) · 2026-10-22
 - [全站视觉与交互协调（2026-10-18）](VISUAL-LANGUAGE-2026-10-18.md)
 - [全站多尺寸布局复核（2026-10-18）](RESPONSIVE-GLOBAL-2026-10-18.md)
 - [动画连续性与非线性缓动（2026-10-18）](MOTION-CONTINUITY-2026-10-18.md)

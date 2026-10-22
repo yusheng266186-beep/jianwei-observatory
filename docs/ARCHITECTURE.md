@@ -28,7 +28,7 @@ GitHub Pages 仅提供静态前端，后端源码不会在 Pages 执行。腾讯
 
 `index.html` 内含关键首页样式与轻量字体入口。`app/launch.js` 先探测本机工作区，空白时保留可操作的导入首页，有材料时并行恢复存储、索引和应用。`app/data/importer-worker.js` 接收 File，解码、列对应复用已读行；`prepare-worker.js` 处理归一化、合并及索引准备，避免主线程重复解析。
 
-`tools/build-runtime.cjs` 用固定 esbuild 版本打包主程序、共享模块、导入/恢复线程和两个独立页面，生成内容哈希文件及 `app/runtime/manifest.json`，并更新入口 HTML。样式按明确顺序合并，后置共享控件层协调玻璃输入、滑轮和滚动条。字体、工作簿、公式和输出引擎按需加载。独立页面各层样式复制到原目录的内容哈希 CSS，保持字体相对路径与原有层叠顺序。
+`tools/build-runtime.cjs` 用固定 esbuild 版本打包主程序、共享模块、导入/恢复线程和两个独立页面，生成内容哈希文件及 `app/runtime/manifest.json`，并更新入口 HTML。`tools/style-groups.cjs` 维护唯一的主站样式顺序；三个公共包并行加载，报告阅读、试卷材质和辅导包按入口加载。链接在HTML预留原顺序，迟到的样式不追加到最终协调层后方；并发加载合并、失败可重试。字体、工作簿、公式和输出引擎按需加载。独立页面各层样式复制到原目录的内容哈希 CSS，保持字体相对路径与原有层叠顺序。详见[样式与跨端回归](STYLE-DOCUMENT-REGRESSION-2026-10-22.md)。
 
 `tools/runtime-assets.cjs` 以当前 manifest 与 `tools/runtime-releases.json` 的成功发布依赖并集为依据，保留最近3次成功发布和7天内已登记版本。清理前校验全部保留文件及 JS 导入关系；仅删除约定目录中匹配命名规则的哈希资源，失败时不删除。发布成功回执经提交树核验后，维护者在下一轮提交前登记；构建本身不将未发布版本计为成功。旧组件加载失败显示显式刷新入口，刷新不清除本机材料。详见[维护专题](IMPORT-AND-BUILD-MAINTENANCE-2026-10-18.md)。
 

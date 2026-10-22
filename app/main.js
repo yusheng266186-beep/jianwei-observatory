@@ -1,4 +1,5 @@
 import {tableReadingPositions,restoreTableReadingPositions,disclosurePositions,restoreDisclosurePositions} from './ui/study-position.js';
+import {ensureFeatureStyles,ensureSceneStyles} from './ui/feature-styles.js';
 import {isRuntimeLoadError,runtimeFailureMessage} from './ui/runtime-recovery.js';
 import {researchPath,researchStudySnapshot,researchHistoryState,researchHistoryStudy,researchHistoryConditions} from './engine/research-navigation.js';
 import {researchObservationList} from './engine/research-roster.js';
@@ -256,8 +257,8 @@ function go(scene,values={},resetScroll=false,{root=false,recordTrail=true}={}) 
   Object.assign(books[scene],values);current=scene;persistBooks();
   const next=path(scene);if(location.hash!==next)history.pushState(null,'',next);paint(true);
 }
-function warmScene(scene){if(hasMaterials(atlas.data)){loadScene(scene).catch(()=>{});if(['follow','library'].includes(scene))warmExerciseCenter();}}
-function prepareReports(){warmReportFonts().catch(()=>{});warmPDFWorker();warmPDFViewer().catch(()=>{});}
+function warmScene(scene){if(hasMaterials(atlas.data)){loadScene(scene).catch(()=>{});ensureSceneStyles(scene,books[scene]).catch(()=>{});if(['follow','library'].includes(scene))warmExerciseCenter();}}
+function prepareReports(){ensureFeatureStyles('reports').catch(()=>{});warmReportFonts().catch(()=>{});warmPDFWorker();warmPDFViewer().catch(()=>{});}
 function openEntry(scene){
   const values={board:{mode:'overview',search:'',page:1},class:{tab:'snapshot',search:'',page:1},papers:{key:'',shelfExam:atlas.latest,shelfSubject:'all'},people:{sid:'',...directoryDefaults},library:{tab:'materials'}}[scene]||{};
   go(scene,values,true,{root:true});
@@ -283,7 +284,7 @@ async function paint(transition=false,focus=null) {
     const available=hasMaterials(atlas.data);let view,key='';
     if(!available)view=welcomeView();
     else {
-      const module=await loadScene(scene);if(serial!==paintId)return;
+      const [module]=await Promise.all([loadScene(scene),ensureSceneStyles(scene,books[scene])]);if(serial!==paintId)return;
       if(sceneObject(scene)!==paintedObject&&!stage().dataset.sliding&&!reducedMotion())await foregroundFrame();if(serial!==paintId)return;
       key=viewKey(scene);
       if(key===paintedViewKey&&sceneObject(scene)===paintedObject&&!focus){
@@ -551,6 +552,7 @@ function refreshSavedReport(report){
 }
 async function openReport(report,{fresh=false}={}) {
   const request=++reportRequest;
+  try{await ensureFeatureStyles('reports');}catch(error){if(request===reportRequest)notify(error.message);return false;}if(request!==reportRequest)return false;
   if(typeof report==='function'){
     const dialog=document.getElementById('report-dialog');
     document.getElementById('report-content').innerHTML='<div class="surface-loading" role="status"><span class="overline">整理打印材料</span><h2 id="report-dialog-title">正在准备这次观察的报告</h2><p>仅在打开报告时整理完整记录。</p>'+button('关闭 ×','close-report',{},'outline')+'</div>';
@@ -736,7 +738,7 @@ function warmExerciseCenter(){
  if(exerciseWarmTask||!hasMaterials(atlas.data)||document.hidden)return;
  exerciseWarmTask=exerciseStudio().then(studio=>studio.preload()).catch(()=>{exerciseWarmTask=null;});
 }
-function exerciseModule(){if(!exerciseModuleTask){const task=import('./ui/exercise-studio.js');exerciseModuleTask=task;task.catch(()=>{if(exerciseModuleTask===task)exerciseModuleTask=null;});}return exerciseModuleTask;}
+function exerciseModule(){if(!exerciseModuleTask){const task=Promise.all([import('./ui/exercise-studio.js'),ensureFeatureStyles('exercises')]).then(([module])=>module);exerciseModuleTask=task;task.catch(()=>{if(exerciseModuleTask===task)exerciseModuleTask=null;});}return exerciseModuleTask;}
 
 function exerciseStudio(){
  if(!exerciseStudioTask){const task=exerciseModule().then(({createExerciseStudio})=>createExerciseStudio({notify,show:showDialog,close:dialog=>dismissDialog(dialog.id),getAtlas:()=>atlas,onFeedback:async record=>{const synced=syncPracticeFeedbackPlans(session.plans,record);session.plans=synced.plans;if(planDraft){const draft=syncPracticeFeedbackPlans([planDraft],record);if(draft.linked){planDraft=draft.plans[0];rememberPlanDraft();if(document.getElementById('plan-dialog').open)drawPlan();}}if(synced.linked){const saved=await persistPlansNow();if(current==='follow')await paint();notify(saved?'练后结果已同步至'+synced.linked+'条教学跟进。':'练后结果已保存，跟进记录暂留当前页面，请下载备份。');}else notify('练后结果已保存，可通过“加入教学跟进”关联训练安排。');},onAttach(record,source){
@@ -757,6 +759,7 @@ function mountExerciseCenter(){
 
 async function openExercises(context={}){
  const attempt=++exerciseOpenRequest,dialog=document.getElementById('exercise-dialog'),content=document.getElementById('exercise-content');
+ try{await ensureFeatureStyles('exercises');}catch(error){if(attempt===exerciseOpenRequest)notify(error.message);return;}if(attempt!==exerciseOpenRequest)return;
  if(!dialog.open){dialog.dataset.loading='true';content.innerHTML='<header class="exercise-heading"><span class="overline">个性化辅导中心</span><h2 id="exercise-title">正在打开辅导中心</h2><p role="status">正在读取本机练习与学生列表…</p></header><button class="button outline" data-cmd="exercise-loading-close">关闭</button>';showDialog(dialog);}
  try{
  const studio=await exerciseStudio();if(attempt!==exerciseOpenRequest||!dialog.open)return;const sid=context.hub?null:context.sid||planDraft?.sid,exam=context.exam||planDraft?.exam||atlas.latest;await studio.open({sid,exam,subject:context.subject,plan:!context.hub&&planDraft?.sid===sid&&planDraft.exam===exam?planDraft:null},{shouldOpen:()=>attempt===exerciseOpenRequest&&dialog.open});delete dialog.dataset.loading;

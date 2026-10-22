@@ -23,7 +23,7 @@ jobs:
           test -z "$(git ls-files --others --exclude-standard)"
   browser-smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -39,12 +39,16 @@ jobs:
       - name: Run the twelve-step browser smoke journey
         env:
           AUDIT_BROWSER: ${{ matrix.browser }}
+          AUDIT_URL: http://127.0.0.1:4173
         run: |
           python3 -m http.server 4173 --bind 127.0.0.1 > "$RUNNER_TEMP/browser-smoke-server.log" 2>&1 &
           server_pid=$!
           trap 'kill "$server_pid"' EXIT
           curl --retry 10 --retry-connrefused --retry-delay 1 --fail --silent http://127.0.0.1:4173/ > /dev/null
           npm run test:smoke
+          npm run test:keyboard
+          npm run test:large-workspace
+          if [ "$AUDIT_BROWSER" = chromium ]; then npm run test:document-regression; fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -52,6 +56,11 @@ jobs:
           path: |
             .audit-output/hengji-audit-results.json
             .audit-output/hengji-*.png
+            .audit-output/keyboard-viewport*/results.json
+            .audit-output/keyboard-viewport*/*.png
+            .audit-output/large-workspace-*/checks.json
+            .audit-output/large-workspace-*/*.png
+            .audit-output/document-regression/exports.json
           if-no-files-found: ignore
           include-hidden-files: true
           retention-days: 7

@@ -249,6 +249,9 @@ python3 -m http.server 4175 --bind 127.0.0.1
 | `node tools/check-release.cjs` | 核对发布入口、清单和引用资源 |
 | `npm run test:smoke` | 运行当前12步浏览器冒烟流程，需另启静态服务器 |
 | `npm run test:responsive` | 执行专项响应式布局检查，需按脚本要求提供浏览器环境 |
+| `npm run test:keyboard` | 检查移动键盘可见区域、输入焦点、长表末行及恢复 |
+| `npm run test:large-workspace` | 1236人、14832条成绩、5000份练习的多尺寸压力回归 |
+| `npm run test:document-regression` | 十科学生/教师版40份PDF及Word的固定成稿回放与版式基线 |
 | `node tools/export-training-prompts.cjs --out /绝对路径/新的导出目录` | 导出实际编译提示词，含匿名示例，不调用模型、不读取账号密钥 |
 
 `package.json`中还保留报告、启动、控件、动效与练习等专项脚本；各专项脚本的浏览器和服务器要求以脚本及对应维护文档为准。
@@ -272,11 +275,11 @@ AUDIT_URL=http://127.0.0.1:4175 npm run test:smoke
 GitHub Actions的 `Verify install and build` 包含质量检查与两套浏览器回归：
 
 - `quality`：全新安装、契约检查、单元测试、构建、资源检查和生成文件一致性检查。
-- `browser-smoke`：分别安装Chromium、WebKit，启动静态服务器并执行12步浏览器流程，分别保留测试产物。可用 `AUDIT_BROWSER=webkit` 在具备WebKit运行依赖的环境复核同一脚本。
+- `browser-smoke`：分别安装Chromium、WebKit，启动静态服务器并执行12步流程、键盘和大数据检查，Chromium还回放十科40份文档导出，分别保留测试产物。可用 `AUDIT_BROWSER=webkit` 在具备WebKit运行依赖的环境复核对应脚本。
 
 CI不会使用真实学生表格或生产模型凭据。涉及模型、云端授权、生图或实际文档效果的改动，还需要针对性实测，并分别记录首轮成功、恢复、内容核对和导出结果，不能用“所有单元测试通过”代替真实调用验证。
 
-2026-10-22最新回归为1036项单元测试通过；启动与存储优化另用240份匿名练习核对试题中心、手机设置及公式预览，详见[启动与恢复优化](docs/STARTUP-RESILIENCE-2026-10-22.md)。此前真实云端HTML动画、数学3题与早期SVG比较保留为历史样本。测试数字是当次快照，发布结果以对应提交的CI和[专题验证记录](docs/README.md)为准。
+2026-10-22最新回归为1040项单元测试通过；样式初始包体积减少约17.5%，较大数据及两套浏览器的键盘检查完成，十科40份文档渲染113页复核，详见[样式、文档与跨端回归](docs/STYLE-DOCUMENT-REGRESSION-2026-10-22.md)。上一轮240份练习及存储恢复记录保留在[启动与恢复优化](docs/STARTUP-RESILIENCE-2026-10-22.md)。测试数字是当次快照，本机回放不能代替真实模型调用，发布结果以对应提交的CI和[专题验证记录](docs/README.md)为准。
 
 <a id="deployment"></a>
 ## 发布与维护

@@ -1,0 +1,166 @@
+{
+  "version": 1,
+  "note": "2026-10-22人工核对的匿名成稿版式基线；仅用于固定样本回归，不约束教师实际生成的题目或页数。",
+  "files": {
+    "数学-student.pdf": {
+      "pages": 2
+    },
+    "数学-student.docx": {
+      "tables": 1,
+      "equations": 32,
+      "figures": 1
+    },
+    "数学-teacher.pdf": {
+      "pages": 3
+    },
+    "数学-teacher.docx": {
+      "tables": 1,
+      "equations": 98,
+      "figures": 1
+    },
+    "物理-student.pdf": {
+      "pages": 2
+    },
+    "物理-student.docx": {
+      "tables": 3,
+      "equations": 30,
+      "figures": 0
+    },
+    "物理-teacher.pdf": {
+      "pages": 4
+    },
+    "物理-teacher.docx": {
+      "tables": 3,
+      "equations": 94,
+      "figures": 0
+    },
+    "化学-student.pdf": {
+      "pages": 2
+    },
+    "化学-student.docx": {
+      "tables": 2,
+      "equations": 25,
+      "figures": 0
+    },
+    "化学-teacher.pdf": {
+      "pages": 4
+    },
+    "化学-teacher.docx": {
+      "tables": 2,
+      "equations": 50,
+      "figures": 4
+    },
+    "生物-student.pdf": {
+      "pages": 2
+    },
+    "生物-student.docx": {
+      "tables": 1,
+      "equations": 20,
+      "figures": 1
+    },
+    "生物-teacher.pdf": {
+      "pages": 4
+    },
+    "生物-teacher.docx": {
+      "tables": 1,
+      "equations": 65,
+      "figures": 1
+    },
+    "语文-student.pdf": {
+      "pages": 2
+    },
+    "语文-student.docx": {
+      "tables": 0,
+      "equations": 0,
+      "figures": 0
+    },
+    "语文-teacher.pdf": {
+      "pages": 3
+    },
+    "语文-teacher.docx": {
+      "tables": 0,
+      "equations": 0,
+      "figures": 0
+    },
+    "英语-student.pdf": {
+      "pages": 2
+    },
+    "英语-student.docx": {
+      "tables": 0,
+      "equations": 0,
+      "figures": 0
+    },
+    "英语-teacher.pdf": {
+      "pages": 3
+    },
+    "英语-teacher.docx": {
+      "tables": 0,
+      "equations": 0,
+      "figures": 0
+    },
+    "日语-student.pdf": {
+      "pages": 2
+    },
+    "日语-student.docx": {
+      "tables": 0,
+      "equations": 0,
+      "figures": 0
+    },
+    "日语-teacher.pdf": {
+      "pages": 3
+    },
+    "日语-teacher.docx": {
+      "tables": 0,
+      "equations": 0,
+      "figures": 0
+    },
+    "历史-student.pdf": {
+      "pages": 2
+    },
+    "历史-student.docx": {
+      "tables": 0,
+      "equations": 0,
+      "figures": 0
+    },
+    "历史-teacher.pdf": {
+      "pages": 3
+    },
+    "历史-teacher.docx": {
+      "tables": 0,
+      "equations": 0,
+      "figures": 0
+    },
+    "政治-student.pdf": {
+      "pages": 2
+    },
+    "政治-student.docx": {
+      "tables": 0,
+      "equations": 0,
+      "figures": 0
+    },
+    "政治-teacher.pdf": {
+      "pages": 3
+    },
+    "政治-teacher.docx": {
+      "tables": 0,
+      "equations": 0,
+      "figures": 0
+    },
+    "地理-student.pdf": {
+      "pages": 2
+    },
+    "地理-student.docx": {
+      "tables": 2,
+      "equations": 0,
+      "figures": 1
+    },
+    "地理-teacher.pdf": {
+      "pages": 4
+    },
+    "地理-teacher.docx": {
+      "tables": 2,
+      "equations": 1,
+      "figures": 1
+    }
+  }
+}

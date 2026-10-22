@@ -2,6 +2,7 @@ const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypt
 const esbuild=require(process.env.ESBUILD_LIB||'esbuild');
 const {plan,compatibilityFiles}=require('./runtime-assets.cjs');
 const {indexHTML,standaloneHTML}=require('./build-html.cjs');
+const {groups:styleGroups}=require('./style-groups.cjs');
 const hash=value=>crypto.createHash('sha256').update(value).digest('hex').slice(0,12);
 async function build(root=path.resolve(__dirname,'..')){
  const out=path.join(root,'app/runtime'),staged=new Map(),overrides=new Map(),read=file=>fs.readFileSync(path.join(root,file),'utf8');
@@ -29,23 +30,25 @@ async function build(root=path.resolve(__dirname,'..')){
  await compile({entryPoints:{main:'app/main.js'}});
  await compile({splitting:false,entryPoints:{'figure-library':'assets/figure-library.js','model-workbench':'assets/model-workbench.js'}});
  const entries=Object.fromEntries(Object.entries(outputs).filter(([,value])=>value.entryPoint).map(([file,value])=>[value.entryPoint,path.relative(path.join(root,'app'),path.join(root,file)).split(path.sep).join('/')]));
- const sheets=['styles.css',...['journey','glass','reading-fonts','typography','questions','material','reports','controls','question-glass','report-reading','paper-material','runtime','exercises','exercise-center','exercise-feedback','research-continuity','archive','fields','wheels','refinement','visual-language'].map(name=>'styles/'+name+'.css')];
- const css=await esbuild.build({absWorkingDir:root,stdin:{contents:sheets.map(file=>'@import '+JSON.stringify('./'+file)+';').join('\n'),loader:'css',resolveDir:root},bundle:true,write:false,minify:true,charset:'utf8',outfile:'styles.bundle.css',plugins:[{name:'css-assets',setup(job){job.onResolve({filter:/\.(woff2|png|svg)(\?|$)/},args=>({path:'../'+path.relative(root,path.resolve(args.resolveDir,args.path)).split(path.sep).join('/'),external:true}));}}]});
- const cssText=css.outputFiles[0].text,cssName='assets/runtime-'+hash(cssText)+'.css',landingCSS=read('styles/landing.css'),landingName='assets/landing-'+hash(landingCSS)+'.css';
- staged.set(cssName,Buffer.from(cssText));staged.set(landingName,Buffer.from(landingCSS));
+ const workspaceStyles=[];
+ for(const group of styleGroups){
+  const css=await esbuild.build({absWorkingDir:root,stdin:{contents:group.sheets.map(file=>'@import '+JSON.stringify('./'+file)+';').join('\n'),loader:'css',resolveDir:root},bundle:true,write:false,minify:true,charset:'utf8',outfile:'styles.bundle.css',plugins:[{name:'css-assets',setup(job){job.onResolve({filter:/\.(woff2|png|svg)(\?|$)/},args=>({path:'../'+path.relative(root,path.resolve(args.resolveDir,args.path)).split(path.sep).join('/'),external:true}));}}]});
+  const text=css.outputFiles[0].text,file='assets/runtime-'+group.name+'-'+hash(text)+'.css';staged.set(file,Buffer.from(text));workspaceStyles.push({file,feature:group.feature});
+ }
+ const cssName=workspaceStyles[0].file,landingCSS=read('styles/landing.css'),landingName='assets/landing-'+hash(landingCSS)+'.css';staged.set(landingName,Buffer.from(landingCSS));
  const preload=new Set();function dependencies(file){for(const item of outputs[file]?.imports||[]){if(item.external||item.kind!=='import-statement'||preload.has(item.path))continue;preload.add(item.path);dependencies(item.path);}}dependencies('app/'+entries['app/main.js']);
  const preloadAttribute=JSON.stringify([...preload].map(file=>'../'+file)).replaceAll('"','&quot;');
- const launch=`<script src="./app/launch.js?v=runtime-v53" data-runtime="./${entries['app/main.js']}" data-storage="./${entries['app/data/storage.js']}" data-prepare="./${entries['app/data/prepare-worker.js']}" data-importer="../${importerName}" data-preload="${preloadAttribute}" defer></script>`;
+ const launch=`<script src="./app/launch.js?v=runtime-v54" data-runtime="./${entries['app/main.js']}" data-storage="./${entries['app/data/storage.js']}" data-prepare="./${entries['app/data/prepare-worker.js']}" data-importer="../${importerName}" data-preload="${preloadAttribute}" defer></script>`;
  const {dockIcon}=await import(pathToFileURL(path.join(root,'app/ui/icons.js')).href);
  const routes=[['board','年级总览'],['class','班级研究'],['papers','试卷研究'],['people','学生研究'],['follow','教学跟进'],['library','资料与报告']];
  const dock='<span class="dock-indicator" aria-hidden="true"></span>'+routes.map(([id,label])=>'<button data-cmd="nav" data-scene="'+id+'"><span class="dock-symbol">'+dockIcon(id)+'</span><span>'+label+'</span><i></i></button>').join('');
- staged.set('index.html',Buffer.from(indexHTML(read('index.html'),{launch,landingCSS:landingCSS.trim().replaceAll("url('../assets/","url('./assets/"),runtimeCSS:cssName,dock})));
+ staged.set('index.html',Buffer.from(indexHTML(read('index.html'),{launch,landingCSS:landingCSS.trim().replaceAll("url('../assets/","url('./assets/"),runtimeCSS:cssName,workspaceStyles,dock})));
  const styleSources={'figure-library.html':['assets/model-workbench.css','assets/figure-library.css','styles/fields.css','styles/refinement.css','styles/reading-fonts.css','styles/visual-language.css'],'model-workbench.html':['assets/model-workbench.css','styles/fields.css','styles/wheels.css','styles/refinement.css','styles/reading-fonts.css','styles/visual-language.css']},styles=new Set();
  for(const [file,source] of [['figure-library.html','assets/figure-library.js'],['model-workbench.html','assets/model-workbench.js']]){
   const links=styleSources[file].map(style=>{const content=fs.readFileSync(path.join(root,style)),name=style.replace(/\.css$/,'-'+hash(content)+'.css');staged.set(name,content);styles.add(name);return '<link rel="stylesheet" href="./'+name+'">';}).join('');
   staged.set(file,Buffer.from(standaloneHTML(read(file),{entry:entries[source],links})));
  }
- const manifest={main:entries['app/main.js'],storage:entries['app/data/storage.js'],prepare:entries['app/data/prepare-worker.js'],importer:importerName,preload:[...preload],css:cssName,landing:landingName,styles:[...styles].sort(),standalone:{figures:entries['assets/figure-library.js'],models:entries['assets/model-workbench.js']},files:Object.keys(outputs)};
+ const manifest={main:entries['app/main.js'],storage:entries['app/data/storage.js'],prepare:entries['app/data/prepare-worker.js'],importer:importerName,preload:[...preload],css:cssName,landing:landingName,workspaceStyles,styles:[...new Set([...styles,...workspaceStyles.map(s=>s.file)])].sort(),standalone:{figures:entries['assets/figure-library.js'],models:entries['assets/model-workbench.js']},files:Object.keys(outputs)};
  // Persist a bounded fallback graph so a missed release receipt cannot delete
  // the preceding entry. Identical builds preserve the same graph (including CI).
  const fallback=compatibilityFiles(manifest,head,production,registry);if(fallback.length)manifest.compatibility=fallback;

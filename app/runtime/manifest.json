@@ -1,5 +1,5 @@
 {
-  "main": "runtime/main-BP27ZI7T.js",
+  "main": "runtime/main-ZZAZU4V3.js",
   "storage": "runtime/storage-QF5WNAP5.js",
   "prepare": "runtime/prepare-URUUUWSB.js",
   "importer": "app/runtime/importer-B4QXMGYP.js",
@@ -29,11 +29,43 @@
     "app/runtime/shared-OIY7F67X.js",
     "app/runtime/shared-QGKTY336.js"
   ],
-  "css": "assets/runtime-1964a0c075e1.css",
+  "css": "assets/runtime-foundation-e51449e9d6c2.css",
   "landing": "assets/landing-8e0095cb7b55.css",
+  "workspaceStyles": [
+    {
+      "file": "assets/runtime-foundation-e51449e9d6c2.css",
+      "feature": ""
+    },
+    {
+      "file": "assets/runtime-report-reading-daa030bab1b8.css",
+      "feature": "reports"
+    },
+    {
+      "file": "assets/runtime-papers-7f16c53f2508.css",
+      "feature": "papers"
+    },
+    {
+      "file": "assets/runtime-runtime-4d786a93211a.css",
+      "feature": ""
+    },
+    {
+      "file": "assets/runtime-exercises-bb140abdcba3.css",
+      "feature": "exercises"
+    },
+    {
+      "file": "assets/runtime-finish-4c991c3f4e61.css",
+      "feature": ""
+    }
+  ],
   "styles": [
     "assets/figure-library-20349b898c28.css",
     "assets/model-workbench-50ab61a061f6.css",
+    "assets/runtime-exercises-bb140abdcba3.css",
+    "assets/runtime-finish-4c991c3f4e61.css",
+    "assets/runtime-foundation-e51449e9d6c2.css",
+    "assets/runtime-papers-7f16c53f2508.css",
+    "assets/runtime-report-reading-daa030bab1b8.css",
+    "assets/runtime-runtime-4d786a93211a.css",
     "styles/fields-a6e6da17cff4.css",
     "styles/reading-fonts-daadf771f13d.css",
     "styles/refinement-931faf8c3de1.css",
@@ -60,7 +92,7 @@
     "app/runtime/shared-PXKZPDZL.js",
     "app/runtime/shared-S3IIO5LF.js",
     "app/runtime/shared-FLK274R7.js",
-    "app/runtime/main-BP27ZI7T.js",
+    "app/runtime/main-ZZAZU4V3.js",
     "app/runtime/shared-ANF6O23H.js",
     "app/runtime/shared-GJ4PEHDZ.js",
     "app/runtime/shared-F43TXK24.js",

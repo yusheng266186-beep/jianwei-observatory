@@ -1,0 +1,29 @@
+// Anonymous stress data, no account or model calls. Timings are observations,
+// while correctness, bounded rendering and preserved records are hard checks.
+const {chromium,webkit}=require('playwright'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const {makeWideFixture}=require('./fixtures.cjs');
+function largeFixture(){
+ const base=makeWideFixture(),data={...base,students:[],scores:[],answers:[],exercises:[],banks:{},exams:Array.from({length:12},(_,i)=>({id:String(501+i),order:i,label:'压力回放第'+(i+1)+'场',scope:'school'}))};
+ data.lines=data.exams.flatMap(e=>base.lines.filter(l=>l.exam==='52').map(l=>({...l,exam:e.id})));
+ for(const e of data.exams)for(const [key,bank] of Object.entries(base.banks))data.banks[key.split('|')[0]+'|'+e.id]=bank;
+ for(let batch=0;batch<12;batch++)for(const student of base.students){const sid=student.id+'-'+batch;data.students.push({id:sid,name:'压力同学'+String(data.students.length+1).padStart(4,'0')});const row=base.scores.find(r=>r.sid===student.id&&r.exam==='52');for(const exam of data.exams)data.scores.push({...row,sid,exam:exam.id});for(const a of base.answers.filter(a=>a.sid===student.id))data.answers.push({...a,sid,exam:'512'});}
+ for(let i=0;i<5000;i++){const s=data.students[i%data.students.length],row=data.scores.find(r=>r.sid===s.id),subject=['数学','物理','化学','生物','语文','英语','历史','政治','地理','日语'][i%10];data.exercises.push({id:'stress-'+i,sid:s.id,exam:'512',status:i%7===0?'failed':'ready',createdAt:1792627200000+i*1000,reviewedAt:i%3===0?'reviewed':null,student:{name:s.name,classNo:row.classNo,examLabel:'压力回放第12场'},request:{subject,focus:i%2?'函数与条件分析':'材料信息提取',curriculum:'高中已学范围',count:3,minutes:20,difficulty:'基础巩固'},sheet:i%7===0?undefined:{title:subject+'专项练习',objective:'压力回放',questions:[]}});}
+ return data;
+}
+const engine=process.env.AUDIT_BROWSER==='webkit'?webkit:chromium,out=process.env.AUDIT_OUTPUT||path.join(__dirname,'../.audit-output/large-workspace-'+engine.name());fs.mkdirSync(out,{recursive:true});
+(async()=>{const b=await engine.launch(),p=await b.newPage({viewport:{width:1440,height:960},reducedMotion:'reduce'}),errors=[],checks=[],data=largeFixture();p.setDefaultTimeout(90000);p.on('pageerror',e=>errors.push(e.message));
+ try{await p.route('**/*tencentscf.com/**',r=>r.abort());await p.goto(process.env.AUDIT_URL||'http://127.0.0.1:4198');
+  assert.equal(await p.evaluate(()=>performance.getEntriesByType('resource').some(e=>/assets\/runtime-.*\.css/.test(e.name))),false,'Empty landing must not request workspace CSS');
+  await p.evaluate(()=>{window.auditLongTasks=[];try{new PerformanceObserver(list=>window.auditLongTasks.push(...list.getEntries().map(e=>Math.round(e.duration)))).observe({type:'longtask',buffered:true});}catch{}});
+  const started=Date.now();await p.locator('#files').setInputFiles({name:'anonymous-large.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(data))});await p.locator('[data-inbox=commit]').click();await p.locator('#inbox').waitFor({state:'hidden'});await p.locator('body[data-workspace=ready]').waitFor();checks.push({importMs:Date.now()-started,students:data.students.length,scores:data.scores.length,exercises:data.exercises.length});
+  const nav=async scene=>{await p.locator('#navigation [data-scene='+scene+']').click();await p.waitForFunction(s=>document.querySelector('#stage').dataset.scene===s&&document.querySelector('#stage').getAttribute('aria-busy')==='false',scene);};
+  for(const width of [320,390,768,1440,1920]){await p.setViewportSize({width,height:960});for(const scene of ['board','class','papers','people','follow','library']){await nav(scene);assert(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),width+' '+scene+' overflow');checks.push({width,scene});}}
+  await p.locator('#stage [data-key=tab][data-value=exercises]').click();await p.locator('#exercise-center[data-center-ready=true]').waitFor();assert.equal(await p.locator('[data-center-card]').count(),24);assert.match(await p.locator('[data-center-range]').innerText(),/5000/);
+  const query='压力同学0001 数学',at=Date.now();await p.locator('[data-center-search]').fill(query);await p.waitForFunction(()=>!document.querySelector('[data-center-range]').textContent.includes('/ 5000'));await p.waitForTimeout(150);
+  const expected=data.exercises.filter(r=>r.student.name==='压力同学0001'&&r.request.subject==='数学').length;assert.equal(await p.locator('[data-center-card]').count(),Math.min(expected,24));assert.match(await p.locator('[data-center-range]').innerText(),new RegExp('/ '+expected+'份'));
+  checks.push({searchMs:Date.now()-at,matched:expected});await p.locator('[data-center-action=reset]').click();await p.locator('[data-center-action=more]').click();assert.equal(await p.locator('[data-center-card]').count(),48);
+  const retained=await p.evaluate(async()=>{const {access}=await import('/app/data/storage.js');return (await access('exercises')).length;});assert.equal(retained,5000);assert.deepEqual(errors,[]);
+  checks.push({centerMountMs:await p.locator('#exercise-center').getAttribute('data-center-load-ms'),longTasks:await p.evaluate(()=>window.auditLongTasks),retained});
+  await p.screenshot({path:path.join(out,'center.png')});fs.writeFileSync(path.join(out,'checks.json'),JSON.stringify({engine:engine.name(),checks,errors},null,2));console.log('PASS '+engine.name()+' '+JSON.stringify(checks[0])+' '+JSON.stringify(checks.at(-1)));
+ }finally{await b.close();}
+})().catch(e=>{console.error(e);process.exitCode=1;});
