@@ -29,7 +29,7 @@ test('确实为空与历史材料暂不可读分开处理，恢复后仍读取�
 test('完整备份遇到存储故障仍能下载当前材料和内存练习，未知集合不伪装为空',async()=>{
  const snapshot={students:[{id:'anonymous'}],scores:[{total:0}]},live={exercises:[{id:'kept'}],exerciseComposerDrafts:{version:1,requests:[]}};
  const result=await workspaceBackup(snapshot,{live,read:()=>Promise.reject(Error('blocked'))});
- assert.equal(result.complete,false);assert.deepEqual(result.missing,['exerciseSavedSetups']);assert.deepEqual(result.payload.exercises,live.exercises);assert.equal(result.payload.scores[0].total,0);assert(!Object.hasOwn(result.payload,'exerciseSavedSetups'));
+ assert.equal(result.complete,false);assert.deepEqual(result.missing,['exerciseSavedSetups','importColumnTemplates']);assert.deepEqual(result.payload.exercises,live.exercises);assert.equal(result.payload.scores[0].total,0);assert(!Object.hasOwn(result.payload,'exerciseSavedSetups'));
  const full=await workspaceBackup(snapshot,{read:async()=>({exerciseSavedSetups:['saved']})});assert(full.complete);assert.deepEqual(full.payload.exerciseSavedSetups,['saved']);assert.deepEqual(full.payload.exercises,[]);
 });
 test('Word组件正常时不受独立Excel请求失败影响，失败组件可以重试',async()=>{

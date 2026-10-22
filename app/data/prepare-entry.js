@@ -1,1 +1,1 @@
-export const prepareURL=new URL("../../app/runtime/prepare-URUUUWSB.js",import.meta.url);
+export const prepareURL=new URL("../../app/runtime/prepare-I725DOMJ.js",import.meta.url);

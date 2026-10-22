@@ -1,3 +1,4 @@
+import {installCommittedInput} from './committed-input.js';
 import {practiceFeedbackSummary} from '../engine/exercise-feedback.js';
 import {exerciseSyncMessage} from '../engine/exercise-sync.js';
 import {exerciseIdentity} from '../engine/exercise-identity.js';
@@ -65,7 +66,7 @@ export function createExerciseCenter({records,getAtlas,authed,onOpen,onNew,onRef
   listeners=new AbortController();const signal=listeners.signal,smallScreen=matchMedia('(max-width:600px)');
   smallScreen.addEventListener('change',()=>{if(root!==host)return;const scope=root.querySelector('[data-center-scope-tools]');if(scope)scope.open=!smallScreen.matches;choices?.close(false,true);},{signal});
   choices=installExerciseChoices(root,(id,value)=>{if(root!==host||busy)return;if(id==='center-class')filters.classNo=value;else if(id==='center-subject')filters.subject=value;else if(id==='center-sort')filters.sort=value;changeFilters();});
-  root.addEventListener('input',e=>{if(root===host&&!busy&&e.target.matches('[data-center-search]')){filters.query=e.target.value;clearTimeout(searchTimer);searchTimer=setTimeout(()=>{if(root===host)changeFilters();},90);}},{signal});
+  installCommittedInput(root,e=>{if(root===host&&!busy){filters.query=e.target.value;clearTimeout(searchTimer);searchTimer=setTimeout(()=>{if(root===host)changeFilters();},90);}},{signal,matches:'[data-center-search]',onCompositionStart:()=>clearTimeout(searchTimer)});
   root.addEventListener('change',e=>{if(root!==host||busy)return;if(e.target.matches('[data-center-select]')){e.target.checked?selected.add(e.target.dataset.centerSelect):selected.delete(e.target.dataset.centerSelect);confirmation=null;render();}if(e.target.matches('[data-center-select-shown]')){for(const r of view().shown)e.target.checked?selected.add(r.id):selected.delete(r.id);confirmation=null;render();}},{signal});
   root.addEventListener('click',async e=>{
    const b=e.target.closest('[data-center-action],[data-center-filter]');if(!b||b.disabled||root!==host||busy)return;

@@ -1,3 +1,4 @@
+import {trackWorkspaceChanges} from './workspace-protection.js';
 // Storage has no analysis dependencies. The landing page can confirm whether
 // a workspace exists without downloading the research application.
 export function workspaceStorage(pathname=''){
@@ -11,7 +12,9 @@ export {STORAGE_SCOPE};
 const TABLE='materials';
 export const PREPARED_VERSION=46;
 export function preference(key,fallback){try{return JSON.parse(localStorage.getItem(localPrefix+key))??fallback;}catch{return fallback;}}
-export function remember(key,value){try{localStorage.setItem(localPrefix+key,JSON.stringify(value));return true;}catch{return false;}}
+const protectedPreferences=new Set(['savedPeople','comparePeople','directoryViews','research']);
+const changed=()=>{try{localStorage.setItem(localPrefix+'workspaceChangeHint',JSON.stringify(crypto.randomUUID()));globalThis.window?.dispatchEvent?.(new Event('workspace-saved'));}catch{}};
+export function remember(key,value){try{const text=JSON.stringify(value),previous=localStorage.getItem(localPrefix+key);localStorage.setItem(localPrefix+key,text);const meaningful=key==='research'?JSON.stringify(JSON.parse(previous||'{}')?.saved||[])!==JSON.stringify(value?.saved||[]):previous!==text;if(protectedPreferences.has(key)&&meaningful){localStorage.setItem(localPrefix+'workspacePreferenceRevision',JSON.stringify(crypto.randomUUID()));changed();}return true;}catch{return false;}}
 function open(name=DB){return new Promise((resolve,reject)=>{
  const req=indexedDB.open(name,1);let done=false;
  const timer=setTimeout(()=>finish(new Error('本机存储暂时没有响应')),3500);
@@ -25,19 +28,19 @@ export async function access(key,value,write=false,name=DB,table=TABLE,entries=n
   const timer=setTimeout(()=>{try{tx?.abort();}catch{}finish(new Error('本机存储操作超时，内容未保存'));},4500);
   function finish(error){if(done)return;done=true;clearTimeout(timer);db.close();error?reject(error):resolve(result);}
   try{tx=db.transaction(table,write?'readwrite':'readonly');tx.oncomplete=()=>finish();tx.onerror=()=>finish(tx.error||new Error('本机存储写入失败'));tx.onabort=()=>finish(tx.error||new Error('本机存储事务已取消，内容未保存'));
-   if(write)for(const [k,v] of entries||[[key,value]])tx.objectStore(table).put(v,k);
+   if(write){const store=tx.objectStore(table),track=table===TABLE&&name===DB?trackWorkspaceChanges(store):()=>{};for(const [k,v] of entries||[[key,value]]){store.put(v,k);track(k,v);}}
    else if(Array.isArray(key)){result={};for(const k of key){const r=tx.objectStore(table).get(k);r.onsuccess=()=>{result[k]=r.result??null;};}}
    else{const r=tx.objectStore(table).get(key);r.onsuccess=()=>{result=r.result??null;};}
   }catch(error){try{tx?.abort();}catch{}finish(error);}
  });
 }
 let writes=Promise.resolve();
-function savedHint(entries){const data=entries.find(([key])=>key==='dataset')?.[1];if(data)remember('workspacePresent',Boolean(data.scores?.length||data.answers?.length||data.lines?.length||Object.keys(data.banks||{}).length));}
+function savedHint(entries){const data=entries.find(([key])=>key==='dataset')?.[1];if(data)remember('workspacePresent',Boolean(data.scores?.length||data.answers?.length||data.lines?.length||Object.keys(data.banks||{}).length));changed();}
 export function write(entries){const snapshot=structuredClone(entries),operation=writes.then(()=>access(null,null,true,DB,TABLE,snapshot)).then(result=>{savedHint(snapshot);return result;});writes=operation.catch(()=>{});return operation;}
 // Read and modify one value in the same transaction, including across tabs.
 export function update(key,reduce){
  const operation=writes.then(async()=>{const db=await open();return new Promise((resolve,reject)=>{let tx,result,done=false,reason;const finish=error=>{if(done)return;done=true;clearTimeout(timer);db.close();error?reject(error):resolve(result);},timer=setTimeout(()=>{reason=new Error('本机保存超时，请重试');try{tx?.abort();}catch{}finish(reason);},4500);
-  try{tx=db.transaction(TABLE,'readwrite');const store=tx.objectStore(TABLE),request=store.get(key);request.onsuccess=()=>{try{result=reduce(request.result??null);if(result&&typeof result.then==='function')throw new Error('存储更新须同步完成');store.put(result,key);}catch(error){reason=error;tx.abort();}};tx.oncomplete=()=>finish();tx.onerror=()=>finish(reason||tx.error||new Error('本机保存未完成，请重试'));tx.onabort=()=>finish(reason||tx.error||new Error('本机保存已取消'));}catch(error){try{tx?.abort();}catch{}finish(error);}
+  try{tx=db.transaction(TABLE,'readwrite');const store=tx.objectStore(TABLE),track=trackWorkspaceChanges(store),request=store.get(key);request.onsuccess=()=>{try{result=reduce(request.result??null);if(result&&typeof result.then==='function')throw new Error('存储更新须同步完成');store.put(result,key);track(key,result);}catch(error){reason=error;tx.abort();}};tx.oncomplete=()=>{finish();changed();};tx.onerror=()=>finish(reason||tx.error||new Error('本机保存未完成，请重试'));tx.onabort=()=>finish(reason||tx.error||new Error('本机保存已取消'));}catch(error){try{tx?.abort();}catch{}finish(error);}
  });});writes=operation.catch(()=>{});return operation;
 }
 export function writePrepared(entries){const ready=Promise.resolve(entries);ready.catch(()=>{});const operation=writes.then(async()=>{const entries=await ready,result=await access(null,null,true,DB,TABLE,entries);savedHint(entries);return result;});writes=operation.catch(()=>{});return operation;}
@@ -69,13 +72,13 @@ export function writeWorkspaceIfCurrent(entries,expectedStamp,{reducers={}}={}){
    const finish=error=>{if(done)return;done=true;clearTimeout(timer);db.close();error?reject(error):resolve(result);};
    const timer=setTimeout(()=>{reason=new Error('工作区保存超时，原材料未替换');try{tx?.abort();}catch{}finish(reason);},4500);
    try{
-    tx=db.transaction(TABLE,'readwrite');const store=tx.objectStore(TABLE),prepared=store.get('prepared');
+    tx=db.transaction(TABLE,'readwrite');const store=tx.objectStore(TABLE),track=trackWorkspaceChanges(store),prepared=store.get('prepared');
     prepared.onsuccess=()=>{try{
      if((prepared.result?.stamp??null)!==(expectedStamp??null))return;
      result.stamp=crypto.randomUUID();
      for(const [key,value] of snapshot){
-      if(reducers[key]){const read=store.get(key);read.onsuccess=()=>{try{const next=reducers[key](read.result??null,value);if(next&&typeof next.then==='function')throw new Error('工作区更新须同步完成');store.put(next,key);result.values[key]=next;}catch(error){reason=error;tx.abort();}};}
-      else store.put(value,key);
+      if(reducers[key]){const read=store.get(key);read.onsuccess=()=>{try{const next=reducers[key](read.result??null,value);if(next&&typeof next.then==='function')throw new Error('工作区更新须同步完成');store.put(next,key);track(key,next);result.values[key]=next;}catch(error){reason=error;tx.abort();}};}
+      else {store.put(value,key);track(key,value);}
      }
      store.put({version:PREPARED_VERSION,stamp:result.stamp},'prepared');result.saved=true;
     }catch(error){reason=error;tx.abort();}};

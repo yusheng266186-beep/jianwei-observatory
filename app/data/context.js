@@ -18,5 +18,6 @@ export function mergeContext(current,incoming,ids) {
   // replay an old copy of the draft library from the current dataset.
   result.exercises=Array.isArray(incoming.exercises)?remapContext(incoming.exercises,ids):undefined;
   result.exerciseSavedSetups=Array.isArray(incoming.exerciseSavedSetups)?structuredClone(incoming.exerciseSavedSetups):undefined;
+  result.importColumnTemplates=Array.isArray(incoming.importColumnTemplates)?structuredClone(incoming.importColumnTemplates):undefined;
   return result;
 }

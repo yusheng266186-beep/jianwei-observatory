@@ -19,6 +19,7 @@
 | 查看构建产物清理与旧资源兼容 | [导入与构建维护](IMPORT-AND-BUILD-MAINTENANCE-2026-10-18.md) |
 | 排查试题中心首次打开、存储恢复及Word等待 | [启动、恢复与交互优化](STARTUP-RESILIENCE-2026-10-22.md) |
 | 维护样式分包、多科导出及大数据/移动键盘回归 | [样式、文档与跨端回归](STYLE-DOCUMENT-REGRESSION-2026-10-22.md) |
+| 查看中文输入、备份状态与通用表列对应复用 | [工作区资料保护与导入复用](WORKSPACE-CARE-2026-10-22.md) |
 
 ## 当前状态与阅读原则
 
@@ -129,7 +130,9 @@
 </details>
 
 <details>
-<summary>成绩研究、数据保存与跟进（13篇）</summary>
+<summary>成绩研究、数据保存与跟进（14篇）</summary>
+
+- [中文输入、资料保护与导入复用（2026-10-22）](WORKSPACE-CARE-2026-10-22.md)
 
 - [即时筛选与研究线索找回（2026-10-18）](WORKSPACE-RESUME-2026-10-18.md)
 - [教学跟进：训练与复核日程（2026-10-18）](TEACHING-AGENDA-2026-10-18.md)

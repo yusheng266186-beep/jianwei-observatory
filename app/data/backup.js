@@ -4,7 +4,7 @@ export async function workspaceBackup(snapshot,{read,live=null,setups=value=>val
  let saved={},complete=true;
  try{saved=await read()||{};}catch{complete=false;}
  const payload={...snapshot},source={...saved,...(live||{})},missing=[];
- for(const key of ['exercises','exerciseSavedSetups','exerciseComposerDrafts']){
+ for(const key of ['exercises','exerciseSavedSetups','exerciseComposerDrafts','importColumnTemplates']){
   if(Object.hasOwn(source,key))payload[key]=key==='exerciseSavedSetups'?setups(source[key]):key==='exerciseComposerDrafts'?(source[key]?.version===1?source[key]:{version:1,requests:[],focuses:[],bases:[],applied:[]}):Array.isArray(source[key])?source[key]:[];
   else if(complete)payload[key]=key==='exerciseComposerDrafts'?{version:1,requests:[],focuses:[],bases:[],applied:[]}:[];
   else missing.push(key);
