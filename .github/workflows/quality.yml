@@ -59,6 +59,7 @@ jobs:
             .audit-output/keyboard-viewport*/results.json
             .audit-output/keyboard-viewport*/*.png
             .audit-output/large-workspace-*/checks.json
+            .audit-output/large-workspace-*/failure.json
             .audit-output/large-workspace-*/*.png
             .audit-output/document-regression/exports.json
           if-no-files-found: ignore
