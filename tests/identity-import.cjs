@@ -1,4 +1,4 @@
-const {chromium,webkit}=require('playwright'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const {chromium,webkit}=require('playwright'),assert=require('node:assert/strict'),path=require('node:path');
 const {ready,text}=require('./paper-preview-helpers.cjs');
 (async()=>{const engine=process.env.AUDIT_BROWSER==='webkit'?webkit:chromium,b=await engine.launch(engine===chromium?{executablePath:process.env.CHROMIUM_PATH}:{}),p=await b.newPage({viewport:{width:390,height:844},reducedMotion:'reduce'}),errors=[];p.on('pageerror',e=>errors.push(e.message));try{
  await p.goto(process.env.AUDIT_URL||'http://127.0.0.1:4173');await p.waitForSelector('#welcome-title');await p.locator('#files').setInputFiles({name:'anonymous-same-name.csv',mimeType:'text/csv',buffer:Buffer.from('姓名,班级,考试,总分,学生识别码,校排名\n匿名同名,4,高三第二次月考,500,001,217\n匿名同名,4,高三第二次月考,450,002,220')});await p.locator('[data-mapping] [type=submit]').click();await p.locator('[data-inbox=commit]').click();await p.waitForSelector('#inbox:not([open])',{state:'attached'});

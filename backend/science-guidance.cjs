@@ -14,7 +14,6 @@ const specs={
  '化学':molecule+'\n'+molecular+'\n'+crystal,
  '生物':cell+'\n'+photosynthesis+'\n'+dna+'\n'+molecule+'\n'+molecular
 };
-function scienceSpecs(subject){return specs[subject]||'';}
 function scienceFigureGuide(subject){return specs[subject]?schema+'\n'+specs[subject]:'';}
 function scienceGuide(subject){return specs[subject]?schema+selection+'\n'+specs[subject]:'';}
-module.exports={scienceSpecs,scienceFigureGuide,scienceGuide};
+module.exports={scienceFigureGuide,scienceGuide};

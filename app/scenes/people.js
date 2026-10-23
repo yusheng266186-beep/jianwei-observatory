@@ -5,8 +5,8 @@ import {metricEvidenceHTML} from '../ui/metric-evidence.js';
 import {knowledgeLabels} from '../engine/knowledge.js?v=runtime-v45';
 import {personalQuestionCard,personalQuestionLink} from '../ui/personal-questions.js?v=runtime-v45';
 import {renderDirectory} from './directory.js?v=runtime-v45';
-import {head,button,chips,badge,block,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote,empty} from '../ui/html.js?v=runtime-v45';
-import {trajectory,chartButtons,rateColor,rateLegend} from '../ui/plots.js?v=runtime-v45';
+import {head,button,chips,badge,block,ribbon,table,number,integer,percent,delta,esc,footnote,empty} from '../ui/html.js?v=runtime-v45';
+import {trajectory,chartButtons,rateLegend} from '../ui/plots.js?v=runtime-v45';
 import {valid,sum} from '../engine/metrics.js?v=runtime-v45';
 import {scoreRows,answerRows,evidence} from '../io/exports.js?v=runtime-v45';
 export function render(atlas,state,session) {

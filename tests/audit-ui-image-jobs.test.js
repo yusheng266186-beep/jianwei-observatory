@@ -58,7 +58,7 @@ test('过期插图/图示结果不写入新题，老师的新修改保留；匹�
  assert.equal(stale.stale,true);assert.equal(job.status,'ready');assert.equal(pending.status,'failed');assert.equal(pending.stale,true);assert.match(pending.failure,/题干已在绘图期间修改/);
  assert.equal(q.stem,'老师刚刚改过的题干。','the edited stem must survive');assert.equal(q.diagram.kind,'illustration','the old figure must not replace the current diagram');assert.equal(q.diagram.image.data,'NEW');assert.equal(record.reviewedAt,'teacher-approval');
 
- const legacy={id:'legacy',type:'illustration',questionId:1,status:'queued',questionId:1};
+ const legacy={id:'legacy',type:'illustration',questionId:1,status:'queued'};
  const before=structuredClone(q);const rejected=applyImagePayload(record,legacy,{questionId:1,image:{mime:'image/png',data:'OLD'}});
  assert.equal(rejected.stale,true);assert.equal(legacy.status,'failed');assert.match(legacy.failure,/旧版本任务/);assert.deepEqual(q,before);
 });

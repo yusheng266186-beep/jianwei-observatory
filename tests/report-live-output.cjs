@@ -1,4 +1,4 @@
-const {ready:paperReady,text:paperText,settings:openSettings,closeSettings}=require('./paper-preview-helpers.cjs');
+const {text:paperText,settings:openSettings,closeSettings}=require('./paper-preview-helpers.cjs');
 // Real download contents, rather than merely the presence of a download event.
 const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),cp=require('node:child_process'),{makeFixture}=require('./fixtures.cjs');
 const out=path.join(__dirname,'../.audit-output/paper-v30');fs.mkdirSync(out,{recursive:true});

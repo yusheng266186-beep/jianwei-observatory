@@ -1,4 +1,4 @@
-import test from 'node:test';import assert from 'node:assert/strict';import completion from '../backend/model-completion.cjs';import reader from '../backend/stream-reader.cjs';import generator from '../backend/generator.cjs';import {validateExerciseResult} from '../app/engine/exercise-contract.js';
+import test from 'node:test';import assert from 'node:assert/strict';import completion from '../backend/model-completion.cjs';import reader from '../backend/stream-reader.cjs';import generator from '../backend/generator.cjs';
 const input={subject:'数学',grade:'高三',examStyle:'sichuan-gaokao',curriculum:'高中数学函数与导数',focus:'求导与单调性',count:3,minutes:40,difficulty:'拓展挑战',visuals:'none',evidence:[]};
 const event=p=>Buffer.from('data: '+JSON.stringify(p)+'\n\n');
 test('Gemini输出额度截断与缺少结束标记可区分，保留原始片段和实际用量诊断',()=>{

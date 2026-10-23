@@ -1,5 +1,5 @@
 const {settings:openSettings}=require('./paper-preview-helpers.cjs');
-const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),{makeFixture}=require('./fixtures.cjs');
+const {chromium}=require('playwright'),assert=require('node:assert/strict'),path=require('node:path'),{makeFixture}=require('./fixtures.cjs');
 const out=path.join(__dirname,'../.audit-output/paper-v30'),data=makeFixture();
 (async()=>{const b=await chromium.launch({executablePath:'/usr/bin/chromium',args:['--no-sandbox']});const p=await b.newPage({viewport:{width:390,height:844},reducedMotion:'reduce'});p.setDefaultTimeout(15000);const errors=[];p.on('pageerror',e=>errors.push(e.message));try{
  await p.goto('http://127.0.0.1:4173');await p.waitForSelector('#navigation button');await p.locator('#files').setInputFiles({name:'anonymous-boundaries.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(data))});await p.locator('[data-inbox=commit]').click();await p.waitForSelector('body[data-workspace=ready]');await p.waitForSelector('#inbox:not([open])',{state:'attached'});

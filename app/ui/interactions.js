@@ -1,6 +1,6 @@
 import {installDisclosures,openDisclosure} from './disclosure-motion.js';
 export {openDisclosure};
-import {motion,finishAnimation,moveIndicator} from './motion.js?v=runtime-v45';
+import {motion,moveIndicator} from './motion.js?v=runtime-v45';
 import {springFrame} from './spring-motion.js';
 import {positionSpreadLabels} from './plots.js?v=runtime-v45';
 import {paperMapLayout} from '../engine/paper-structure.js?v=runtime-v45';

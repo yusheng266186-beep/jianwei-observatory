@@ -34,7 +34,7 @@ import {exerciseFocusParts,toggleExerciseFocus,quickExerciseFocus} from './exerc
 import {exerciseChoice,installExerciseChoices} from './exercise-choice.js';
 import {access,write,update,preference,remember,workspaceStorage} from '../data/storage.js';
 import {exerciseServiceURL} from '../data/exercise-config.js';
-import {validateExerciseRequest,validateExerciseResult,exerciseEvidence,exerciseSubjects,exerciseQuestionTypes,exerciseTypeLabel,EXERCISE_SUBJECTS,EXERCISE_DIFFICULTIES,difficultyProfile,minimumExerciseMinutes} from '../engine/exercise-contract.js';
+import {validateExerciseRequest,validateExerciseResult,exerciseSubjects,exerciseQuestionTypes,exerciseTypeLabel,EXERCISE_SUBJECTS,EXERCISE_DIFFICULTIES,difficultyProfile,minimumExerciseMinutes} from '../engine/exercise-contract.js';
 import {analyzeExerciseBasis,exerciseExams} from '../engine/exercise-basis.js';
 import {trainingQuestionLabel} from '../engine/training.js';
 import {exerciseFigurePositions} from '../engine/exercise-figure-layout.js';
@@ -238,7 +238,7 @@ function updateSelectionSummary(){
   const template=serverTemplates?.subjects.find(t=>t.subject===request.subject),templateControls=done||pending?'':`<section class="exercise-template"><h4>练习方式</h4><div class="chips">${[['targeted','薄弱点专项'],['variation','同类变式'],['retest','复核小测']].map(([id,label])=>action(label,'template',(request.template||'targeted')===id?'chip selected':'chip',`data-ai-value="${id}" aria-pressed="${(request.template||'targeted')===id}"`)).join('')}</div></section>`;
   const visualControls=exerciseChoice('visuals','配图方式',request.visuals||'vector',exerciseVisualOptions)+'<p class="report-help">默认由模型按题目判断：无需图片时不配图，精确图示优先SVG，复杂外观按需使用工作台已选的生图服务。也可手动指定方式，生成后统一审题。</p><details class="exercise-prompt-details"><summary>查看'+esc(request.subject)+'命题规则</summary><p class="report-help">'+esc(template?.checklist||EXERCISE_SUBJECTS.find(t=>t.id===request.subject)?.rule||'')+' · 云端统一命题、结构和复核规则。</p></details>';
   const presets=exercisePresets(request.subject),knowledge=importedKnowledge().slice(0,12);
-  const focusParts=exerciseFocusParts(request.focus,exerciseAllFocusLabels(request.subject,knowledge,request.targets)),scoped=exerciseScopeMatches(request.subject,request.curriculum||'',knowledge),selectedTargets=exerciseKnowledgeLabels(request.subject,knowledge,request.targets).filter(label=>focusParts.includes(label));if(!done&&!pending)request.targets=selectedTargets;
+  const focusParts=exerciseFocusParts(request.focus,exerciseAllFocusLabels(request.subject,knowledge,request.targets)),selectedTargets=exerciseKnowledgeLabels(request.subject,knowledge,request.targets).filter(label=>focusParts.includes(label));if(!done&&!pending)request.targets=selectedTargets;
   const briefLevel=difficultyProfile(request.difficulty)?.id||'基础巩固',briefHTML=done||pending||partial?'':'<div class="exercise-request-brief-slot" data-ai-request-brief>'+exerciseRequestBriefHTML(request,{labels:request.targets||[],level:briefLevel})+'</div>';
   const quickContent='<div class="exercise-quick-content">'+[['weakest','只练最弱项'],['recommended','采用推荐重点'],['clear','清空重选']].map(([id,label])=>action(label,'focus-quick',(id==='clear'?'quiet':'chip')+(focusQuick===id?' selected':''),'data-ai-value="'+id+'" aria-pressed="'+(focusQuick===id)+'" aria-describedby="exercise-focus-feedback"')).join('')+'</div><p class="exercise-focus-feedback" id="exercise-focus-feedback" role="status" aria-live="polite">'+esc(focusFeedback||(!knowledge.length?'当前依据暂无可推荐知识点，可直接点选下方训练模块。':''))+'</p>';
   const focusOptions='<div class="exercise-focus-options">'+quickContent+'<div data-ai-content-picker>'+contentPicker.html(request,knowledge)+'</div></div>';
@@ -352,30 +352,21 @@ function updateSelectionSummary(){
   if(cmd==='fit-minutes'){readInputs();request.minutes=Math.max(5,Math.min(90,Number(b.dataset.aiValue)||request.minutes));delete fieldErrors.minutes;await draw();return;}
   if(cmd==='template'){readInputs();request.template=b.dataset.aiValue;await draw();return;}
   if(cmd==='vector-version'){request={...newExerciseDraft(current.request),visuals:'vector'};current=null;contentPicker.restore(request);await draw();startAtTop();return;}
-  if(cmd==='figure-redraw'){
-   const record=current,q=record?.sheet?.questions.find(q=>q.id===Number(b.dataset.aiQuestion));
-   if(!q)throw new Error('请先选择一道已有题目。');if(!settings.token||settings.expires<Date.now())throw Object.assign(new Error('请先验证教师访问，再单独绘图。'),{target:'code'});
-   // The in-flight guard is taken before the first await so a rapid second
-   // click cannot replace this job or dispatch a second paid request.
+  if(cmd==='figure-redraw'||cmd==='illustration'){
+   const redraw=cmd==='figure-redraw',record=current,q=record?.sheet?.questions.find(q=>q.id===Number(b.dataset.aiQuestion));
+   if(!redraw&&(!record?.sheet||!['auto','hybrid'].includes(record.request.visuals)))throw new Error('请先选择允许复杂插图的训练');
+   if(!q)throw new Error('请先选择一道已有题目。');
+   if(redraw&&(!settings.token||settings.expires<Date.now()))throw Object.assign(new Error('请先验证教师访问，再单独绘图。'),{target:'code'});
+   // Take the in-flight guard before the first await. Both entries re-plan
+   // from the current full question, including the teacher's latest edits.
    const started=beginImageJob(record,q,{type:'figure'});
-   if(!started){error='这道题的图示正在提交或生成，完成后可再次重绘。';await draw();revealFeedback('error');return;}
-   b.disabled=true;b.textContent='正在提交…';
-   await submitImageJob(record,started,'/figures',{generation,source});return;
-  }
-  if(cmd==='illustration'){
-   const record=current,qid=Number(b.dataset.aiQuestion),q=record?.sheet?.questions.find(q=>q.id===qid);
-   if(!record?.sheet||!['auto','hybrid'].includes(record.request.visuals))throw new Error('请先选择允许复杂插图的训练');if(!q)throw new Error('请先选择一道已有题目。');
-   // Re-plan from the current complete question. A sourceId-only illustration
-   // request would draw the old cloud stem when the teacher edited it first.
-   const started=beginImageJob(record,q,{type:'figure'});
-   if(!started){error='这道题的插图正在提交或生成，完成后可重新查看。';await draw();revealFeedback('error');return;}
+   if(!started){error=redraw?'这道题的图示正在提交或生成，完成后可再次重绘。':'这道题的插图正在提交或生成，完成后可重新查看。';await draw();revealFeedback('error');return;}
    b.disabled=true;b.textContent='正在提交…';
    await submitImageJob(record,started,'/figures',{generation,source});return;
   }
   if(cmd==='subject'){if(!subjects().includes(b.dataset.aiValue))return;rememberDraft();chooseSubject(b.dataset.aiValue);error='';await draw();poll().catch(e=>notify(e.message));return;}
   if(cmd==='difficulty'){readInputs();request.difficulty=b.dataset.aiValue;await draw();return;}
   if(cmd==='new'){readInputs();request=newExerciseDraft(request);current=null;if(!request.basis)applyBasis(basisSelection().mode);contentPicker.restore(request);await draw();startAtTop();return;}
-  if(cmd==='history'){current=eligible().find(r=>r.id===b.dataset.aiId)||null;if(current)request=structuredClone(current.request);await draw();return;}
   if(cmd==='resume'){if(busy||!current?.resumeAvailable)return;if(!settings.token||settings.expires<Date.now())throw Object.assign(new Error('请先验证教师访问，再继续原任务。'),{target:'code'});const job=current;busy=true;b.disabled=true;b.textContent='正在恢复…';request=structuredClone(job.request);const sent=await api('/jobs/'+job.id+'/resume',{method:'POST',body:job.requiresImageRegeneration?{regenerateImage:true}:{}});if(generation!==epoch)return;mergeJobAcknowledgement(job,sent);delete job.failure;delete job.progress;await persist();await poll();busy=false;await draw();revealFeedback('status');return;}
   if(cmd==='query'){if(busy)return;busy=true;await draw();const job=current;if(job?.status==='unconfirmed'){submittingJob=job;validateExerciseRequest(job.request);const sent=await api('/jobs',{method:'POST',body:job.request,id:job.id});if(generation!==epoch)return;mergeJobSnapshot(job,sent);delete job.failure;await persist();}await poll();busy=false;await draw();return;}
   if(cmd==='generate'){if(busy)return;if(!settings.token||settings.expires<Date.now())throw Object.assign(new Error('请先输入动态验证码，验证教师访问后再生成。'),{target:'code'});readInputs();validateDraft();if(request.basis?.mode==='latest'&&!request.evidence?.length)throw new Error('当前考试没有有效小题失分依据，请选择其他考试或教师自定目标');request=newExerciseDraft(request);const input=validateExerciseRequest(request);if(records.some(r=>r.sid===context.sid&&r.exam===context.exam&&r.request?.subject===input.subject&&['submitting','unconfirmed','queued','running'].includes(r.status)))throw new Error('该学生已有生成任务，请继续查询或等待完成');busy=true;drafts.delete(draftKey(input.subject));composerStamps.delete(draftKey(input.subject));composerDirty.set(draftKey(input.subject),{request:null});scheduleComposer();const job={id:crypto.randomUUID(),sid:context.sid,exam:context.exam,request:input,status:'submitting',createdAt:Date.now(),student:{name:getAtlas().name(context.sid),classNo:getAtlas().materialAt(context.sid,context.exam)?.classNo,examLabel:getAtlas().exam(context.exam).label},reviewedAt:null,service:settings.url,sourceExams:[...basisSelection().exams]};submittingJob=job;current=job;records.push(job);b.disabled=true;b.textContent='正在提交…';await draw();revealFeedback('status');await persist();if(generation!==epoch)return;const sent=await api('/jobs',{method:'POST',body:input,id:job.id});if(generation!==epoch)return;mergeJobSnapshot(job,sent);delete job.failure;await persist();await poll();busy=false;await draw();return;}

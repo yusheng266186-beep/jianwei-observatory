@@ -1,7 +1,6 @@
 'use strict';
-const {completionUsage,incompleteCompletion}=require('./completion-diagnostics.cjs'),{eventError,httpError}=require('./upstream-event.cjs');
+const {completionUsage,incompleteCompletion}=require('./completion-diagnostics.cjs'),{eventError,httpError:upstreamError}=require('./upstream-event.cjs');
 const {request}=require('./tencent.cjs'),{routes,connectionMatches}=require('./model-control.cjs'),{adaptModelBody}=require('./model-adapter.cjs'),{USER_AGENT,readCompletion}=require('./kimi.cjs');
-function upstreamError(response,key){return httpError(response,key);}
 function parseStream(source,protocol,options={}){
  let output='',done=false,finish='',usage={};
  for(const event of String(source).split(/\r?\n\r?\n/)){
@@ -40,7 +39,7 @@ function parseResponse(response,protocol,options={}){
 async function completeRemote(prompt,generation,{key,transport=request,probe=false,onProgress,signal}={}){
  if(generation.provider==='openai-codex')return require('./codex-completion.cjs').complete(prompt,generation,{probe,onProgress,signal});
  if(generation.provider==='openai-chatgpt')return require('./openai-siwc.cjs').complete(prompt,generation,{probe,onProgress,signal});
- const route=routes[generation.provider];if(!connectionMatches(generation)||!['chat-completions','anthropic','responses'].includes(generation.protocol)||!key)throw new Error('MODEL_NOT_CONFIGURED');
+ if(!connectionMatches(generation)||!['chat-completions','anthropic','responses'].includes(generation.protocol)||!key)throw new Error('MODEL_NOT_CONFIGURED');
  const body=adaptModelBody({messages:[{role:'system',content:prompt.system},{role:'user',content:typeof prompt.inputText==='string'?prompt.inputText:JSON.stringify(prompt.input)}],max_tokens:probe?256:32768,effort:generation.effort},{name:generation.provider,model:generation.model},generation.effort,{profile:generation.adapterProfile,probe});
  if(prompt.image)require('./model-vision.cjs').attachImage(body,generation.protocol,prompt.image);
  const protocol=generation.protocol,suffix=protocol==='anthropic'?'/v1/messages':protocol==='responses'?'/responses':'/chat/completions';

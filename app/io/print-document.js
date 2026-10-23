@@ -4,7 +4,7 @@ import {selectedReport} from '../engine/report-selection.js?v=runtime-v45';
 import {esc} from '../ui/html.js?v=runtime-v45';
 import {SITE_NAME} from '../brand.js?v=runtime-v45';
 import {qualifyHistoricalRankings} from '../engine/ranking.js?v=runtime-v45';
-import {sectionGroup,metricSection,importantCell,compactMeta} from './report-design.js?v=runtime-v45';
+import {metricSection,importantCell,compactMeta} from './report-design.js?v=runtime-v45';
 // All three outlets share the same sections, field splits and missing-value rules.
 export function documentSections(report){
  report=qualifyHistoricalRankings(report);
@@ -20,7 +20,7 @@ export function documentSections(report){
 export function columnWeights(headers){return headers.map(h=>h==='考试'?1.8:h==='班级'?0.65:/建议|安排|线索|知识点|依据|记录|结果|说明|内容|题目|方向|任务/.test(h)?2.3:/日期|时段|学生|学科/.test(h)?1.5:1);}
 export function reportHTML(report){
  report=selectedReport(report);
- const sections=documentSections(report),paper=paperMetrics(report);
+ const sections=documentSections(report);
  return '<article class="print-paper"><div class="print-brand">'+esc(SITE_NAME)+'</div><h1>'+esc(report.title)+'</h1><p>'+esc(report.subtitle)+'</p><p class="print-meta">'+esc(report.created||'')+' · A4黑白打印</p>'+(report.meta?.length?'<dl>'+report.meta.map(([k,v])=>'<dt>'+esc(k)+'</dt><dd>'+esc(v)+'</dd>').join('')+'</dl>':'')+sections.map((s,i)=>'<section><h2>'+String(i+1).padStart(2,'0')+' '+esc(s.title)+'</h2>'+(s.caption?'<p class="print-caption">'+esc(s.caption)+'</p>':'')+s.paragraphs.map(p=>'<p>'+esc(p)+'</p>').join('')+(s.headers.length?(s.rows.length?'<table><colgroup>'+columnWeights(s.headers).map(w=>'<col style="width:'+w/columnWeights(s.headers).reduce((a,b)=>a+b,0)*100+'%">').join('')+'</colgroup><thead><tr>'+s.headers.map(h=>'<th>'+esc(h)+'</th>').join('')+'</tr></thead><tbody>'+s.rows.map(r=>'<tr>'+s.headers.map((_,j)=>'<td>'+esc(r[j]??'—')+'</td>').join('')+'</tr>').join('')+'</tbody></table>':'<p>本范围暂无符合条件的记录。</p>'):'')+'</section>').join('')+(report.note?'<section><h2>教师判断与后续行动</h2><p class="written-note">'+esc(report.note)+'</p></section>':'')+'<footer>成绩、名次和有效线均依据原始成绩表。</footer></article>';
 }
 export function pdfDefinition(report){
@@ -35,7 +35,7 @@ export function pdfDefinition(report){
  if(meta.length)content.push({text:meta.map(([key,value])=>key+'：'+String(value??'—')).join('  ·  '),style:'caption',margin:[0,0,0,7]});
  const sections=documentSections(report);
  sections.forEach((s,i)=>{
-  const group=sectionGroup(s),heading=String(i+1).padStart(2,'0')+'  '+s.title;
+  const heading=String(i+1).padStart(2,'0')+'  '+s.title;
   const intro=[{text:heading,style:'heading'},
    ...(s.caption?[{text:s.caption,style:'caption'}]:[]),
    ...s.paragraphs.map(text=>({text,margin:[0,0,0,5]}))];

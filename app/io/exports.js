@@ -3,10 +3,10 @@ import {createPDFJob,idlePDFWorker} from './pdf-runtime.js?v=runtime-v45';
 export {idlePDFWorker};
 import {paperSettings} from '../engine/paper-settings.js?v=runtime-v45';
 import {selectedReport} from '../engine/report-selection.js?v=runtime-v45';
-import {reportHTML,wordFiles,documentSections} from './print-document.js?v=runtime-v45';
+import {wordFiles,documentSections} from './print-document.js?v=runtime-v45';
 export {reportHTML} from './print-document.js?v=runtime-v45';
-import {esc,number,percent,signed} from '../ui/html.js?v=runtime-v45';
-import {SITE_NAME,CREST_URL} from '../brand.js?v=runtime-v45';
+
+import {SITE_NAME} from '../brand.js?v=runtime-v45';
 import {chartFontRules} from '../ui/font-export.js?v=runtime-v45';
 import {worksheetNames} from './sheet-names.js?v=runtime-v45';
 import {workbookVendor,zipVendor} from './vendor-loader.js';

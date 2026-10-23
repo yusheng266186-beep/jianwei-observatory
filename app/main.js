@@ -40,9 +40,9 @@ import {researchView,studyDescription,studyAvailable,studyKey} from './ui/resear
 import {Atlas} from './engine/atlas.js?v=runtime-v45';
 import {loadScene} from './scenes/load.js?v=runtime-v45';
 import {SUBJECTS} from './data/compat.js?v=runtime-v45';
-import {access,write,update as updateStored,savePreparedVersioned,STORAGE_SCOPE} from './data/storage.js';
+import {access,update as updateStored,savePreparedVersioned,STORAGE_SCOPE} from './data/storage.js';
 import {workspaceBackup} from './data/backup.js';
-import {hydrate,save,saveWorkspace,restoreDataset,hasMaterials,preference,remember,previous,emptyDataset,loadNotebook,loadPlans} from './data/workspace.js?v=runtime-v45';
+import {hydrate,saveWorkspace,restoreDataset,hasMaterials,preference,remember,previous,emptyDataset,loadNotebook,loadPlans} from './data/workspace.js?v=runtime-v45';
 import {prepareDataset,prepareMaterial} from './data/preparation.js?v=runtime-v45';
 import {remapScopedContext,mergeStudentIdentities} from './data/identity.js?v=runtime-v45';
 import {mergeNotebook,mergePlans,mergeNotebookRestore,settleNotebook,settlePlans,recordPlanText,applyPlanText,clearPlanText,planDraftIdentity,planTextPaths} from './data/workspace-merge.js?v=runtime-v45';
@@ -53,7 +53,7 @@ import {NoteJournal} from './data/notes.js?v=runtime-v45';
 import {installViewportMetrics} from './ui/viewport.js?v=runtime-v45';
 import {repairKnowledgeReport} from './engine/knowledge.js?v=runtime-v45';
 import {motion,visualFrame,cancelOwnMotion,finishAnimation,enterCanvas,arrangeRows,prepareCanvasSlide,finishCanvasSlide,moveIndicator} from './ui/motion.js?v=runtime-v45';
-import {esc,button,empty,table} from './ui/html.js?v=runtime-v45';
+import {esc,button,empty} from './ui/html.js?v=runtime-v45';
 import {excel,word,pdf,print,download,chart,evidence} from './io/exports.js?v=runtime-v45';
 import {directoryDefaults,lensValues,queryDirectory,directoryViewValues,directoryViewName} from './engine/directory.js?v=runtime-v45';
 import {peekView,compareView,drawerEvidence} from './ui/explorer.js?v=runtime-v45';
@@ -516,9 +516,8 @@ async function applyMaterials(dataset,before,message,{undo=true,prepared=false,i
   const {archiveRestore,restoredRemovals}=await import('./data/archive-restore.js');
   const archive=archiveRestore(dataset,{plans:session.plans,plansBase,resetContext,composerDrafts:context?.exerciseComposerDrafts,remap:context?.remap});
   const receipt=await saveWorkspace(dataset,before,notebook,{prepared:true,expectedStamp:datasetStamp,entries:archive.entries,reducers:archive.reducers,reduceNotebook:latest=>mergeNotebook(base,notebook,Array.isArray(latest)?latest:base).records});
-  const stored=true,stamp=receipt.stamp;notebook=receipt.notebook;
-  session.notebook=structuredClone(notebook);session.plans=receipt.values.plans.map(normalizePlan);
-  noteJournal.persisted(notebook);notebookBase=structuredClone(notebook);plansBase=structuredClone(session.plans);
+  const stamp=receipt.stamp;notebook=receipt.notebook;
+  noteJournal.persisted(notebook);notebookBase=structuredClone(notebook);
   if(Array.isArray(dataset.exercises)){
     remember('exerciseRemoved',restoredRemovals(preference('exerciseRemoved',[]),dataset.exercises,receipt.values.exercises));
     const jobs=rows=>rows.flatMap(row=>[row,...Object.values(row.imageJobs||{})]);
@@ -535,7 +534,7 @@ async function applyMaterials(dataset,before,message,{undo=true,prepared=false,i
   if(restored?.composerStats?.added)extras.push('恢复 '+restored.composerStats.added+' 份训练草稿');
   if(restored?.composerStats?.kept)extras.push('保留 '+restored.composerStats.kept+' 份本页较新草稿');
   const detail=extras.length?'；'+extras.join('，'):'';
-  notify(stored?message+'，已保存到本机'+detail:message+'，本机未保存，请下载完整备份。'+detail,undo?{label:'撤回材料更新',cmd:'undo'}:{});
+  notify(message+'，已保存到本机'+detail,undo?{label:'撤回材料更新',cmd:'undo'}:{});
 }
 async function materialContext(incoming,mode,before) {
   const drafts=incoming.exerciseComposerDrafts;

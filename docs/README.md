@@ -17,6 +17,7 @@
 | 查看生成、格式、题型及评分的改进 | [官方通道出题与验收](OFFICIAL-GENERATION-IMPROVEMENT-2026-10-21.md) |
 | 查看PDF/Word纸面规则 | [文档排版与学科计分](DOCUMENT-POLISH-2026-10-21.md) |
 | 查看构建产物清理与旧资源兼容 | [导入与构建维护](IMPORT-AND-BUILD-MAINTENANCE-2026-10-18.md) |
+| 核对冗余代码清理及功能、视觉、动效保留依据 | [全仓冗余代码审查](CODE-CLEANUP-2026-10-23.md) |
 | 排查试题中心首次打开、存储恢复及Word等待 | [启动、恢复与交互优化](STARTUP-RESILIENCE-2026-10-22.md) |
 | 维护样式分包、多科导出及大数据/移动键盘回归 | [样式、文档与跨端回归](STYLE-DOCUMENT-REGRESSION-2026-10-22.md) |
 | 查看中文输入、备份状态与通用表列对应复用 | [工作区资料保护与导入复用](WORKSPACE-CARE-2026-10-22.md) |
@@ -188,8 +189,9 @@
 </details>
 
 <details>
-<summary>工程维护、综合审查与发布（16篇）</summary>
+<summary>工程维护、综合审查与发布（17篇）</summary>
 
+- [全仓冗余代码审查与等价清理](CODE-CLEANUP-2026-10-23.md) · 2026-10-23
 - [数据与运行可靠性复核修复](AUDIT-REPAIRS-2026-10-19.md) · 2026-10-19
 - [导入、构建与资源保留维护 · 2026-10-18](IMPORT-AND-BUILD-MAINTENANCE-2026-10-18.md)
 - [正式合并与实际工作簿校检](PRODUCTION-RELEASE-2026-10-17.md) · 2026-10-17

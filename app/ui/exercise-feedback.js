@@ -1,5 +1,5 @@
 import {pickerField} from './plan-controls.js';
-import {feedbackMarks,practiceFeedbackCurrent,practiceFeedbackDraftMetrics,practiceFeedbackSummary,practiceKnowledgeHistory,validatePracticeFeedback} from '../engine/exercise-feedback.js';
+import {feedbackMarks,practiceFeedbackCurrent,practiceFeedbackDraftMetrics,practiceKnowledgeHistory,validatePracticeFeedback} from '../engine/exercise-feedback.js';
 import {createPracticeFeedbackDrafts} from '../engine/exercise-feedback-drafts.js';
 import {todayLocal} from '../engine/training.js';
 import {esc,percent} from './html.js';

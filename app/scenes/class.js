@@ -5,7 +5,7 @@ import {researchChangeHTML,researchChangeText} from '../ui/research-change.js';
 import {goalCards} from '../ui/evidence-visuals.js?v=runtime-v45';
 import {head,button,chips,badge,block,examRail,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote,classPicker,empty} from '../ui/html.js?v=runtime-v45';
 import {trajectory,bars,spread,chartButtons} from '../ui/plots.js?v=runtime-v45';
-import {difference,average,valid,maxScore} from '../engine/metrics.js?v=runtime-v45';
+import {difference,average,valid} from '../engine/metrics.js?v=runtime-v45';
 import {scoreRows,evidence} from '../io/exports.js?v=runtime-v45';
 const rowsSection=(title,headers,rows)=>({title,headers,rows});
 export function render(atlas,state) {

@@ -1,6 +1,6 @@
 import {practiceFeedbackSummary} from '../engine/exercise-feedback.js';
 import {selectedPlans,scheduleLabel,scheduleTimeLabel,trainingSummary,dateLabel,reviewSummary,todayLocal,planAgenda,planTimingLabels,planMatchesTime} from '../engine/training.js?v=runtime-v45';
-import {head,button,chips,badge,block,examRail,table,number,integer,delta,esc,personButton,search,footnote,empty} from '../ui/html.js?v=runtime-v45';
+import {head,button,chips,badge,block,examRail,table,number,delta,esc,personButton,search,footnote,empty} from '../ui/html.js?v=runtime-v45';
 import {evidence} from '../io/exports.js?v=runtime-v45';
 const statuses=[['new','待开始'],['active','跟进中'],['done','已完成']];
 const noteField=(atlas,plan)=>'<textarea data-plan-note="'+esc(plan.id)+'" aria-label="'+esc(atlas.name(plan.sid))+'的教学记录" placeholder="记录做法、日期和下一步">'+esc(plan.note||'')+'</textarea>';

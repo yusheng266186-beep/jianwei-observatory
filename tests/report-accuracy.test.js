@@ -5,7 +5,7 @@ import vm from 'node:vm';
 import {createRequire} from 'node:module';
 import {parseWorkbook,mergeDatasets} from '../app/data/parser.js';
 import {Atlas} from '../app/engine/atlas.js';
-import {selectedReport} from '../app/engine/report-selection.js';
+
 import {documentSections} from '../app/io/print-document.js';
 import {buildTeachingReport} from '../app/engine/reports.js';
 import {prepareReportFonts} from '../app/io/report-fonts.js';

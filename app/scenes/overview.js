@@ -1,5 +1,5 @@
-import {button,block,ribbon,table,number,integer,percent,delta,esc,chips,examChips,empty} from '../ui/html.js?v=runtime-v45';
-import {bars,trajectory,chartButtons} from '../ui/plots.js?v=runtime-v45';
+import {button,block,integer,percent,delta,esc,chips,examChips,empty} from '../ui/html.js?v=runtime-v45';
+import {bars,chartButtons} from '../ui/plots.js?v=runtime-v45';
 import {directoryEntries} from '../engine/directory.js?v=runtime-v45';
 import {difference} from '../engine/metrics.js?v=runtime-v45';
 import {thresholdProfile,routePreview} from '../ui/evidence-visuals.js?v=runtime-v45';

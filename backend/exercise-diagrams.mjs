@@ -49,7 +49,7 @@ export function validateExerciseDiagram(d){
 // Never infer missing apparatus or fabricate experimental curve coordinates.
 export function validateGeneratedExerciseFigures(sheet,request,{allowRequests=false}={}){
  for(const q of sheet.questions){
-  const d=q.diagram,studentText=[q.stem,...q.choices].join('\n');
+  const d=q.diagram;
   // Whether prose really depends on a missing figure needs context. A keyword
   // also occurs in quotations, text descriptions and student drawing tasks.
   if(!d)continue;validateExerciseDiagram(d);

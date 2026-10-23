@@ -1,6 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {createRequire} from 'node:module';
 import {Atlas} from '../app/engine/atlas.js';import {buildTeachingReport} from '../app/engine/reports.js';import {documentSections,wordFiles,pdfDefinition} from '../app/io/print-document.js';
-import {validDate,dateLabel,dateChoices,planMatchesTime,questionOptions,draftForPlan,selectedPlans,snapshotQuestion,trainingSummary,trainingQuestionLabel} from '../app/engine/training.js';
+import {validDate,dateLabel,dateChoices,planMatchesTime,questionOptions,draftForPlan,selectedPlans,trainingSummary,trainingQuestionLabel} from '../app/engine/training.js';
 const {makeFixture}=createRequire(import.meta.url)('./fixtures.cjs');
 const atlas=()=>new Atlas(makeFixture());
 test('班级特控/本科名单只列有效线下观察带，0与缺失不混淆，任务未设置不编造',()=>{

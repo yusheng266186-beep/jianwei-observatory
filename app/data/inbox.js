@@ -2,7 +2,7 @@ import {access,update} from './storage.js';
 import {importTemplates,matchImportTemplate,saveImportTemplate,validImportMapping,mergeImportTemplates} from './import-templates.js';
 import {openSurface,closeSurface} from '../ui/surface-motion.js?v=runtime-v45';
 import {mergeDatasets,FLAT_FIELDS} from './parser.js?v=runtime-v45';
-import {esc,button,badge} from '../ui/html.js?v=runtime-v45';
+import {esc} from '../ui/html.js?v=runtime-v45';
 import {importerURL} from './importer-entry.js';
 import {importDecisionsComplete,resolveImportConflicts} from './import-conflicts.js';
 import {importConflictsHTML} from '../ui/import-conflicts.js';

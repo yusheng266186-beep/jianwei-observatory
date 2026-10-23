@@ -1,4 +1,4 @@
-import {button,badge,block,ribbon,table,number,integer,percent,esc,empty} from './html.js?v=runtime-v45';
+import {button,block,ribbon,table,number,integer,percent,esc,empty} from './html.js?v=runtime-v45';
 import {bars,chartButtons} from './plots.js?v=runtime-v45';
 import {average,valid} from '../engine/metrics.js?v=runtime-v45';
 import {evidence} from '../io/exports.js?v=runtime-v45';

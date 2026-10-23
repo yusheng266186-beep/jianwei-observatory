@@ -24,7 +24,7 @@ export function repairSourceRanks(data){
   [row.schoolRank,row.classRank,row.cityRank]=values;
   row.rankSources=Object.fromEntries(['schoolRank','classRank','cityRank'].filter(k=>validRank(row[k])).map(k=>[k,'原表对应名次列']));
   row.rankProvenance='source-audit-v2';
-  for(const [subject,score] of Object.entries(row.subjects||{})){
+  for(const score of Object.values(row.subjects||{})){
    if(score.rankAuditInvalidated)continue;
    if(explicitRanks(score))continue;
    if(['51','52','21','33','4册'].includes(row.exam)){

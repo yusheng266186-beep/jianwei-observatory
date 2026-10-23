@@ -2,9 +2,9 @@ import {researchPlotOptions} from '../engine/plot-scale.js';
 import {researchRoster} from '../engine/research-roster.js';
 import {goalCards} from '../ui/evidence-visuals.js?v=runtime-v45';
 import {overview} from './overview.js?v=runtime-v45';
-import {head,button,chips,examChips,badge,block,examRail,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote,empty} from '../ui/html.js?v=runtime-v45';
+import {head,button,chips,examChips,block,examRail,ribbon,table,number,integer,percent,delta,esc,personButton,search,footnote,empty} from '../ui/html.js?v=runtime-v45';
 import {mini,bars,trajectory,spread,chartButtons} from '../ui/plots.js?v=runtime-v45';
-import {difference,average} from '../engine/metrics.js?v=runtime-v45';
+import {difference} from '../engine/metrics.js?v=runtime-v45';
 import {scoreRows,effectiveRows,subjectRows,evidence} from '../io/exports.js?v=runtime-v45';
 const tools=()=>button('摘录这页','capture',{},'outline')+button('导出','export',{},'accent');
 export function render(atlas,state) {

@@ -424,20 +424,11 @@ input[type=search]{min-width:0}
 }
 
 /* Brief: role segments, the live configuration and the pipeline in one panel. */
-.workbench-brief{
-  display:grid;
-  grid-template-columns:minmax(210px,.65fr) minmax(0,1.75fr);
-  column-gap:24px;
-  padding:var(--panel-pad);
-}
-.brief-head{align-items:center}
-.brief-head>div{flex:1 1 220px}
-#diagram-inherit{align-self:center}
+.workbench-brief{padding:var(--panel-pad)}
 .model-role-switch{
   display:grid;
   grid-template-columns:repeat(3,minmax(0,1fr));
   gap:6px;
-  margin-top:0;
 }
 .model-role-switch button{
   display:flex;
@@ -699,7 +690,6 @@ input[type=search]{min-width:0}
 }
 .model-list button{
   display:grid;
-  grid-template-columns:minmax(0,1fr) 20px;
   align-items:center;
   gap:9px;
   min-width:0;
@@ -1186,18 +1176,6 @@ input[type=search]{min-width:0}
 .usage-panel[aria-busy=true] #usage-form{opacity:.62;pointer-events:none}
 
 /* History is an index, not a stack of cards. */
-.history{padding:var(--panel-pad)}
-.history-head{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px 16px;
-}
-.history-head h2{
-  margin:4px 0 0;
-  font-size:18px;
-  line-height:1.4;
-}
 #history{
   display:grid;
   grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
@@ -1250,21 +1228,6 @@ input[type=search]{min-width:0}
 }
 
 /* Diagnostics stays a subordinate, full-width reading surface. */
-.diagnostics-panel{padding:var(--panel-pad)}
-.diagnostics-panel>header{
-  display:flex;
-  align-items:flex-start;
-  justify-content:space-between;
-  gap:12px 20px;
-  flex-wrap:wrap;
-}
-.diagnostics-panel>header>div{min-width:0}
-.diagnostics-panel h2{
-  margin:5px 0 4px;
-  font-size:clamp(20px,2.3vw,24px);
-  line-height:1.35;
-}
-.diagnostics-panel header p,
 .diagnostic-caption,
 .diagnostic-detail p{
   margin:0 0 8px;
