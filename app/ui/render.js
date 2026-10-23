@@ -4,7 +4,7 @@ const identity=node=>{
   if(node.dataset.motionKey)return 'motion:'+node.dataset.motionKey;
   if(node.dataset.renderKey)return 'render:'+node.dataset.renderKey;
   if(node.dataset.field)return 'field:'+node.dataset.field;
-  if(node.dataset.cmd)return node.tagName+':'+Object.entries(node.dataset).filter(([k])=>k!=='motionKey').map(([k,v])=>k+'='+v).join('|');
+  if(node.dataset.cmd)return node.tagName+':'+Object.entries(node.dataset).filter(([k])=>!['motionKey','motionControl'].includes(k)).map(([k,v])=>k+'='+v).join('|');
   if(node.matches('input,textarea'))return node.tagName+':'+node.name+':'+(node.type==='radio'?node.value:'');
   return null;
 };
@@ -12,11 +12,15 @@ const compatible=(a,b)=>a.nodeType===b.nodeType&&(a.nodeType!==1||(a.tagName===b
 function synchronize(current,next) {
   if(current.nodeType===3||current.nodeType===8){if(current.nodeValue!==next.nodeValue)current.nodeValue=next.nodeValue;return;}
   const managed=current.hasAttribute('data-managed')&&next.hasAttribute('data-managed');
+  const controlOwned=current.dataset.motionControl==='true',pressScale=controlOwned?current.style.scale:'';
   const surfaceOwned=current.dataset.surfaceMotion==='managed'&&current.dataset.surfacePhase!=='closed';
   const fallbackClasses=surfaceOwned?['choice-fallback-open','picker-fallback-open'].filter(name=>current.classList.contains(name)):[];
   const keepOpen=current.tagName==='DETAILS'&&!next.hasAttribute('data-controlled'),wasOpen=current.open;
-  for(const attr of [...current.attributes])if(!next.hasAttribute(attr.name)&&!(managed&&(attr.name==='style'||attr.name.startsWith('data-pdf')||attr.name==='data-current-page'))&&!(surfaceOwned&&(attr.name==='style'||attr.name==='inert'||attr.name.startsWith('data-surface-'))))current.removeAttribute(attr.name);
+  for(const attr of [...current.attributes])if(!next.hasAttribute(attr.name)&&!(controlOwned&&attr.name==='data-motion-control')&&!(managed&&(attr.name==='style'||attr.name.startsWith('data-pdf')||attr.name==='data-current-page'))&&!(surfaceOwned&&(attr.name==='style'||attr.name==='inert'||attr.name.startsWith('data-surface-'))))current.removeAttribute(attr.name);
   for(const attr of next.attributes){const value=attr.name==='class'&&fallbackClasses.length?[...new Set(attr.value.split(/\s+/).concat(fallbackClasses))].join(' '):attr.value;if(current.getAttribute(attr.name)!==value)current.setAttribute(attr.name,value);}
+  // Press ownership is independent of command identity and declarative styles.
+  // Repainting a live control must retain its focus and held compression.
+  if(pressScale)current.style.scale=pressScale;
   if(keepOpen)current.open=wasOpen;
   if(current.matches('input,textarea')) {
     if(current.value!==next.value)current.value=next.value;

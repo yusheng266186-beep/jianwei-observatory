@@ -927,8 +927,8 @@ async function commands(event) {
     if(d.cmd==='section-top'){scrollToMotion(window,{top:0});return;}
     if(d.cmd==='section-jump') {
       const target=document.getElementById(d.target);if(!target)return;
-      if(target.matches('details'))target.open=true;
-      for(let parent=target.parentElement;parent;parent=parent.parentElement)if(parent.matches('details'))parent.open=true;
+      if(target.matches('details'))openDisclosure(target);
+      for(let parent=target.parentElement;parent;parent=parent.parentElement)if(parent.matches('details'))openDisclosure(parent);
       scrollToMotion(window,{top:scrollY+target.getBoundingClientRect().top-(parseFloat(getComputedStyle(target).scrollMarginTop)||0)});return;
     }
     if(b.closest('#table-reader')&&!['table-close','table-shift'].includes(d.cmd))closeReader();
