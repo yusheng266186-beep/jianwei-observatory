@@ -7,11 +7,11 @@ export function save(dataset,{prepared=false}={}){const meta={version:PREPARED_V
 export const loadNotebook=()=>access('notebook');
 export const loadPlans=()=>access('plans');
 export const saveNotebook=notebook=>write([['notebook',notebook]]);
-export async function saveWorkspace(dataset,prior,notebook,{prepared=false,expectedStamp=null,reduceNotebook=null}={}){
+export async function saveWorkspace(dataset,prior,notebook,{prepared=false,expectedStamp=null,reduceNotebook=null,entries=[],reducers={}}={}){
  const captured=structuredClone({prior,notebook}),ready=prepared?dataset:await prepareDataset(dataset);
- const receipt=await writeWorkspaceIfCurrent([['previous',captured.prior],['dataset',ready],['notebook',captured.notebook]],expectedStamp,{reducers:reduceNotebook?{notebook:reduceNotebook}:{}});
+ const receipt=await writeWorkspaceIfCurrent([['previous',captured.prior],['dataset',ready],['notebook',captured.notebook],...entries],expectedStamp,{reducers:{...reducers,...(reduceNotebook?{notebook:reduceNotebook}:{})}});
  if(!receipt.saved)throw Object.assign(new Error('材料已在另一个页面更新。本页尚未替换材料，请刷新后重新导入。'),{code:'WORKSPACE_CONFLICT'});
- return {stamp:receipt.stamp,notebook:receipt.values.notebook??captured.notebook};
+ return {stamp:receipt.stamp,notebook:receipt.values.notebook??captured.notebook,values:receipt.values};
 }
 export function restoreDataset(dataset) {
   return dataset.anonymous===true&&dataset.userImported!==true?emptyDataset():normalizeDataset(dataset);

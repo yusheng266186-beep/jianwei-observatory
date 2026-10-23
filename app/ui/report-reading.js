@@ -132,7 +132,7 @@ export function installReportReading(dialog){
    syncOverlay(nextState);
    const next=dialog.querySelector('.report-paper-scroll');if(pane!==next){dispose();wanted=null;resize.disconnect();pane=next;if(pane){pane.replaceChildren();pane.scrollTop=0;resize.observe(pane);}}
    if(!pane){wanted=null;return;}
-   const output=selectedReport(report),nextKey=pdfKey(output),previousWanted=wanted?.key;wanted={report:output,key:nextKey};if(!output.sections.length&&!output.note?.trim()){dispose();wanted=null;pane.innerHTML='<div class="pdf-empty">勾选要导出的章节，开始纸面预览。</div>';pane.dataset.pdfState='empty';state.pdfPage=1;pane.dataset.currentPage='1';position();return;}
+   const output=selectedReport(report),nextKey=pdfKey(output),previousWanted=wanted?.key;wanted={report:output,key:nextKey};if(!output.sections.length&&!output.note?.trim()){dispose();wanted=null;pane.innerHTML='<div class="pdf-empty" role="status">当前没有可导出的正文。请勾选章节、调整记录筛选，或加入教师判断。</div>';pane.dataset.pdfState='empty';state.pdfPage=1;pane.dataset.currentPage='1';position();return;}
    // Form / button redraws of the same pending paper must not cancel its
    // worker, particularly when a download is claiming that preview's result.
    if(nextKey!==key){restore=keep;if(previousWanted!==nextKey)queue(!doc||keep?.reset?0:160);}else layout(keep);position();

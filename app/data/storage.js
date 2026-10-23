@@ -12,7 +12,7 @@ export {STORAGE_SCOPE};
 const TABLE='materials';
 export const PREPARED_VERSION=46;
 export function preference(key,fallback){try{return JSON.parse(localStorage.getItem(localPrefix+key))??fallback;}catch{return fallback;}}
-const protectedPreferences=new Set(['savedPeople','comparePeople','directoryViews','research']);
+const protectedPreferences=new Set(['savedPeople','comparePeople','directoryViews','research','followDraft','planTextDrafts']);
 const changed=()=>{try{localStorage.setItem(localPrefix+'workspaceChangeHint',JSON.stringify(crypto.randomUUID()));globalThis.window?.dispatchEvent?.(new Event('workspace-saved'));}catch{}};
 export function remember(key,value){try{const text=JSON.stringify(value),previous=localStorage.getItem(localPrefix+key);localStorage.setItem(localPrefix+key,text);const meaningful=key==='research'?JSON.stringify(JSON.parse(previous||'{}')?.saved||[])!==JSON.stringify(value?.saved||[]):previous!==text;if(protectedPreferences.has(key)&&meaningful){localStorage.setItem(localPrefix+'workspacePreferenceRevision',JSON.stringify(crypto.randomUUID()));changed();}return true;}catch{return false;}}
 function open(name=DB){return new Promise((resolve,reject)=>{

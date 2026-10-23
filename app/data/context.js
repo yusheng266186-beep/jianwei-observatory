@@ -19,5 +19,6 @@ export function mergeContext(current,incoming,ids) {
   result.exercises=Array.isArray(incoming.exercises)?remapContext(incoming.exercises,ids):undefined;
   result.exerciseSavedSetups=Array.isArray(incoming.exerciseSavedSetups)?structuredClone(incoming.exerciseSavedSetups):undefined;
   result.importColumnTemplates=Array.isArray(incoming.importColumnTemplates)?structuredClone(incoming.importColumnTemplates):undefined;
+  result.workspaceDrafts=incoming.workspaceDrafts?.version===1?remapContext(incoming.workspaceDrafts,ids):undefined;
   return result;
 }

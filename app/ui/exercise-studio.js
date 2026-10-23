@@ -385,13 +385,14 @@ function updateSelectionSummary(){
  return {
   async backupSnapshot(){
    if(!loaded)return null;
-   rememberDraft();await persistComposer().catch(()=>{});await persist().catch(()=>{});
-   return structuredClone({exercises:records,exerciseComposerDrafts:{...drafts.serialize(),bases:[...basisSelections]}});
+   rememberDraft();let backupSaved=true;try{await persistComposer();}catch{backupSaved=false;}try{await persist();}catch{backupSaved=false;}
+   return structuredClone({backupSaved,exercises:records,exerciseComposerDrafts:{...drafts.serialize(),bases:[...basisSelections]}});
   },
   async flush(){rememberDraft();await persistComposer();if(loaded)await persist();},
   async reload(){
    clearTimeout(composerTimer);await composerSaving.catch(()=>{});await saving.catch(()=>{});epoch++;drawing++;clearTimeout(timer);clearInterval(waitTicker);busy=false;imageLocks.clear();
    const saved=await access(['exercises','exerciseSavedSetups','exerciseComposerDrafts']);
+   removedIds.clear();for(const id of preference('exerciseRemoved',[]))removedIds.add(id);deletionQueue=[...new Set(preference('exerciseDeletionQueue',[]))];for(const id of pendingRemovals.keys())if(!removedIds.has(id))pendingRemovals.delete(id);
    records=Array.isArray(saved.exercises)?saved.exercises.filter(row=>!removedIds.has(row.id)):[];baseline=exerciseRecordSnapshot(records);drafts.restore(saved.exerciseComposerDrafts);setupShelf.load(saved.exerciseSavedSetups);basisSelections.clear();
    for(const [key,value] of saved.exerciseComposerDrafts?.bases||[])basisSelections.set(key,value);
    composerDirty.clear();composerStamps.clear();loaded=true;context=null;current=null;selecting=true;renderedReview=null;saveConflict=null;externalChange=false;contentPicker.clear();center.render();syncCenterTicker();

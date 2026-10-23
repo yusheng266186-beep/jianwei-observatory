@@ -1,6 +1,6 @@
+import {workspaceDrafts,restoreWorkspaceDrafts} from './data/workspace-drafts.js';
 import {createWorkspaceProtection} from './ui/workspace-protection.js';
 import {backupCounts} from './data/workspace-protection.js';
-import {mergeImportTemplates} from './data/import-templates.js';
 import {installCommittedInput} from './ui/committed-input.js';
 import {tableReadingPositions,restoreTableReadingPositions,disclosurePositions,restoreDisclosurePositions} from './ui/study-position.js';
 import {ensureFeatureStyles,ensureSceneStyles} from './ui/feature-styles.js';
@@ -45,7 +45,7 @@ import {workspaceBackup} from './data/backup.js';
 import {hydrate,save,saveWorkspace,restoreDataset,hasMaterials,preference,remember,previous,emptyDataset,loadNotebook,loadPlans} from './data/workspace.js?v=runtime-v45';
 import {prepareDataset,prepareMaterial} from './data/preparation.js?v=runtime-v45';
 import {remapScopedContext,mergeStudentIdentities} from './data/identity.js?v=runtime-v45';
-import {mergeNotebook,mergePlans,mergeNotebookRestore,mergePlansRestore,settleNotebook,settlePlans,mergeRestoredExerciseRecords,mergeRestoredComposerDrafts,recordPlanText,applyPlanText,clearPlanText,planDraftIdentity,planTextPaths} from './data/workspace-merge.js?v=runtime-v45';
+import {mergeNotebook,mergePlans,mergeNotebookRestore,settleNotebook,settlePlans,recordPlanText,applyPlanText,clearPlanText,planDraftIdentity,planTextPaths} from './data/workspace-merge.js?v=runtime-v45';
 import {fourSheetBundle,fourSheetFilename} from './engine/export-scope.js?v=runtime-v45';
 import {tracksStudyScroll,createCheckpointScheduler} from './engine/checkpoint-policy.js?v=runtime-v45';
 import {Inbox} from './data/inbox.js?v=runtime-v45';
@@ -396,19 +396,27 @@ function store({quiet=false}={}) {
     return false;
   }});datasetSaving=operation.catch(()=>{});return operation;
 }
-function workspaceSnapshot(){return structuredClone({...atlas.data,plans:session.plans,notebook:session.notebook,savedPeople:session.savedPeople,comparePeople:session.comparePeople,directoryViews:session.directoryViews,research});}
+function workspaceSnapshot(){
+ const snapshot=structuredClone({...atlas.data,plans:session.plans,notebook:session.notebook,savedPeople:session.savedPeople,comparePeople:session.comparePeople,directoryViews:session.directoryViews,research,workspaceDrafts:workspaceDrafts({followDraft:planDraft?{plan:planDraft,ui:planUI}:preference('followDraft',null),planTextDrafts})});
+ // These are one-time archive imports, not the live exercise/template stores.
+ // A later material undo must not resurrect an exercise already deleted here.
+ for(const key of ['exercises','exerciseSavedSetups','exerciseComposerDrafts','importColumnTemplates'])delete snapshot[key];
+ return snapshot;
+}
 async function backupWorkspace(){
  archiveStudy();flushWorkspaceInput();
- await Promise.allSettled([datasetSaving,plansSaving,persistNotebook()]);
+ const saves=await Promise.allSettled([datasetSaving,persistPlansNow({quiet:true}),persistNotebook()]);
  let live=null;try{live=exerciseStudioTask?await(await exerciseStudioTask).backupSnapshot():null;}catch{}
  const {savedExerciseSetups}=await import('./engine/exercise-setups.js');
- // Capture before assembling the export. Concurrent edits remain marked newer.
- let journal=null;try{journal=await access('workspaceJournal');}catch{}
+ // Read collections and their revision together; later edits stay newer.
  const localRevision=preference('workspacePreferenceRevision','');
- const result=await workspaceBackup(workspaceSnapshot(),{live,read:()=>access(['exercises','exerciseSavedSetups','exerciseComposerDrafts','importColumnTemplates']),setups:savedExerciseSetups});
+ const result=await workspaceBackup(workspaceSnapshot(),{live,read:()=>access(['prepared','workspaceJournal','exercises','exerciseSavedSetups','exerciseComposerDrafts','importColumnTemplates']),setups:savedExerciseSetups,datasetStamp});
+ if(saves.some(saved=>saved.status==='rejected'||saved.value===false)){result.complete=false;result.missing.push('unsavedChanges');}
+ result.payload.backupStatus={version:1,complete:result.complete,missing:[...new Set(result.missing)]};
  download(JSON.stringify(result.payload),SITE_NAME+(result.complete?'-完整工作区-':'-当前可恢复资料-')+new Date().toLocaleDateString('sv-SE',{timeZone:'Asia/Shanghai'})+'.json','application/json');
- if(result.complete&&journal)workspaceProtection.receipt({at:Date.now(),stamp:journal.stamp||'',localRevision,counts:backupCounts(result.payload)});
- if(!result.complete)notify('已导出当前可恢复资料。部分练习或模板暂未读到，请保留本页，存储恢复后再下载完整备份。');
+ if(result.complete&&result.journal)workspaceProtection.receipt({at:Date.now(),stamp:result.journal.stamp||'',localRevision,counts:backupCounts(result.payload)});
+ if(result.staleDataset)notify('已导出本页资料。其他页面已更新成绩材料，请保留此文件，刷新后再下载最新完整备份。');
+ else if(!result.complete)notify('已导出当前可恢复资料。部分修改尚未保存或集合暂未读到，请保留本页，恢复后再下载完整备份。');
 }
 function recordNoteDraft(note){if(!noteJournal.record(note))storageNotice('note-draft','判断仍在当前页面，本机草稿暂存空间不足。请下载完整备份保留记录。');}
 function evidenceSaveState(note,value,error=false){for(const button of stage().querySelectorAll('[data-cmd=notebook-retry]'))if(button.dataset.id===note.id)button.hidden=!error;const count=stage().querySelector('[data-notebook-written]');if(count)count.textContent=session.notebook.filter(n=>n.note?.trim()).length+'份已有教师判断';for(const node of stage().querySelectorAll('[data-evidence-save]'))if(node.dataset.evidenceSave===note.id){node.textContent=value;node.dataset.state=error?'error':value==='已保存到本机'?'saved':'saving';}}
@@ -485,31 +493,14 @@ async function reloadExerciseStudioPreservingDrafts() {
   if(!exerciseStudioTask)return;
   await(await exerciseStudioTask).reload();
 }
-async function restoreContext(incoming,{resetContext=false,notebook=null,composerDrafts=null,remap=new Map()}={}) {
-  const incomingPlans=incoming.plans||incoming.actions;
-  if(Array.isArray(incomingPlans))session.plans=resetContext?incomingPlans.map(normalizePlan):mergePlansRestore(session.plans,incomingPlans.map(normalizePlan)).records;
-  else if(resetContext)session.plans=[];
-  await persistPlansNow({quiet:true});
+async function restoreContext(incoming,{notebook=null,values={},restored={}}={}) {
+  session.plans=(values.plans||session.plans).map(normalizePlan);plansBase=structuredClone(session.plans);remember('plans',session.plans);
   for(const key of ['savedPeople','comparePeople','directoryViews'])if(Array.isArray(incoming[key])){session[key]=structuredClone(incoming[key]);remember(key,session[key]);}
   if(incoming.research){research.saved=structuredClone(Array.isArray(incoming.research.saved)?incoming.research.saved:[]);research.recent=structuredClone(Array.isArray(incoming.research.recent)?incoming.research.recent.slice(0,24):[]);persistResearch();}
   if(Array.isArray(notebook))session.notebook=structuredClone(notebook);
-  else if(resetContext)session.notebook=[];
-  if(Array.isArray(incoming.importColumnTemplates))await updateStored('importColumnTemplates',previous=>mergeImportTemplates(previous,incoming.importColumnTemplates));
-  if(Array.isArray(incoming.exerciseSavedSetups)){const {mergeExerciseSetupArchive}=await import('./engine/exercise-setups.js');await updateStored('exerciseSavedSetups',previous=>mergeExerciseSetupArchive(previous,incoming.exerciseSavedSetups));}
-  let exerciseStats=null;
-  if(Array.isArray(incoming.exercises)){
-    let records=null;
-    await updateStored('exercises',latest=>{const merged=mergeRestoredExerciseRecords(latest||[],incoming.exercises);exerciseStats=merged;records=merged.records;return merged.records;});
-    remember('exercisePending',(records||[]).some(planPending));
-  }
-  let composerStats=null;
-  if(composerDrafts?.version===1){
-    let merged=null;
-    await updateStored('exerciseComposerDrafts',latest=>{merged=mergeRestoredComposerDrafts(latest,composerDrafts,{remap});return merged;});
-    composerStats=merged?.restore||null;
-  }
-  if(exerciseStats||composerStats)await reloadExerciseStudioPreservingDrafts();
-  return {exerciseStats,composerStats};
+  if(Array.isArray(values.exercises))remember('exercisePending',values.exercises.some(planPending));
+  if(incoming.workspaceDrafts?.version===1){const restoredDrafts=restoreWorkspaceDrafts({followDraft:planDraft?{plan:planDraft,ui:planUI}:preference('followDraft',null),planTextDrafts},incoming.workspaceDrafts);planTextDrafts=restoredDrafts.planTextDrafts;remember('followDraft',restoredDrafts.followDraft);remember('planTextDrafts',planTextDrafts);}
+  return restored;
 }
 async function changeMaterials(operation) {
   if(materialBusy)throw new Error('当前材料仍在更新，请完成后再操作');
@@ -522,11 +513,22 @@ async function applyMaterials(dataset,before,message,{undo=true,prepared=false,i
   const incomingNotebook=Array.isArray(dataset.notebook)?dataset.notebook:null;
   let notebook=resetContext?structuredClone(incomingNotebook||[]):(incomingNotebook?mergeNotebookRestore(session.notebook,incomingNotebook).records:session.notebook);
   const base=structuredClone(notebookBase);
-  const receipt=await saveWorkspace(dataset,before,notebook,{prepared:true,expectedStamp:datasetStamp,reduceNotebook:latest=>mergeNotebook(base,notebook,Array.isArray(latest)?latest:base).records});
-  const stored=true,stamp=receipt.stamp;notebook=receipt.notebook;datasetStamp=stamp;
-  const restored=await restoreContext(dataset,{resetContext,notebook,composerDrafts:context?.exerciseComposerDrafts,remap:context?.remap});
-  if(stored){noteJournal.persisted(notebook);notebookBase=structuredClone(notebook);}
-  await installDataset(dataset,{fresh:true,prepared:true,index,stamp:stored?stamp:null});
+  const {archiveRestore,restoredRemovals}=await import('./data/archive-restore.js');
+  const archive=archiveRestore(dataset,{plans:session.plans,plansBase,resetContext,composerDrafts:context?.exerciseComposerDrafts,remap:context?.remap});
+  const receipt=await saveWorkspace(dataset,before,notebook,{prepared:true,expectedStamp:datasetStamp,entries:archive.entries,reducers:archive.reducers,reduceNotebook:latest=>mergeNotebook(base,notebook,Array.isArray(latest)?latest:base).records});
+  const stored=true,stamp=receipt.stamp;notebook=receipt.notebook;
+  session.notebook=structuredClone(notebook);session.plans=receipt.values.plans.map(normalizePlan);
+  noteJournal.persisted(notebook);notebookBase=structuredClone(notebook);plansBase=structuredClone(session.plans);
+  if(Array.isArray(dataset.exercises)){
+    remember('exerciseRemoved',restoredRemovals(preference('exerciseRemoved',[]),dataset.exercises,receipt.values.exercises));
+    const jobs=rows=>rows.flatMap(row=>[row,...Object.values(row.imageJobs||{})]);
+    remember('exerciseDeletionQueue',restoredRemovals(preference('exerciseDeletionQueue',[]),jobs(dataset.exercises),jobs(receipt.values.exercises)));
+  }
+  // Advance the page and its stamp together. Everything durable committed in
+  // one transaction; an optional list refresh can no longer revert the import.
+  const restored=await restoreContext(dataset,{notebook,values:receipt.values,restored:archive.stats});
+  await installDataset(dataset,{fresh:true,prepared:true,index,stamp});
+  if(restored.exerciseStats||restored.composerStats)try{await reloadExerciseStudioPreservingDrafts();}catch{notify('材料已保存，练习列表暂未刷新；重新打开页面即可读取。');}
   const extras=[];
   if(restored?.exerciseStats?.added)extras.push('恢复 '+restored.exerciseStats.added+' 份旧练习');
   if(restored?.exerciseStats?.copies)extras.push('保留 '+restored.exerciseStats.copies+' 份旧练习副本');

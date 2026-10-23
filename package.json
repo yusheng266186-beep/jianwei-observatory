@@ -48,6 +48,7 @@
     "test:keyboard": "node tests/keyboard-viewport.cjs",
     "test:large-workspace": "node tests/large-workspace.cjs",
     "test:workspace-care": "node tests/workspace-care.cjs",
+    "test:archive-reliability": "node tests/archive-reliability.cjs",
     "test:document-regression": "node tests/document-regression.cjs",
     "test:report-render-race": "node tests/report-render-race.cjs",
     "test:report-types": "node tests/report-types.cjs",
