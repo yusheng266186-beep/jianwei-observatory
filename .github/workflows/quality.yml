@@ -45,8 +45,8 @@ jobs:
           server_pid=$!
           trap 'kill "$server_pid"' EXIT
           curl --retry 10 --retry-connrefused --retry-delay 1 --fail --silent http://127.0.0.1:4173/ > /dev/null
-          npm run test:smoke
           npm run test:global-motion
+          npm run test:smoke
           npm run test:keyboard
           npm run test:workspace-care
           npm run test:archive-reliability

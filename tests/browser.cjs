@@ -133,7 +133,7 @@ async function run(){
   await check('正常动画连续导航可操作，控制台与资源无错误',async()=>{
    await page.emulateMedia({reducedMotion:'no-preference'});await page.setViewportSize({width:1280,height:900});
    for(const scene of ['people','papers','board','class'])await page.locator(`#navigation [data-cmd="nav"][data-scene="${scene}"]`).click();
-   await stageReady('class');await click('[data-cmd="class-subject"][data-subject="数学"]');await drawerTitle('数学');await closeDrawer();
+   await stageReady('class');await page.waitForFunction(()=>!document.querySelector('.scene-leaving-viewport')&&document.getAnimations().every(a=>a.effect?.getTiming().iterations===Infinity||(!a.pending&&a.playState!=='running')));await click('[data-cmd="class-subject"][data-subject="数学"]');await drawerTitle('数学');await closeDrawer();
    await page.waitForFunction(()=>!document.body.classList.contains('modal-open'));
    assert.deepEqual(errors,[]);assert.deepEqual(failed,[]);
   });
