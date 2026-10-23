@@ -48,7 +48,7 @@ export function installReportReading(dialog){
   if(pinnedEnd&&pane.scrollHeight-pane.clientHeight-pane.scrollTop>3)pane.scrollTop=pane.scrollHeight;
   const count=doc?.numPages||0,gap=parseFloat(getComputedStyle(pane.querySelector('.pdf-pages')||pane).rowGap)||20,atEnd=pane.scrollHeight-pane.clientHeight-pane.scrollTop<=3,n=atEnd&&count?count:Math.max(1,Math.min(count||1,Math.floor((pane.scrollTop+Math.min(100,pane.clientHeight*.25))/Math.max(1,(base?.height||1)*scale+gap))+1));
   pane.dataset.currentPage=String(n);if(state)state.pdfPage=n;
-  const label=dialog.querySelector('.report-paper-position');if(label)label.textContent=count?'第 '+n+' / '+count+' 页 · PDF纸面':'正在生成PDF纸面';
+  const label=dialog.querySelector('.report-paper-position');if(label)label.textContent=count?'第 '+n+' / '+count+' 页 · PDF纸面':pane.dataset.pdfState==='empty'?'尚无导出正文':pane.dataset.pdfState==='error'?'纸面暂未生成':'正在生成PDF纸面';
   const input=dialog.querySelector('[data-report-page-target]');if(input&&document.activeElement!==input)input.value=String(n);
   const total=dialog.querySelector('[data-paper-page-count]');if(total)total.textContent='/ '+(count||'—');
   for(const b of dialog.querySelectorAll('[data-cmd="report-paper-step"]'))b.disabled=!count||(Number(b.dataset.step)<0?n<=1:n>=count);
