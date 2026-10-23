@@ -24,6 +24,7 @@
 | 排查导入中途失败、跨页备份及练习/计划草稿恢复 | [备份、恢复与导入一致性复查](ARCHIVE-RELIABILITY-2026-10-23.md) |
 | 排查跨页旧成绩、无修改保存、慢网反馈、手机提示与连接查询 | [体验与可靠性修复](EXPERIENCE-RELIABILITY-2026-10-23.md) |
 | 排查提交结果不确定、Esc关闭丢草稿及比较记录串轮 | [异步恢复与关闭保护](ASYNC-CONTINUATION-2026-10-23.md) |
+| 排查报告等待、动画交接与试题中心操作反馈 | [加载、动效与操作反馈打磨](INTERACTION-POLISH-2026-10-23.md) |
 
 ## 当前状态与阅读原则
 
@@ -134,8 +135,9 @@
 </details>
 
 <details>
-<summary>成绩研究、数据保存与跟进（17篇）</summary>
+<summary>成绩研究、数据保存与跟进（18篇）</summary>
 
+- [加载、动效与操作反馈打磨](INTERACTION-POLISH-2026-10-23.md) · 2026-10-23
 - [异步恢复与关闭保护（2026-10-23）](ASYNC-CONTINUATION-2026-10-23.md)
 - [体验与可靠性修复（2026-10-23）](EXPERIENCE-RELIABILITY-2026-10-23.md)
 - [备份、恢复与导入一致性复查（2026-10-23）](ARCHIVE-RELIABILITY-2026-10-23.md)

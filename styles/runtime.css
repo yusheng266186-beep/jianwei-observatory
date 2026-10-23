@@ -5,8 +5,14 @@ dialog[data-backdrop-phase=entering]::backdrop{animation:surface-backdrop-in var
 dialog[data-backdrop-phase=leaving]::backdrop{animation:surface-backdrop-out var(--motion-leave) var(--motion-exit-ease) both}
 @keyframes surface-backdrop-in{from{opacity:var(--surface-backdrop-from,0)}to{opacity:1}}
 @keyframes surface-backdrop-out{from{opacity:var(--surface-backdrop-from,1)}to{opacity:0}}
-.surface-loading{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;min-height:50vh;padding:clamp(24px,5vw,64px);gap:14px}
+.surface-loading{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;box-sizing:border-box;width:100%;min-height:min(50vh,360px);padding:clamp(24px,5vw,64px);gap:14px}
 .surface-loading h2,.surface-loading p{margin:0}.surface-loading p{color:var(--muted)}
+.surface-loading>p{display:flex;align-items:center;gap:10px;line-height:1.85}.surface-loading>div{display:flex;flex-wrap:wrap;gap:10px}
+.surface-loading-mark{display:inline-block;flex:none;width:15px;height:15px;border:2px solid #7898b336;border-top-color:var(--school-blue);border-radius:50%}
+@media(prefers-reduced-motion:no-preference){body:not([data-motion=calm]) .surface-loading-mark{animation:surface-loading-turn .9s linear infinite}@keyframes surface-loading-turn{to{transform:rotate(360deg)}}}
+.report-dialog[data-report-loading]{box-sizing:border-box;width:calc(100vw - 32px);height:calc(100dvh - 32px);max-width:min(1920px,calc(100vw - 32px));padding:18px 22px;border-radius:22px}
+@media(max-width:900px){.report-dialog[data-report-loading]{width:calc(100vw - 16px);height:calc(100dvh - 16px);padding:12px 14px;border-radius:16px}}
+@media(max-width:560px){.report-dialog[data-report-loading]{width:calc(100vw - 12px);max-width:calc(100vw - 12px);height:calc(100dvh - 12px);padding:10px;border-radius:14px}}
 /* Fit modal workspaces to the visible area when a mobile keyboard opens. */
 .sheet-dialog[open],.table-reader[open]{top:var(--visual-view-top,0px);bottom:var(--visual-view-bottom,0px);max-height:min(85dvh,calc(var(--visual-view-height,100dvh) - 24px))}
 .report-dialog[open],.table-reader[open]{max-height:calc(var(--visual-view-height,100dvh) - 24px)}

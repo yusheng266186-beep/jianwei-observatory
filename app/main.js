@@ -6,6 +6,7 @@ import {backupCounts} from './data/workspace-protection.js';
 import {installCommittedInput} from './ui/committed-input.js';
 import {tableReadingPositions,restoreTableReadingPositions,disclosurePositions,restoreDisclosurePositions} from './ui/study-position.js';
 import {ensureFeatureStyles,ensureSceneStyles} from './ui/feature-styles.js';
+import {surfaceLoadingHTML} from './ui/surface-loading.js';
 import {isRuntimeLoadError,runtimeFailureMessage} from './ui/runtime-recovery.js';
 import {replaceResearchHistory,pushResearchHistory,researchPath,researchStudySnapshot,researchHistoryState,researchHistoryStudy,researchHistoryConditions} from './engine/research-navigation.js';
 import {researchObservationList} from './engine/research-roster.js';
@@ -558,7 +559,7 @@ async function commitMaterial(incoming,mode) {
     await applyMaterials(dataset,before,'材料已加入工作区',{prepared:true,index,context});
   });
 }
-let reportRequest=0;
+let reportRequest=0,reportRetry=null;
 const foregroundFrame=()=>new Promise(resolve=>{if(document.hidden){setTimeout(resolve,0);return;}requestAnimationFrame(()=>setTimeout(resolve,0));});
 function sameReport(a,b){return a.title===b.title&&a.subtitle===b.subtitle&&JSON.stringify(a.sections)===JSON.stringify(b.sections)&&JSON.stringify(a.sheets)===JSON.stringify(b.sheets);}
 function refreshSavedReport(report){
@@ -567,25 +568,35 @@ function refreshSavedReport(report){
  try{const refreshed=teachingReport(report.spec);refreshed.outputSelection=transferSelection(report,refreshed);return {...report,...refreshed,id:report.id,created:report.created||refreshed.created,note:report.note||'',study:report.study,studyTitle:report.studyTitle};}catch{return report;}
 }
 async function openReport(report,{fresh=false}={}) {
-  const request=++reportRequest;
-  try{await ensureFeatureStyles('reports');}catch(error){if(request===reportRequest)notify(error.message);return false;}if(request!==reportRequest)return false;
-  if(typeof report==='function'){
-    const dialog=document.getElementById('report-dialog');
-    document.getElementById('report-content').innerHTML='<div class="surface-loading" role="status"><span class="overline">整理打印材料</span><h2 id="report-dialog-title">正在准备这次观察的报告</h2><p>仅在打开报告时整理完整记录。</p>'+button('关闭 ×','close-report',{},'outline')+'</div>';
-    if(exportReport?.id)persistNotebook().catch(()=>{});clearTimeout(noteTimer);
-    exportReport=null;reportNoteState='preview';reportScope.reading=false;const opening=showDialog(dialog);await foregroundFrame();await opening;
-    if(request!==reportRequest||!dialog.open||dialog.dataset.surfacePhase==='leaving')return false;
-    try{report=report();}catch(error){notify('报告暂时未能整理：'+error.message);await dismissDialog('report-dialog');return false;}
-    if(request!==reportRequest)return false;
-  }
   if(!report){notify('先打开一个班级、学生或试卷，再摘录研究结果。');if(document.getElementById('report-dialog').open)await dismissDialog('report-dialog');return false;}
+  const request=++reportRequest,dialog=document.getElementById('report-dialog'),content=document.getElementById('report-content');
+  reportRetry={report,fresh};
+  if(exportReport?.id)persistNotebook().catch(()=>{});clearTimeout(noteTimer);
+  exportReport=null;reportNoteState='preview';reportScope.reading=false;dialog.dataset.reportLoading='true';
+  content.innerHTML=surfaceLoadingHTML({titleId:'report-dialog-title',title:'正在准备这次观察的报告',overline:'整理打印材料',message:'正在读取报告样式与完整记录…',closeCommand:'close-report'});
+  showDialog(dialog);
+  const active=()=>request===reportRequest&&dialog.open&&dialog.dataset.surfacePhase!=='leaving';
+  try{
+    await ensureFeatureStyles('reports');
+    if(!active())return false;
+    // Paint feedback once; content preparation need not wait for the full arrival.
+    await foregroundFrame();if(!active())return false;
+    if(typeof report==='function')report=report();
+    if(!report)throw new Error('当前观察没有可整理的报告内容。');
+  }catch(error){
+    if(!active())return false;
+    content.innerHTML='<section class="surface-loading"><h2 id="report-dialog-title" tabindex="-1">报告暂时未能打开</h2><p role="alert">'+esc(runtimeFailureMessage(error))+'</p><div>'+button('重试打开','report-retry',{},'accent')+button('关闭','close-report',{},'outline')+'</div></section>';
+    content.querySelector('h2').focus({preventScroll:true});return false;
+  }
+  if(!active())return false;
+  reportRetry=null;delete dialog.dataset.reportLoading;
   report=refreshSavedReport(report);
   if(!report.id&&!fresh)report=session.notebook.find(note=>note.autoSaved&&sameReport(note,report))||report;
-  if(exportReport?.id)persistNotebook().catch(()=>{});reportNoteRevision++;
-  clearTimeout(noteTimer);exportReport=structuredClone(report);reportOrigin=report.id?(report.study||null):studyNow();
+  reportNoteRevision++;exportReport=structuredClone(report);reportOrigin=report.id?(report.study||null):studyNow();
   if(reportOrigin&&!exportReport.study){exportReport.study=structuredClone(reportOrigin);exportReport.studyTitle=studyDescription(atlas,reportOrigin).title;}
   reportNoteState=report.id?'saved':'preview';reportScope={section:0,page:1,search:'',preview:'paper',settingsOpen:false,reading:false,paperWidth:'fit',paperZoom:100,pdfPage:1};drawReport({reset:true});
-  const dialog=document.getElementById('report-dialog');showDialog(dialog);dialog.scrollTop=0;reportReader?.sync(reportScope,exportReport,{top:0,left:0,end:false,page:1,ratio:0});enhance(dialog);
+  showDialog(dialog);dialog.scrollTop=0;reportReader?.sync(reportScope,exportReport,{top:0,left:0,end:false,page:1,ratio:0});enhance(dialog);
+  const title=content.querySelector('#report-dialog-title');if(title){title.tabIndex=-1;title.focus({preventScroll:true});}
 }
 function drawReport({reset=false}={}){const snapshot=reset?{top:0,left:0,end:false,page:1,ratio:0,reset:true}:reportReader?.snapshot();prepareUpdate({replacing:true});const content=document.getElementById('report-content');renderInto(content,reportView(exportReport,reportScope,{context:reportContext(atlas,exportReport,reportScope),jobs:reportJobs,noteState:reportNoteState,availableKinds:['class','subject','student','follow'].filter(kind=>kind==='follow'||reportExams(atlas,kind).length),canReturn:Boolean(reportOrigin&&studyAvailable(atlas,reportOrigin))}));reportReader?.sync(reportScope,exportReport,snapshot);enhance(content);notificationLayout.refresh();}
 let reportSettingsIntent=null;
@@ -646,7 +657,8 @@ async function finishReport() {
   if(reportNoteState==='error'){notify('判断尚未成功保存，请先下载这份材料保留记录。');return false;}return true;
 }
 async function closeReport() {
-  const report=exportReport;if(!await finishReport()||report!==exportReport)return;
+  const report=exportReport,request=reportRequest;if(!await finishReport()||report!==exportReport||request!==reportRequest)return;
+  reportRetry=null;
   await dismissDialog('report-dialog');
   if(current==='library'&&books.library.tab==='notebook')await paint();
 }
@@ -775,9 +787,9 @@ function mountExerciseCenter(){
 
 async function openExercises(context={}){
  const attempt=++exerciseOpenRequest,dialog=document.getElementById('exercise-dialog'),content=document.getElementById('exercise-content');
- if(!dialog.open){dialog.dataset.loading='true';content.innerHTML='<header class="exercise-heading"><span class="overline">个性化辅导中心</span><h2 id="exercise-title">正在打开辅导中心</h2><p role="status">正在读取本机练习与学生列表…</p></header><button class="button outline" data-cmd="exercise-loading-close">关闭</button>';showDialog(dialog);}
+ if(!dialog.open){dialog.dataset.loading='true';content.innerHTML=surfaceLoadingHTML({titleId:'exercise-title',title:'正在打开辅导中心',overline:'个性化辅导中心',message:'正在读取本机练习与学生列表…',closeCommand:'exercise-loading-close'});showDialog(dialog);}
  try{
- const studio=await exerciseStudio();if(attempt!==exerciseOpenRequest||!dialog.open)return;const sid=context.hub?null:context.sid||planDraft?.sid,exam=context.exam||planDraft?.exam||atlas.latest;await studio.open({sid,exam,subject:context.subject,plan:!context.hub&&planDraft?.sid===sid&&planDraft.exam===exam?planDraft:null},{shouldOpen:()=>attempt===exerciseOpenRequest&&dialog.open});delete dialog.dataset.loading;
+ const studio=await exerciseStudio();if(attempt!==exerciseOpenRequest||!dialog.open)return;const sid=context.hub?null:context.sid||planDraft?.sid,exam=context.exam||planDraft?.exam||atlas.latest;await studio.open({sid,exam,subject:context.subject,plan:!context.hub&&planDraft?.sid===sid&&planDraft.exam===exam?planDraft:null},{shouldOpen:()=>attempt===exerciseOpenRequest&&dialog.open});if(attempt===exerciseOpenRequest)delete dialog.dataset.loading;
  }catch(error){if(attempt!==exerciseOpenRequest||!dialog.open)return;delete dialog.dataset.loading;content.innerHTML='<header class="exercise-heading"><h2 id="exercise-title">辅导中心暂时未能打开</h2><p role="alert">'+esc(runtimeFailureMessage(error))+'</p></header>'+button(isRuntimeLoadError(error)?'刷新并继续':'重新打开',isRuntimeLoadError(error)?'reload':'exercise-hub',{},'accent')+'<button class="button outline" data-cmd="exercise-loading-close">关闭</button>';}
 }
 const planPaths=new Set(['sid','exam','teacher','note','reviewDate','result','review.correct','review.total','training.key','training.tasks','training.method','training.count','training.targetRate','training.goal','schedule.date','schedule.slot','schedule.period','schedule.time','schedule.duration','ui.no','ui.search','ui.questionFilter','ui.knowledge']);
@@ -1042,6 +1054,7 @@ async function commands(event) {
     else if(d.cmd==='capture')await capture();
     else if(d.cmd==='export')openReport(activeReport);
     else if(d.cmd==='close-report')await closeReport();
+    else if(d.cmd==='report-retry'){if(reportRetry)await openReport(reportRetry.report,{fresh:reportRetry.fresh});}
     else if(d.cmd==='report-keep')await keepReport();
     else if(d.cmd==='report-return'){if(await finishReport())if(reportOrigin)await restoreStudy(reportOrigin);}
     else if(d.cmd==='report-section'){Object.assign(reportScope,{section:Number(d.index),page:1,search:'',preview:'details'});drawReport();}
@@ -1142,7 +1155,7 @@ export async function mount(boot=null) {
   for(const dialog of document.querySelectorAll('dialog')){dialog.addEventListener('toggle',syncOverlays);dialog.addEventListener('close',syncOverlays);}
   for(const id of ['reading-dialog','research-dialog','table-reader','plan-dialog'])document.getElementById(id).addEventListener('cancel',event=>{event.preventDefault();dismissDialog(id);});
   document.getElementById('table-reader').addEventListener('close',event=>{if(!event.target.open)document.getElementById('table-reader-content').replaceChildren();});
-  document.getElementById('exercise-dialog').addEventListener('cancel',event=>{if(!event.currentTarget.dataset.loading)return;event.preventDefault();event.stopImmediatePropagation();exerciseOpenRequest++;delete event.currentTarget.dataset.loading;dismissDialog('exercise-dialog');});
+  document.getElementById('exercise-dialog').addEventListener('cancel',event=>{if(!event.currentTarget.querySelector('[data-cmd=exercise-loading-close]'))return;event.preventDefault();event.stopImmediatePropagation();exerciseOpenRequest++;delete event.currentTarget.dataset.loading;dismissDialog('exercise-dialog');});
   const drawer=document.getElementById('research-drawer');drawer.addEventListener('cancel',event=>{event.preventDefault();closeDrawer();});drawer.addEventListener('click',event=>{if(event.target!==drawer)return;const bounds=drawer.getBoundingClientRect();if(event.clientX<bounds.left||event.clientX>bounds.right||event.clientY<bounds.top||event.clientY>bounds.bottom)closeDrawer();});
   document.addEventListener('toggle',event=>{if(event.target.matches?.('.directory-filters')){books.people.filtersOpen=event.target.open;persistBooks();}},true);
   window.addEventListener('resize',positionDock);
