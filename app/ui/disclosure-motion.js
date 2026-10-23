@@ -33,11 +33,13 @@ export function toggleDisclosure(details,{reducedMotion=motionReduced,onSettled=
  // wrapping and async text can then retarget from the current frame without a
  // resize feedback loop or a jump when automatic height is finally restored.
  if(states.get(details)===record&&typeof ResizeObserver==='function'){
-  const sizes=new WeakMap();
+  const sizes=new WeakMap(),observed=new Set();
   const schedule=()=>{if(resizeFrame)return;resizeFrame=requestAnimationFrame(()=>{resizeFrame=0;if(states.get(details)!==record)return;const current=details.getBoundingClientRect().height;record.animation?.cancel();run(current,motion.control);});};
-  const observe=()=>{for(const child of details.children){if(sizes.has(child))continue;sizes.set(child,{width:child.offsetWidth,height:child.offsetHeight});observer.observe(child,{box:'border-box'});}};
+  const observe=()=>{let changed=false;const children=new Set(details.children);for(const child of observed)if(!children.has(child)){observer.unobserve?.(child);observed.delete(child);sizes.delete(child);changed=true;}for(const child of children){const next={width:child.offsetWidth,height:child.offsetHeight},last=sizes.get(child);if(!last||Math.abs(last.width-next.width)>1||Math.abs(last.height-next.height)>1)changed=true;sizes.set(child,next);if(!observed.has(child)){observed.add(child);observer.observe(child,{box:'border-box'});}}return changed;};
   observer=new ResizeObserver(entries=>{let changed=false;for(const entry of entries){const box=entry.borderBoxSize?.[0]||(entry.borderBoxSize?.inlineSize!=null?entry.borderBoxSize:null),rect=box?{width:box.inlineSize,height:box.blockSize}:entry.target.getBoundingClientRect(),last=sizes.get(entry.target);if(last&&(Math.abs(last.width-rect.width)>1||Math.abs(last.height-rect.height)>1))changed=true;sizes.set(entry.target,rect);}if(changed)schedule();});observe();
-  if(typeof MutationObserver==='function'){childrenObserver=new MutationObserver(()=>{observe();schedule();});childrenObserver.observe(details,{childList:true});}
+  // Content can change before the first resize delivery, including in WebKit.
+  // Read layout dimensions after DOM edits; transforms from press do not count.
+  if(typeof MutationObserver==='function'){childrenObserver=new MutationObserver(entries=>{if(observe()||entries.some(entry=>entry.type==='attributes'&&entry.target===details))schedule();});childrenObserver.observe(details,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['class','style','hidden']});}
  }
  return promise;
 }

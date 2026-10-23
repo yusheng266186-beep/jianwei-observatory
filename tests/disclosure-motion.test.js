@@ -49,3 +49,13 @@ test('打开期间内容长高重新指向自然高度，过期动画不会提�
   details.animations[0].resolve();await Promise.resolve();await Promise.resolve();assert.equal(settled,false);details.animations[1].resolve();assert.equal(await promise,true);assert.equal(disconnected,1);assert.equal(details.dataset.disclosurePhase,undefined);
  }finally{for(const name of names)if(saved[name]===undefined)delete globalThis[name];else globalThis[name]=saved[name];}
 });
+
+test('首次尺寸回调前的内层修改也能重定高度，按压样式不引起重复动画',async()=>{
+ const names=['getComputedStyle','ResizeObserver','MutationObserver','requestAnimationFrame','cancelAnimationFrame'],saved=Object.fromEntries(names.map(n=>[n,globalThis[n]]));let mutation,options,sequence=0;const frames=new Map();
+ try{
+  globalThis.getComputedStyle=computed;globalThis.requestAnimationFrame=fn=>{frames.set(++sequence,fn);return sequence;};globalThis.cancelAnimationFrame=id=>frames.delete(id);
+  globalThis.ResizeObserver=class{observe(){}disconnect(){}};globalThis.MutationObserver=class{constructor(fn){mutation=fn;}observe(node,value){options=value;}disconnect(){}};
+  const {details,summary}=fixture(),body=details.children[1];for(const child of details.children)Object.assign(child,{offsetWidth:220,offsetHeight:0});summary.offsetHeight=40;body.offsetHeight=200;details.getBoundingClientRect=()=>({height:details.open?body.offsetHeight+48:48});
+  const promise=toggleDisclosure(details,{reducedMotion});assert(options.subtree&&options.attributes&&options.characterData);mutation([{type:'attributes',target:summary}]);assert.equal(frames.size,0,'press transforms leave layout unchanged');body.offsetHeight=400;mutation([{type:'attributes',target:body}]);assert.equal(frames.size,1);for(const fn of [...frames.values()])fn();frames.clear();assert.equal(details.animations.length,2);assert.equal(details.animations[1].frames[1].height,'448px');details.animations[1].resolve();assert.equal(await promise,true);
+ }finally{for(const name of names)if(saved[name]===undefined)delete globalThis[name];else globalThis[name]=saved[name];}
+});
