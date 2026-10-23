@@ -2,7 +2,7 @@ import {installCommittedInput} from './committed-input.js';
 import {exerciseVisualOptions,exerciseVisualLabel} from './exercise-visual-policy.js';
 import {exerciseWorkspaceHTML} from './exercise-workspace.js';
 import {exerciseRequestBriefHTML,exerciseRequestSummaryHTML,exerciseCountGuidance} from './exercise-request-brief.js';
-import {exerciseRecordSnapshot,exerciseDocumentVersion,mergeExerciseRecords,settleExerciseRecords,exerciseModificationCopy} from '../engine/exercise-records.js';
+import {exerciseRecordSnapshot,exerciseRecordsUnchanged,exerciseDocumentVersion,mergeExerciseRecords,settleExerciseRecords,exerciseModificationCopy} from '../engine/exercise-records.js';
 import {scheduleIdleWork} from './idle-work.js';
 import {installExerciseFigureResize} from './exercise-figure-resize.js';
 import {prepareExerciseBatch} from '../engine/exercise-batch.js';
@@ -81,9 +81,9 @@ export function createExerciseStudio({notify,show,close,onAttach,onFeedback=()=>
   clearTimeout(saveTimer);saveTimer=null;const generation=epoch;
   saving=saving.catch(()=>{}).then(async()=>{
    if(generation!==epoch)return;
-   const captured=snapshot();let changed=false;const saved=await update('exercises',latest=>{const value=mergeExerciseRecords(baseline,captured,latest||[],{removed:preference('exerciseRemoved',[])});changed=JSON.stringify(value)!==JSON.stringify(latest||[]);return value;});
+   const captured=exerciseRecordsUnchanged(records,baseline)?baseline:snapshot();let changed=false;const saved=(await update('exercises',latest=>{const value=mergeExerciseRecords(baseline,captured,latest||[],{removed:preference('exerciseRemoved',[])});changed=value!==latest&&!exerciseRecordsUnchanged(value,latest||[]);return changed?value:latest;},{skipUnchanged:true}))||[];
    if(generation!==epoch)return saved;
-   const settled=settleExerciseRecords(records,captured,saved);records=settled.rows;baseline=settled.baseline;if(current&&!records.includes(current)){current=null;context=null;selecting=true;renderedReview=null;}else if(current?.sheet)request=structuredClone(current.request);
+   if(captured!==baseline||!exerciseRecordsUnchanged(saved,baseline)){const settled=settleExerciseRecords(records,captured,saved);records=settled.rows;baseline=settled.baseline;}if(current&&!records.includes(current)){current=null;context=null;selecting=true;renderedReview=null;}else if(current?.sheet)request=structuredClone(current.request);
    saveConflict=null;externalChange=false;remember('exercisePending',records.some(r=>pendingJob(r)||pendingImages(r)));center.render();syncCenterTicker();syncNotice();if(changed)signalSaved();return saved;
   });
   saving.catch(e=>{if(generation!==epoch)return;if(e.code==='EXERCISE_SAVE_CONFLICT'){saveConflict=e;syncNotice();notify(e.message);}else notify('练习的本机保存未完成，请先保留当前页面并重试。');});

@@ -23,7 +23,7 @@
 .chart-buttons button:disabled{opacity:.4;cursor:default}
 /* Blur the backdrop once so scrolling dialog content stays on an unfiltered layer. */
 .sheet-dialog,.research-drawer,.table-reader{backdrop-filter:none;-webkit-backdrop-filter:none}
-#toast{inset:94px 24px auto auto;transform:translateY(-8px);gap:10px;max-width:min(420px,calc(100vw - 32px));padding:10px 12px 10px 16px}
+#toast{inset:auto 24px var(--toast-clearance,104px) auto;transform:translateY(8px);gap:10px;max-width:min(420px,calc(100vw - 32px));padding:10px 12px 10px 16px}
 #toast.visible{transform:translateY(0);pointer-events:none}
 #toast>span{min-width:0;overflow-wrap:anywhere}
 #toast:not(.visible){display:none;pointer-events:none}
@@ -74,7 +74,7 @@ dialog #toast.visible{transform:translateY(0)}
  .personal-question-card header span{font-size:11px}
  .personal-questions{grid-template-columns:repeat(2,minmax(0,1fr))}
  .empty-result-actions .button{font-size:11px}
- #toast{inset:82px 16px auto auto;font-size:11px;max-width:calc(100vw - 32px)}
+ #toast{inset:auto 16px var(--toast-clearance,104px) auto;font-size:11px;max-width:calc(100vw - 32px)}
 }
 @keyframes scope-arrive{from{opacity:.2;transform:translateY(-5px)}to{opacity:1;transform:translateY(0)}}
 body[data-motion=calm] .scope-controls{animation:none!important}

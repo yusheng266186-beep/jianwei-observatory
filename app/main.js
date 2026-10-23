@@ -1,5 +1,7 @@
-import {workspaceDrafts,restoreWorkspaceDrafts} from './data/workspace-drafts.js';
+import {workspaceDrafts,restoreWorkspaceDrafts,planDraftMatches} from './data/workspace-drafts.js';
 import {createWorkspaceProtection} from './ui/workspace-protection.js';
+import {createWorkspaceUpdates} from './ui/workspace-updates.js';
+import {sameJSONValue} from './engine/value-equality.js';
 import {backupCounts} from './data/workspace-protection.js';
 import {installCommittedInput} from './ui/committed-input.js';
 import {tableReadingPositions,restoreTableReadingPositions,disclosurePositions,restoreDisclosurePositions} from './ui/study-position.js';
@@ -71,6 +73,7 @@ if(preference('interfaceRevision','')!=='study-20261011b'){books.board.mode='ove
 let atlas=new Atlas(emptyDataset()),current='board',activeReport=null,exportReport=null,reportScope={section:0,page:1,search:''},revision=0,paintId=0,searchTimer,searchPaint,drawerTimer,reportTimer,noteTimer,inbox;
 const workspaceProtection=createWorkspaceProtection({snapshot:()=>atlas.data,notify:(...args)=>notify(...args)});
 let notebookSaving=Promise.resolve(),notebookBase=[],plansBase=[],datasetStamp=null,planSaveTimer,planDraftSaveTimer,planTextDrafts=preference('planTextDrafts',{}),plansSaving=Promise.resolve(),datasetSaving=Promise.resolve(),storageNoticeState={key:'',at:0};
+let workspaceUpdates;
 let drawerState=null,drawerClosing=null,drawerMotion=null,drawerContentMotion=null,drawerContentFrame=null,drawerEpoch=0,observationRequest=0,drawerOpener=null,drawerTrail=[],paintedObject='',paintedScrolls=new Map(),pagePositions=new Map(),scrollResets=new Set(),pendingUndo=null;
 let paintedStudy=null,researchTrail=[],researchSearchTimer,closedStudy=null,reportOrigin=null,reportNoteState='preview',reportNoteRevision=0,modalOrder=[];
 let navigationScope=preference('navigationScope','')||crypto.randomUUID(),historyRestoring=false,lastHistoryURL='',historyRequest=0;remember('navigationScope',navigationScope);
@@ -380,6 +383,7 @@ async function installDataset(dataset,{fresh=false,prepared=false,index=null,sta
   persistBooks();const savedNavigation=!fresh&&researchHistoryStudy(history.state,{scope:navigationScope,hash:location.hash});
   if(available&&savedNavigation&&studyAvailable(atlas,savedNavigation.study))await restoreNavigationEntry();else await paint(true);
   if(available)warmWorkspace();
+  workspaceUpdates?.start();
 }
 function storageNotice(key,message,action={label:'下载完整备份',cmd:'backup'}) {
   const now=Date.now();
@@ -417,6 +421,7 @@ async function backupWorkspace(){
  if(result.complete&&result.journal)workspaceProtection.receipt({at:Date.now(),stamp:result.journal.stamp||'',localRevision,counts:backupCounts(result.payload)});
  if(result.staleDataset)notify('已导出本页资料。其他页面已更新成绩材料，请保留此文件，刷新后再下载最新完整备份。');
  else if(!result.complete)notify('已导出当前可恢复资料。部分修改尚未保存或集合暂未读到，请保留本页，恢复后再下载完整备份。');
+ return result;
 }
 function recordNoteDraft(note){if(!noteJournal.record(note))storageNotice('note-draft','判断仍在当前页面，本机草稿暂存空间不足。请下载完整备份保留记录。');}
 function evidenceSaveState(note,value,error=false){for(const button of stage().querySelectorAll('[data-cmd=notebook-retry]'))if(button.dataset.id===note.id)button.hidden=!error;const count=stage().querySelector('[data-notebook-written]');if(count)count.textContent=session.notebook.filter(n=>n.note?.trim()).length+'份已有教师判断';for(const node of stage().querySelectorAll('[data-evidence-save]'))if(node.dataset.evidenceSave===note.id){node.textContent=value;node.dataset.state=error?'error':value==='已保存到本机'?'saved':'saving';}}
@@ -429,8 +434,8 @@ function persistNotebook(){
     const saved=await updateStored('notebook',latest=>{
       if(!Array.isArray(latest))return snapshot;
       merge=mergeNotebook(notebookBase,snapshot,latest);
-      return merge.records;
-    });
+      return sameJSONValue(merge.records,latest)?latest:merge.records;
+    },{skipUnchanged:true});
     if(generation===revision){
       if(merge?.remaps?.length){
         noteJournal.remap(merge.remaps);
@@ -467,8 +472,8 @@ async function persistPlansNow({quiet=false}={}) {
       saved=await updateStored('plans',latest=>{
         if(!Array.isArray(latest))return snapshot;
         merge=mergePlans(base,snapshot,latest);
-        return merge.records;
-      });
+        return sameJSONValue(merge.records,latest)?latest:merge.records;
+      },{skipUnchanged:true});
     }catch{
       if(!quiet)storageNotice('plans-error','训练计划暂存在当前页面，工作区数据库未能写入。请下载完整备份后重试。');
       return false;
@@ -770,7 +775,6 @@ function mountExerciseCenter(){
 
 async function openExercises(context={}){
  const attempt=++exerciseOpenRequest,dialog=document.getElementById('exercise-dialog'),content=document.getElementById('exercise-content');
- try{await ensureFeatureStyles('exercises');}catch(error){if(attempt===exerciseOpenRequest)notify(error.message);return;}if(attempt!==exerciseOpenRequest)return;
  if(!dialog.open){dialog.dataset.loading='true';content.innerHTML='<header class="exercise-heading"><span class="overline">个性化辅导中心</span><h2 id="exercise-title">正在打开辅导中心</h2><p role="status">正在读取本机练习与学生列表…</p></header><button class="button outline" data-cmd="exercise-loading-close">关闭</button>';showDialog(dialog);}
  try{
  const studio=await exerciseStudio();if(attempt!==exerciseOpenRequest||!dialog.open)return;const sid=context.hub?null:context.sid||planDraft?.sid,exam=context.exam||planDraft?.exam||atlas.latest;await studio.open({sid,exam,subject:context.subject,plan:!context.hub&&planDraft?.sid===sid&&planDraft.exam===exam?planDraft:null},{shouldOpen:()=>attempt===exerciseOpenRequest&&dialog.open});delete dialog.dataset.loading;
@@ -794,7 +798,7 @@ function rememberPlanText(path,value){
 }
 function drawPlan(){planControls?.close();const root=document.getElementById('plan-content');renderInto(root,followEditor(atlas,planDraft,planUI));enhance(root);notificationLayout.refresh();}
 function openPlan(context={}){
- clearTimeout(planSearchTimer);const existing=context.id?session.plans.find(p=>p.id===context.id):null,stored=planDraft?{plan:planDraft,ui:planUI}:preference('followDraft',null),resume=stored?.plan&&(context.id?stored.plan.id===context.id:!context.sid&&!stored.plan.id);
+ clearTimeout(planSearchTimer);const existing=context.id?session.plans.find(p=>p.id===context.id):null,stored=planDraft?{plan:planDraft,ui:planUI}:preference('followDraft',null),resume=planDraftMatches(context,stored?.plan);
  if(resume&&atlas.materialAt(stored.plan.sid,stored.plan.exam)&&(!stored.plan.id||session.plans.some(p=>p.id===stored.plan.id))){planDraft=draftForPlan(atlas,{},stored.plan);planUI=stored.ui||{};}
  else {const exam=context.exam||atlas.latest,sid=context.sid||materialPeople(atlas,exam)[0]?.sid;planDraft=draftForPlan(atlas,{...context,exam,sid},existing);planUI={questionFilter:'weak',no:'all'};}
  if(!planDraft.sid){notify('请先导入学生材料');return;}
@@ -849,6 +853,7 @@ async function commands(event) {
   if(/^(plan-|follow-|notebook-|reading-)|^(clear|undo|undo-action|capture)$/.test(d.cmd))invalidateViews();
   try {
     if(d.cmd==='exercise-loading-close'){exerciseOpenRequest++;delete document.getElementById('exercise-dialog').dataset.loading;await dismissDialog('exercise-dialog');return;}
+    if(d.cmd==='workspace-load-latest'){await workspaceUpdates.load();return;}
     if(d.cmd==='exercise-center'){await dismissDialog('exercise-dialog');go('library',{tab:'exercises'},true);mountExerciseCenter();return;}
     if(d.cmd==='exercise-hub'){await openExercises({hub:true});return;}
     if(d.cmd==='exercise-record'){await (await exerciseStudio()).openRecord(d.id);return;}
@@ -1119,6 +1124,7 @@ async function forms(event) {
 }
 export async function mount(boot=null) {
   history.scrollRestoration='manual';
+  workspaceUpdates=createWorkspaceUpdates({stamp:()=>datasetStamp,busy:()=>materialBusy,preserve:backupWorkspace,reload:()=>{researchCheckpoint.flush();persistBooks();location.reload();}});
   let teachingDay=todayLocal(),teachingDayTimer;
   const refreshTeachingDay=()=>{clearTimeout(teachingDayTimer);const next=todayLocal();if(next!==teachingDay){teachingDay=next;invalidateViews();if(current==='follow'&&hasMaterials(atlas.data))paint(false);}teachingDayTimer=setTimeout(refreshTeachingDay,nextTeachingDayDelay());};
   refreshTeachingDay();window.addEventListener('focus',refreshTeachingDay);document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshTeachingDay();});
@@ -1200,6 +1206,7 @@ export async function mount(boot=null) {
     if(planJournalApplied||!Array.isArray(storedPlans))await persistPlansNow({quiet:true});
     if(Object.keys(noteJournal.drafts).length||Object.keys(noteJournal.textDrafts).length){persistNotebook().catch(()=>storageNotice('note-draft','教师判断已从本机草稿恢复，请下载完整备份保留记录。'));}if(materials.origin==='migrated')notify('原工作区材料已恢复');
     window.dispatchEvent(new Event('hengji:workspace-ready'));
+    workspaceUpdates.start();
     if(preference('exercisePending',false))setTimeout(()=>exerciseStudio().then(studio=>studio.resume()).catch(()=>{}),0);
   }catch(error){if(startRevision!==revision)return;stage().setAttribute('aria-busy','false');stage().innerHTML='<section class="block workspace-recovery" role="alert"><span class="overline">本机资料</span><h1>资料暂未读入</h1><p>已保存的材料与记录保留原状，请重新读取后继续。</p><p>'+esc(error.message)+'</p>'+button('重新读取资料','reload',{},'accent')+'</section>';}
 }

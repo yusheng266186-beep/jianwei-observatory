@@ -1,3 +1,4 @@
+import {sameJSONValue} from './value-equality.js';
 // Three-way saves preserve changes made by other tabs. Document and approval
 // are one unit: an approval must never migrate onto a different sheet.
 const transient=new Set(['progress','generationLog']);
@@ -6,6 +7,10 @@ const taskFields=new Set(['status','acceptedAt','serverCreatedAt','startedAt','f
 const equal=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
 const fields=(row,keys)=>Object.fromEntries([...keys].sort().filter(k=>Object.hasOwn(row||{},k)).map(k=>[k,row[k]]));
 export const exerciseRecordSnapshot=rows=>structuredClone(rows.map(row=>Object.fromEntries(Object.entries(row).filter(([k])=>!transient.has(k)))));
+export function exerciseRecordsUnchanged(rows,baseline){
+ const persisted=row=>Object.fromEntries(Object.entries(row).filter(([key])=>!transient.has(key)));
+ return rows===baseline||rows.length===baseline.length&&rows.every((row,i)=>row===baseline[i]||sameJSONValue(persisted(row),persisted(baseline[i])));
+}
 export const exerciseDocumentVersion=row=>JSON.stringify(fields(row,documentFields));
 function syncObject(target,source,{root=false}={}){
  for(const key of Object.keys(target))if(!(root&&transient.has(key))&&!Object.hasOwn(source,key))delete target[key];
@@ -23,6 +28,9 @@ function newestTask(local,remote){
  return (local.lastCheckedAt||0)>(remote.lastCheckedAt||0)?local:remote;
 }
 export function mergeExerciseRecords(base,local,latest,{removed=[]}={}){
+ // The caller may reuse its immutable baseline when no local record changed.
+ // Still read the latest transaction value, so remote edits/deletions win.
+ if(base===local){const deleted=new Set(removed);return latest?.some(row=>deleted.has(row.id))?latest.filter(row=>!deleted.has(row.id)):latest||[];}
  const before=new Map(base.map(r=>[r.id,r])),deleted=new Set(removed),result=new Map((latest||[]).filter(r=>!deleted.has(r.id)).map(r=>[r.id,r]));
  for(const row of local){
   const old=before.get(row.id),saved=result.get(row.id);

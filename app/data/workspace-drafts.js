@@ -1,6 +1,11 @@
 import {remapContext} from './context.js';
 import {planDraftIdentity,planTextPaths} from './workspace-merge.js';
 
+export function planDraftMatches(context={},draft){
+ if(!draft)return false;if(context.id)return draft.id===context.id;if(draft.id)return false;
+ return (!context.sid||draft.sid===context.sid)&&(!context.exam||String(draft.exam)===String(context.exam))&&(!context.key||draft.training?.key===context.key);
+}
+
 export function workspaceDrafts({followDraft=null,planTextDrafts={}}={}){
  const draft=followDraft?.plan&&typeof followDraft.plan.sid==='string'?structuredClone(followDraft):null;
  const journal={};
