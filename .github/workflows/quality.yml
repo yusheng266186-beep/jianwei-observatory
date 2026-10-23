@@ -46,13 +46,13 @@ jobs:
           trap 'kill "$server_pid"' EXIT
           curl --retry 10 --retry-connrefused --retry-delay 1 --fail --silent http://127.0.0.1:4173/ > /dev/null
           npm run test:smoke
+          npm run test:global-motion
           npm run test:keyboard
           npm run test:workspace-care
           npm run test:archive-reliability
           npm run test:experience
           npm run test:continuation
           npm run test:interaction-polish
-          npm run test:global-motion
           npm run test:large-workspace
           if [ "$AUDIT_BROWSER" = chromium ]; then npm run test:document-regression; fi
       - uses: actions/upload-artifact@v4
