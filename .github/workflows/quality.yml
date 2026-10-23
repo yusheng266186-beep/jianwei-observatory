@@ -50,6 +50,7 @@ jobs:
           npm run test:workspace-care
           npm run test:archive-reliability
           npm run test:experience
+          npm run test:continuation
           npm run test:large-workspace
           if [ "$AUDIT_BROWSER" = chromium ]; then npm run test:document-regression; fi
       - uses: actions/upload-artifact@v4
@@ -71,6 +72,9 @@ jobs:
             .audit-output/experience-reliability-*/checks.json
             .audit-output/experience-reliability-*/*-failure.json
             .audit-output/experience-reliability-*/*.png
+            .audit-output/continuation-reliability-*/checks.json
+            .audit-output/continuation-reliability-*/*-failure.json
+            .audit-output/continuation-reliability-*/*.png
             .audit-output/document-regression/exports.json
           if-no-files-found: ignore
           include-hidden-files: true

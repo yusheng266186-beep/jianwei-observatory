@@ -10,3 +10,12 @@ test('temporary failures back off while continuing only the original probe',()=>
   assert.deepEqual(probeRecovery(error,1),{retry:true,delay:5000});assert.equal(probeRecovery(error,2).delay,10000);assert.equal(probeRecovery(error,10).delay,30000);
  }
 });
+test('a missing probe is queried briefly after an uncertain submission, then terminates',()=>{
+ for(const error of [{code:'JOB_NOT_FOUND'},{status:404}]){
+  assert.deepEqual(probeRecovery(error,1,{now:1000,unconfirmedUntil:9000}),{retry:true,delay:5000});
+  assert.deepEqual(probeRecovery(error,2,{now:8000,unconfirmedUntil:9000}),{retry:true,delay:1000});
+  assert.equal(probeRecovery(error,3,{now:9000,unconfirmedUntil:9000}).retry,false);
+ }
+ assert.equal(probeRecovery({status:410},1,{now:1000,unconfirmedUntil:9000}).retry,false);
+ assert.equal(probeRecovery({status:403},1,{now:1000,unconfirmedUntil:9000}).retry,false);
+});

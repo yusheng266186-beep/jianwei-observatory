@@ -19,7 +19,7 @@ const roleLabel=value=>({exercise:'出题',diagram:'图示',repair:'校检',imag
 const roleSelection=(current,value)=>value==='image'?(current.imageSelection||state.image.selection):value==='diagram'?(current.diagramSelection||current.selection):value==='repair'?(current.repairSelection||current.selection):current.selection;
 function resetRepairDraft(){repairInheritDraft=!state.current.repairSelection;repairAttemptsDraft=state.current.repairAttempts??1;repairWheelStamp='';}
 const repairWheels=installExerciseWheels($('repair-policy'),(_,value)=>{if(busy)return;repairAttemptsDraft=value;repairWheelStamp=String(value);renderSelection();message('已选择'+(value===0?'关闭自动修复':value+'次自动修复')+'，应用配置后生效。');});
-let token='',state,selection,busy=false,probeId=null,probeSelection='',pollTimer=0,probeGeneration=0,probeFailures=0,usageState=null,usageBusy=false,usageDirty=false;
+let token='',state,selection,busy=false,probeId=null,probeSelection='',pollTimer=0,probeGeneration=0,probeFailures=0,probeUnconfirmedUntil=0,usageState=null,usageBusy=false,usageDirty=false;
 const requests=createRequestScope();
 let usageDraft=30,diagnosticDays=7,diagnosticData=null,pelicanPanel=null,cloudAccountsPanel=null;
 
@@ -62,25 +62,26 @@ $('search').addEventListener('input',()=>renderModels({resetScroll:true}));
 $('history').addEventListener('click',e=>{const b=e.target.closest('[data-history]');if(b&&!busy){const h=state.history.find(h=>h.revision===Number(b.dataset.history));if(h?.role==='image'){imageDraft={...roleSelection(h,'image')};renderImageServices();$('image-service-message').textContent='已选取历史生图配置，应用后生效。';return;}role=h.role||'exercise';selection={...roleSelection(h,role)};if(role==='repair'){repairInheritDraft=!h.repairSelection;if(repairInheritDraft)selection={...state.current.selection};repairAttemptsDraft=h.repairAttempts??1;repairWheelStamp='';}$('search').value='';render();if(!focusMatching($('history'),'data-history',b.dataset.history))focusMatching($('models'),'data-model',selection.model);}});
 $('refresh').addEventListener('click',async()=>{try{if(await load({keep:true}))message('已同步最新配置。');}catch(e){if(e.code==='SESSION_CHANGED')return;message(e.message,true);}});
 $('apply').addEventListener('click',async()=>{if(busy)return;const ticket=requests.ticket();busy=true;renderSelection();const chosen={...selection};message('正在保存配置…');try{const saved=await api('/admin/models',{method:'POST',body:{expectedRevision:state.current.revision,selection:role==='repair'&&repairInheritDraft?null:chosen,role,...(role==='repair'?{repairAttempts:repairAttemptsDraft}:{})}});state.current=saved.current;await load();message(roleLabel(role)+'配置已生效，新任务将使用 '+label(chosen).model+'。');}catch(e){if(!requests.current(ticket))return;if(e.code==='MODEL_REVISION_CONFLICT')await load();message(e.message,true);}finally{if(requests.current(ticket)){busy=false;if(state)renderSelection();}}});
-function endProbe(text){clearTimeout(pollTimer);probeGeneration++;probeId=null;probeFailures=0;sessionStorage.removeItem('jianwei-model-probe');$('probe-stop').hidden=true;$('probe-state').classList.remove('loading');$('probe-state').textContent=text;if(state)renderSelection();}
+function rememberProbe(){try{sessionStorage.setItem('jianwei-model-probe',JSON.stringify({id:probeId,label:probeSelection,unconfirmedUntil:probeUnconfirmedUntil}));}catch{}}
+function endProbe(text){probeUnconfirmedUntil=0;clearTimeout(pollTimer);probeGeneration++;probeId=null;probeFailures=0;try{sessionStorage.removeItem('jianwei-model-probe');}catch{}$('probe-stop').hidden=true;$('probe-state').classList.remove('loading');$('probe-state').textContent=text;if(state)renderSelection();}
 async function pollProbe(){
  if(!probeId)return;const ticket=requests.ticket(),id=probeId,generation=probeGeneration,current=()=>requests.current(ticket)&&id===probeId&&generation===probeGeneration;
  try{
-  const r=await api('/jobs/'+id);if(!current())return;probeFailures=0;
+  const r=await api('/jobs/'+id);if(!current())return;probeFailures=0;if(probeUnconfirmedUntil){probeUnconfirmedUntil=0;rememberProbe();}
   if(['queued','running'].includes(r.status)){pollTimer=setTimeout(pollProbe,2500);return;}
   const latency=Number.isFinite(r.probe?.latencyMs)?'（'+(r.probe.latencyMs/1000).toFixed(1)+' 秒）':'';
   endProbe(probeSelection+' · '+(r.status==='ready'?'连接通过'+latency:errors[r.error]||'测试未完成，请稍后再试。'));await load({keep:true});
  }catch(e){
-  if(!current())return;const recovery=probeRecovery(e,++probeFailures);
+  if(!current())return;const recovery=probeRecovery(e,++probeFailures,{unconfirmedUntil:probeUnconfirmedUntil});
   if(!recovery.retry){endProbe(recovery.message);return;}
-  if(token){$('probe-state').textContent='连接暂时中断，正在查询原测试…';pollTimer=setTimeout(pollProbe,recovery.delay);}
+  if(token){$('probe-state').textContent=probeUnconfirmedUntil?'提交结果尚未确认，正在查询原测试，请勿重复提交…':'连接暂时中断，正在查询原测试…';pollTimer=setTimeout(pollProbe,recovery.delay);}
  }
 }
 $('probe-stop').addEventListener('click',()=>endProbe('已停止查询。云端已接收的测试不受影响，可稍后刷新查看连接记录。'));
-$('probe').addEventListener('click',async()=>{if(probeId||busy)return;const ticket=requests.ticket(),generation=++probeGeneration,id=crypto.randomUUID(),current=()=>requests.current(ticket)&&generation===probeGeneration&&probeId===id;probeId=id;probeFailures=0;probeSelection=label(selection).model;sessionStorage.setItem('jianwei-model-probe',JSON.stringify({id:probeId,label:probeSelection,selection:{...selection}}));renderSelection();$('probe-state').classList.add('loading');$('probe-state').textContent=probeSelection+' · 正在测试，预计 5–45 秒…';try{await api('/admin/probes',{method:'POST',id,body:selection});if(current())pollProbe();}catch(e){if(current())endProbe(e.message);}});
+$('probe').addEventListener('click',async()=>{if(probeId||busy)return;const ticket=requests.ticket(),generation=++probeGeneration,id=crypto.randomUUID(),current=()=>requests.current(ticket)&&generation===probeGeneration&&probeId===id;probeId=id;probeFailures=0;probeUnconfirmedUntil=Date.now()+60000;probeSelection=label(selection).model;rememberProbe();renderSelection();$('probe-state').classList.add('loading');$('probe-state').textContent=probeSelection+' · 正在测试，预计 5–45 秒…';try{await api('/admin/probes',{method:'POST',id,body:selection});if(current()){probeUnconfirmedUntil=0;rememberProbe();pollProbe();}}catch(e){if(!current())return;if(!probeRecovery(e).retry||e.status===429){endProbe(e.message);return;}$('probe-state').textContent='提交结果尚未确认，正在查询原测试，请勿重复提交…';pollProbe();}});
 function resumeProbe(){
  if(probeId)return;
- try{const pending=JSON.parse(sessionStorage.getItem('jianwei-model-probe')||'null');if(pending?.id){probeId=pending.id;probeSelection=pending.label;$('probe-state').classList.add('loading');$('probe-state').textContent=probeSelection+' · 正在恢复测试状态…';renderSelection();pollProbe();}}
+ try{const pending=JSON.parse(sessionStorage.getItem('jianwei-model-probe')||'null');if(/^[a-f0-9-]{36}$/i.test(pending?.id||'')){probeId=pending.id;probeSelection=pending.label;probeUnconfirmedUntil=Math.min(Number(pending.unconfirmedUntil)||0,Date.now()+60000);$('probe-state').classList.add('loading');$('probe-state').textContent=probeSelection+' · 正在恢复测试状态…';renderSelection();pollProbe();}}
  catch{sessionStorage.removeItem('jianwei-model-probe');}
 }
 function cloudWakeDefaults(){
