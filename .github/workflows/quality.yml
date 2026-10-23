@@ -45,6 +45,7 @@ jobs:
           server_pid=$!
           trap 'kill "$server_pid"' EXIT
           curl --retry 10 --retry-connrefused --retry-delay 1 --fail --silent http://127.0.0.1:4173/ > /dev/null
+          node tests/motion-probe.cjs
           npm run test:global-motion
           npm run test:smoke
           npm run test:keyboard
@@ -83,6 +84,8 @@ jobs:
             .audit-output/global-motion-*/checks.json
             .audit-output/global-motion-*/*-failure.json
             .audit-output/global-motion-*/*.png
+            .audit-output/motion-probe-*/probe.json
+            .audit-output/motion-probe-*/*.png
             .audit-output/document-regression/exports.json
           if-no-files-found: ignore
           include-hidden-files: true
