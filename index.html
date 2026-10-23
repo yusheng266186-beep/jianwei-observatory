@@ -20,19 +20,57 @@ body[data-workspace=empty] .brand strong,body[data-workspace=empty] .welcome-sch
 .welcome-route{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;list-style:none;margin:5px 0 0;padding:22px 0 0;border-top:1px solid #dce7ee8c}
 .welcome-route li{display:flex;align-items:flex-start;gap:14px;min-width:0}.welcome-route b{font-size:11px;font-weight:500;letter-spacing:.12em;color:#7696ab;padding-top:3px}.welcome-route li>div{display:flex;flex-direction:column;gap:3px;min-width:0}.welcome-route strong{font-size:13px;font-weight:500}.welcome-route span{font-size:11px;color:var(--muted)}
 .welcome-route+.welcome-footer{padding-top:12px;border-top:0}.launch-progress{display:flex;align-items:center;gap:9px;margin-top:18px;font-size:11px;color:var(--muted);overflow-wrap:anywhere;max-width:100%}.launch-progress>span{min-width:0;flex:1}.launch-progress i{width:6px;height:6px;border-radius:50%;background:#688da4;flex-shrink:0;animation:entry-pulse 1.7s ease-in-out infinite}.launch-progress[data-state=error] i{background:#a36952;animation:none}.launch-progress .button{padding:4px 6px;min-height:28px;flex-shrink:0}
-body[data-workspace=empty] .welcome-workspace{animation:entry-arrive .65s cubic-bezier(.16,1,.3,1) both}body[data-workspace=empty] .button{transition:background .2s,box-shadow .2s,transform .25s;-webkit-tap-highlight-color:transparent}body[data-workspace=empty] .button:active{transform:translateY(1px)}body[data-workspace=empty] .button:focus-visible{outline:0;box-shadow:inset 0 0 0 2px #54809e88,0 3px 15px -9px #315f7a66}
+body[data-workspace=empty] .welcome-workspace{animation:entry-arrive var(--motion-arrive,340ms) var(--motion-ease,var(--ease)) both}body[data-workspace=empty] .button{transition:background-color var(--motion-feedback,160ms) var(--ease),box-shadow var(--motion-feedback,160ms) var(--ease),transform var(--motion-control,220ms) var(--ease),scale var(--motion-control,220ms) var(--ease);-webkit-tap-highlight-color:transparent}body[data-workspace=empty] .button:active{transform:translateY(1px);scale:.986;transition-duration:var(--motion-press,90ms)}body[data-workspace=empty] .button:focus-visible{outline:0;box-shadow:inset 0 0 0 2px #54809e88,0 3px 15px -9px #315f7a66}
 @keyframes entry-arrive{from{opacity:.6;transform:translateY(9px)}to{opacity:1;transform:none}}@keyframes entry-pulse{50%{opacity:.3}}
 @media(hover:hover){body[data-workspace=empty] .button.quiet:hover{background:#ffffff90}body[data-workspace=empty] .button.accent:hover{background:#264f6a;box-shadow:inset 0 1px #ffffff40,0 9px 23px -11px #25465e70}}
 @media(max-width:760px){.welcome-route{gap:10px;padding-top:18px}.welcome-route li{flex-direction:column;gap:5px}.welcome-route strong{font-size:12px}.welcome-route span{font-size:10px;line-height:1.7}.welcome-route+.welcome-footer{padding-top:10px}.welcome-actions{gap:6px}.welcome-actions>.accent{padding:12px 16px}.welcome-actions>.quiet{padding-inline:6px}.launch-progress{font-size:10px}}
 @media(prefers-reduced-motion:reduce){body[data-workspace=empty] .welcome-workspace,.launch-progress i{animation:none}}
 body[data-motion=calm] .welcome-workspace,body[data-motion=calm] .launch-progress i{animation:none}
-@media(max-width:360px){.welcome-copy h1{font-size:40px}}</style>
-  <link rel="stylesheet" data-href="./assets/runtime-foundation-3b25bc96a96f.css" data-workspace-styles>
+@media(max-width:360px){.welcome-copy h1{font-size:40px}}
+
+/* Shared motion language. Native springs retain velocity on interruption;
+   sampled critical damping gives CSS the same rounded start and quiet tail. */
+:root{
+ --motion-press:90ms;--motion-feedback:160ms;--motion-control:220ms;
+ --motion-disclose:280ms;--motion-arrange:300ms;--motion-arrive:340ms;
+ --motion-travel:400ms;--motion-leave:180ms;--motion-hover-delay:140ms;
+ --motion-ease:cubic-bezier(.22,1,.36,1);--motion-travel-ease:cubic-bezier(.2,.78,.22,1);
+ --motion-exit-ease:cubic-bezier(.4,0,.75,.25);--motion-press-ease:cubic-bezier(.2,.7,.3,1);
+ --ease:var(--motion-ease);--spring:var(--motion-ease);
+}
+@supports(animation-timing-function:linear(0,1)){
+ :root{--motion-ease:linear(0,.0102 2%,.0371 4%,.0983 7%,.1742 10%,.284 14%,.4443 20%,.6233 28%,.781 38%,.8925 50%,.9597 65%,.9873 80%,1);--motion-travel-ease:var(--motion-ease)}
+}
+body :is(.button,button,a.button,summary,input,textarea){transition-timing-function:var(--motion-ease)}
+body :is(button,a.button,summary)[data-motion-control]{transform-origin:center;touch-action:manipulation}
+body .button[data-motion-control]:active:where(:not(:disabled)){transform:translateY(0);transition-duration:var(--motion-press);transition-timing-function:var(--motion-press-ease)}
+body :is(.top,.login,.settings,.providers,.chooser,.diagnostics-panel,.figure-sample,.figure-detail) button[data-motion-control]:active:where(:not(:disabled)){transform:translateY(0);transition-duration:var(--motion-press)}
+body :is(.navigation-dock button,.scene-tabs .chip,.drawer-tabs .chip)[data-motion-control]{transform-origin:center}
+body :is(.cloud-flow-inner,.account-flow-inner){animation-duration:var(--motion-control);animation-timing-function:var(--motion-ease)}
+/* Selection labels keep fixed metrics. Only the background spring changes size. */
+.dock-indicator[data-motion-owned=indicator],.selection-indicator[data-motion-owned=indicator]{transition:none}
+body .exercise-wheel:is(.is-scrolling,.is-dragging) .exercise-wheel-option>span{transition:none}
+[data-surface-motion=managed]{animation:none!important;transition:none!important}
+dialog[data-surface-motion=managed]::backdrop{animation:none}
+dialog[data-backdrop-phase=entering]::backdrop{animation:surface-backdrop-in var(--motion-arrive) var(--motion-ease) both}
+dialog[data-backdrop-phase=leaving]::backdrop{animation:surface-backdrop-out var(--motion-leave) var(--motion-exit-ease) both}
+@keyframes surface-backdrop-in{from{opacity:var(--surface-backdrop-from,0)}to{opacity:1}}
+@keyframes surface-backdrop-out{from{opacity:var(--surface-backdrop-from,1)}to{opacity:0}}
+/* The live notification stays in the top layer through its exit. */
+#toast[data-surface-phase=leaving]{display:flex;pointer-events:none}
+#toast[data-surface-phase=leaving] :is(button,a){pointer-events:none}
+.chart-tooltip[data-surface-motion=managed]{will-change:auto}
+@media(hover:none){body :is(button,a.button,summary)[data-motion-control]:hover{translate:none}}
+body[data-motion=calm] *,body[data-motion=calm] *::before,body[data-motion=calm] *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+body[data-motion=calm] :is(.button,button[data-motion-control],summary[data-motion-control],.figure-sample):is(:hover,:active){transform:none;translate:none;scale:none}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+@media(prefers-reduced-motion:reduce){body[data-workspace=empty] .button:active,body .figure-sample:hover{transform:none;scale:none}}</style>
+  <link rel="stylesheet" data-href="./assets/runtime-foundation-ef1c421f8181.css" data-workspace-styles>
   <link rel="stylesheet" data-href="./assets/runtime-report-reading-daa030bab1b8.css" data-feature-styles="reports">
-  <link rel="stylesheet" data-href="./assets/runtime-research-457e5b236ac4.css" data-workspace-styles>
+  <link rel="stylesheet" data-href="./assets/runtime-research-f47cb4573fa6.css" data-workspace-styles>
   <link rel="stylesheet" data-href="./assets/runtime-exercises-bb140abdcba3.css" data-feature-styles="exercises">
-  <link rel="stylesheet" data-href="./assets/runtime-finish-58c08b85b68b.css" data-workspace-styles>
-  <script src="./app/launch.js?v=runtime-v54" data-runtime="./runtime/main-MMY64AEO.js" data-storage="./runtime/storage-7U7Z7LVZ.js" data-prepare="./runtime/prepare-W2EFWCXN.js" data-importer="../app/runtime/importer-UMEQBE65.js" data-preload="[&quot;../app/runtime/shared-LDJRZ6KL.js&quot;,&quot;../app/runtime/shared-4ZXJZ5S3.js&quot;,&quot;../app/runtime/shared-VUBVUIEW.js&quot;,&quot;../app/runtime/shared-GIKLZFEU.js&quot;,&quot;../app/runtime/shared-7MMYHJMB.js&quot;,&quot;../app/runtime/shared-LEW7AEWW.js&quot;,&quot;../app/runtime/shared-X7V5UWHZ.js&quot;,&quot;../app/runtime/shared-EJ4VR2V3.js&quot;,&quot;../app/runtime/shared-22DNDQP2.js&quot;,&quot;../app/runtime/shared-LAZ35GIL.js&quot;,&quot;../app/runtime/shared-RMTIRWQZ.js&quot;,&quot;../app/runtime/shared-44VAQO44.js&quot;,&quot;../app/runtime/shared-PAV3FDI5.js&quot;,&quot;../app/runtime/shared-FOPJNSNX.js&quot;,&quot;../app/runtime/shared-F43TXK24.js&quot;,&quot;../app/runtime/shared-AKOWLLA6.js&quot;,&quot;../app/runtime/shared-OSBWC4IZ.js&quot;,&quot;../app/runtime/shared-OYBO36OO.js&quot;,&quot;../app/runtime/shared-BK7ZVNJK.js&quot;,&quot;../app/runtime/shared-6V7U7ZWQ.js&quot;,&quot;../app/runtime/shared-MRUPZPR3.js&quot;,&quot;../app/runtime/shared-ALU6GCQR.js&quot;,&quot;../app/runtime/shared-XM3VEEEU.js&quot;,&quot;../app/runtime/shared-KRHZRIX7.js&quot;,&quot;../app/runtime/shared-XGHOXAPK.js&quot;,&quot;../app/runtime/shared-OIY7F67X.js&quot;,&quot;../app/runtime/shared-QGKTY336.js&quot;]" defer></script>
+  <link rel="stylesheet" data-href="./assets/runtime-finish-5ecfd7756deb.css" data-workspace-styles>
+  <script src="./app/launch.js?v=runtime-v54" data-runtime="./runtime/main-J4YADQ4J.js" data-storage="./runtime/storage-7U7Z7LVZ.js" data-prepare="./runtime/prepare-W2EFWCXN.js" data-importer="../app/runtime/importer-UMEQBE65.js" data-preload="[&quot;../app/runtime/shared-LDJRZ6KL.js&quot;,&quot;../app/runtime/shared-4ZXJZ5S3.js&quot;,&quot;../app/runtime/shared-VUBVUIEW.js&quot;,&quot;../app/runtime/shared-GIKLZFEU.js&quot;,&quot;../app/runtime/shared-7MMYHJMB.js&quot;,&quot;../app/runtime/shared-LEW7AEWW.js&quot;,&quot;../app/runtime/shared-X7V5UWHZ.js&quot;,&quot;../app/runtime/shared-EJ4VR2V3.js&quot;,&quot;../app/runtime/shared-22DNDQP2.js&quot;,&quot;../app/runtime/shared-LAZ35GIL.js&quot;,&quot;../app/runtime/shared-RMTIRWQZ.js&quot;,&quot;../app/runtime/shared-44VAQO44.js&quot;,&quot;../app/runtime/shared-PAV3FDI5.js&quot;,&quot;../app/runtime/shared-B27ELWU3.js&quot;,&quot;../app/runtime/shared-BUP7PYWF.js&quot;,&quot;../app/runtime/shared-AKOWLLA6.js&quot;,&quot;../app/runtime/shared-OSBWC4IZ.js&quot;,&quot;../app/runtime/shared-OYBO36OO.js&quot;,&quot;../app/runtime/shared-BK7ZVNJK.js&quot;,&quot;../app/runtime/shared-6V7U7ZWQ.js&quot;,&quot;../app/runtime/shared-MRUPZPR3.js&quot;,&quot;../app/runtime/shared-ALU6GCQR.js&quot;,&quot;../app/runtime/shared-XM3VEEEU.js&quot;,&quot;../app/runtime/shared-KRHZRIX7.js&quot;,&quot;../app/runtime/shared-XGHOXAPK.js&quot;,&quot;../app/runtime/shared-OIY7F67X.js&quot;,&quot;../app/runtime/shared-QGKTY336.js&quot;]" defer></script>
 </head>
 <body data-workspace="empty">
   <header class="masthead">

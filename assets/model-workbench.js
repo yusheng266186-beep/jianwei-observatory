@@ -1,3 +1,5 @@
+import {installControlMotion} from '../app/ui/control-motion.js';
+installControlMotion();
 import {modelSpeedLabel,modelPerformanceHTML} from '../app/ui/model-performance.js';
 import {installDisclosures} from '../app/ui/disclosure-motion.js';
 installDisclosures();

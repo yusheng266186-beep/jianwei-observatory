@@ -24,20 +24,8 @@
  --ui-control:linear-gradient(135deg,#ffffff87,#f2f8fc3b);
  --ui-control-shadow:inset 0 1px 0 #ffffffe0,0 5px 12px -11px #284c6638;
  --ui-focus:#648ca963;
- --motion-feedback:160ms;--motion-control:220ms;--motion-disclose:260ms;
- --motion-ease:cubic-bezier(.22,1,.36,1);--motion-travel:400ms;--motion-travel-ease:cubic-bezier(.2,.78,.22,1);
- --motion-exit-ease:cubic-bezier(.4,0,.75,.25);--ease:var(--motion-ease);--spring:var(--motion-ease);
 }
-/* Sampled critical damping: a rounded start and long, quiet settling tail.
-   Older engines retain the cubic fallback; native travel uses the same physics. */
-@supports(animation-timing-function:linear(0,1)){
- :root{--motion-ease:linear(0,.0102 2%,.0371 4%,.0983 7%,.1742 10%,.284 14%,.4443 20%,.6233 28%,.781 38%,.8925 50%,.9597 65%,.9873 80%,1);--motion-travel-ease:var(--motion-ease)}
-}
-.dock-indicator[data-motion-owned=indicator],.selection-indicator[data-motion-owned=indicator]{transition:none}
-body :is(.chip,.exam-stop,.exercise-choice-trigger,.plan-picker-trigger,.reading-choice,.figure-filters button,.usage-presets button){transition-timing-function:var(--motion-ease)}
-body .button:active:where(:not(:disabled)){transition-timing-function:cubic-bezier(.2,.7,.3,1)}
-/* Wheel depth follows its actual distance from center, including native inertia.
-   Its fixed font metrics and row stride remain unchanged while the text scales. */
+/* Wheel depth follows native scroll position without animating font metrics. */
 body .exercise-wheel-option[style]>span,body .exercise-wheel-option[aria-selected=true][style]>span{transform:scale(calc(.8 + .2*var(--wheel-focus,0)));opacity:calc(.63 + .37*var(--wheel-focus,0))}
 body .exercise-wheel:is(.is-scrolling,.is-dragging) .exercise-wheel-option>span{transition:none}
 body{color:var(--ink);font-family:var(--sans)}

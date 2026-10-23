@@ -1,3 +1,5 @@
+import {installControlMotion} from '../app/ui/control-motion.js';
+installControlMotion();
 import {installDisclosures} from '../app/ui/disclosure-motion.js';
 installDisclosures();
 import {openSurface,closeSurface} from '../app/ui/surface-motion.js';

@@ -1,3 +1,4 @@
+import {motionReduced} from './motion-preference.js';
 import {installCommittedInput} from './committed-input.js';
 import {practiceFeedbackSummary} from '../engine/exercise-feedback.js';
 import {exerciseSyncMessage} from '../engine/exercise-sync.js';
@@ -63,7 +64,7 @@ export function createExerciseCenter({records,getAtlas,authed,onOpen,onNew,onRef
   enhance(host,{reveal:false});times();
  }
  function changeFilters(){clearTimeout(searchTimer);searchTimer=null;limit=24;confirmation=null;message='';render();}
- function reveal(node,focus=false){if(!node)return;if(focus){node.tabIndex=-1;node.focus({preventScroll:true});}node.scrollIntoView({block:'nearest',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});}
+ function reveal(node,focus=false){if(!node)return;if(focus){node.tabIndex=-1;node.focus({preventScroll:true});}node.scrollIntoView({block:'nearest',behavior:motionReduced()?'instant':'smooth'});}
  function install(root){
   listeners=new AbortController();const signal=listeners.signal,smallScreen=matchMedia('(max-width:600px)');
   smallScreen.addEventListener('change',()=>{if(root!==host)return;const scope=root.querySelector('[data-center-scope-tools]');if(scope)scope.open=!smallScreen.matches;choices?.close(false,true);},{signal});

@@ -52,6 +52,7 @@
     "test:experience": "node tests/experience-reliability.cjs",
     "test:continuation": "node tests/continuation-reliability.cjs",
     "test:interaction-polish": "node tests/interaction-polish.cjs",
+    "test:global-motion": "node tests/global-motion.cjs",
     "test:document-regression": "node tests/document-regression.cjs",
     "test:report-render-race": "node tests/report-render-race.cjs",
     "test:report-types": "node tests/report-types.cjs",

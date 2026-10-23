@@ -1,5 +1,5 @@
 {
-  "main": "runtime/main-MMY64AEO.js",
+  "main": "runtime/main-J4YADQ4J.js",
   "storage": "runtime/storage-7U7Z7LVZ.js",
   "prepare": "runtime/prepare-W2EFWCXN.js",
   "importer": "app/runtime/importer-UMEQBE65.js",
@@ -17,8 +17,8 @@
     "app/runtime/shared-RMTIRWQZ.js",
     "app/runtime/shared-44VAQO44.js",
     "app/runtime/shared-PAV3FDI5.js",
-    "app/runtime/shared-FOPJNSNX.js",
-    "app/runtime/shared-F43TXK24.js",
+    "app/runtime/shared-B27ELWU3.js",
+    "app/runtime/shared-BUP7PYWF.js",
     "app/runtime/shared-AKOWLLA6.js",
     "app/runtime/shared-OSBWC4IZ.js",
     "app/runtime/shared-OYBO36OO.js",
@@ -32,11 +32,11 @@
     "app/runtime/shared-OIY7F67X.js",
     "app/runtime/shared-QGKTY336.js"
   ],
-  "css": "assets/runtime-foundation-3b25bc96a96f.css",
-  "landing": "assets/landing-8e0095cb7b55.css",
+  "css": "assets/runtime-foundation-ef1c421f8181.css",
+  "landing": "assets/landing-36583039f885.css",
   "workspaceStyles": [
     {
-      "file": "assets/runtime-foundation-3b25bc96a96f.css",
+      "file": "assets/runtime-foundation-ef1c421f8181.css",
       "feature": ""
     },
     {
@@ -44,7 +44,7 @@
       "feature": "reports"
     },
     {
-      "file": "assets/runtime-research-457e5b236ac4.css",
+      "file": "assets/runtime-research-f47cb4573fa6.css",
       "feature": ""
     },
     {
@@ -52,7 +52,7 @@
       "feature": "exercises"
     },
     {
-      "file": "assets/runtime-finish-58c08b85b68b.css",
+      "file": "assets/runtime-finish-5ecfd7756deb.css",
       "feature": ""
     }
   ],
@@ -60,19 +60,20 @@
     "assets/figure-library-20349b898c28.css",
     "assets/model-workbench-010e5d6d02d6.css",
     "assets/runtime-exercises-bb140abdcba3.css",
-    "assets/runtime-finish-58c08b85b68b.css",
-    "assets/runtime-foundation-3b25bc96a96f.css",
+    "assets/runtime-finish-5ecfd7756deb.css",
+    "assets/runtime-foundation-ef1c421f8181.css",
     "assets/runtime-report-reading-daa030bab1b8.css",
-    "assets/runtime-research-457e5b236ac4.css",
+    "assets/runtime-research-f47cb4573fa6.css",
     "styles/fields-a6e6da17cff4.css",
+    "styles/motion-9c525563f090.css",
     "styles/reading-fonts-daadf771f13d.css",
     "styles/refinement-931faf8c3de1.css",
-    "styles/visual-language-498e033a94dd.css",
+    "styles/visual-language-99dac54117e3.css",
     "styles/wheels-907315f6eddb.css"
   ],
   "standalone": {
-    "figures": "runtime/figure-library-EU3JHQHD.js",
-    "models": "runtime/model-workbench-MVGOCJ6M.js"
+    "figures": "runtime/figure-library-PDGU6Y6Q.js",
+    "models": "runtime/model-workbench-LD75FS4Q.js"
   },
   "files": [
     "app/runtime/prepare-W2EFWCXN.js",
@@ -81,24 +82,24 @@
     "app/runtime/shared-KPTXKDQP.js",
     "app/runtime/shared-IWRQQNGR.js",
     "app/runtime/shared-NAC5QX24.js",
-    "app/runtime/shared-5CQG3IRA.js",
+    "app/runtime/shared-GKDWA2WJ.js",
     "app/runtime/shared-MC2PBSUI.js",
     "app/runtime/shared-BHYKATDH.js",
     "app/runtime/shared-DT7NCFGB.js",
-    "app/runtime/shared-YY3REA7X.js",
+    "app/runtime/shared-SFC6NCLO.js",
     "app/runtime/shared-TT5GZL2Z.js",
-    "app/runtime/shared-EWVSQ2P4.js",
+    "app/runtime/shared-K4AY67NK.js",
     "app/runtime/shared-N4BZF6CX.js",
     "app/runtime/shared-2TG7WVSY.js",
     "app/runtime/shared-SN3HOOOK.js",
-    "app/runtime/main-MMY64AEO.js",
+    "app/runtime/main-J4YADQ4J.js",
     "app/runtime/shared-LDJRZ6KL.js",
     "app/runtime/shared-44VAQO44.js",
     "app/runtime/shared-PAV3FDI5.js",
-    "app/runtime/shared-FOPJNSNX.js",
-    "app/runtime/shared-F43TXK24.js",
-    "app/runtime/shared-4ZXJZ5S3.js",
+    "app/runtime/shared-B27ELWU3.js",
+    "app/runtime/shared-BUP7PYWF.js",
     "app/runtime/shared-OYBO36OO.js",
+    "app/runtime/shared-4ZXJZ5S3.js",
     "app/runtime/shared-IZLNVYMF.js",
     "app/runtime/shared-BK7ZVNJK.js",
     "app/runtime/shared-SWQCWK2E.js",
@@ -128,7 +129,7 @@
     "app/runtime/shared-OIY7F67X.js",
     "app/runtime/shared-QGKTY336.js",
     "app/runtime/shared-RMTIRWQZ.js",
-    "app/runtime/figure-library-EU3JHQHD.js",
-    "app/runtime/model-workbench-MVGOCJ6M.js"
+    "app/runtime/figure-library-PDGU6Y6Q.js",
+    "app/runtime/model-workbench-LD75FS4Q.js"
   ]
 }

@@ -1,4 +1,4 @@
-// Optional headless measurements; these describe this container, not real-device FPS.
+// Optional headless measurements; these describe this development environment, not real-device FPS.
 const {chromium}=require('playwright');
 const fs=require('node:fs'),path=require('node:path');
 const {makeFixture}=require('./fixtures.cjs');
@@ -28,8 +28,8 @@ const percentile=(values,p)=>{if(!values.length)return null;const sorted=[...val
    new PerformanceObserver(list=>{if(window.__profile.recording)window.__profile.tasks.push(...list.getEntries().map(e=>e.duration));}).observe({type:'longtask'});
    document.addEventListener('click',e=>{if(window.__profile.recording)window.__profile.clicks.push({at:performance.now(),scene:e.target.closest('[data-cmd="nav"]')?.dataset.scene||null});},true);
   });
-  const settle=()=>page.waitForFunction(()=>document.getElementById('stage').getAttribute('aria-busy')!=='true'&&document.getAnimations().filter(a=>a.effect?.getTiming().iterations!==Infinity).every(a=>a.playState!=='running'&&!a.pending));
-  await page.goto(url);await page.waitForSelector('#navigation button');await settle();await page.locator('#files').setInputFiles(material);await page.locator('[data-inbox="commit"]').click();await page.waitForSelector('body[data-workspace="ready"]');await page.waitForSelector('#inbox:not([open])',{state:'attached'});await settle();
+  const settle=()=>page.waitForFunction(()=>document.getElementById('stage').getAttribute('aria-busy')!=='true'&&!document.querySelector('[data-scroll-motion=running]')&&document.getAnimations().filter(a=>a.effect?.getTiming().iterations!==Infinity).every(a=>a.playState!=='running'&&!a.pending));
+  await page.goto(url);await page.waitForSelector('#welcome-title');await settle();await page.locator('#files').setInputFiles(material);await page.locator('[data-inbox="commit"]').click();await page.waitForSelector('body[data-workspace="ready"]');await page.waitForSelector('#inbox:not([open])',{state:'attached'});await settle();
   for(const scene of scenes){await page.locator(`[data-cmd="nav"][data-scene="${scene}"]`).click();await page.waitForFunction(s=>document.getElementById('stage').dataset.scene===s,scene);await settle();}
   await page.evaluate(()=>Object.assign(window.__profile,{recording:true,gaps:[],tasks:[],clicks:[],lastFrame:0}));const timings=[];
   for(let cycle=0;cycle<2;cycle++)for(const scene of scenes){
@@ -45,5 +45,5 @@ const percentile=(values,p)=>{if(!values.length)return null;const sorted=[...val
   const summary={version,platform:mobile?'mobile':'desktop',students:fixture.students.length,answers:fixture.answers.length,questions:Object.values(fixture.banks).reduce((n,b)=>n+b.length,0),navigations:timings.length,visibleMedianMs:percentile(timings.map(t=>t.visible),.5),settledMedianMs:percentile(timings.map(t=>t.settled),.5),rafGap95Ms:percentile(data.gaps,.95),rafGapsOver34Ms:data.gaps.filter(v=>v>34).length,rafFrames:data.gaps.length,longTasks:data.tasks.length,longTaskTotalMs:Math.round(data.tasks.reduce((s,v)=>s+v,0)),rapidAccepted:rapid.clicks.filter(c=>c.scene).length,rapidExpected:expected.length,rapidFinal:rapid.final,errors};
   results.push({...summary,timings,gaps:data.gaps,tasks:data.tasks,rapid});console.log(JSON.stringify(summary));await context.close();
  }
- fs.writeFileSync(path.join(output,'profile.json'),JSON.stringify({environment:'Headless Chromium in cloud container; no screenshot recording during timing',results},null,2));await browser.close();
+ fs.writeFileSync(path.join(output,'profile.json'),JSON.stringify({environment:'Headless Chromium with local anonymous fixtures; no screenshot recording during timing',results},null,2));await browser.close();
 })().catch(e=>{console.error(e);process.exitCode=1;});

@@ -38,3 +38,14 @@ test('共用关闭和方向图标包含可绘制路径，路径数据不会作�
  assert.match(button('↓','report-part-move',{},'icon-only','aria-label="下移班级概况"'),/aria-label="下移班级概况"[^>]*><svg[^>]+><path/);
  assert(!interfaceIcon('unknown').includes('undefined'));
 });
+
+test('打开期间内容长高重新指向自然高度，过期动画不会提前完成或遗留观察器',async()=>{
+ const names=['getComputedStyle','ResizeObserver','requestAnimationFrame','cancelAnimationFrame'],saved=Object.fromEntries(names.map(n=>[n,globalThis[n]]));let callback,disconnected=0,sequence=0;const frames=new Map();
+ try{
+  globalThis.getComputedStyle=computed;globalThis.requestAnimationFrame=fn=>{frames.set(++sequence,fn);return sequence;};globalThis.cancelAnimationFrame=id=>frames.delete(id);
+  globalThis.ResizeObserver=class{constructor(fn){callback=fn;}observe(){}disconnect(){disconnected++;}};
+  const {details,summary}=fixture(),body=details.children[1];Object.assign(summary,{offsetWidth:220,offsetHeight:40});Object.assign(body,{offsetWidth:220,offsetHeight:200,getBoundingClientRect(){return {width:220,height:this.offsetHeight};}});Object.assign(details.children[2],{offsetWidth:220,offsetHeight:0});details.getBoundingClientRect=()=>({height:details.open?body.offsetHeight+48:48});
+  let settled=false;const promise=toggleDisclosure(details,{reducedMotion});promise.then(()=>settled=true);body.offsetHeight=400;callback([{target:body,borderBoxSize:[{inlineSize:220,blockSize:400}]}]);for(const fn of [...frames.values()])fn();frames.clear();assert.equal(details.animations.length,2);assert.equal(details.animations[1].frames[1].height,'448px');
+  details.animations[0].resolve();await Promise.resolve();await Promise.resolve();assert.equal(settled,false);details.animations[1].resolve();assert.equal(await promise,true);assert.equal(disconnected,1);assert.equal(details.dataset.disclosurePhase,undefined);
+ }finally{for(const name of names)if(saved[name]===undefined)delete globalThis[name];else globalThis[name]=saved[name];}
+});

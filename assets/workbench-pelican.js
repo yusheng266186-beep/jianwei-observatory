@@ -1,3 +1,4 @@
+import {openSurface,closeSurface} from '../app/ui/surface-motion.js';
 import {PELICAN_DEFAULT_PROMPT,PELICAN_PROMPT_VERSION} from './pelican-prompt.js';
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const legacyPrompt='绘制一只骑自行车的鹈鹕。用完整、自包含的 SVG 表现清晰的鸟喙、身体、双轮、车架与脚踏关系，构图协调。直接输出 SVG，不引用外部资源，不使用脚本、foreignObject 或动画。';
@@ -24,7 +25,7 @@ export function createPelicanPanel({root,api,session,getSelection,getCatalog,onA
  function viewer(html,title){const id=crypto.randomUUID(),node=document.createElement('iframe');node.src='./pelican-preview.html?v=html-v1#'+id;node.title=title;node.sandbox='allow-scripts';node.referrerPolicy='no-referrer';node.dataset.pelicanFrame=id;previews.set(id,{node,html});return node;}
  addEventListener('message',event=>{if(event.data?.type!=='jianwei-pelican-viewer-ready')return;const entry=previews.get(event.data.id);if(entry&&event.source===entry.node.contentWindow)entry.node.contentWindow.postMessage({type:'jianwei-pelican-render',id:event.data.id,html:entry.html},'*');});
  const dialog=document.createElement('dialog');dialog.className='pelican-preview-dialog';dialog.innerHTML='<header><h2>HTML 动画预览</h2><button type="button" aria-label="关闭动画预览">×</button></header><div class="pelican-preview-body"></div>';document.body.append(dialog);
- const closePreview=()=>{for(const [id,value] of previews)if(dialog.contains(value.node))previews.delete(id);dialog.querySelector('.pelican-preview-body').replaceChildren();dialog.close();};dialog.querySelector('button').addEventListener('click',closePreview);dialog.addEventListener('cancel',event=>{event.preventDefault();closePreview();});
+ const closePreview=()=>closeSurface(dialog,{hide:()=>{for(const [id,value] of previews)if(dialog.contains(value.node))previews.delete(id);dialog.querySelector('.pelican-preview-body').replaceChildren();dialog.close();}});dialog.querySelector('button').addEventListener('click',closePreview);dialog.addEventListener('cancel',event=>{event.preventDefault();closePreview();});
  function render(){
   const openSources=new Set(Array.from($('results').querySelectorAll('details[open]')).map(e=>e.dataset.source));renderCandidates();
   if(!data){$('results').replaceChildren();return;}
@@ -47,7 +48,7 @@ export function createPelicanPanel({root,api,session,getSelection,getCatalog,onA
  async function load(){if(!session()||loading)return;const ticket=epoch;loading=true;try{const result=await api('/admin/pelican');if(ticket!==epoch)return;$('history').innerHTML=result.runs?.length?result.runs.map(r=>'<button type="button" data-pelican-open="'+esc(r.id)+'"><span>'+esc(new Date(r.createdAt).toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}))+' · '+r.candidates.length+' 个模型</span><small>'+esc(states[r.status]||r.status)+'</small></button>').join(''):'<p class="note">还没有已保存的比较。</p>';renderCandidates();if(activeId)await poll();}catch(e){if(ticket===epoch&&!authError(e))message(e.message||'暂时无法读取比较记录。');}finally{if(ticket===epoch)loading=false;}}
  root.addEventListener('click',async event=>{
   const target=event.target.closest('button');if(!target||target.disabled||!session())return;
-  if(target.hasAttribute('data-pelican-preview')){const item=data?.candidates[Number(target.dataset.pelicanPreview)];if(item?.html||item?.svg){dialog.querySelector('.pelican-preview-body').replaceChildren(viewer(item.html||item.svg,item.label+' · 完整HTML动画'));dialog.showModal();}}
+  if(target.hasAttribute('data-pelican-preview')){const item=data?.candidates[Number(target.dataset.pelicanPreview)];if(item?.html||item?.svg){dialog.querySelector('.pelican-preview-body').replaceChildren(viewer(item.html||item.svg,item.label+' · 完整HTML动画'));openSurface(dialog);}}
   if(target.hasAttribute('data-pelican-add'))addSelection();
   if(target.hasAttribute('data-pelican-reset-prompt')&&!active()&&!opening&&!submitting){$('prompt').value=PELICAN_DEFAULT_PROMPT;save();message('已恢复 Cockpit Tools 1.3.73 原始提示词。');}
   if(target.hasAttribute('data-pelican-remove')&&!active()&&!opening&&!submitting){candidates.splice(Number(target.dataset.pelicanRemove),1);save();renderCandidates();}

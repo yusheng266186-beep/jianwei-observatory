@@ -52,6 +52,7 @@ jobs:
           npm run test:experience
           npm run test:continuation
           npm run test:interaction-polish
+          npm run test:global-motion
           npm run test:large-workspace
           if [ "$AUDIT_BROWSER" = chromium ]; then npm run test:document-regression; fi
       - uses: actions/upload-artifact@v4
@@ -79,6 +80,9 @@ jobs:
             .audit-output/interaction-polish-*/checks.json
             .audit-output/interaction-polish-*/*-failure.json
             .audit-output/interaction-polish-*/*.png
+            .audit-output/global-motion-*/checks.json
+            .audit-output/global-motion-*/*-failure.json
+            .audit-output/global-motion-*/*.png
             .audit-output/document-regression/exports.json
           if-no-files-found: ignore
           include-hidden-files: true

@@ -4,13 +4,20 @@ export {finishAnimation};
 // Native animations keep the live controls available throughout a transition.
 // CSS and native animations read the same tokens. Defaults also allow engine
 // tests and environments without a document to import this module.
-const tokens=typeof document!=='undefined'&&typeof getComputedStyle==='function'?getComputedStyle(document.documentElement):null;
+let tokens;
 const token=(name,fallback)=>tokens?.getPropertyValue('--motion-'+name).trim()||fallback;
 const duration=(name,fallback)=>{const value=token(name,fallback+'ms');return parseFloat(value)*(value.endsWith('ms')?1:1000);};
-export const settle=token('ease','cubic-bezier(.22,1,.36,1)');
-export const travel=token('travel-ease','cubic-bezier(.2,.78,.22,1)');
+export let settle,travel,hoverDelay;
 const step=(name,ms,easing=settle)=>({duration:duration(name,ms),easing});
-export const motion={feedback:step('feedback',160),control:step('control',220),disclose:step('disclose',260),arrive:step('arrive',320),arrange:step('arrange',300),travel:step('travel',400,travel),leave:step('leave',180,token('exit-ease','cubic-bezier(.4,0,.8,.2)'))};
+export const motion={};
+export function refreshMotion(){
+ tokens=typeof document!=='undefined'&&typeof getComputedStyle==='function'?getComputedStyle(document.documentElement):null;
+ settle=token('ease','cubic-bezier(.22,1,.36,1)');travel=token('travel-ease','cubic-bezier(.2,.78,.22,1)');hoverDelay=duration('hover-delay',140);
+ Object.assign(motion,{feedback:step('feedback',160),control:step('control',220),disclose:step('disclose',280),arrive:step('arrive',340),arrange:step('arrange',300),travel:step('travel',400,travel),leave:step('leave',180,token('exit-ease','cubic-bezier(.4,0,.75,.25)'))});
+}
+// Module preload may evaluate before optional theme links finish, especially in
+// WebKit. Refresh once the interactive shell mounts, then share these timings.
+refreshMotion();
 export function visualFrame(element){const style=getComputedStyle(element);return {opacity:style.opacity,transform:style.transform};}
 export function cancelOwnMotion(element){try{for(const animation of element.getAnimations?.()||[])try{animation.cancel();}catch{}}catch{}}
 let canvasSlide=null,slideSerial=0;
@@ -83,6 +90,17 @@ export function enterCanvas(canvas,direction) {
   const head=canvas.querySelector('.scene-head'),featured=canvas.querySelector('.overview-featured');
   if(head&&direction!=='focus')head.animate([{translate:(direction==='backward'?-8:8)+'px 0px'},{translate:'0px 0px'}],motion.arrive);
   if(featured&&featured.getBoundingClientRect().top<innerHeight)featured.animate([{translate:'0px 6px'},{translate:'0px 0px'}],motion.arrive);
+}
+const contentMotions=new WeakMap();
+export function enterContent(root){
+ const selector='.block,.materials-stage,.exercise-center,.report-studio,.directory-results,.student-grid,.paper-profile,.follow-workbench';
+ let count=0;
+ for(const element of root.querySelectorAll(selector)){
+  if(element.parentElement.closest(selector)||element.contains(document.activeElement)&&document.activeElement.matches('input,textarea,select,[contenteditable=true]'))continue;
+  const box=element.getBoundingClientRect();if(box.bottom<72||box.top>=innerHeight||!box.width||!box.height||count++>=6)continue;
+  const previous=contentMotions.get(element),from=previous?visualFrame(element):{opacity:.96,transform:'translateY(3px)'};previous?.cancel();element.dataset.contentMotion='entering';
+  try{const animation=element.animate([from,{opacity:1,transform:'none'}],motion.control);contentMotions.set(element,animation);finishAnimation(animation,motion.control.duration).then(()=>{if(contentMotions.get(element)!==animation)return;contentMotions.delete(element);delete element.dataset.contentMotion;});}catch{delete element.dataset.contentMotion;}
+ }
 }
 export function arrangeRows(root,positions,{edge=72}={}) {
   let order=0;

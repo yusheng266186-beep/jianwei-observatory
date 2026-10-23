@@ -51,6 +51,8 @@
 
 打开报告或辅导中心时先显示可关闭的加载窗口；报告样式读取失败可直接重试。内容就绪即可使用，入场动画不会延后报告整理，也不会打断已经开始的训练输入。
 
+全站使用统一的非线性动效：按钮按下与松开、悬停、选中底片、局部内容、抽屉、弹窗、折叠和提示按层级分配节奏。连续点选从当前画面接续；章节与宽表的程序滚动可由滚轮、触摸或拖动中断。静读及系统减少动态偏好同样适用于独立工作台和图示页，内容与输入无需等动画结束。
+
 <a id="teacher-guide"></a>
 ## 教师使用指南
 
@@ -262,6 +264,8 @@ python3 -m http.server 4175 --bind 127.0.0.1
 | `npm run test:experience` | 检查跨页材料提醒、备份后载入、无修改同步、慢网反馈、提示避让及连接查询恢复 |
 | `npm run test:continuation` | 检查提交响应丢失、Esc关闭保存失败及模型比较连续切换的迟到响应 |
 | `npm run test:interaction-polish` | 检查报告慢样式与重试、动画交接保存及焦点、试题中心就地反馈和窄屏布局 |
+| `npm run test:global-motion` | 双浏览器检查全局非线性节奏、连点改向、按压/悬停、窗口、折叠、提示、滚动及静读偏好 |
+| `npm run profile:motion` | 以匿名材料记录桌面/手机帧间隔、长任务及连续导航；可用MOTION_BASELINE_URL进行构建对照 |
 | `npm run test:large-workspace` | 1236人、14832条成绩、5000份练习的多尺寸压力回归 |
 | `npm run test:document-regression` | 十科学生/教师版40份PDF及Word的固定成稿回放与版式基线 |
 | `node tools/export-training-prompts.cjs --out /绝对路径/新的导出目录` | 导出实际编译提示词，含匿名示例，不调用模型、不读取账号密钥 |

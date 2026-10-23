@@ -1,3 +1,4 @@
+import {motionReduced} from './motion-preference.js';
 import {installCommittedInput} from './committed-input.js';
 import {exerciseVisualOptions,exerciseVisualLabel} from './exercise-visual-policy.js';
 import {exerciseWorkspaceHTML} from './exercise-workspace.js';
@@ -60,7 +61,7 @@ export function createExerciseStudio({notify,show,close,onAttach,onFeedback=()=>
  function revealSetup(editing){
   const node=root.querySelector(editing?'[data-ai-setup-name]':'.exercise-setup-feedback');if(!node||!node.textContent.trim()&&!editing)return;
   for(let parent=node.parentElement;parent&&parent!==root;parent=parent.parentElement)if(parent.tagName==='DETAILS')parent.open=true;
-  node.scrollIntoView({block:'center',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});if(editing)node.focus({preventScroll:true});
+  node.scrollIntoView({block:'center',behavior:motionReduced()?'instant':'smooth'});if(editing)node.focus({preventScroll:true});
  }
  function startAtTop(){if(root.contains(document.activeElement)&&document.activeElement.matches('input,textarea,[contenteditable=true]'))return;dialog.scrollTop=0;const title=root.querySelector('#exercise-title');if(title){title.tabIndex=-1;title.focus({preventScroll:true});}}
  async function drawPicker(){
@@ -175,7 +176,7 @@ async function submitImageJob(record,{job,key},endpoint,{generation,source}){
   const node=target==='code'?root.querySelector('[data-ai-code]'):root.querySelector('[data-ai-field="'+target+'"]')||root.querySelector('[data-exercise-wheel="'+target+'"]')||root.querySelector(target==='status'?'.exercise-status':'.exercise-error');
   if(!node)return;for(let parent=node.parentElement;parent&&parent!==root;parent=parent.parentElement)if(parent.tagName==='DETAILS')parent.open=true;node.focus({preventScroll:true});
   const position=()=>Math.max(0,dialog.scrollTop+node.getBoundingClientRect().top-dialog.getBoundingClientRect().top-(dialog.clientHeight-node.getBoundingClientRect().height)/2);
-  dialog.scrollTo({top:position(),behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});
+  dialog.scrollTo({top:position(),behavior:motionReduced()?'instant':'smooth'});
   // WebKit can cancel a dialog's smooth scroll when focusing a newly opened
   // disclosure. Complete that same focus action without moving later input.
   setTimeout(()=>{if(!dialog.open||document.activeElement!==node)return;const r=node.getBoundingClientRect(),d=dialog.getBoundingClientRect();if(r.top<d.top||r.bottom>d.bottom)dialog.scrollTo({top:position(),behavior:'instant'});},500);
@@ -332,7 +333,7 @@ function updateSelectionSummary(){
    if(copy){records.push(copy);current=copy;}saveConflict=null;await persist();if(!current||!records.includes(current)){current=null;context=null;selecting=true;await drawPicker();}else{request=structuredClone(current.request);previews.delete(current);await draw();}startAtTop();return;
   }
   if(cmd==='refresh-preview'){if(!current?.sheet)return;const record=current,global=!!b.closest('[data-ai-preview-update]');b.disabled=true;b.textContent='正在更新预览…';clearTimeout(saveTimer);previews.delete(record);await persist();await draw();if(global&&record===current){const approval=root.querySelector('[data-ai-review]');if(approval&&!approval.disabled)approval.focus({preventScroll:true});}return;}
-  if(cmd==='quality-locate'){const target=root.querySelector('[data-question-id="'+Number(b.dataset.aiQuestion)+'"]');if(target){target.scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});const edit=target.querySelector('.exercise-edit');if(edit)edit.open=true;}return;}
+  if(cmd==='quality-locate'){const target=root.querySelector('[data-question-id="'+Number(b.dataset.aiQuestion)+'"]');if(target){target.scrollIntoView({block:'start',behavior:motionReduced()?'instant':'smooth'});const edit=target.querySelector('.exercise-edit');if(edit)edit.open=true;}return;}
   if(cmd.startsWith('setup-')){if(setupShelf.pending)return;readInputs();const setupContext=draftKey(request.subject);b.disabled=true;await setupShelf.handle(cmd,{locked:waiting(current)||!!current?.resumeAvailable});if(selecting||!context||draftKey(request.subject)!==setupContext)return;await draw();if(cmd!=='setup-cancel')revealSetup(cmd==='setup-edit'||cmd==='setup-manage');return;}
   if(cmd==='scope-selected'){readInputs();const groups=exerciseSelectedGroups(request);if(groups.length)request.curriculum=exerciseScopeWithGroups(request.subject,request.curriculum,groups);await draw();return;}
   if(cmd==='knowledge-group'){readInputs();contentPicker.select(request.subject,b.dataset.aiValue);await draw();return;}

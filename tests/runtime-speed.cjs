@@ -5,7 +5,7 @@ const url=process.env.AUDIT_URL||'http://127.0.0.1:4173',engine=process.env.AUDI
  p.on('pageerror',e=>errors.push(e.message));const requests=[];p.on('request',r=>requests.push(r.url()));
  try{
   await p.goto(url);await p.waitForSelector('#welcome-title');await p.waitForTimeout(100);
-  const boot=requests.filter(x=>new URL(x).pathname.endsWith('.js'));assert.equal(boot.length,2);assert(!requests.some(x=>/pdfmake|pdfjs|xlsx|report-fonts/.test(x)));assert.equal(await p.locator('link[rel=stylesheet]').count(),1);
+  const boot=requests.filter(x=>new URL(x).pathname.endsWith('.js'));assert.equal(boot.length,2);assert(!requests.some(x=>/pdfmake|pdfjs|xlsx|report-fonts/.test(x)));assert.equal(await p.locator('link[rel=stylesheet][href]').count(),0,'the empty landing uses its inline critical theme without fetching deferred workspace styles');assert(!requests.some(x=>new URL(x).pathname.endsWith('.css')),'workspace CSS stays deferred until import');
   const data=makeWideFixture();await p.locator('#files').setInputFiles({name:'anonymous-speed.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(data))});await p.locator('[data-inbox=commit]').click();await p.waitForSelector('body[data-workspace=ready]');await p.waitForSelector('#inbox:not([open])',{state:'attached'});
   assert(!requests.some(x=>x.includes('xlsx.full')),'JSON import needs no XLSX download');
   const nav=async scene=>{await p.locator(`#navigation [data-scene=${scene}]`).click();await p.waitForFunction(s=>document.querySelector('#stage').dataset.scene===s&&document.querySelector('#stage').getAttribute('aria-busy')==='false',scene)};

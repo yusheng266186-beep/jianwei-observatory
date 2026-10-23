@@ -1,0 +1,37 @@
+/* Shared motion language. Native springs retain velocity on interruption;
+   sampled critical damping gives CSS the same rounded start and quiet tail. */
+:root{
+ --motion-press:90ms;--motion-feedback:160ms;--motion-control:220ms;
+ --motion-disclose:280ms;--motion-arrange:300ms;--motion-arrive:340ms;
+ --motion-travel:400ms;--motion-leave:180ms;--motion-hover-delay:140ms;
+ --motion-ease:cubic-bezier(.22,1,.36,1);--motion-travel-ease:cubic-bezier(.2,.78,.22,1);
+ --motion-exit-ease:cubic-bezier(.4,0,.75,.25);--motion-press-ease:cubic-bezier(.2,.7,.3,1);
+ --ease:var(--motion-ease);--spring:var(--motion-ease);
+}
+@supports(animation-timing-function:linear(0,1)){
+ :root{--motion-ease:linear(0,.0102 2%,.0371 4%,.0983 7%,.1742 10%,.284 14%,.4443 20%,.6233 28%,.781 38%,.8925 50%,.9597 65%,.9873 80%,1);--motion-travel-ease:var(--motion-ease)}
+}
+body :is(.button,button,a.button,summary,input,textarea){transition-timing-function:var(--motion-ease)}
+body :is(button,a.button,summary)[data-motion-control]{transform-origin:center;touch-action:manipulation}
+body .button[data-motion-control]:active:where(:not(:disabled)){transform:translateY(0);transition-duration:var(--motion-press);transition-timing-function:var(--motion-press-ease)}
+body :is(.top,.login,.settings,.providers,.chooser,.diagnostics-panel,.figure-sample,.figure-detail) button[data-motion-control]:active:where(:not(:disabled)){transform:translateY(0);transition-duration:var(--motion-press)}
+body :is(.navigation-dock button,.scene-tabs .chip,.drawer-tabs .chip)[data-motion-control]{transform-origin:center}
+body :is(.cloud-flow-inner,.account-flow-inner){animation-duration:var(--motion-control);animation-timing-function:var(--motion-ease)}
+/* Selection labels keep fixed metrics. Only the background spring changes size. */
+.dock-indicator[data-motion-owned=indicator],.selection-indicator[data-motion-owned=indicator]{transition:none}
+body .exercise-wheel:is(.is-scrolling,.is-dragging) .exercise-wheel-option>span{transition:none}
+[data-surface-motion=managed]{animation:none!important;transition:none!important}
+dialog[data-surface-motion=managed]::backdrop{animation:none}
+dialog[data-backdrop-phase=entering]::backdrop{animation:surface-backdrop-in var(--motion-arrive) var(--motion-ease) both}
+dialog[data-backdrop-phase=leaving]::backdrop{animation:surface-backdrop-out var(--motion-leave) var(--motion-exit-ease) both}
+@keyframes surface-backdrop-in{from{opacity:var(--surface-backdrop-from,0)}to{opacity:1}}
+@keyframes surface-backdrop-out{from{opacity:var(--surface-backdrop-from,1)}to{opacity:0}}
+/* The live notification stays in the top layer through its exit. */
+#toast[data-surface-phase=leaving]{display:flex;pointer-events:none}
+#toast[data-surface-phase=leaving] :is(button,a){pointer-events:none}
+.chart-tooltip[data-surface-motion=managed]{will-change:auto}
+@media(hover:none){body :is(button,a.button,summary)[data-motion-control]:hover{translate:none}}
+body[data-motion=calm] *,body[data-motion=calm] *::before,body[data-motion=calm] *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+body[data-motion=calm] :is(.button,button[data-motion-control],summary[data-motion-control],.figure-sample):is(:hover,:active){transform:none;translate:none;scale:none}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+@media(prefers-reduced-motion:reduce){body[data-workspace=empty] .button:active,body .figure-sample:hover{transform:none;scale:none}}

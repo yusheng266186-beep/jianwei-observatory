@@ -7,12 +7,14 @@ import {installCommittedInput} from './ui/committed-input.js';
 import {tableReadingPositions,restoreTableReadingPositions,disclosurePositions,restoreDisclosurePositions} from './ui/study-position.js';
 import {ensureFeatureStyles,ensureSceneStyles} from './ui/feature-styles.js';
 import {surfaceLoadingHTML} from './ui/surface-loading.js';
+import {createNoticeMotion} from './ui/notice-motion.js';
+import {scrollToMotion} from './ui/scroll-motion.js';
 import {isRuntimeLoadError,runtimeFailureMessage} from './ui/runtime-recovery.js';
 import {replaceResearchHistory,pushResearchHistory,researchPath,researchStudySnapshot,researchHistoryState,researchHistoryStudy,researchHistoryConditions} from './engine/research-navigation.js';
 import {researchObservationList} from './engine/research-roster.js';
 import {syncPracticeFeedbackPlans} from './engine/exercise-feedback.js';
 import {recordPageTiming} from './engine/runtime-diagnostics.js';
-import {openSurface,closeSurface,prepareBackdrop} from './ui/surface-motion.js?v=runtime-v45';
+import {openSurface,closeSurface} from './ui/surface-motion.js?v=runtime-v45';
 import {warmReportFonts} from './io/report-fonts.js?v=runtime-v45';
 import {warmPDFWorker} from './io/pdf-runtime.js?v=runtime-v45';
 import {warmPDFViewer} from './io/pdf-viewer-library.js?v=runtime-v45';
@@ -55,7 +57,7 @@ import {Inbox} from './data/inbox.js?v=runtime-v45';
 import {NoteJournal} from './data/notes.js?v=runtime-v45';
 import {installViewportMetrics} from './ui/viewport.js?v=runtime-v45';
 import {repairKnowledgeReport} from './engine/knowledge.js?v=runtime-v45';
-import {motion,visualFrame,cancelOwnMotion,finishAnimation,enterCanvas,arrangeRows,prepareCanvasSlide,finishCanvasSlide,moveIndicator} from './ui/motion.js?v=runtime-v45';
+import {motion,visualFrame,cancelOwnMotion,enterCanvas,enterContent,arrangeRows,prepareCanvasSlide,finishCanvasSlide,moveIndicator} from './ui/motion.js?v=runtime-v45';
 import {esc,button,empty} from './ui/html.js?v=runtime-v45';
 import {excel,word,pdf,print,download,chart,evidence} from './io/exports.js?v=runtime-v45';
 import {directoryDefaults,lensValues,queryDirectory,directoryViewValues,directoryViewName} from './engine/directory.js?v=runtime-v45';
@@ -75,7 +77,7 @@ let atlas=new Atlas(emptyDataset()),current='board',activeReport=null,exportRepo
 const workspaceProtection=createWorkspaceProtection({snapshot:()=>atlas.data,notify:(...args)=>notify(...args)});
 let notebookSaving=Promise.resolve(),notebookBase=[],plansBase=[],datasetStamp=null,planSaveTimer,planDraftSaveTimer,planTextDrafts=preference('planTextDrafts',{}),plansSaving=Promise.resolve(),datasetSaving=Promise.resolve(),storageNoticeState={key:'',at:0};
 let workspaceUpdates;
-let drawerState=null,drawerClosing=null,drawerMotion=null,drawerContentMotion=null,drawerContentFrame=null,drawerEpoch=0,observationRequest=0,drawerOpener=null,drawerTrail=[],paintedObject='',paintedScrolls=new Map(),pagePositions=new Map(),scrollResets=new Set(),pendingUndo=null;
+let drawerState=null,drawerClosing=null,drawerContentMotion=null,drawerContentFrame=null,drawerEpoch=0,observationRequest=0,drawerOpener=null,drawerTrail=[],paintedObject='',paintedScrolls=new Map(),pagePositions=new Map(),scrollResets=new Set(),pendingUndo=null;
 let paintedStudy=null,researchTrail=[],researchSearchTimer,closedStudy=null,reportOrigin=null,reportNoteState='preview',reportNoteRevision=0,modalOrder=[];
 let navigationScope=preference('navigationScope','')||crypto.randomUUID(),historyRestoring=false,lastHistoryURL='',historyRequest=0;remember('navigationScope',navigationScope);
 const reducedMotion=()=>reading.motion==='calm'||matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -102,6 +104,7 @@ const num=value=>value===null||String(value).trim()===''?null:Number.isFinite(Nu
 const converted=value=>value==='true'?true:value==='false'?false:value;
 const stage=()=>document.getElementById('stage');
 const notificationLayout=installNotificationLayout(document.getElementById('toast'));
+const noticeMotion=createNoticeMotion(document.getElementById('toast'),{reducedMotion});
 function placeNotification(preferredHost=null) {
   const toast=document.getElementById('toast'),focused=document.activeElement?.closest('dialog[open]');
   modalOrder=modalOrder.filter(dialog=>dialog.open);
@@ -113,8 +116,7 @@ function notify(message,action={}) {
   placeNotification();
   const toast=document.getElementById('toast');pendingUndo=action.undo||null;
   toast.innerHTML='<span>'+esc(message)+'</span>'+((action.undo||action.cmd)?button(esc(action.label||'撤销'),action.undo?'undo-action':action.cmd,{},'toast-action'):'')+button('×','toast-close',{},'toast-dismiss','aria-label="关闭提示"');
-  if(toast.showPopover){if(toast.matches(':popover-open'))toast.hidePopover();toast.showPopover();}
-  toast.classList.add('visible');notificationLayout.refresh();clearTimeout(notify.timer);notify.timer=setTimeout(()=>{toast.classList.remove('visible');if(toast.hidePopover&&toast.matches(':popover-open'))toast.hidePopover();pendingUndo=null;},action.undo||action.cmd?9000:4500);
+  noticeMotion.show();notificationLayout.refresh();clearTimeout(notify.timer);notify.timer=setTimeout(()=>{pendingUndo=null;noticeMotion.hide();},action.undo||action.cmd?9000:4500);
 }
 const tablePositionKey=el=>paintedObject+'|'+(el.closest('.block')?.querySelector('h2')?.textContent||'')+'|'+(el.closest('.table-frame')?.dataset.tableKey||el.querySelector('table')?.getAttribute('aria-label'));
 function closeReader(){return dismissDialog('table-reader');}
@@ -334,7 +336,7 @@ async function paint(transition=false,focus=null) {
       if(!reducedMotion()) {
         if(slide)slide();
         else if(changed)enterCanvas(stage(),direction);
-        else arrangeRows(stage(),positions);
+        else {arrangeRows(stage(),positions);if(transition&&!focus)enterContent(stage());}
       }
     };
     apply();if(serial===paintId)recordPageTiming(scene,performance.now()-started);if(scene==='library'&&books.library.tab==='exercises')mountExerciseCenter();if(scene==='library'&&books.library.tab==='materials')workspaceProtection.mount();
@@ -704,16 +706,13 @@ function drawDrawer() {
 }
 function openDrawer(state,{focusTitle=true}={}) {
   observationRequest++;
-  const dialog=document.getElementById('research-drawer'),reopening=Boolean(drawerClosing),wasOpen=dialog.open,from=wasOpen?visualFrame(dialog):{opacity:.16,transform:'translateX(32px)'};
-  ++drawerEpoch;if(!wasOpen||reopening)drawerMotion?.cancel();drawerClosing=null;
+  const dialog=document.getElementById('research-drawer'),reopening=Boolean(drawerClosing),wasOpen=dialog.open;
+  ++drawerEpoch;drawerClosing=null;
   if(wasOpen&&!reopening&&drawerState)drawerTrail.push({...structuredClone(drawerState),scrollTop:drawerScroll().scrollTop,tablePositions:drawerTablePositions()});else drawerTrail=[];
   drawerState=state;drawDrawer();drawerScroll().scrollTop=0;
-  if(!wasOpen||reopening)prepareBackdrop(dialog,'entering');
-  if(!wasOpen){drawerOpener=document.activeElement;dialog.showModal();document.body.classList.add('drawer-open');}
-  if(!reducedMotion()){
-    if(!wasOpen||reopening)drawerMotion=dialog.animate([from,{opacity:1,transform:'translateX(0)'}],motion.arrive);
-    else animateDrawer();
-  }
+  if(!wasOpen)drawerOpener=document.activeElement;
+  openSurface(dialog,{reducedMotion,from:{opacity:.24,transform:'translateX(32px)'},show:()=>{dialog.showModal();document.body.classList.add('drawer-open');}});
+  if(wasOpen&&!reopening&&!reducedMotion())animateDrawer();
   const title=document.getElementById('drawer-title');if(focusTitle&&title){title.tabIndex=-1;title.focus({preventScroll:true});}
   else dialog.querySelector('[data-cmd=drawer-close]')?.focus({preventScroll:true});
 }
@@ -722,12 +721,11 @@ function closeDrawer() {
   observationRequest++;
   const dialog=document.getElementById('research-drawer');if(drawerClosing)return drawerClosing;if(!dialog.open)return Promise.resolve(true);
   const study=studyNow();if(study){archiveStudy(study);closedStudy={study,closedAt:Date.now()};}
-  const epoch=++drawerEpoch,from=visualFrame(dialog);drawerMotion?.cancel();drawerContentMotion?.cancel();
-  prepareBackdrop(dialog,'leaving');
+  const epoch=++drawerEpoch;drawerContentMotion?.cancel();
   const closing=(async()=>{
-    if(!reducedMotion())try{drawerMotion=dialog.animate([from,{opacity:0,transform:'translateX(20px)'}],motion.leave);await finishAnimation(drawerMotion,motion.leave.duration);}catch{}
-    if(epoch!==drawerEpoch)return false;
-    dialog.close();document.body.classList.remove('drawer-open');drawerState=null;drawerTrail=[];drawerOpener?.isConnected&&drawerOpener.focus({preventScroll:true});return true;
+    const closed=await closeSurface(dialog,{reducedMotion,to:{opacity:0,transform:'translateX(20px)'},hide:()=>{dialog.close();document.body.classList.remove('drawer-open');}});
+    if(!closed||epoch!==drawerEpoch)return false;
+    drawerState=null;drawerTrail=[];drawerOpener?.isConnected&&drawerOpener.focus({preventScroll:true});return true;
   })();
   drawerClosing=closing;closing.finally(()=>{if(drawerClosing===closing)drawerClosing=null;});return closing;
 }
@@ -926,12 +924,12 @@ async function commands(event) {
       else if(d.cmd==='research-remove'){const collection=research[d.collection],index=collection?.findIndex(e=>e.id===d.id),entry=collection?.[index];if(entry){collection.splice(index,1);persistResearch();drawResearch();notify('已移除研究记录',{undo:()=>{research[d.collection].splice(Math.min(index,research[d.collection].length),0,entry);persistResearch();if(document.getElementById('research-dialog').open)drawResearch();}});}}
       return;
     }
-    if(d.cmd==='section-top'){window.scrollTo({top:0,behavior:reducedMotion()?'instant':'smooth'});return;}
+    if(d.cmd==='section-top'){scrollToMotion(window,{top:0});return;}
     if(d.cmd==='section-jump') {
       const target=document.getElementById(d.target);if(!target)return;
       if(target.matches('details'))target.open=true;
       for(let parent=target.parentElement;parent;parent=parent.parentElement)if(parent.matches('details'))parent.open=true;
-      target.scrollIntoView({behavior:reducedMotion()?'instant':'smooth',block:'start'});return;
+      scrollToMotion(window,{top:scrollY+target.getBoundingClientRect().top-(parseFloat(getComputedStyle(target).scrollMarginTop)||0)});return;
     }
     if(b.closest('#table-reader')&&!['table-close','table-shift'].includes(d.cmd))closeReader();
     if(d.cmd==='table-open') {
@@ -946,7 +944,7 @@ async function commands(event) {
     if(d.cmd==='reading-set'||d.cmd==='reading-reset'){if(d.cmd==='reading-reset')Object.assign(reading,readingDefaults);else if(Object.hasOwn(readingDefaults,d.key))reading[d.key]=d.value;remember('reading',reading);applyReading(reading);if(reducedMotion()){finishCanvasSlide();for(const animation of document.getAnimations())animation.cancel();}renderInto(document.getElementById('reading-content'),readingView(reading));enhance();positionDock();return;}
     if(d.cmd==='undo-action'){const undo=pendingUndo;pendingUndo=null;if(undo){await undo();notify('已撤销刚才的操作');}return;}
     if(b.closest('#research-drawer')&&['nav','class','paper','lens-paper','subject-open','people-lens','inspect-bin','workbook-open','library-open'].includes(d.cmd)&&!await closeDrawer())return;
-    if(d.cmd==='toast-close'){const toast=document.getElementById('toast');clearTimeout(notify.timer);toast.classList.remove('visible');if(toast.hidePopover&&toast.matches(':popover-open'))toast.hidePopover();pendingUndo=null;}
+    if(d.cmd==='toast-close'){clearTimeout(notify.timer);pendingUndo=null;noticeMotion.hide();}
     else if(d.cmd==='nav'||d.cmd==='home'){if(d.cmd==='home')event.preventDefault();openEntry(d.cmd==='home'?'board':d.scene);}
     else if(d.cmd==='set'||d.cmd==='toggle')update(d.key,d.value,d.cmd==='toggle');
     else if(d.cmd==='directory-material'&&current==='people'){
@@ -970,7 +968,7 @@ async function commands(event) {
     else if(d.cmd==='knowledge-open'){const classes=d.no?[Number(d.no)]:d.classes!==undefined?d.classes.split(',').filter(Boolean).map(Number):[...(books.papers.classes||[])],key=d.key||books.papers.key;if(!atlas.paper(key,classes).skills.some(s=>s.name===d.knowledge)){notify('这个知识点还没有题目材料');return;}openDrawer({type:'knowledge',key,knowledge:d.knowledge,classes,tab:'questions',filter:'all',sort:'low',search:'',page:1});}
     else if(d.cmd==='lens-filter'||d.cmd==='question-band'||d.cmd==='lens-sort'||d.cmd==='lens-tier'){const fromStructure=Boolean(b.closest('.score-structure'));drawerState[['lens-filter','question-band'].includes(d.cmd)?'filter':d.cmd==='lens-sort'?'sort':'tier']=d.value;drawerState.page=1;drawDrawer();if(fromStructure)revealResults(document.getElementById('drawer-content'));}
     else if(d.cmd==='drawer-search-clear'){clearTimeout(drawerTimer);drawerState.search='';drawerState.page=1;drawDrawer();document.querySelector('#drawer-content [data-drawer-field="search"]')?.focus({preventScroll:true});}
-    else if(d.cmd==='drawer-section'){const dialog=document.getElementById('research-drawer'),target=document.getElementById(d.target);if(target&&dialog.contains(target)){const scroller=drawerScroll();scroller.scrollTo({top:d.target==='drawer-title'?0:Math.max(0,scroller.scrollTop+target.getBoundingClientRect().top-scroller.getBoundingClientRect().top-24),behavior:reducedMotion()?'instant':'smooth'});const heading=target.matches('h2')?target:target.querySelector('h2');if(heading){heading.tabIndex=-1;heading.focus({preventScroll:true});}}}
+    else if(d.cmd==='drawer-section'){const dialog=document.getElementById('research-drawer'),target=document.getElementById(d.target);if(target&&dialog.contains(target)){const scroller=drawerScroll();scrollToMotion(scroller,{top:d.target==='drawer-title'?0:Math.max(0,scroller.scrollTop+target.getBoundingClientRect().top-scroller.getBoundingClientRect().top-24)});const heading=target.matches('h2')?target:target.querySelector('h2');if(heading){heading.tabIndex=-1;heading.focus({preventScroll:true});}}}
     else if(d.cmd==='lens-page'){drawerState.page=Math.max(1,(drawerState.page||1)+Number(d.step));drawDrawer();revealResults(document.getElementById('drawer-content'));}
     else if(d.cmd==='lens-exam'){drawerState.exam=d.exam;drawerState.page=1;drawerState.search='';drawDrawer();animateDrawer();}
     else if(d.cmd==='knowledge-class')openDrawer({...structuredClone(drawerState),classes:[Number(d.no)],tab:'students',filter:'all',search:'',page:1});
