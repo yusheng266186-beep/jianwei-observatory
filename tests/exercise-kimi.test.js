@@ -28,16 +28,16 @@ test('Moonshot schema supplies types inside question alternatives without changi
  assert.equal(compatible.properties.questions.maxItems,12);assert.deepEqual(prompt.schema,original);assert.deepEqual(compatible.properties.questions.prefixItems.map(q=>q.properties.type.enum),original.properties.questions.prefixItems.map(q=>q.properties.type.enum));
 });
 
-test('Kimi K3与K2.8目录公开准确名称和三档映射，默认仍为K3',()=>{
+test('Kimi K3.1 Pro、K3与K2.8目录公开准确名称和三档映射，默认仍为K3',()=>{
  const env={KIMI_API_KEY:'private-kimi-test'},p=control.publicCatalog(env).find(p=>p.id==='kimi-code');
- assert.equal(p.defaultModel,'k3');assert.deepEqual(p.models.map(m=>m.name),['Kimi K3','Kimi K2.8 Preview']);
+ assert.equal(p.defaultModel,'k3');assert.deepEqual(p.models.map(m=>m.name),['Kimi K3.1 Pro','Kimi K3','Kimi K2.8 Preview']);
  for(const m of p.models){assert.deepEqual(m.efforts,{eco:'low',standard:'high',deep:'max'});for(const [effort,native]of Object.entries(m.efforts)){const g=control.snapshot({provider:p.id,model:m.id,effort},env);assert.equal(g.model,m.id);assert.equal(g.reasoningEffort,native);assert.equal(g.credentialRef,'KIMI_API_KEY');}}
  assert(!JSON.stringify(p).includes(env.KIMI_API_KEY));
  assert.throws(()=>control.snapshot({provider:'kimi-code',model:'k2.8',effort:'deep'},env),/MODEL_SELECTION_INVALID/);
 });
 
-test('Kimi两款模型三档出题均发送冻结的真实型号和强度，不回退到K3',async()=>{
- for(const model of ['k3','kimi-for-coding'])for(const effort of ['eco','standard','deep']){
+test('Kimi三款模型三档出题均发送冻结的真实型号和强度，不回退到K3',async()=>{
+ for(const model of ['k3.1-pro','k3','kimi-for-coding'])for(const effort of ['eco','standard','deep']){
   const generation=control.snapshot({provider:'kimi-code',model,effort},{KIMI_API_KEY:'test-only'});let sent;
   const result=await generator.generate(input,{generation,key:'test-only',transport:async(url,o)=>{sent=JSON.parse(o.body);assert.equal(url,'https://api.kimi.com/coding/v1/chat/completions');return {status:200,body:stream(JSON.stringify(sheet()))};}});
   assert.equal(sent.model,model);assert.equal(sent.reasoning_effort,{eco:'low',standard:'high',deep:'max'}[effort]);assert.equal(result.model,model);assert.equal(result.reasoningEffort,sent.reasoning_effort);assert.equal(result.sheet.questions.length,12);
@@ -45,7 +45,7 @@ test('Kimi两款模型三档出题均发送冻结的真实型号和强度，不�
 });
 
 test('Kimi图示及学科校检共用结构调用与连接测试都沿用所选型号及强度',async()=>{
- for(const model of ['k3','kimi-for-coding'])for(const effort of ['eco','standard','deep']){
+ for(const model of ['k3.1-pro','k3','kimi-for-coding'])for(const effort of ['eco','standard','deep']){
   const env={KIMI_API_KEY:'test-only'},generation=control.snapshot({provider:'kimi-code',model,effort},env),requests=[];
   const transport=async(url,o)=>{requests.push(JSON.parse(o.body));return {status:200,body:stream('{"value":703}')};};
   const result=await figures.structured({system:'仅输出JSON',input:{},schema:{type:'object',properties:{value:{type:'integer'}},required:['value']}},{generation,env,transport});
@@ -58,5 +58,5 @@ test('Kimi图示及学科校检共用结构调用与连接测试都沿用所选�
 test('Kimi拒绝未知型号、接口错配和未知思考强度，网络请求前即失败',async()=>{
  let calls=0;const prompt={system:'JSON',input:{},schema:{type:'object'}},options={key:'test-only',transport:async()=>{calls++;throw Error('unexpected network');}};
  for(const args of [{kind:'code',model:'k2.8'},{kind:'code',model:'https://evil.test'},{kind:'platform',model:'kimi-for-coding'},{kind:'code',model:'k3',effort:'auto'}])await assert.rejects(kimi.completeKimi(prompt,{...options,...args}),/MODEL_SELECTION_INVALID/);
- assert.equal(calls,0);assert.equal(kimi.kimiProfile('code').model,'k3');assert.equal(kimi.kimiProfile('platform').model,'kimi-k3');
+ assert.equal(calls,0);assert.equal(kimi.kimiProfile('code').model,'k3');assert.equal(kimi.kimiProfile('platform').model,'kimi-k3');assert.equal(kimi.kimiProfile('platform','kimi-k3.1-pro').model,'kimi-k3.1-pro');assert.throws(()=>kimi.kimiProfile('code','kimi-k3.1-pro'),/MODEL_SELECTION_INVALID/);assert.throws(()=>kimi.kimiProfile('platform','k3.1-pro'),/MODEL_SELECTION_INVALID/);
 });

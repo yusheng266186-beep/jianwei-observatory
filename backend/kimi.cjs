@@ -4,7 +4,7 @@
 const {request}=require('./tencent.cjs'),{eventError,httpError}=require('./upstream-event.cjs');
 const USER_AGENT='JianweiObservatory/1.0 (+https://github.com/yusheng266186-beep/jianwei-observatory)';
 function kimiProfile(kind='platform',model){
- const route=kind==='platform'?{base:'https://api.moonshot.cn/v1',model:'kimi-k3',models:['kimi-k3']}:kind==='code'?{base:'https://api.kimi.com/coding/v1',model:'k3',models:['k3','kimi-for-coding']}:null;
+ const route=kind==='platform'?{base:'https://api.moonshot.cn/v1',model:'kimi-k3',models:['kimi-k3','kimi-k3.1-pro']}:kind==='code'?{base:'https://api.kimi.com/coding/v1',model:'k3',models:['k3.1-pro','k3','kimi-for-coding']}:null;
  if(!route)throw new Error('MODEL_ENDPOINT_INVALID');
  model=model??route.model;
  if(!route.models.includes(model))throw new Error('MODEL_SELECTION_INVALID');
