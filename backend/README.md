@@ -154,6 +154,8 @@
 
 Kimi个人会员目录包含K3.1 Pro（`k3.1-pro`）、K3和K2.8 Preview，均按所选档位发送`low/high/max`；默认与当前选择保持原值。参见[K3.1 Pro接入说明](../docs/KIMI-K31-PRO-2026-10-24.md)。
 
+CodeBuddy CLI API作为独立提供方，使用`CODEBUDDY_API_KEY`和固定`https://www.codebuddy.cn/v2`流式接口；目录包含14个CLI型号，按各自实际支持的档位执行。参见[接入说明](../docs/CODEBUDDY-API-2026-10-24.md)。
+
 `model-performance.json` 只保存对应中转来源的公开TPS快照和日期。它不决定调用时限，不代替实时测试，也不构成成功率承诺。生图提供方独立选择和冻结，不随题文模型自动换密钥或分组。
 
 ### 命题要求与输出契约
