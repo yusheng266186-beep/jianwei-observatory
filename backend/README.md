@@ -201,7 +201,7 @@ node tools/export-training-prompts.cjs --out /绝对路径/新的导出目录
 
 旧 `openai-chatgpt` 计划通道不再挂载面板或进入公开目录；启用当前通道的正式环境对旧授权接口返回HTTP 410。`openai-siwc.cjs`、`openai-credentials.cjs` 和旧本机助手等代码是历史实现，不是当前账号管理入口，不能混用两套授权令牌。
 
-当前云端代理同步本地已更新的 **VLESS / Reality** 出站，`openai-proxy.cjs` 也保留原固定证书TLS配置的兼容。云端只监听 `127.0.0.1:18080`，保留Reality公钥验证及目标HTTPS证书验证；其他服务商和腾讯存储不改走该代理。更新代码时保留代理层、官方运行时层及相应环境配置。
+2026-10-25已按用户要求将当前云端出站恢复到之前的 **Hysteria2**，保留节点证书固定及目标HTTPS证书验证；`openai-proxy.cjs`也保留VLESS/Reality兼容。云端只监听`127.0.0.1:18080`，按请求启动和释放；其他模型提供方和腾讯存储不改走该代理。账号池已补充新增Plus账号，两站共用3个账号。更新代码时保留代理层、官方运行时层及相应环境配置，详见[本次恢复与实测](../docs/OPENAI-RESTORED-2026-10-25.md)。
 
 具体实测和授权修复见[工作台整合](../docs/WORKBENCH-UNIFIED-2026-10-22.md)与[浏览器授权完成修复](../docs/BROWSER-OAUTH-COMPLETION-FIX-2026-10-22.md)。
 

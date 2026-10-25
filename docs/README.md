@@ -10,7 +10,7 @@
 | 理解数据、排名、存储与浏览器恢复 | [系统架构](ARCHITECTURE.md) |
 | 本地开发、发布、迁移或回退 | [部署维护手册](DEPLOYMENT.md)及[README开发章节](../README.md#development) |
 | 维护HTTP、Worker、账号、模型或额度 | [后端手册](../backend/README.md) |
-| 了解当前官方通道、模型比较与代理 | [2026-10-22工作台整合](WORKBENCH-UNIFIED-2026-10-22.md) |
+| 了解当前官方通道、模型比较与代理 | [2026-10-22工作台整合](WORKBENCH-UNIFIED-2026-10-22.md)、[2026-10-25代理恢复与新增账号](OPENAI-RESTORED-2026-10-25.md) |
 | 核对鹈鹕测智原版提示词与HTML动画预览 | [Cockpit原版提示词与HTML预览](PELICAN-HTML-2026-10-22.md) |
 | 排查浏览器授权完成后一直等待 | [OAuth完成确认与恢复](BROWSER-OAUTH-COMPLETION-FIX-2026-10-22.md) |
 | 导出完整的云端前置提示词 | [提示词导出与复核](PROMPT-EXPORT-2026-10-21.md) |
