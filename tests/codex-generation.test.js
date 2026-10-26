@@ -18,6 +18,13 @@ test('official completion keeps the frozen account, stream, image and cancellati
  await assert.rejects(adapter.complete(prompt,g,{control:{bind:async()=>{throw Error('CODEX_ACCOUNT_REAUTH_REQUIRED');}}}),/MODEL_AUTH_FAILED/);
  let at=0;await assert.rejects(adapter.complete(prompt,g,{now:()=>at,sleep:async ms=>{at+=ms;},control:{bind:async x=>x,withAccount:async()=>{throw Error('CODEX_ACCOUNT_BUSY');}}}),/MODEL_RATE_LIMIT/);
 });
+test('GPT-6.1 Terra exposes only its supported native efforts and preserves the selected model and account',async()=>{
+ const model='gpt-6.1-terra',native=['none','low','medium','high','xhigh','max'],route=control.publicCatalog(env).find(p=>p.id==='openai-codex'),profile=control.modelProfile('openai-codex',model);
+ assert(route.models.some(m=>m.id===model&&m.name==='GPT-6.1 Terra'));assert.equal(profile.contextWindow,1050000);assert.equal(profile.efforts.ultra,undefined);assert.throws(()=>control.snapshot({provider:'openai-codex',model,effort:'ultra'},env),/MODEL_SELECTION_INVALID/);
+ for(const effort of native){const generation={...control.snapshot({provider:'openai-codex',model,effort},env),codexAccountId:'b'.repeat(32)},prompt={system:'规则',input:{task:'37×19'}};let seen;
+  const result=await adapter.complete(prompt,generation,{control:{bind:async g=>g,withAccount:async(id,fn)=>{assert.equal(id,generation.codexAccountId);return fn('runtime');}},runtimeMethods:{complete:async(rt,p,g)=>{seen={p,g};return {output:'703'};}}});assert.equal(result.output,'703');assert.equal(seen.g.model,model);assert.equal(seen.g.reasoningEffort,effort);assert.equal(seen.p,prompt);
+ }
+});
 test('a busy official credential waits before sending, without duplicate model calls or changing accounts',async()=>{
  let attempts=0,calls=0,at=0;const g={...control.snapshot(selection,env),codexAccountId:'a'.repeat(32)};
  const result=await adapter.complete({input:{}},g,{now:()=>at,sleep:async ms=>{at+=ms;},control:{bind:async x=>x,withAccount:async(id,fn)=>{assert.equal(id,g.codexAccountId);if(attempts++===0)throw Error('CODEX_ACCOUNT_BUSY');return fn('runtime');}},runtimeMethods:{complete:async()=>{calls++;return {output:'done'};}}});

@@ -187,6 +187,8 @@
 
 官方账号通过私有云端存储和刷新租约管理，网页不持有上游令牌。2026-10-25已恢复原Hysteria2云端代理，并补充新增Plus账号，两站共用3个账号；[两站实际调用验证](docs/OPENAI-RESTORED-2026-10-25.md)已通过。旧计划通道已停用，旧实现与私有历史记录只保留兼容及审计用途。详见[工作台整合](docs/WORKBENCH-UNIFIED-2026-10-22.md)与[后端手册](backend/README.md)。
 
+2026-10-27官方账号组新增[GPT-6.1 Terra](docs/GPT-61-TERRA-2026-10-27.md)，支持none/low/medium/high/xhigh/max六档；当前配置保持原值。
+
 <a id="architecture"></a>
 ## 系统架构与目录
 
