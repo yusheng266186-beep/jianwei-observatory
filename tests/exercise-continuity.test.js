@@ -16,9 +16,9 @@ test('表内简称与手工教学范围可帮助定位，无法识别时提供�
  assert.equal(exerciseContentGroup({...request,focus:'教师另定专题',targets:[],curriculum:''}),exerciseCatalog('数学').groups[0].name);
 });
 test('恢复草稿后清理前一搜索，教师主动浏览的章节不会在普通重绘时跳回',()=>{
- const picker=createExerciseContentPicker();picker.restore(request);assert.match(picker.options(request,[]),/<h5>椭圆/);
+ const picker=createExerciseContentPicker();picker.restore(request);picker.setMode('数学','textbook');assert.match(picker.options(request,[]),/<h5>椭圆/);
  picker.select('数学','复数');assert.match(picker.html(request,[]),/<h5>复数的概念<\/h5>/);assert.match(picker.html(request,[]),/<h5>复数的概念<\/h5>/);
- picker.search('数学','复数');picker.restore({...request,focus:'导数运算与切线',targets:['导数运算与切线']});const html=picker.html({...request,focus:'导数运算与切线',targets:['导数运算与切线']},[]);assert.match(html,/<h5>导数/);assert.match(html,/data-ai-knowledge-search value=""/);
+ picker.search('数学','复数');picker.restore({...request,focus:'导数运算与切线',targets:['导数运算与切线']});picker.setMode('数学','textbook');const html=picker.html({...request,focus:'导数运算与切线',targets:['导数运算与切线']},[]);assert.match(html,/<h5>导数/);assert.match(html,/data-ai-knowledge-search value=""/);
 });
 test('从搜索点选知识点后提供该板块的方法重点，同时保留搜索与其他已选项',()=>{
  const picker=createExerciseContentPicker(),r={...request,focus:'导数运算与切线、椭圆几何性质',targets:['导数运算与切线','椭圆几何性质']},before=structuredClone(r);picker.search('数学','椭圆');picker.selectTopic('数学','椭圆几何性质');const html=picker.html(r,[]);assert.match(html,/联立后检验交点条件/);assert.match(html,/data-ai-knowledge-search value="椭圆"/);assert.match(html,/导数运算与切线/);assert.deepEqual(r,before);

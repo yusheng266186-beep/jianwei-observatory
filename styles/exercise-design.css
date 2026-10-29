@@ -75,3 +75,20 @@
 @media(prefers-reduced-motion:reduce){.exercise-topic-point,.exercise-picked-list>button,.exercise-knowledge-chapters button,.exercise-difficulties>.exercise-difficulty{transition:none!important;transform:none!important}}
 @media(forced-colors:active){.exercise-topic-point,.exercise-plan-row,.exercise-difficulties>.exercise-difficulty{border:1px solid CanvasText}.exercise-topic-point.selected,.exercise-difficulties>.exercise-difficulty.selected{outline:2px solid Highlight}}
 body[data-surface=paper] :is(.exercise-topic-point,.exercise-plan-row,.exercise-difficulties>.exercise-difficulty){background:#fff;box-shadow:none}
+.exercise-knowledge-modes{display:flex;gap:4px;width:fit-content;max-width:100%;padding:4px;margin:0 0 20px;border-radius:13px;background:var(--surface-control);box-shadow:inset 0 1px #fff8}
+.exercise-knowledge-modes button{min-height:40px;padding:9px 20px;border:1px solid transparent;border-radius:10px;background:transparent;color:var(--muted);font:inherit;font-size:12px;cursor:pointer;transition:background .24s,color .24s,box-shadow .24s}
+.exercise-knowledge-modes button.selected{color:var(--blue-ink);border-color:#ffffffa6;background:linear-gradient(135deg,#dcebf8c9,#ffffff8c);box-shadow:inset 0 1px #fff,0 2px 8px #6d91b916}
+.exercise-knowledge-modes button:focus-visible{outline:2px solid var(--school-blue,#547fab);outline-offset:3px}
+#exercise-content .exercise-knowledge-tree{gap:7px}
+.exercise-knowledge-tree-branch{min-width:0}
+#exercise-content .exercise-knowledge-tree .exercise-knowledge-branch{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;color:var(--ink);padding:10px 12px;font-weight:500}
+.exercise-knowledge-branch>i{font-style:normal;color:var(--muted);flex-shrink:0}
+#exercise-content .exercise-knowledge-tree .exercise-knowledge-branch.is-current{color:var(--blue-ink);background:#e1edf85c}
+.exercise-knowledge-tree-branch>div:not([hidden]){display:grid;gap:4px;margin:5px 0 7px 10px;padding-left:7px;border-left:1px solid #8ea9c333;animation:exercise-knowledge-arrive .24s cubic-bezier(.2,.8,.2,1)}
+#exercise-content .exercise-knowledge-tree .exercise-knowledge-tree-group{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 10px;font-size:11px}
+.exercise-knowledge-tree-group>small{color:var(--muted);font-size:9px;flex-shrink:0;font-variant-numeric:tabular-nums}
+@keyframes exercise-knowledge-arrive{from{opacity:.4;transform:translateY(3px)}to{opacity:1;transform:none}}
+@media(max-width:760px){.exercise-math-mobile-levels{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}.exercise-math-mobile-levels .exercise-choice{min-width:0}.exercise-math-mobile-levels .exercise-choice-trigger{min-height:48px;height:calc(100% - 22px)}.exercise-knowledge-modes{margin-bottom:18px}.exercise-knowledge-modes button{padding-inline:18px}}
+@media(max-width:380px){.exercise-math-mobile-levels{grid-template-columns:minmax(0,1fr)}}
+@media(prefers-reduced-motion:reduce){.exercise-knowledge-modes button{transition:none}.exercise-knowledge-tree-branch>div:not([hidden]){animation:none}}
+@media(forced-colors:active){.exercise-knowledge-modes button.selected{outline:2px solid Highlight}.exercise-knowledge-tree-branch>div:not([hidden]){border-color:CanvasText}}

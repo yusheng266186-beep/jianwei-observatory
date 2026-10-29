@@ -1,4 +1,5 @@
 import {exerciseCatalog} from '../data/exercise-catalog.js';
+import {mathKnowledgeCatalog} from '../data/math-knowledge.js';
 // Optional teacher choices; these never infer a textbook edition or replace
 // the knowledge labels supplied by the imported exam materials.
 const modules={
@@ -22,6 +23,7 @@ const goals={
  '生物':['概念辨析与联系','遗传规律与概率计算','实验变量与对照设计','图表信息与证据推理']
 };
 export function exercisePresets(subject){return {modules:exerciseCatalog(subject).groups.map(g=>g.name),goals:goals[subject]||['基础概念巩固','材料阅读与信息提取','分析推理与规范表达','综合应用与迁移']};}
+export const exerciseScopeGroup=(subject,name)=>subject==='数学'?({'平面向量与立体几何':'向量与几何','平面向量':'向量与几何','空间向量与立体几何':'向量与几何','平面解析几何':'解析几何','计数原理与概率统计':'概率与统计'}[name]||name):name;
 
 const scopeTerms={
  数学:[['集合与常用逻辑用语',/集合|交集|并集|补集|命题|逻辑/],['函数与导数',/函数|导数|单调|极值|最值|零点/],['三角函数与解三角形',/三角|正弦|余弦|解三角形/],['数列',/数列|等差|等比|递推/],['平面向量与立体几何',/向量|立体|空间|平面|翻折|球|圆柱/],['解析几何',/椭圆|双曲线|抛物线|圆锥曲线|弦长|离心率/],['概率与统计',/概率|统计|分布|随机|回归/]],
@@ -33,8 +35,8 @@ const scopeTerms={
 // A suggested grouping never becomes a new score-derived knowledge label.
 export function exerciseScopeModules(subject,curriculum=''){
  const prefix='高中'+subject+'已学内容：';if(!curriculum.startsWith(prefix))return [];
- const choices=[...new Set([...(modules[subject]||[]),...exercisePresets(subject).modules])],selected=curriculum.slice(prefix.length).split('、').map(s=>s.trim()).filter(Boolean);
- return selected.length&&selected.every(m=>choices.includes(m))?[...new Set(selected.map(m=>m==='平面向量与立体几何'?'向量与几何':m))]:[];
+ const choices=[...new Set([...(modules[subject]||[]),...exercisePresets(subject).modules,...(subject==='数学'?mathKnowledgeCatalog.modules.map(m=>m.name):[])])],selected=curriculum.slice(prefix.length).split('、').map(s=>s.trim()).filter(Boolean);
+ return selected.length&&selected.every(m=>choices.includes(m))?[...new Set(selected.map(m=>exerciseScopeGroup(subject,m)))]:[];
 }
 // Add the selected knowledge groups to a recognised module list. Existing
 // modules stay in place; a free-text or special scope is never replaced.
