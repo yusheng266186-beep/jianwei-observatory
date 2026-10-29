@@ -1,0 +1,6 @@
+import {esc} from './html.js';
+export const shortExerciseTarget=target=>String(target||'').split(' / ').at(-1);
+export function exerciseQuestionTargetHTML(request,index){
+ const slot=request.questionPlan?.[index],target=slot?.target;
+ return '<header class="exercise-question-target-heading"><div><span class="eyebrow">当前题目</span><h4>第 '+(index+1)+' 题 · 选择知识点</h4><p>点选下方考点，即用于这道题。相同考点可以用于其他题。</p></div><div class="exercise-question-navigation"><button type="button" class="button quiet" data-ai-action="plan-previous" '+(index===0?'disabled':'')+' aria-label="上一题">←</button><span>'+(index+1)+' / '+request.count+'</span><button type="button" class="button quiet" data-ai-action="plan-next" '+(index>=request.count-1?'disabled':'')+' aria-label="下一题">→</button></div></header>'+(target?'<div class="exercise-current-target" role="status"><div><span>本题知识点</span><b>'+esc(shortExerciseTarget(target))+'</b><small>'+esc(target)+'</small></div><div><button type="button" class="button quiet" data-ai-action="plan-target-clear">恢复自动</button><button type="button" class="button quiet" data-ai-action="plan-target-all">用于全部 '+request.count+' 题</button></div></div>':'<p class="exercise-auto-target" role="status">本题暂由模型根据整体目标自动选点。你可以在下方指定具体知识点。</p>');
+}

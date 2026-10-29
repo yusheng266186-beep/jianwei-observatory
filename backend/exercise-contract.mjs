@@ -44,8 +44,8 @@ const legacyQuestionType=(subject,type)=>(type==='阅读'&&['语文','英语','�
 export const exerciseQuestionTypes=subject=>subjectTypes[subject]||types;
 export const exerciseTypeLabel=type=>({选择:'单项选择',多选:'多项选择',阅读:'阅读简答',简答:'简答'}[type]||type);
 export function exercisePlanFor(request){
- const explicit=slots=>slots.map((slot,i)=>request.questionPlan?.[i]?.type?{...slot,type:request.questionPlan[i].type}:slot);
- const slots=Array.from({length:request.count},(_,i)=>({id:i+1,...(request.targets?.length?{target:request.targets[Math.floor(i*request.targets.length/request.count)]}:{}),...(request.questionTypes?.length?{type:request.questionTypes[Math.floor(i*request.questionTypes.length/request.count)]}:{})}));
+ const perQuestion=request.targetMode==='per-question',explicit=slots=>slots.map((slot,i)=>({...slot,...(request.questionPlan?.[i]?.type?{type:request.questionPlan[i].type}:{}),...(perQuestion&&request.questionPlan?.[i]?.target?{target:request.questionPlan[i].target}:{})}));
+ const slots=Array.from({length:request.count},(_,i)=>({id:i+1,...(!perQuestion&&request.targets?.length?{target:request.targets[Math.floor(i*request.targets.length/request.count)]}:{}),...(request.questionTypes?.length?{type:request.questionTypes[Math.floor(i*request.questionTypes.length/request.count)]}:{})}));
  const types=request.questionTypes||[];if(!types.length||!request.targets?.length)return explicit(slots);
  const preferred=slots.map(slot=>{
   const target=slot.target||'';let type;
@@ -62,15 +62,17 @@ export function exercisePlanFor(request){
 const text=(v,max=Infinity)=>typeof v==='string'&&v.trim().length>0&&v.length<=max;
 const keys=(o,allowed)=>o&&typeof o==='object'&&!Array.isArray(o)&&Object.keys(o).every(k=>allowed.includes(k));
 export function validateExerciseRequest(value){
- if(!keys(value,['subject','grade','curriculum','focus','count','minutes','difficulty','evidence','basis','visuals','template','targets','requirements','questionTypes','questionPlan','examStyle','answerSpaceVersion'])||!EXERCISE_SUBJECTS.some(s=>s.id===value.subject)||value.grade!=='高三'||!text(value.curriculum,160)||!text(value.focus,2000)||!Number.isInteger(value.count)||value.count<3||value.count>12||!Number.isInteger(value.minutes)||value.minutes<5||value.minutes>90||!difficultyProfile(value.difficulty)||!Array.isArray(value.evidence)||value.evidence.length>24)throw new Error('请确认学科、训练重点、教材范围、3–12题及5–90分钟。');
+ if(!keys(value,['subject','grade','curriculum','focus','count','minutes','difficulty','evidence','basis','visuals','template','targets','requirements','questionTypes','questionPlan','targetMode','examStyle','answerSpaceVersion'])||!EXERCISE_SUBJECTS.some(s=>s.id===value.subject)||value.grade!=='高三'||!text(value.curriculum,160)||!text(value.focus,2000)||!Number.isInteger(value.count)||value.count<3||value.count>12||!Number.isInteger(value.minutes)||value.minutes<5||value.minutes>90||!difficultyProfile(value.difficulty)||!Array.isArray(value.evidence)||value.evidence.length>24)throw new Error('请确认学科、训练重点、教材范围、3–12题及5–90分钟。');
+ const perQuestion=value.targetMode==='per-question';if(value.targetMode!==undefined&&!perQuestion)throw new Error('知识点安排方式无效。');
  const minimum=minimumExerciseMinutes(value.count);
  if(value.minutes<minimum)throw new Error('所选'+value.count+'题与'+value.minutes+'分钟不匹配，请减少题数或将训练时长设为至少'+minimum+'分钟。');
  if(value.answerSpaceVersion!==undefined&&value.answerSpaceVersion!==1)throw new Error('作答版式版本无效。');
  if(value.examStyle!==undefined&&value.examStyle!=='sichuan-gaokao')throw new Error('命题规范无效。');
  if(value.examStyle==='sichuan-gaokao'&&value.questionTypes?.some(t=>!exerciseQuestionTypes(value.subject).includes(t)))throw new Error('请选择符合四川高考规范的学科题型。');
  if(value.requirements!==undefined&&(typeof value.requirements!=='string'||value.requirements.length>1000))throw new Error('补充要求最多1000字。');
- if(value.targets!==undefined&&(!Array.isArray(value.targets)||value.targets.length>12||value.targets.length>value.count||new Set(value.targets).size!==value.targets.length||value.targets.some(t=>!text(t,200))))throw new Error('每次最多选择12个不同训练点，题数须不少于训练点数量。');
- if(value.questionPlan!==undefined&&(!Array.isArray(value.questionPlan)||value.questionPlan.length!==value.count||value.questionPlan.some((slot,i)=>!keys(slot,['id','type'])||slot.id!==i+1||slot.type!==undefined&&!exerciseQuestionTypes(value.subject).includes(slot.type))))throw new Error('请按题号完整安排每道题，题型须适合当前学科。');
+ if(value.targets!==undefined&&(!Array.isArray(value.targets)||value.targets.length>(perQuestion?64:12)||!perQuestion&&value.targets.length>value.count||new Set(value.targets).size!==value.targets.length||value.targets.some(t=>!text(t,200))))throw new Error(perQuestion?'请精简候选知识点，每项最多200字。':'每次最多选择12个不同训练点，题数须不少于训练点数量。');
+ if(value.questionPlan!==undefined&&(!Array.isArray(value.questionPlan)||value.questionPlan.length!==value.count||value.questionPlan.some((slot,i)=>!keys(slot,['id','type','target'])||slot.id!==i+1||slot.type!==undefined&&!exerciseQuestionTypes(value.subject).includes(slot.type)||slot.target!==undefined&&(!perQuestion||!text(slot.target,200)||!value.targets?.includes(slot.target)))))throw new Error('请按题号完整安排每道题，题型须适合当前学科。');
+ if(perQuestion&&(!value.questionPlan||value.questionTypes?.length))throw new Error('请按题号安排知识点和题型，自动题型留空。');
  if(value.questionPlan?.some(s=>s.type&&value.questionTypes?.length&&!value.questionTypes.includes(s.type)))throw new Error('逐题题型与整体题型范围冲突，请重新确认。');
  if(value.questionTypes!==undefined&&(!Array.isArray(value.questionTypes)||value.questionTypes.length>value.count||new Set(value.questionTypes).size!==value.questionTypes.length||value.questionTypes.some(t=>!exerciseQuestionTypes(value.subject).includes(t)&&!legacyQuestionType(value.subject,t))))throw new Error('请选择适合当前学科的题型，题数须不少于所选题型数量。');
  for(const e of value.evidence)if(!keys(e,['label','knowledge','score','max','exam'])||!text(e.label,60)||typeof e.knowledge!=='string'||e.knowledge.length>200||typeof e.score!=='number'||!Number.isFinite(e.score)||typeof e.max!=='number'||!Number.isFinite(e.max)||e.max<=0||e.score<0||e.score>e.max)throw new Error('训练依据只接受明确满分、有效得分的匿名得分项。');
@@ -103,6 +105,7 @@ export function validateExerciseResult(value,request,{allowPendingFigures=false,
   if(q.answerLines!==undefined&&(!Number.isInteger(q.answerLines)||q.answerLines<0||q.answerLines>48))throw new Error('第'+(i+1)+'题的建议作答行数无效。');
   if(q.target!==undefined&&!text(q.target,200)||request.targets?.length&&!request.targets.includes(q.target))throw new Error('第'+(i+1)+'题未对应已选训练点。');
   if(request.questionTypes?.length&&!request.questionTypes.includes(q.type))throw new Error('第'+(i+1)+'题不符合所选题型。');
+  if(request.targetMode==='per-question'&&request.questionPlan?.[i]?.target&&q.target!==request.questionPlan[i].target)throw new Error('第'+(i+1)+'题未使用该题指定的知识点。');
   if(request.questionPlan?.[i]?.type&&q.type!==request.questionPlan[i].type)throw new Error('第'+(i+1)+'题须为'+exerciseTypeLabel(request.questionPlan[i].type)+'，与逐题安排不一致。');
   if(request.examStyle==='sichuan-gaokao'&&!exerciseQuestionTypes(request.subject).includes(q.type))throw new Error('第'+(i+1)+'题不符合四川高考学科题型。');
   if(q.diagram)validateExerciseDiagram(q.diagram);
@@ -121,7 +124,7 @@ export function validateExerciseResult(value,request,{allowPendingFigures=false,
   // HTML and scripts are never accepted as model-authored layout.
   if([q.stem,q.answer,q.analysis,...q.choices,...q.points].some(s=>/<\/?(?:script|iframe|img|svg|style)\b|javascript:/i.test(s)))throw new Error('题目中存在非教学内容。');
  }
- if(request.targets?.some(t=>!value.questions.some(q=>q.target===t)))throw new Error('练习没有覆盖全部已选训练点。');
+ if(request.targetMode!=='per-question'&&request.targets?.some(t=>!value.questions.some(q=>q.target===t)))throw new Error('练习没有覆盖全部已选训练点。');
  if(request.questionTypes?.some(t=>!value.questions.some(q=>q.type===t)))throw new Error('练习没有覆盖全部所选题型。');
  // Difficulty labels and estimated minutes are advisory metadata. The review
  // model judges the actual content against the teacher's requested difficulty.

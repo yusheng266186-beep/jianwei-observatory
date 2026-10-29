@@ -12,7 +12,7 @@ function plan(input){
   // with three global targets and a late two-target group, redistribution
   // would silently turn geo/prob/prob into geo/geo/prob.
   const slots=groupScope.localSlots(whole,offset,size),targets=[...new Set(slots.map(s=>s.target).filter(Boolean))],types=[...new Set(slots.map(s=>s.type).filter(Boolean))];
-  parts.push({index:i,offset,slots,input:{...structuredClone(input),count:size,minutes:duration,...(input.targets?{targets}:{}),...(input.questionTypes?{questionTypes:input.questionPlan&&!input.questionTypes.length?[]:types}:{}),...(input.questionPlan?{questionPlan:input.questionPlan.slice(offset,end).map((s,j)=>({...s,id:j+1}))}:{}),...(input.visuals==='hybrid'&&i>0?{visuals:'vector'}:{})}});offset=end;minutes+=duration;
+  parts.push({index:i,offset,slots,input:{...structuredClone(input),count:size,minutes:duration,...(input.targets?{targets:input.targetMode==='per-question'?[...input.targets]:targets}:{}),...(input.questionTypes?{questionTypes:input.questionPlan&&!input.questionTypes.length?[]:types}:{}),...(input.questionPlan?{questionPlan:input.questionPlan.slice(offset,end).map((s,j)=>({...s,id:j+1}))}:{}),...(input.visuals==='hybrid'&&i>0?{visuals:'vector'}:{})}});offset=end;minutes+=duration;
  }return parts;
 }
 async function latestAttempt(store,key,index){let low=0,high=1;const first=await store.get(ref(key,index,0));if(!first)return null;while(await store.get(ref(key,index,high))){low=high;high=high*2+1;}while(high-low>1){const mid=Math.floor((low+high)/2);if(await store.get(ref(key,index,mid)))low=mid;else high=mid;}const r=low?await store.get(ref(key,index,low)):first;return {...r.value,attempt:low};}

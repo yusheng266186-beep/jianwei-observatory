@@ -1,6 +1,7 @@
 // The review board is rendered before generation, not behind a disclosure.
 // Keep the wording here so the visible summary and saved-setup preview agree.
 import {esc} from './html.js';
+import {shortExerciseTarget} from './exercise-question-target.js';
 import {exerciseTypeLabel} from '../engine/exercise-contract.js';
 import {exerciseVisualLabel} from './exercise-visual-policy.js';
 
@@ -19,7 +20,8 @@ export function exerciseRequestRows(request,{labels=[],level}={}){
  const count=Number.isInteger(request?.count)?request.count:0,minutes=Number.isInteger(request?.minutes)?request.minutes:0;
  return [
   ['教学范围',request?.curriculum?.trim()||'尚未选择，待补充教材与范围'],
-  ['知识点',labels.length?labels.join('、'):'由训练内容补充'],
+  [request.targetMode==='per-question'?'自动选题参考范围':'知识点',labels.length?labels.join('、'):request.targetMode==='per-question'?'根据整体训练目标安排':'由训练内容补充'],
+  ...(request.targetMode==='per-question'?[['逐题安排',request.questionPlan.map(s=>'第'+s.id+'题：'+(s.target?shortExerciseTarget(s.target):'自动选点')+' · '+(s.type?exerciseTypeLabel(s.type):'自动题型')).join('；')]]:[]),
   ['训练重点',request?.focus?.trim()||'尚未填写'],
   ...(request?.requirements?.trim()?[['补充要求',request.requirements.trim()]]:[]),
   ['题型（答题形式）',typeText+(request.questionPlan?.some(s=>s.type)?'':types.length?' · 决定怎么作答，具体任务由训练内容决定':' · 未选择时按学科自动搭配')],
@@ -35,7 +37,7 @@ export function exerciseRequestSummaryHTML(request,options={}){
 export function exerciseRequestBriefHTML(request,{labels=[],level}={}){
  const types=request?.questionTypes||[],count=Number.isInteger(request?.count)?request.count:0,minutes=Number.isInteger(request?.minutes)?request.minutes:0;
  const chips=[
-  [labels.length?labels.length+'个知识点':'知识点待补充',!labels.length],
+  [request.targetMode==='per-question'?(request.questionPlan?.filter(s=>s.target).length||0)+'题已指定知识点':labels.length?labels.length+'个知识点':'知识点待补充',request.targetMode!=='per-question'&&!labels.length],
   [request.questionPlan?.some(s=>s.type)?request.questionPlan.filter(s=>s.type).length+'题已限定题型':exerciseTypeSummary(types),false],
   [count?count+'题':'题数待定',!count],
   [minutes?minutes+'分钟':'时长待定',!minutes],

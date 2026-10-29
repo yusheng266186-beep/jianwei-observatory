@@ -1,5 +1,5 @@
 {
-  "main": "runtime/main-TWRVY4I6.js",
+  "main": "runtime/main-U2QUBTZJ.js",
   "storage": "runtime/storage-7U7Z7LVZ.js",
   "prepare": "runtime/prepare-W2EFWCXN.js",
   "importer": "app/runtime/importer-UMEQBE65.js",
@@ -56,14 +56,14 @@
       "feature": ""
     },
     {
-      "file": "assets/runtime-exercise-design-d2273d5622d4.css",
+      "file": "assets/runtime-exercise-design-fcf535851552.css",
       "feature": "exercises"
     }
   ],
   "styles": [
     "assets/figure-library-20349b898c28.css",
     "assets/model-workbench-010e5d6d02d6.css",
-    "assets/runtime-exercise-design-d2273d5622d4.css",
+    "assets/runtime-exercise-design-fcf535851552.css",
     "assets/runtime-exercises-bb140abdcba3.css",
     "assets/runtime-finish-5ecfd7756deb.css",
     "assets/runtime-foundation-ef1c421f8181.css",
@@ -85,19 +85,19 @@
     "app/runtime/importer-UMEQBE65.js",
     "app/runtime/storage-7U7Z7LVZ.js",
     "app/runtime/shared-KPTXKDQP.js",
-    "app/runtime/shared-U6KVOXG7.js",
-    "app/runtime/shared-WI4F75B5.js",
-    "app/runtime/shared-2QVWHTI6.js",
-    "app/runtime/shared-J7VFNNV3.js",
-    "app/runtime/shared-TSNYG3PS.js",
-    "app/runtime/shared-6QE2GOQM.js",
-    "app/runtime/shared-YT23B3LK.js",
-    "app/runtime/shared-W4ZOVJTI.js",
-    "app/runtime/shared-H6GNMNDJ.js",
-    "app/runtime/shared-N4BZF6CX.js",
-    "app/runtime/shared-2SE5LS2F.js",
-    "app/runtime/shared-UQ3G3ND5.js",
-    "app/runtime/main-TWRVY4I6.js",
+    "app/runtime/shared-GYAH7X7M.js",
+    "app/runtime/shared-WOYRV752.js",
+    "app/runtime/shared-6ECRNTQH.js",
+    "app/runtime/shared-WQZUQ3RR.js",
+    "app/runtime/shared-M5EXCISE.js",
+    "app/runtime/shared-GEOGMXP2.js",
+    "app/runtime/shared-JYSRJCMD.js",
+    "app/runtime/shared-KGWAZNVN.js",
+    "app/runtime/shared-PCDO7ZPS.js",
+    "app/runtime/shared-AKR6HU7C.js",
+    "app/runtime/shared-PGDYGYNE.js",
+    "app/runtime/shared-X5FTDFYJ.js",
+    "app/runtime/main-U2QUBTZJ.js",
     "app/runtime/shared-LDJRZ6KL.js",
     "app/runtime/shared-44VAQO44.js",
     "app/runtime/shared-PAV3FDI5.js",
@@ -136,10 +136,5 @@
     "app/runtime/shared-RMTIRWQZ.js",
     "app/runtime/figure-library-5P5ZFBEZ.js",
     "app/runtime/model-workbench-Z7SCGND7.js"
-  ],
-  "compatibility": [
-    "app/runtime/main-SXPHJUOO.js",
-    "app/runtime/shared-26FKYW6M.js",
-    "assets/runtime-exercise-design-8bd2d0660b26.css"
   ]
 }

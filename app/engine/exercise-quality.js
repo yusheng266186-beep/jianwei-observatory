@@ -34,9 +34,10 @@ export function auditExerciseQuality(sheet,request={},notes=[]){
    const parts=expression.replace(/\\(?:text|mathrm)\s*\{[^{}]*\}/g,'').split('=');if(parts.length<2||parts.length>8)continue;const values=parts.map(numericExerciseExpression);if(values.some(v=>v===null))continue;checks.equations++;
    if(values.every(v=>Math.abs(v-values[0])<=1e-7*Math.max(1,...values.map(Math.abs))))checks.consistentEquations++;else add(q.id,'arithmetic','数值算式两侧不一致；如为近似值，请明确近似关系和精度。',expression.slice(0,240));
   }
+  if(request.targetMode==='per-question'&&request.questionPlan?.[q.id-1]?.target&&q.target!==request.questionPlan[q.id-1].target)add(q.id,'target','本题未对应教师按题号指定的知识点，请重新核对。');
   if(q.target&&request.targets?.length&&!request.targets.includes(q.target))add(q.id,'target','本题训练点与本次选择不一致，请核对范围。');
  }
- for(const target of request.targets||[])if(!(sheet?.questions||[]).some(q=>q.target===target))add(0,'coverage','所选训练点尚未在逐题目标中体现：'+target,target);
+ for(const target of request.targetMode==='per-question'?[]:request.targets||[])if(!(sheet?.questions||[]).some(q=>q.target===target))add(0,'coverage','所选训练点尚未在逐题目标中体现：'+target,target);
  for(const n of notes)for(const message of n.issues||[])add(n.questionId,'content',message);
  return {version:EXERCISE_QUALITY_VERSION,checks,issues,stamp:exerciseQualityStamp(sheet)};
 }
