@@ -9,6 +9,7 @@ const groups=[
  // when opened directly from class or student research, before visiting papers.
  group('research','',['paper-material','runtime']),
  group('exercises','exercises',['exercises','exercise-center','exercise-feedback']),
- group('finish','',['research-continuity','archive','fields','wheels','refinement','visual-language','motion'])
+ group('finish','',['research-continuity','archive','fields','wheels','refinement','visual-language','motion']),
+ group('exercise-design','exercises',['exercise-design'])
 ];
 module.exports={groups};

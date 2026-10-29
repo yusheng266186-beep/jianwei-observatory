@@ -1,13 +1,14 @@
 import {EXERCISE_SUBJECTS,difficultyProfile,exerciseQuestionTypes} from './exercise-contract.js';
-const fields=['subject','curriculum','focus','targets','requirements','count','minutes','difficulty','questionTypes','visuals','template'];
+const fields=['subject','curriculum','focus','targets','requirements','count','minutes','difficulty','questionTypes','questionPlan','visuals','template'];
 // Reusable settings contain no student identity, exam IDs or score evidence.
 export function exerciseSetupContent(request){
  if(!request||!EXERCISE_SUBJECTS.some(s=>s.id===request.subject))throw new Error('请选择训练学科');
  const content={};for(const field of fields)if(request[field]!==undefined)content[field]=structuredClone(request[field]);
- for(const [field,max] of [['curriculum',160],['focus',500],['requirements',1000]])if(content[field]!==undefined&&(typeof content[field]!=='string'||content[field].length>max))throw new Error('请精简'+({curriculum:'教学范围',focus:'训练重点',requirements:'补充要求'}[field])+'后保存');
+ for(const [field,max] of [['curriculum',160],['focus',2000],['requirements',1000]])if(content[field]!==undefined&&(typeof content[field]!=='string'||content[field].length>max))throw new Error('请精简'+({curriculum:'教学范围',focus:'训练重点',requirements:'补充要求'}[field])+'后保存');
  if(!Number.isInteger(content.count)||content.count<3||content.count>12||!Number.isInteger(content.minutes)||content.minutes<5||content.minutes>90||!difficultyProfile(content.difficulty))throw new Error('请确认题量、时长与难度后保存');
  for(const field of ['targets','questionTypes'])if(content[field]!==undefined&&(!Array.isArray(content[field])||content[field].some(v=>typeof v!=='string')||new Set(content[field]).size!==content[field].length))throw new Error('草稿选项无效');
  if(content.targets?.some(t=>!t.trim()||t.length>200)||content.questionTypes?.some(t=>!exerciseQuestionTypes(content.subject).includes(t)))throw new Error('请使用当前学科的训练选项');
+ if(content.questionPlan!==undefined&&(!Array.isArray(content.questionPlan)||content.questionPlan.length!==content.count||content.questionPlan.some((s,i)=>!s||typeof s!=='object'||Object.keys(s).some(k=>!['id','type'].includes(k))||s.id!==i+1||s.type!==undefined&&!exerciseQuestionTypes(content.subject).includes(s.type))))throw new Error('逐题题型安排无效');
  if(content.visuals!==undefined&&!['auto','none','vector','hybrid'].includes(content.visuals)||content.template!==undefined&&!['targeted','variation','retest'].includes(content.template))throw new Error('草稿设置无效');
  return content;
 }
@@ -31,5 +32,5 @@ export function mergeExerciseSetupArchive(current,incoming,{newId=()=>crypto.ran
 }
 export function applyExerciseSetup(setup,current){
  const content=exerciseSetupContent(setup.content);if(content.subject!==current.subject)throw new Error('请选择当前学科的草稿');
- const {targets,requirements,questionTypes,...base}=structuredClone(current);return {...base,...content,examStyle:'sichuan-gaokao',answerSpaceVersion:1};
+ const {targets,requirements,questionTypes,questionPlan,...base}=structuredClone(current);return {...base,...content,examStyle:'sichuan-gaokao',answerSpaceVersion:1};
 }

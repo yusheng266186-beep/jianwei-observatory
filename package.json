@@ -69,6 +69,7 @@
     "test:exercise-picker-background": "node tests/exercise-picker-background.cjs",
     "test:exercise-mobile-word": "node tests/exercise-mobile-word.cjs",
     "test:exercise-center": "node tests/exercise-center.cjs",
+    "test:exercise-design": "node tests/exercise-design.cjs",
     "test:exercise-composer": "node tests/exercise-composer.cjs",
     "runtime:check": "node tools/runtime-assets.cjs",
     "runtime:prune": "node tools/runtime-assets.cjs --apply",

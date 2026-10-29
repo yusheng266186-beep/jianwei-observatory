@@ -4,7 +4,7 @@ import {openSurface,closeSurface} from './surface-motion.js';
 // The same glass and interruptible motion as the teacher's date/time controls.
 export function exerciseChoice(id,label,value,options){
  const selected=options.find(o=>o.value===value),display=selected?.label||(value?(id==='curriculum'?'自定 · ':'')+value:options[0]?.label||'请选择');
- return `<div class="field exercise-choice" data-render-key="choice-${id}"><span id="exercise-${id}-label">${esc(label)}</span><button type="button" class="exercise-choice-trigger" data-exercise-choice="${id}" title="${esc(display)}" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="exercise-${id}-label exercise-${id}-value" aria-controls="exercise-${id}-options"><span id="exercise-${id}-value">${esc(display)}</span><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="m4 6 4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div id="exercise-${id}-options" class="exercise-choice-panel" popover="manual" role="listbox" aria-labelledby="exercise-${id}-label">${options.map(o=>`<button type="button" role="option" tabindex="-1" aria-selected="${o.value===value}" data-exercise-option="${esc(o.value)}"><span>${esc(o.label)}</span><i aria-hidden="true">${o.value===value?'✓':''}</i></button>`).join('')}</div></div>`;
+ return `<div class="field exercise-choice" data-render-key="choice-${id}"><span id="exercise-${id}-label">${esc(label)}</span><button type="button" class="exercise-choice-trigger" data-exercise-choice="${id}" title="${esc(display)}" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="exercise-${id}-label exercise-${id}-value" aria-controls="exercise-${id}-options"><span id="exercise-${id}-value">${esc(display)}</span><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="m4 6 4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div id="exercise-${id}-options" class="exercise-choice-panel" popover="manual" role="listbox" aria-hidden="true" aria-labelledby="exercise-${id}-label">${options.map(o=>`<button type="button" role="option" tabindex="-1" aria-selected="${o.value===value}" data-exercise-option="${esc(o.value)}"><span>${esc(o.label)}</span><i aria-hidden="true">${o.value===value?'✓':''}</i></button>`).join('')}</div></div>`;
 }
 
 export function installExerciseChoices(root,onChange){
@@ -22,7 +22,7 @@ export function installExerciseChoices(root,onChange){
 
  const schedule=()=>{if(active&&!frame)frame=requestAnimationFrame(()=>{frame=0;position();});};
  function close(focus=false,immediate=false){
-  const old=active;if(!old)return Promise.resolve();active=null;old.trigger.setAttribute('aria-expanded','false');
+  const old=active;if(!old)return Promise.resolve();active=null;old.trigger.setAttribute('aria-expanded','false');old.panel.setAttribute('aria-hidden','true');
   const hide=()=>{if(nativeOpen(old.panel))old.panel.hidePopover();old.panel.classList.remove('choice-fallback-open');};
   const done=immediate?(hide(),Promise.resolve()):closeSurface(old.panel,{hide,isOpen:()=>opened(old.panel)});
   if(focus&&old.trigger.isConnected)old.trigger.focus({preventScroll:true});return done;
@@ -30,7 +30,7 @@ export function installExerciseChoices(root,onChange){
  function open(trigger,last=false){
   if(active?.trigger===trigger){close(true);return;}close(false,true);
   const panel=root.querySelector('#'+trigger.getAttribute('aria-controls'));if(!panel)return;
-  active={trigger,panel};trigger.setAttribute('aria-expanded','true');
+  active={trigger,panel};trigger.setAttribute('aria-expanded','true');panel.removeAttribute('aria-hidden');
   openSurface(panel,{show:()=>{try{panel.showPopover();}catch{panel.classList.add('choice-fallback-open');}},isOpen:()=>opened(panel)});position();
   const options=[...panel.querySelectorAll('[role=option]')],selected=panel.querySelector('[aria-selected=true]');(last?options.at(-1):selected||options[0])?.focus({preventScroll:true});if(selected)panel.scrollTop=Math.max(0,selected.offsetTop-(panel.clientHeight-selected.offsetHeight)/2);
  }

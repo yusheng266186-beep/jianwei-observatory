@@ -5,7 +5,7 @@
 // groups that already finished. It is prompt metadata, not a request field.
 const {isDeepStrictEqual}=require('node:util');
 
-const VERSION=2;
+const VERSION=3;
 const MAX_COMPLETED=12;
 const MAX_STEM=120;
 const MAX_SHARED_STEM=12000;
@@ -15,7 +15,7 @@ const MAX_LEVEL=10;
 const MAX_REQUIREMENTS=1000;
 const ROOT_KEYS=['version','group','global','slots','coverage','completed'];
 const GROUP_KEYS=['index','count','offset','size','firstQuestion','lastQuestion'];
-const GLOBAL_KEYS=['subject','grade','curriculum','focus','count','minutes','difficulty','targets','questionTypes','requirements'];
+const GLOBAL_KEYS=['subject','grade','curriculum','focus','count','minutes','difficulty','targets','questionTypes','questionPlan','requirements'];
 const SLOT_KEYS=['id','target','type'];
 const COMPLETED_KEYS=['id','target','type','level','stem','figure','sharedStem'];
 const COVERAGE_KEYS=['completedTargets','outsideTargets'];
@@ -32,19 +32,20 @@ const mismatch=detail=>Object.assign(Error('GROUP_SCOPE_MISMATCH'),{detail});
 // compares it with the contract for every supported count, so prompt slots,
 // response schema and program validation cannot drift from the whole paper.
 function globalSlots(request,version=VERSION){
+ const explicit=slots=>slots.map((slot,i)=>version>=3&&request.questionPlan?.[i]?.type?{...slot,type:request.questionPlan[i].type}:slot);
  const count=request?.count;if(!Number.isInteger(count)||count<1)return [];
  const targets=Array.isArray(request?.targets)?request.targets:[],questionTypes=Array.isArray(request?.questionTypes)?request.questionTypes:[];
  const slots=Array.from({length:count},(_,index)=>({id:index+1,...(targets.length?{target:targets[Math.floor(index*targets.length/count)]}:{}),...(questionTypes.length?{type:questionTypes[Math.floor(index*questionTypes.length/count)]}:{})}));
- if(version===1||!questionTypes.length||!targets.length)return slots;
+ if(version===1||!questionTypes.length||!targets.length)return explicit(slots);
  const preferred=slots.map(slot=>{
   const target=slot.target||'';let type;
   if(request.subject==='语文'){if(/文言.*翻译|语言简明|简明改写|语言.*改写|压缩语段/.test(target))type='简答';else if(/写作|作文/.test(target))type='写作';}
   if(['英语','日语'].includes(request.subject)){if(/写作|书面表达|作文/.test(target))type='写作';else if(/语法|助词|词形/.test(target))type='填空';else if(/阅读/.test(target))type='选择';}
   return questionTypes.includes(type)?type:null;
  });
- if(!preferred.some(Boolean))return slots;
+ if(!preferred.some(Boolean))return explicit(slots);
  let flexible=0;const planned=slots.map((slot,i)=>({...slot,type:preferred[i]||questionTypes[flexible++%questionTypes.length]}));
- return questionTypes.every(type=>planned.some(slot=>slot.type===type))?planned:slots;
+ return explicit(questionTypes.every(type=>planned.some(slot=>slot.type===type))?planned:slots);
 }
 function localSlots(slots,offset,count){
  return slots.slice(offset,offset+count).map((slot,index)=>({id:index+1,...(slot.target!==undefined?{target:slot.target}:{}),...(slot.type!==undefined?{type:slot.type}:{})}));
@@ -62,7 +63,7 @@ function createGroupContext({request,index,partCount,offset,slots,completed=[],p
  return {
   version:planVersion,
   group:{index:index+1,count:partCount,offset,size:slots.length,firstQuestion:offset+1,lastQuestion:offset+slots.length},
-  global:{...(readable(request.subject,40)?{subject:request.subject}:{}),...(readable(request.grade,20)?{grade:request.grade}:{}),...(readable(request.curriculum,160)?{curriculum:request.curriculum}:{}),...(readable(request.focus,500)?{focus:request.focus}:{}),count:request.count,minutes:request.minutes,...(readable(request.difficulty,40)?{difficulty:request.difficulty}:{}),targets,questionTypes,...(typeof request.requirements==='string'?{requirements:request.requirements}:{})},
+  global:{...(readable(request.subject,40)?{subject:request.subject}:{}),...(readable(request.grade,20)?{grade:request.grade}:{}),...(readable(request.curriculum,160)?{curriculum:request.curriculum}:{}),...(readable(request.focus,2000)?{focus:request.focus}:{}),count:request.count,minutes:request.minutes,...(readable(request.difficulty,40)?{difficulty:request.difficulty}:{}),targets,questionTypes,...(request.questionPlan?{questionPlan:structuredClone(request.questionPlan)}:{}),...(typeof request.requirements==='string'?{requirements:request.requirements}:{})},
   slots:slots.map(slot=>({id:slot.id,...(slot.target!==undefined?{target:slot.target}:{}),...(slot.type!==undefined?{type:slot.type}:{})})),
   coverage:{completedTargets:[...new Set(bounded.map(item=>item.target).filter(Boolean))],outsideTargets:targets.filter(target=>!localTargets.includes(target))},
   completed:bounded
@@ -71,14 +72,14 @@ function createGroupContext({request,index,partCount,offset,slots,completed=[],p
 function normalizeGroupScope(scope,{count,request}={}){
  if(!isRecord(scope))throw invalid('缺少本组冻结范围。');
  if(!onlyKeys(scope,ROOT_KEYS))throw invalid('本组冻结范围包含未知字段。');
- if(![1,VERSION].includes(scope.version))throw invalid('本组冻结范围版本不受支持。');
+ if(![1,2,VERSION].includes(scope.version))throw invalid('本组冻结范围版本不受支持。');
  const {group,global}=scope,slots=scope.slots;
  if(!onlyKeys(group,GROUP_KEYS))throw invalid('本组范围字段不完整。');
  if(![group.index,group.count,group.offset,group.size,group.firstQuestion,group.lastQuestion].every(Number.isInteger)||group.index<1||group.count<1||group.index>group.count||group.offset<0||group.size<1)throw invalid('本组范围序号无效。');
  if(group.firstQuestion!==group.offset+1||group.lastQuestion!==group.offset+group.size)throw invalid('本组题号区间与偏移不一致。');
  if(!Array.isArray(slots)||slots.length!==group.size||count!==undefined&&slots.length!==count)throw invalid('本组槽位数量与请求题数不一致。');
  if(!onlyKeys(global,GLOBAL_KEYS)||!Number.isInteger(global.count)||!Number.isInteger(global.minutes)||global.count<3||global.count>12||global.minutes<5||global.minutes>90||!strings(global.targets)||!unique(global.targets)||!strings(global.questionTypes)||!unique(global.questionTypes))throw invalid('整卷范围字段不完整。');
- for(const [key,max] of [['subject',40],['grade',20],['curriculum',160],['focus',500],['difficulty',40]]){
+ for(const [key,max] of [['subject',40],['grade',20],['curriculum',160],['focus',2000],['difficulty',40]]){
   if(!readable(global[key],max))throw invalid('整卷范围缺少'+key+'。');
   if(request&&global[key]!==request[key])throw invalid('整卷范围'+key+'与组内请求不一致。');
  }
@@ -86,6 +87,10 @@ function normalizeGroupScope(scope,{count,request}={}){
  if(global.requirements!==undefined&&(typeof global.requirements!=='string'||global.requirements.length>MAX_REQUIREMENTS))throw invalid('整卷要求超出范围。');
  if(request&&global.requirements!==request.requirements)throw invalid('整卷requirements与组内请求不一致。');
  const requestedTargets=Array.isArray(request?.targets)?request.targets:null,requestedTypes=Array.isArray(request?.questionTypes)?request.questionTypes:null;
+ if(global.questionPlan!==undefined){
+  if(scope.version<3||!Array.isArray(global.questionPlan)||global.questionPlan.length!==global.count||global.questionPlan.some((s,i)=>!onlyKeys(s,SLOT_KEYS)||s.id!==i+1||s.target!==undefined||s.type!==undefined&&!readable(s.type,MAX_TYPE)))throw invalid('整卷逐题题型安排无效。');
+  if(request&&!isDeepStrictEqual(global.questionPlan.slice(group.offset,group.offset+group.size).map((s,i)=>({...s,id:i+1})),request.questionPlan))throw invalid('组内逐题题型安排不是整卷安排的精确切片。');
+ }else if(request?.questionPlan!==undefined)throw invalid('组内逐题题型缺少整卷安排。');
  if(request&&global.targets.length&&!requestedTargets)throw invalid('组内请求缺少训练点数组。');
  if(request&&global.questionTypes.length&&!requestedTypes)throw invalid('组内请求缺少题型数组。');
  if(requestedTargets?.length&&!global.targets.length)throw invalid('组内训练点缺少整卷目标。');
@@ -99,12 +104,12 @@ function normalizeGroupScope(scope,{count,request}={}){
   if(global.targets.length&&slot.target===undefined)throw invalid('本组槽位缺少训练点。');
   if(global.questionTypes.length&&slot.type===undefined)throw invalid('本组槽位缺少题型。');
   if(requestedTargets&&slot.target!==undefined&&!requestedTargets.includes(slot.target))throw invalid('本组槽位训练点与组内请求不一致。');
-  if(requestedTypes&&slot.type!==undefined&&!requestedTypes.includes(slot.type))throw invalid('本组槽位题型与组内请求不一致。');
+  if(requestedTypes?.length&&slot.type!==undefined&&!requestedTypes.includes(slot.type))throw invalid('本组槽位题型与组内请求不一致。');
   if(requestedTargets&&requestedTargets.length&&slot.target===undefined)throw invalid('组内请求缺少本组槽位训练点。');
   if(requestedTypes&&requestedTypes.length&&slot.type===undefined)throw invalid('组内请求缺少本组槽位题型。');
  }
  if(!isDeepStrictEqual(slots,localSlots(globalSlots(global,scope.version),group.offset,group.size)))throw invalid('本组槽位不是整卷计划的精确切片。');
- if(request)for(const [key,field] of [['targets','target'],['questionTypes','type']])if(!isDeepStrictEqual([...new Set(slots.map(slot=>slot[field]).filter(Boolean))],request[key]||[]))throw invalid('本组槽位与组内请求的'+key+'不一致。');
+ if(request)for(const [key,field] of [['targets','target'],['questionTypes','type']])if(!(key==='questionTypes'&&global.questionPlan&&!requestedTypes?.length)&&!isDeepStrictEqual([...new Set(slots.map(slot=>slot[field]).filter(Boolean))],request[key]||[]))throw invalid('本组槽位与组内请求的'+key+'不一致。');
  if(!Array.isArray(scope.completed)||scope.completed.length>MAX_COMPLETED)throw invalid('已完成题目摘要超出范围。');
  const seen=new Set();
  for(const item of scope.completed){

@@ -1,5 +1,5 @@
 {
-  "main": "runtime/main-AMODMBHJ.js",
+  "main": "runtime/main-SXPHJUOO.js",
   "storage": "runtime/storage-7U7Z7LVZ.js",
   "prepare": "runtime/prepare-W2EFWCXN.js",
   "importer": "app/runtime/importer-UMEQBE65.js",
@@ -54,11 +54,16 @@
     {
       "file": "assets/runtime-finish-5ecfd7756deb.css",
       "feature": ""
+    },
+    {
+      "file": "assets/runtime-exercise-design-8bd2d0660b26.css",
+      "feature": "exercises"
     }
   ],
   "styles": [
     "assets/figure-library-20349b898c28.css",
     "assets/model-workbench-010e5d6d02d6.css",
+    "assets/runtime-exercise-design-8bd2d0660b26.css",
     "assets/runtime-exercises-bb140abdcba3.css",
     "assets/runtime-finish-5ecfd7756deb.css",
     "assets/runtime-foundation-ef1c421f8181.css",
@@ -80,19 +85,19 @@
     "app/runtime/importer-UMEQBE65.js",
     "app/runtime/storage-7U7Z7LVZ.js",
     "app/runtime/shared-KPTXKDQP.js",
-    "app/runtime/shared-IWRQQNGR.js",
-    "app/runtime/shared-NAC5QX24.js",
-    "app/runtime/shared-GKDWA2WJ.js",
-    "app/runtime/shared-MC2PBSUI.js",
-    "app/runtime/shared-BHYKATDH.js",
-    "app/runtime/shared-DT7NCFGB.js",
-    "app/runtime/shared-3QDGYG65.js",
-    "app/runtime/shared-TT5GZL2Z.js",
-    "app/runtime/shared-K4AY67NK.js",
+    "app/runtime/shared-U6KVOXG7.js",
+    "app/runtime/shared-WI4F75B5.js",
+    "app/runtime/shared-2QVWHTI6.js",
+    "app/runtime/shared-J7VFNNV3.js",
+    "app/runtime/shared-TSNYG3PS.js",
+    "app/runtime/shared-6QE2GOQM.js",
+    "app/runtime/shared-26FKYW6M.js",
+    "app/runtime/shared-W4ZOVJTI.js",
+    "app/runtime/shared-H6GNMNDJ.js",
     "app/runtime/shared-N4BZF6CX.js",
-    "app/runtime/shared-2TG7WVSY.js",
-    "app/runtime/shared-SN3HOOOK.js",
-    "app/runtime/main-AMODMBHJ.js",
+    "app/runtime/shared-2SE5LS2F.js",
+    "app/runtime/shared-UQ3G3ND5.js",
+    "app/runtime/main-SXPHJUOO.js",
     "app/runtime/shared-LDJRZ6KL.js",
     "app/runtime/shared-44VAQO44.js",
     "app/runtime/shared-PAV3FDI5.js",
@@ -133,6 +138,7 @@
     "app/runtime/model-workbench-Z7SCGND7.js"
   ],
   "compatibility": [
-    "app/runtime/model-workbench-HCGJKQAC.js"
+    "app/runtime/main-AMODMBHJ.js",
+    "app/runtime/shared-3QDGYG65.js"
   ]
 }
