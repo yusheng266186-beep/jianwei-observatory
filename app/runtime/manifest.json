@@ -78,7 +78,7 @@
   ],
   "standalone": {
     "figures": "runtime/figure-library-5P5ZFBEZ.js",
-    "models": "runtime/model-workbench-Z7SCGND7.js"
+    "models": "runtime/model-workbench-R4FLI5K2.js"
   },
   "files": [
     "app/runtime/prepare-W2EFWCXN.js",
@@ -135,6 +135,6 @@
     "app/runtime/shared-QGKTY336.js",
     "app/runtime/shared-RMTIRWQZ.js",
     "app/runtime/figure-library-5P5ZFBEZ.js",
-    "app/runtime/model-workbench-Z7SCGND7.js"
+    "app/runtime/model-workbench-R4FLI5K2.js"
   ]
 }

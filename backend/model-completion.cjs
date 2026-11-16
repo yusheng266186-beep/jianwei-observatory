@@ -36,15 +36,18 @@ function parseResponse(response,protocol,options={}){
  }
  return protocol==='chat-completions'?readCompletion(response.body,{protocol,key:options.key}):parseStream(response.body,protocol,options);
 }
-async function completeRemote(prompt,generation,{key,transport=request,probe=false,onProgress,signal}={}){
+async function completeRemote(prompt,generation,{key,transport=request,probe=false,onProgress,signal,env=process.env}={}){
  if(generation.provider==='openai-codex')return require('./codex-completion.cjs').complete(prompt,generation,{probe,onProgress,signal});
  if(generation.provider==='openai-chatgpt')return require('./openai-siwc.cjs').complete(prompt,generation,{probe,onProgress,signal});
  if(!connectionMatches(generation)||!['chat-completions','anthropic','responses'].includes(generation.protocol)||!key)throw new Error('MODEL_NOT_CONFIGURED');
+ const base=generation.provider==='workbuddy-account'?require('./workbuddy-account.cjs').workbuddyAccountBase(env):generation.base;
+ if(!base)throw new Error('MODEL_NOT_CONFIGURED');
+ if(generation.provider==='workbuddy-account'&&prompt.image)throw new Error('MODEL_VISION_UNSUPPORTED');
  const body=adaptModelBody({messages:[{role:'system',content:prompt.system},{role:'user',content:typeof prompt.inputText==='string'?prompt.inputText:JSON.stringify(prompt.input)}],max_tokens:probe?256:32768,effort:generation.effort},{name:generation.provider,model:generation.model},generation.effort,{profile:generation.adapterProfile,probe});
  if(prompt.image)require('./model-vision.cjs').attachImage(body,generation.protocol,prompt.image);
  const protocol=generation.protocol,suffix=protocol==='anthropic'?'/v1/messages':protocol==='responses'?'/responses':'/chat/completions';
  const reader=require('./stream-reader.cjs').createStreamReader(protocol),progress=onProgress?require('./progress.cjs').streamProgress(protocol,onProgress):null;
- const response=await transport(generation.base.replace(/\/$/,'')+suffix,{method:'POST',body:JSON.stringify(body),headers:{'Content-Type':'application/json','User-Agent':USER_AGENT,...(protocol==='anthropic'?{'x-api-key':key,'anthropic-version':'2023-06-01'}:{Authorization:'Bearer '+key})},timeout:probe?45000:840000,deadlineMs:probe?45000:840000,maxBytes:64*1024*1024,collectBody:false,signal,onChunk:chunk=>{reader.write(chunk);progress?.(chunk);}});
+ const response=await transport(base.replace(/\/$/,'')+suffix,{method:'POST',body:JSON.stringify(body),headers:{'Content-Type':'application/json','User-Agent':USER_AGENT,...(protocol==='anthropic'?{'x-api-key':key,'anthropic-version':'2023-06-01'}:{Authorization:'Bearer '+key})},timeout:probe?45000:840000,deadlineMs:probe?45000:840000,maxBytes:64*1024*1024,collectBody:false,signal,onChunk:chunk=>{reader.write(chunk);progress?.(chunk);}});
  if(response.status!==200)throw upstreamError(response,key);
  return {...parseResponse(reader.received?{...response,body:reader.finish()}:response,protocol,{key}),model:generation.model,provider:generation.provider,reasoningEffort:generation.reasoningEffort};
 }
@@ -65,7 +68,7 @@ async function probeModel(generation,{env=process.env,transport=request}={}){
  let result;
  if(generation.protocol==='kimi')result=await require('./kimi.cjs').completeKimi(prompt,{key:env[generation.credentialRef],kind:'code',model:generation.model,effort:generation.reasoningEffort,transport,probe:true});
  else if(generation.protocol==='gemini')result=await completeGemini(prompt,generation,{key:env[generation.credentialRef],transport,probe:true});
- else result=await completeRemote(prompt,generation,{key:env[generation.credentialRef],transport,probe:true});
+ else result=await completeRemote(prompt,generation,{key:env[generation.credentialRef],transport,probe:true,env});
  let value;try{value=JSON.parse(result.output);}catch{throw new Error('MODEL_CONTENT_INVALID');}if(value?.value!==703)throw new Error('MODEL_CONTENT_INVALID');
  return {probe:{passed:true,latencyMs:Date.now()-started},model:generation.model,provider:generation.provider,reasoningEffort:generation.reasoningEffort};
 }

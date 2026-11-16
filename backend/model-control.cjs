@@ -2,6 +2,7 @@
 const providers=require('./providers.json'),profiles=require('./model-profiles.json'),performanceReferences=require('./model-performance.json');
 const {hash}=require('./tencent.cjs');
 const images=require('./image-providers.cjs');
+const {workbuddyAccountBase}=require('./workbuddy-account.cjs');
 const extras={
  'kimi-code':{label:'Kimi 官方 · 个人会员',url:'https://api.kimi.com/coding/v1',protocol:'kimi',key:'KIMI_API_KEY',model:'k3',catalog:['k3.1-pro','k3','kimi-for-coding']},
  gemini:{label:'ByteCat · Gemini',url:'https://www.bytecatcode.org',protocol:'gemini',key:'GEMINI_API_KEY',model:'gemini-3.8-flash',catalog:['gemini-3.8-flash']}
@@ -10,7 +11,7 @@ const routes={...extras,...providers},revisionKey=n=>'models/revisions/'+String(
 const fail=code=>Object.assign(new Error(code),{status:code==='MODEL_REVISION_CONFLICT'?409:400});
 function modelProfile(provider,model){return profiles.providers?.[provider]?.[model]||(provider==='deepseek'?profiles.models[model]:null);}
 function connectionMatches(generation){const route=routes[generation?.provider];return !!route&&route.catalog.includes(generation.model)&&[{url:route.url,protocol:route.protocol},...(route.legacyConnections||[])].some(c=>c.url===generation.base&&c.protocol===generation.protocol);}
-function configured(provider,env=process.env){if(provider==='openai-codex')return env.OPENAI_CODEX_ENABLED==='true';if(provider==='openai-chatgpt'&&env.OPENAI_CODEX_ENABLED==='true')return false;let declared=[];try{declared=JSON.parse(env.TRAINING_CONFIGURED_PROVIDERS||'[]');}catch{}return (provider==='openai-chatgpt'?env.OPENAI_SIWC_ENABLED==='true':!!env[routes[provider]?.key])||declared.includes(provider);}
+function configured(provider,env=process.env){if(provider==='workbuddy-account')return typeof env.WORKBUDDY_ACCOUNT_TOKEN==='string'&&env.WORKBUDDY_ACCOUNT_TOKEN.length>=32&&!!workbuddyAccountBase(env);if(provider==='openai-codex')return env.OPENAI_CODEX_ENABLED==='true';if(provider==='openai-chatgpt'&&env.OPENAI_CODEX_ENABLED==='true')return false;let declared=[];try{declared=JSON.parse(env.TRAINING_CONFIGURED_PROVIDERS||'[]');}catch{}return (provider==='openai-chatgpt'?env.OPENAI_SIWC_ENABLED==='true':!!env[routes[provider]?.key])||declared.includes(provider);}
 function snapshot(selection,env=process.env){
  if(!selection||Object.keys(selection).some(k=>!['provider','model','effort'].includes(k)))throw fail('MODEL_SELECTION_INVALID');
  const {provider,model,effort}=selection,route=routes[provider];
