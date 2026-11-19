@@ -12,13 +12,15 @@ export function prepareBackdrop(element,phase,from=backdropFrame(element)){
 // One interruptible lifecycle for modal windows and teacher control popovers.
 // The element remains in the top layer throughout exit; a newer open cancels
 // the pending close, including paused / unavailable animation fallbacks.
-export function openSurface(element,{show=()=>element.showModal(),isOpen=()=>element.open,reducedMotion=calm,from:initial,timing:customTiming}={}){
+export function openSurface(element,{show=()=>element.showModal(),isOpen=()=>element.open,reducedMotion=calm,from:initial,timing:customTiming,trigger}={}){
   const existing=states.get(element),wasOpen=isOpen();
   if(wasOpen&&existing&&existing.phase!=='leaving')return existing.promise;
   const control=element.matches?.('.plan-picker-panel,.exercise-choice-panel'),from=wasOpen?visualFrame(element):initial||(control?{opacity:.16,transform:'translateY(6px) scale(.988)'}:{opacity:.24,transform:'translateY(12px) scale(.992)'}),backdrop=backdropFrame(element);
   cancelOwnMotion(element);
   prepareBackdrop(element,'entering',backdrop);
-  const state={phase:'entering',promise:Promise.resolve()};states.set(element,state);
+  const priorFocus=wasOpen?existing?.priorFocus:element.ownerDocument?.activeElement;
+  const opener=element.tagName==='DIALOG'?(wasOpen?existing?.opener:trigger||priorFocus):null;
+  const state={phase:'entering',promise:Promise.resolve(),opener,priorFocus};states.set(element,state);
   element.dataset.surfaceMotion='managed';element.dataset.surfacePhase='entering';
   element.inert=false;
   if(!wasOpen)show();
@@ -35,7 +37,8 @@ export function closeSurface(element,{hide=()=>element.close(),isOpen=()=>elemen
   if(!isOpen())return Promise.resolve(true);
   const from=visualFrame(element),backdrop=backdropFrame(element);cancelOwnMotion(element);
   prepareBackdrop(element,'leaving',backdrop);
-  const focused=element.ownerDocument?.activeElement,state={phase:'leaving',promise:null,focus:element.contains?.(focused)?focused:null};states.set(element,state);
+  const doc=element.ownerDocument,focused=doc?.activeElement,opener=previous?.opener,priorFocus=previous?.priorFocus;
+  const state={phase:'leaving',promise:null,focus:element.contains?.(focused)?focused:null,opener,priorFocus};states.set(element,state);
   element.dataset.surfaceMotion='managed';element.dataset.surfacePhase='leaving';
   element.inert=true;
   element.dispatchEvent(new Event('surfaceclosing'));
@@ -43,6 +46,9 @@ export function closeSurface(element,{hide=()=>element.close(),isOpen=()=>elemen
   state.promise=(async()=>{
     if(!reducedMotion())try{state.animation=element.animate([from,to],{...timing,fill:'both'});await finishAnimation(state.animation,timing.duration);}catch{}
     if(states.get(element)!==state)return false;
-    if(isOpen())hide();state.phase='closed';element.dataset.surfacePhase='closed';element.style.removeProperty('will-change');element.dispatchEvent(new Event('surfaceclosed'));return true;
+    if(isOpen())hide();
+    const active=doc?.activeElement;
+    if(opener?.isConnected&&!opener.closest('[inert]')&&(!active||active===doc.body||active===priorFocus||element.contains(active)))opener.focus({preventScroll:true});
+    state.phase='closed';element.dataset.surfacePhase='closed';element.style.removeProperty('will-change');element.dispatchEvent(new Event('surfaceclosed'));return true;
   })();return state.promise;
 }

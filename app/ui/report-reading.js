@@ -106,7 +106,7 @@ export function installReportReading(dialog){
  function jump(n){if(!pane||!doc)return;pinnedEnd=false;n=Math.max(1,Math.min(doc.numPages,Math.round(Number(n)||1)));const node=pages.get(n)?.node;if(node){pane.scrollTop=node.offsetTop;paintPage(n);position();pane.focus({preventScroll:true});}}
  dialog.addEventListener('scroll',event=>{if(event.target===pane){cancelAnimationFrame(frame);frame=requestAnimationFrame(position);}},{capture:true,passive:true});
  document.addEventListener('selectionchange',()=>{if(pane&&dialog.open){cancelAnimationFrame(frame);frame=requestAnimationFrame(position);}});
- for(const type of ['wheel','touchstart','pointerdown'])dialog.addEventListener(type,event=>{if(pane?.contains(event.target))pinnedEnd=false;},{capture:true,passive:true});
+ for(const type of ['wheel','touchstart','pointerdown','surface-scroll-input'])dialog.addEventListener(type,event=>{if(pane?.contains(event.target))pinnedEnd=false;},{capture:true,passive:true});
  dialog.addEventListener('keydown',event=>{if(event.target===pane&&['Home','PageUp','PageDown','ArrowUp','ArrowDown'].includes(event.key))pinnedEnd=false;if(event.target.matches('[data-report-page-target]')&&event.key==='Enter'){event.preventDefault();jump(event.target.value);}else if(event.target===pane&&event.key==='Home'){event.preventDefault();pane.scrollTop=0;position();}else if(event.target===pane&&event.key==='End'){event.preventDefault();pinnedEnd=true;pane.scrollTop=pane.scrollHeight;position();}});
  dialog.addEventListener('change',event=>{if(event.target.matches('[data-report-page-target]'))jump(event.target.value);});
  const closed=()=>{if(dialog.open)return;overlay.reset();overlayState=null;dispose();wanted=null;pane=null;resize.disconnect();};

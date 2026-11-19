@@ -62,7 +62,7 @@
 .report-context .chip,.report-paper-options .chip{white-space:normal;text-align:left;line-height:1.5;font-size:10px;min-height:27px;padding:5px 8px}
 .report-context .report-current-person{font-size:11px;padding:8px 10px;background:#e5eff77a;border-radius:8px;color:var(--school-blue)}
 .report-context .report-current-person strong{font-weight:600}
-.report-scope-people{max-height:190px;overflow:auto;overscroll-behavior:contain}
+.report-scope-people{max-height:190px;overflow:auto;overscroll-behavior-x:contain}
 .report-customizer{padding:14px;border:0;background:linear-gradient(145deg,#ffffff99,#edf5fa73)}
 .report-customizer .block-head{display:block}.report-customizer h3{font-size:14px}
 .report-selection-count{display:block;margin-top:6px;font-size:10px;white-space:normal}

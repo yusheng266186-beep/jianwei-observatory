@@ -96,8 +96,8 @@ export function createExerciseCenter({records,getAtlas,authed,onOpen,onNew,onRef
      if(action==='submit'||action==='submit-queue'){const ids=action==='submit'?[b.dataset.centerId]:view().matched.filter(r=>jobState(r)==='prepared').map(r=>r.id),count=await onSubmit(ids);message='本次确认提交'+(count||0)+'份；其余待提交设置保留，可查看卡片中的原因。';}
      if(action==='undo'){const restored=await onUndo();message=restored?'已恢复刚才删除的任务。':'本轮删除的撤销时间已结束。';}
      if(action==='clear-cache'){await onClearCache();message='全部导出缓存已清理，试题内容仍保留。';}
-     if(action==='open')await onOpen(b.dataset.centerId);
-     if(action==='new')await onNew();
+     if(action==='open')await onOpen(b.dataset.centerId,b);
+     if(action==='new')await onNew(b);
      if(action==='refresh'){await onRefresh();message=exerciseSyncMessage(records(),{online:navigator.onLine!==false,authenticated:!!authed()});}
      if(action==='login'){await onLogin(root.querySelector('[data-center-code]').value);message='教师访问已验证，任务状态已更新。';}
     }

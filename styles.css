@@ -93,7 +93,7 @@ input:not([type=radio]):not([type=checkbox]):not([type=file]),textarea{border:1p
 .exam-stop b{font-size:14px;font-weight:600}
 .exam-stop small{font-size:11px;white-space:nowrap}
 .stop-index{font:10px var(--mono);color:var(--muted)}
-.table-scroll{overflow:auto;max-width:100%;max-height:620px;border:1px solid #dce9f6;border-radius:10px}
+.table-scroll{overflow-x:auto;max-width:100%;border:1px solid #dce9f6;border-radius:10px}
 .table-scroll table{width:100%;border-collapse:separate;border-spacing:0;white-space:nowrap;font-size:12px;background:#ffffff}
 .table-scroll th{text-align:left;font-weight:550;font-size:12px;color:#536f8c;padding:14px 16px;background:#f6fafd;border-bottom:1px solid #e0ecf7;position:sticky;top:0;z-index:3}
 .table-scroll td{padding:14px 16px;border-bottom:1px solid #ecf3fa;font-size:13px;transition:background .2s}.table-scroll td:hover{background:#f1f6fb!important}
@@ -518,7 +518,6 @@ body.drawer-open,body.modal-open{overflow:hidden}
 .research-drawer .number-ribbon>div{padding:15px 13px}
 .research-drawer .number-ribbon strong{font-size:25px}
 .research-drawer .block{background:#ffffffa6;box-shadow:none;padding:21px;margin:18px 0;border-color:var(--line)}
-.research-drawer .table-scroll{max-height:530px}
 .drawer-paper-links{display:flex;flex-wrap:wrap;gap:8px}
 .compare-controls{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin:22px 0}
 .compare-overview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
@@ -905,7 +904,6 @@ body[data-surface=paper] .study-outline,body[data-surface=paper] .welcome-worksp
 .block-head{gap:10px}
 .block-head h2{font-size:16px}
 .block-head p{font-size:11px}
-.table-scroll{max-height:520px}
 .table-scroll th,.table-scroll td{padding:11px}
 .table-scroll td{font-size:12px}
 .roster-bar{flex-wrap:wrap;gap:11px}

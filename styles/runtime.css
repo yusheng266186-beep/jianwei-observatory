@@ -16,6 +16,10 @@
 #table-reader-content,.reader-canvas,.reader-canvas>.table-frame{display:flex;flex-direction:column;min-height:0;flex:1}
 #table-reader-content{height:100%}.reader-head,.reader-canvas .table-tools,.reader-canvas .table-overflow-note{flex-shrink:0}
 .reader-canvas .table-scroll{flex:1;min-height:0;height:auto;max-height:none}
+/* One vertical reading surface per workspace. On fixed toolbars only, allow
+   the sibling reading pane to receive a vertical drag. */
+html:has(body:is(.modal-open,.drawer-open)){overflow:hidden;overscroll-behavior:none}
+dialog [data-scroll-chrome]{touch-action:pan-x pinch-zoom}
 body[data-motion=calm] dialog[data-backdrop-phase]::backdrop{animation:none!important}
 @media(prefers-reduced-motion:reduce){dialog[data-backdrop-phase]::backdrop{animation:none!important}}
 

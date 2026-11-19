@@ -47,6 +47,7 @@ jobs:
           curl --retry 10 --retry-connrefused --retry-delay 1 --fail --silent http://127.0.0.1:4173/ > /dev/null
           AUDIT_WIDTH=390 npm run test:exercise-design
           node tests/exercise-review.cjs
+          node tests/surface-scrolling.cjs
           npm run test:global-motion
           npm run test:smoke
           npm run test:keyboard

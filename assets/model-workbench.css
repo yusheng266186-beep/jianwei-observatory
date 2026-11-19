@@ -581,7 +581,7 @@ input[type=search]{min-width:0}
   min-width:0;
   max-height:560px;
   overflow:auto;
-  overscroll-behavior:contain;
+  overscroll-behavior-x:contain;
   padding:2px 3px 2px 0;
 }
 .provider-list button{
@@ -684,7 +684,7 @@ input[type=search]{min-width:0}
   min-width:0;
   max-height:600px;
   overflow:auto;
-  overscroll-behavior:contain;
+  overscroll-behavior-x:contain;
   padding:2px 4px 4px 2px;
   scroll-padding:8px;
 }
