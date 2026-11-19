@@ -1,4 +1,5 @@
 import {contentStamp} from './content-stamp.mjs';
+import {exerciseMathSpans} from './exercise-formulas.mjs';
 // Shared, deterministic review aids. This module never changes model text and
 // never treats an unrecognised expression as either correct or incorrect.
 export const EXERCISE_QUALITY_VERSION=6;
@@ -19,7 +20,7 @@ export function numericExerciseExpression(value){
  function sum(){let n=product();while(['+','-'].includes(tokens[i])){const op=tokens[i++],b=product();n=op==='+'?n+b:n-b;}return n;}
  try{const n=sum();return i===tokens.length&&Number.isFinite(n)?n:null;}catch{return null;}
 }
-function equations(text){return [...String(text||'').matchAll(/\$\$([\s\S]*?)\$\$|\$([^$\n]+)\$/g)].map(m=>m[1]??m[2]);}
+const equations=text=>exerciseMathSpans(String(text||'')).map(span=>span.latex);
 export function exerciseQualityStamp(sheet){return contentStamp([EXERCISE_QUALITY_VERSION,sheet]);}
 export function auditExerciseQuality(sheet,request={},notes=[]){
  const issues=[],checks={questions:0,equations:0,consistentEquations:0,figures:0},seen=new Map(),add=(questionId,code,message,detail='',severity='review')=>{const id=[questionId,code,detail||message].join('|');if(!issues.some(x=>x.id===id))issues.push({id,questionId,code,severity,message,detail});};

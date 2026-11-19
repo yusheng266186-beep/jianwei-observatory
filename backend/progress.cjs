@@ -9,16 +9,29 @@ function partialDocument(source){
  const doc=value()||{},questions=Array.isArray(doc.questions)?doc.questions:[];
  return {title:typeof doc.title==='string'?doc.title.slice(0,100):'',objective:typeof doc.objective==='string'?doc.objective.slice(0,600):'',completed:questions.filter(q=>q&&complete.has(q)).length,questions:questions.filter(q=>q&&typeof q==='object').slice(0,12).map((q,i)=>({id:Number.isInteger(q.id)?q.id:i+1,type:typeof q.type==='string'?q.type:'',complete:complete.has(q),...(q.figureRequest&&typeof q.figureRequest==='object'?{figureRequest:q.figureRequest}:{}),...Object.fromEntries(['stem','answer','analysis'].filter(k=>typeof q[k]==='string').map(k=>[k,q[k].slice(0,1200)]))}))};
 }
-function streamProgress(protocol,report){
- const decoder=new StringDecoder('utf8');let buffer='',output='',summary='',thinkingText='',thinkingChars=0,responseChars=0;
- const emit=(phase)=>report?.({phase,thinkingChars,responseChars,...(thinkingText?{thinkingText,thinkingTruncated:thinkingChars>160000}:{}),...(summary?{summary}:{}),...(output?{draftSource:output}:{})});
+function streamProgress(protocol,report,{cliPreview=false}={}){
+ const decoder=new StringDecoder('utf8');
+ let buffer='',output='',draft='',summary='',thinkingText='',thinkingChars=0,responseChars=0,draftChars=0;
+ const emit=phase=>report?.({phase,thinkingChars,responseChars:output?responseChars:draftChars,
+  ...(thinkingText?{thinkingText,thinkingTruncated:thinkingChars>160000}:{}),
+  ...(summary?{summary}:{}),...(output||draft||cliPreview?{draftSource:output||draft}:{})});
  function event(data){let packet;try{packet=JSON.parse(data);}catch{return;}
   let text='',thinking='',publicSummary='';
-  if(protocol==='chat-completions'||protocol==='kimi'){const delta=packet.choices?.[0]?.delta;text=typeof delta?.content==='string'?delta.content:'';thinking=typeof delta?.reasoning_content==='string'?delta.reasoning_content:'';}
+  if(protocol==='chat-completions'||protocol==='kimi'){
+   const delta=packet.choices?.[0]?.delta;
+   text=typeof delta?.content==='string'?delta.content:'';
+   thinking=typeof delta?.reasoning_content==='string'?delta.reasoning_content:'';
+   if(cliPreview&&!output&&delta?.preview_reset===true){draft='';draftChars=0;emit('thinking');}
+   if(cliPreview&&!output&&typeof delta?.preview_content==='string'&&delta.preview_content){
+    draftChars+=delta.preview_content.length;
+    draft=(draft+delta.preview_content).slice(0,256000);
+    emit('writing');
+   }
+  }
   if(protocol==='anthropic'){if(packet.type==='content_block_start'&&packet.content_block?.type==='text')text=packet.content_block.text||'';if(packet.delta?.type==='text_delta')text=packet.delta.text||'';if(packet.delta?.type==='thinking_delta')thinking=packet.delta.thinking||'';}
   if(protocol==='responses'){if(packet.type==='response.output_text.delta')text=packet.delta||'';if(packet.type==='response.reasoning_summary_text.delta')publicSummary=packet.delta||'';if(packet.type==='response.completed'&&!output)text=(packet.response?.output||[]).filter(p=>p.type==='message').flatMap(p=>p.content||[]).filter(p=>p.type==='output_text').map(p=>p.text||'').join('');}
   if(protocol==='gemini')for(const part of packet.candidates?.[0]?.content?.parts||[]){if(part.thought)publicSummary+=part.text||'';else text+=part.text||'';}
-  if(thinking){thinkingChars+=thinking.length;thinkingText=(thinkingText+thinking).slice(-160000);emit(output?'writing':'thinking');}if(publicSummary){thinkingChars+=publicSummary.length;summary=(summary+publicSummary).slice(-4000);emit(output?'writing':'thinking');}if(text){responseChars+=text.length;output=(output+text).slice(0,256000);emit('writing');}
+  if(thinking){thinkingChars+=thinking.length;thinkingText=(thinkingText+thinking).slice(-160000);emit(output||draft?'writing':'thinking');}if(publicSummary){thinkingChars+=publicSummary.length;summary=(summary+publicSummary).slice(-4000);emit(output||draft?'writing':'thinking');}if(text){responseChars+=text.length;output=(output+text).slice(0,256000);emit('writing');}
  }
  return chunk=>{buffer+=decoder.write(chunk);let match;while((match=/\r?\n\r?\n/.exec(buffer))){const block=buffer.slice(0,match.index);buffer=buffer.slice(match.index+match[0].length);const data=block.split(/\r?\n/).filter(l=>l.startsWith('data:')).map(l=>l.slice(5).trimStart()).join('\n');if(data&&data!=='[DONE]')event(data);}};
 }

@@ -31,8 +31,8 @@ test('宽表标签列较窄，数据列等宽且总宽保持纸张可用宽度',
 });
 
 test('表格公式中的双竖线范数保留原始TeX命令',()=>{const blocks=exerciseRichBlocks('名称 | 表达式\n--- | ---\n向量范数 | $\\|x\\|$');assert.equal(blocks[0].rows[0][1],'$\\|x\\|$');});
-test('旧表只有分隔行多一格时完整显示数据，新成稿检查仍指出列数错误',()=>{
- const source='| 时刻 | 风向 | 风速 |\n| :-: | :-: | :-: | :-: |\n| 02:00 | 西风 | 2.1 |\n| 14:00 | 东风 | 5.6 |',before=source,blocks=exerciseRichBlocks(source);assert.equal(blocks.length,1);assert.equal(blocks[0].kind,'table');assert.deepEqual(blocks[0].rows,[['02:00','西风','2.1'],['14:00','东风','5.6']]);assert.deepEqual(blocks[0].alignments,['center','center','center']);assert.equal(source,before);assert.equal(exerciseTableFormatIssues(source).length,1);
+test('对齐分隔行多一格时兼容正常的数据列',()=>{
+ const source='| 时刻 | 风向 | 风速 |\n| :-: | :-: | :-: | :-: |\n| 02:00 | 西风 | 2.1 |\n| 14:00 | 东风 | 5.6 |',before=source,blocks=exerciseRichBlocks(source);assert.equal(blocks.length,1);assert.equal(blocks[0].kind,'table');assert.deepEqual(blocks[0].rows,[['02:00','西风','2.1'],['14:00','东风','5.6']]);assert.deepEqual(blocks[0].alignments,['center','center','center']);assert.equal(source,before);assert.equal(exerciseTableFormatIssues(source).length,0);
  assert.equal(exerciseTableFormatIssues(source.replace('| :-: | :-: | :-: | :-: |','| :-: | :-: | :-: |')).length,0);assert.equal(exerciseTableFormatIssues('```\n'+source+'\n```').length,0);assert.equal(exerciseTableFormatIssues('$$\n'+source+'\n$$').length,0);
  assert.equal(exerciseRichBlocks('| 项目 | 数据 |\n| - | -: |\n| A | 1 |')[0].kind,'table');
 });

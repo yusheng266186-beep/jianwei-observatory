@@ -55,7 +55,7 @@ async function buildRepairPrompt(input,repair,options={}){
  prompt.input={...prompt.input,repair:{originalDocument:repair.output,validation:String(repair.validation||'成稿格式不符合要求').slice(0,1200),attempt:repair.attempt||1,...(repair.originalValidation?{originalValidation:String(repair.originalValidation).slice(0,1200)}:{}),...(candidate?{candidateDocument:candidate}:{})}};
  const body=JSON.parse(prompt.body);body.systemInstruction.parts[0].text=prompt.system;body.contents[0].parts[0].text=JSON.stringify(prompt.input);prompt.body=JSON.stringify(body);return prompt;
 }
-async function validateOutput(output,input,{separateFigures=false,usage,groupScope:scopeInput}={}){
+async function validateOutput(output,input,{separateFigures=false,usage,groupScope:scopeInput,deferFormulaReview=false}={}){
  const {validateExerciseResult,parseExerciseJSON,validateGeneratedExerciseFigures}=await loadContract();
  const groupScope=scopeInput?require('./exercise-group-scope.cjs').normalizeGroupScope(scopeInput,{count:input?.count,request:input}):null;
  try{
@@ -66,6 +66,8 @@ async function validateOutput(output,input,{separateFigures=false,usage,groupSco
   if(input.visuals==='none'&&sheet.questions.some(q=>q.figureRequest))throw Error('本次不配图，不能返回图示委托。');
   if(separateFigures&&sheet.questions.some(q=>q.diagram))throw Error('出题阶段只能返回图示委托，不能直接绘图。');
   if(sheet.questions.some(q=>q.diagram?.kind==='illustration')&&!['auto','hybrid'].includes(input.visuals)||sheet.questions.filter(q=>q.diagram?.kind==='illustration').length>1||input.visuals==='none'&&sheet.questions.some(q=>q.diagram))throw Error('图示数量或类型不符合所选策略。');
+  const layout=await require('./exercise-formula-review.cjs').exerciseFormulaIssues(sheet,{deferFormulaReview});
+  if(layout.length)throw Error(layout.map(issue=>issue.reason).join(' '));
   return sheet;
  }catch(cause){const validation=cause.message==='GROUP_SCOPE_MISMATCH'&&cause.detail?Object.assign(Error(cause.detail),{code:cause.message}):cause;throw Object.assign(new Error('MODEL_CONTENT_INVALID'),{cause:validation,output,diagnostic:{kind:'document',completeSignal:true,outputChars:output.length,usage}});}
 }
@@ -269,7 +271,7 @@ async function validateRepairFidelity(source,sheet,input,options={}){
  const complete=compared.complete&&compared.fields>0;
  return {verified:complete,readable:compared.fields>0,mode:compared.fields?complete?'fields':'partial':'empty',fields:compared.fields,...(compared.filledPoints?{filledPoints:compared.filledPoints}:{}),...(compared.unreadable?{unreadable:compared.unreadable}:{})};
 }
-async function generate(input,{provider=process.env.TRAINING_PROVIDER||'gemini',key,base=process.env.GEMINI_BASE_URL||'https://www.bytecatcode.org',model=process.env.GEMINI_MODEL||'gemini-3.8-flash',inspect,transport=request,generation,onProgress,signal,separateFigures=false,repair,groupScope}={}){
+async function generate(input,{provider=process.env.TRAINING_PROVIDER||'gemini',key,base=process.env.GEMINI_BASE_URL||'https://www.bytecatcode.org',model=process.env.GEMINI_MODEL||'gemini-3.8-flash',inspect,transport=request,generation,onProgress,signal,separateFigures=false,repair,groupScope,deferFormulaReview=false}={}){
  const {validateExerciseRequest,validateExerciseResult,parseExerciseJSON,validateGeneratedExerciseFigures}=await loadContract();input=validateExerciseRequest(input);
  if(!generation&&!['gemini','kimi-platform','kimi-code'].includes(provider))throw new Error('MODEL_NOT_CONFIGURED');
  const prompt=repair?await buildRepairPrompt(input,repair,{separateFigures,groupScope}):await buildExercisePrompt(input,{separateFigures,groupScope}),{body,template}=prompt;let output,usage,metadata={};
@@ -297,7 +299,7 @@ async function generate(input,{provider=process.env.TRAINING_PROVIDER||'gemini',
  }
  if(generation)metadata={provider:generation.provider,reasoningEffort:generation.reasoningEffort};
  onProgress?.({phase:'validating',responseChars:output.length,draftSource:output.slice(0,256000)});if(inspect)inspect(output);
- const sheet=await validateOutput(output,input,{separateFigures,usage,groupScope});
+ const sheet=await validateOutput(output,input,{separateFigures,usage,groupScope,deferFormulaReview});
  return {sheet,model,...metadata,templateVersion:template.version,templateId:template.id,usage,generatedAt:new Date().toISOString()};
 }
 module.exports={generate,loadContract,buildExercisePrompt,buildRepairPrompt,validateOutput,validateRepairFidelity,upstreamFailure,generationProfile};

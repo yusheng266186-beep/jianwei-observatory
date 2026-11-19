@@ -2,6 +2,7 @@ import {exerciseDocumentDesign as design} from './exercise-document-design.js';
 import {createAsyncRenderCache} from '../engine/async-render-cache.js';
 import {printFontMetrics,alignExerciseLine,exercisePDFLineHeight} from '../engine/exercise-layout.js';
 import {exerciseRichBlocks,exerciseTableWidths} from '../engine/exercise-rich-blocks.js';
+import {exerciseMathParts as mathParts,supportedExerciseFormula,recoverTrailingBrace} from '../engine/exercise-formulas.js';
 import {esc} from '../ui/html.js';
 import {reportFontManifest,cachedFontFile} from './report-fonts.js';
 let loading;const cache=createAsyncRenderCache({entries:160,maxWeight:1500000,weight:value=>value.svg.length}),htmlCache=createAsyncRenderCache({entries:180,maxWeight:1200000});
@@ -15,30 +16,14 @@ export function prepareExerciseMathSVG(svg){
 export function warmExerciseMath(){
  if(!loading){const task=new Promise((resolve,reject)=>{window.MathJax={loader:{paths:{mathjax:new URL('../../vendor/mathjax-3.2.2/',import.meta.url).href.replace(/\/$/,'')},load:['[tex]/mhchem']},tex:{packages:{'[+]':['mhchem']}},startup:{typeset:false},svg:{fontCache:'none'},options:{enableMenu:false}};const script=document.createElement('script');script.src=new URL('../../vendor/mathjax-3.2.2/tex-svg.js',import.meta.url).href;let settled=false;const timer=setTimeout(()=>finish(new Error('公式组件加载超时，请重试')),20000);function finish(error){if(settled)return;settled=true;clearTimeout(timer);if(error){script.remove();reject(error);}else resolve();}script.onload=()=>{if(settled)return;const startup=window.MathJax?.startup?.promise;if(!startup||typeof startup.then!=='function'){finish(new Error('公式组件未能初始化，请重试'));return;}startup.then(()=>finish(),()=>finish(new Error('公式组件未能初始化，请重试')));};script.onerror=()=>finish(new Error('公式组件未能加载，请重试'));document.head.append(script);});loading=task;task.catch(()=>{if(loading===task)loading=null;});}return loading;
 }
-export function mathParts(value){const parts=[],regex=/\$\$([\s\S]*?)\$\$|\$([^$\n]+)\$/g;let at=0,match;while((match=regex.exec(String(value)))){if(match.index>at)parts.push({text:String(value).slice(at,match.index)});parts.push({latex:match[1]??match[2]});at=regex.lastIndex;}if(at<String(value).length)parts.push({text:String(value).slice(at)});return parts;}
-function recoverTrailingBrace(latex){
- const last=latex.trimEnd().length-1;
- if(latex[last]!=='}')return null;
- let depth=0;
- for(let i=0;i<=last;i++){
-  if(latex[i]==='\\'){i++;continue;}
-  if(latex[i]==='{')depth++;
-  else if(latex[i]==='}'){
-   depth--;
-   if(depth<0)return i===last?latex.slice(0,last)+latex.slice(last+1):null;
-  }
- }
- return null;
-}
+export {mathParts};
 export function mathSVG(latex){
- if(latex.length>2500||/\\(?:href|html|includegraphics|url|require|def|newcommand)\b/.test(latex))return Promise.reject(new Error('公式中包含不支持的内容，请编辑后重试'));
+ if(!supportedExerciseFormula(latex))return Promise.reject(new Error('公式中包含不支持的内容，请编辑后重试'));
  return cache.get(latex,async()=>{
   await warmExerciseMath();
   const render=source=>window.MathJax.tex2svgPromise(source,{display:false});
   let source=latex,node=await render(source);
   let failure=node.querySelector('[data-mjx-error]');
-  // A single unmatched group closer at the very end has no visible math.
-  // Try the source first so valid literal braces and delimiters stay intact.
   if(failure?.getAttribute('data-mjx-error')==='Extra close brace or missing open brace'){
    const candidate=recoverTrailingBrace(source);
    if(candidate?.trim()){

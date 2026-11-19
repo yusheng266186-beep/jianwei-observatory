@@ -69,6 +69,6 @@ function documentFormatGuide(subject,{includeExample=true}={}){
  const sample=samples[subject]||samples['数学'];
  return [encoding,tables,prose,...subjectNotes(subject)].join('\n')
   +(includeExample?'\n字段内容编码示例（仅展示正文编码，必填字段及结构见Schema，不是本次试题）：'+JSON.stringify(sample):'')
-  +'。提交前逐字段核对反斜杠、换行、公式分隔符和表格列数，一次输出成稿，直接提供可解析、可预览的最终稿，不添加生成后修复的说明。';
+  +'。提交前逐字段核对反斜杠、换行、公式分隔符、分组花括号及表格列数，一次输出成稿，直接提供可解析、可预览的最终稿，不添加生成后修复的说明。';
 }
 module.exports={documentFormatGuide};

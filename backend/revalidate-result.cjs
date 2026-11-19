@@ -11,7 +11,7 @@ async function revalidateResult(store,key,job,result,{now=Date.now,dispatch=asyn
  let sheet;
  try{
   const {validateOutput}=require('./generator.cjs');
-  sheet=await validateOutput(diagnostic.raw,job.input,{separateFigures,usage:diagnostic.upstream?.usage});
+  sheet=await validateOutput(diagnostic.raw,job.input,{separateFigures,usage:diagnostic.upstream?.usage,deferFormulaReview:!!job.contentReview});
  }catch{return result;}
  const finishedAt=Number.isFinite(result.finishedAt)?result.finishedAt:now(),ready={status:'ready',sheet,...(job.generation?{model:job.generation.model,provider:job.generation.provider,reasoningEffort:job.generation.reasoningEffort}:{}),finishedAt,generatedAt:new Date(finishedAt).toISOString(),recovered:true,...(diagnostic.upstream?.usage?{usage:diagnostic.upstream.usage}:{})};
  if(job.contentReview){await require('./content-review.cjs').begin(store,key,job,ready,{now,dispatch});return await require('./content-review.cjs').snapshot(store,key,{now,dispatch})||result;}

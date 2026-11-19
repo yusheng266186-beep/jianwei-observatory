@@ -3,6 +3,7 @@ import {requireExerciseQualityReview} from '../engine/exercise-quality.js';
 import {validateExerciseResult,difficultyProfile,exerciseTypeLabel} from '../engine/exercise-contract.js';
 import {exercisePrintSections,exerciseAnswerSpaceHeight,exerciseWritingRows,exercisePrintFigureParts,exerciseKeepPromptTogether,exerciseKeepWritingTogether,exerciseChoiceRowKeepNext,exerciseChoiceKeepNext,exercisePrintSubtitle,exerciseKeepWritingSampleTogether} from '../engine/exercise-print.js';
 import {mathParts,mathSVG,exerciseLineWidth} from './exercise-math.js';
+import {exerciseMathSpans} from '../engine/exercise-formulas.js';
 import {exerciseDiagramSVG} from './exercise-diagram.js';
 import {mathMLToOffice,mathMLTableToWord,wordMathNeedsVector} from './exercise-word-math.js';
 import {exerciseRichBlocks,exerciseTableWidths} from '../engine/exercise-rich-blocks.js';
@@ -11,14 +12,12 @@ import {zipVendor} from './vendor-loader.js';
 const xml=value=>String(value??'').replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g,'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
 // Blank source lines are paragraph spacing, not extra Word paragraphs before
 // a page break; retaining those empty paragraphs can create a blank page.
-// Display math may contain real line breaks (aligned derivations). Splitting
-// those lines would leave unmatched $$ fragments that mathParts can only show
-// as TeX source, so keep each $$...$$ token intact in one Word paragraph.
+// Keep multi-line display math intact, including its alternative delimiters.
 export const wordParagraphLines=value=>{
  const text=String(value).replace(/\r\n?/g,'\n'),lines=[];let start=0,at=0;
+ const displays=exerciseMathSpans(text).filter(span=>span.display);let next=0;
  while(at<text.length){
-  if(text[at]==='\\'){at+=text[at+1]==='\n'?1:2;continue;}
-  if(text[at]==='$'&&text[at+1]==='$'){const close=text.indexOf('$$',at+2);if(close>=0){at=close+2;continue;}}
+  if(displays[next]?.start===at){at=displays[next++].end;continue;}
   if(text[at]==='\n'){const line=text.slice(start,at);if(line.trim())lines.push(line);start=++at;continue;}
   at++;
  }
@@ -35,7 +34,7 @@ export function wordAnswerSpaceParagraphs(question,subject){const height=exercis
 const zipLibrary=zipVendor;
 export async function exerciseWord(record,{teacher=false,name=record.student?.name||'',classNo=record.student?.classNo??''}={}){
  if(!record.reviewedAt)throw new Error('请完成审题确认后输出正式练习。');requireExerciseQualityReview(record);
- const sheet=validateExerciseResult(record.sheet,record.request),key=JSON.stringify(['docx-v47-vector-multiline-math',record.request,sheet,teacher,name,classNo,{exerciseId:record.id}]);
+ const sheet=validateExerciseResult(record.sheet,record.request),key=JSON.stringify(['docx-v48-formula-delimiters',record.request,sheet,teacher,name,classNo,{exerciseId:record.id}]);
  const snapshot=structuredClone(record);return exerciseFile(key,()=>buildExerciseWord(snapshot,{teacher,name,classNo}));
 }
 async function buildExerciseWord(record,{teacher,name,classNo}){

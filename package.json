@@ -79,6 +79,7 @@
   },
   "devDependencies": {
     "esbuild": "0.25.11",
+    "mathjax-full": "3.2.2",
     "playwright": "1.62.1"
   },
   "engines": {

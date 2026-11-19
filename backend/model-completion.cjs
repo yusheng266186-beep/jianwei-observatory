@@ -46,7 +46,7 @@ async function completeRemote(prompt,generation,{key,transport=request,probe=fal
  const body=adaptModelBody({messages:[{role:'system',content:prompt.system},{role:'user',content:typeof prompt.inputText==='string'?prompt.inputText:JSON.stringify(prompt.input)}],max_tokens:probe?256:32768,effort:generation.effort},{name:generation.provider,model:generation.model},generation.effort,{profile:generation.adapterProfile,probe});
  if(prompt.image)require('./model-vision.cjs').attachImage(body,generation.protocol,prompt.image);
  const protocol=generation.protocol,suffix=protocol==='anthropic'?'/v1/messages':protocol==='responses'?'/responses':'/chat/completions';
- const reader=require('./stream-reader.cjs').createStreamReader(protocol),progress=onProgress?require('./progress.cjs').streamProgress(protocol,onProgress):null;
+ const reader=require('./stream-reader.cjs').createStreamReader(protocol),progress=onProgress?require('./progress.cjs').streamProgress(protocol,onProgress,{cliPreview:generation.provider==='workbuddy-account'}):null;
  const response=await transport(base.replace(/\/$/,'')+suffix,{method:'POST',body:JSON.stringify(body),headers:{'Content-Type':'application/json','User-Agent':USER_AGENT,...(protocol==='anthropic'?{'x-api-key':key,'anthropic-version':'2023-06-01'}:{Authorization:'Bearer '+key})},timeout:probe?45000:840000,deadlineMs:probe?45000:840000,maxBytes:64*1024*1024,collectBody:false,signal,onChunk:chunk=>{reader.write(chunk);progress?.(chunk);}});
  if(response.status!==200)throw upstreamError(response,key);
  return {...parseResponse(reader.received?{...response,body:reader.finish()}:response,protocol,{key}),model:generation.model,provider:generation.provider,reasoningEffort:generation.reasoningEffort};

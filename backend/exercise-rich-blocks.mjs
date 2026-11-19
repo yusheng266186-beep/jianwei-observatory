@@ -1,41 +1,54 @@
+import {exerciseMathSpans} from './exercise-formulas.mjs';
+
 // Parse presentation blocks without changing the stored question or its review.
 // Pipes inside formulas, escaped pipes and fenced examples are not delimiters.
 function pipeRow(line){
- const cells=[];let cell='',math='',code=false,delimiters=0;
+ const cells=[],math=new Map(exerciseMathSpans(line).map(span=>[span.start,span]));
+ let cell='',code=false,delimiters=0;
  for(let i=0;i<line.length;i++){
   const c=line[i];
-  if(c==='\\'&&i+1<line.length){cell+=line[i+1]==='|'&&!math&&!code?'|':line.slice(i,i+2);i++;continue;}
-  if(c==='`'&&!math)code=!code;
-  if(c==='$'&&!code){const delimiter=line.slice(i,i+2)==='$$'?'$$':'$';if(!math)math=delimiter;else if(math===delimiter)math='';cell+=delimiter;i+=delimiter.length-1;continue;}
-  if(c==='|'&&!math&&!code){cells.push(cell.trim());cell='';delimiters++;}else cell+=c;
+  const span=!code&&math.get(i);
+  if(span){cell+=line.slice(i,span.end);i=span.end-1;continue;}
+  if(c==='\\'&&i+1<line.length){cell+=line[i+1]==='|'&&!code?'|':line.slice(i,i+2);i++;continue;}
+  if(c==='`')code=!code;
+  if(c==='|'&&!code){cells.push(cell.trim());cell='';delimiters++;}else cell+=c;
  }
- if(!delimiters||math||code)return null;
+ if(!delimiters||code)return null;
  cells.push(cell.trim());if(line.trim().startsWith('|'))cells.shift();if(line.trim().endsWith('|')&&!line.trim().endsWith('\\|'))cells.pop();
  return cells.length>1?cells:null;
 }
 const rule=row=>row.every(cell=>/^:?-+:?$/.test(cell));
+function presentationLines(value){
+ const source=String(value??'').replace(/\r\n?/g,'\n'),lines=source.split('\n');
+ const displays=exerciseMathSpans(source).filter(span=>span.display&&span.latex.includes('\n'));
+ const mathLines=new Set();let offset=0,i=0;
+ for(const [line,text] of lines.entries()){
+  while(displays[i]?.end<=offset)i++;
+  if(displays[i]?.start<=offset+text.length)mathLines.add(line);
+  offset+=text.length+1;
+ }
+ return {lines,mathLines};
+}
 export function exerciseTableFormatIssues(value){
- const lines=String(value??'').replace(/\r\n?/g,'\n').split('\n'),issues=[];let fence=false,displayMath=false;
+ const {lines,mathLines}=presentationLines(value),issues=[];let fence=false;
  for(let i=0;i<lines.length;i++){
   if(/^\s*```/.test(lines[i])){fence=!fence;continue;}
-  const markers=lines[i].match(/(?<!\\)\$\$/g)||[];if(!fence&&(displayMath||markers.length%2)){if(markers.length%2)displayMath=!displayMath;continue;}
-  if(fence)continue;const header=pipeRow(lines[i]);if(!header||rule(header))continue;
+  if(fence||mathLines.has(i))continue;const header=pipeRow(lines[i]);if(!header||rule(header))continue;
   const separator=pipeRow(lines[i+1]||'');if(!separator||!rule(separator))continue;
-  if(separator.length!==header.length)issues.push({line:i+2,columns:header.length,actual:separator.length});
-  for(i+=2;i<lines.length;i++){const row=pipeRow(lines[i]);if(!row){i--;break;}if(row.length!==header.length||rule(row))issues.push({line:i+1,columns:header.length,actual:row.length});}
+  // The separator only controls alignment. Real data rows must still match.
+  for(i+=2;i<lines.length;i++){const row=!mathLines.has(i)&&pipeRow(lines[i]);if(!row){i--;break;}if(row.length!==header.length||rule(row))issues.push({line:i+1,columns:header.length,actual:row.length});}
  }
  return issues;
 }
 export function exerciseRichBlocks(value){
- const lines=String(value??'').replace(/\r\n?/g,'\n').split('\n'),blocks=[];let text=[],fence=false,displayMath=false;
+ const {lines,mathLines}=presentationLines(value),blocks=[];let text=[],fence=false;
  const flush=()=>{if(text.length){blocks.push({kind:'text',text:text.join('\n')});text=[];}};
  for(let i=0;i<lines.length;){
   if(/^\s*```/.test(lines[i])){fence=!fence;text.push(lines[i++]);continue;}
-  const markers=lines[i].match(/(?<!\\)\$\$/g)||[];if(!fence&&(displayMath||markers.length%2)){if(markers.length%2)displayMath=!displayMath;text.push(lines[i++]);continue;}
-  const header=!fence&&pipeRow(lines[i]);
+  const header=!fence&&!mathLines.has(i)&&pipeRow(lines[i]);
   if(!header||rule(header)){text.push(lines[i++]);continue;}
   const rows=[header];let end=i+1;
-  while(end<lines.length){const row=pipeRow(lines[end]);if(!row)break;rows.push(row);end++;}
+  while(end<lines.length&&!mathLines.has(end)){const row=pipeRow(lines[end]);if(!row)break;rows.push(row);end++;}
   const separated=rows.length>1&&rule(rows[1]),data=rows.slice(separated?2:1),valid=data.every(row=>row.length===header.length)&&!data.some(rule);
   if(!valid||rows.length<3){text.push(...lines.slice(i,end));i=end;continue;}
   // A legacy delimiter row contains alignment, never question data. If only

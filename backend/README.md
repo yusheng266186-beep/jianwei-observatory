@@ -41,6 +41,7 @@
 | `worker.cjs`、`store.cjs` | 事件处理、私有存储、执行去重与任务分发 |
 | `generator.cjs`、`exercise-groups.cjs` | 约定结构的命题和分组上下文 |
 | `content-review.cjs`、`format-repair.cjs` | 独立学科复核与保留原稿的格式修复 |
+| `exercise-formula-review.cjs`、`exercise-tex-engine.cjs` | 成稿前解析公式并定位题号和字段。解析器由 `npm run package:training` 从与网页同版本的 MathJax 构建 |
 | `progress.cjs`、`result-delivery.cjs` | 流式进度、成稿保存和交付恢复 |
 | `figure-pipeline.cjs`、`figure-generation.cjs`、`illustration.cjs` | 图示规划、绘制、生图和图题核对 |
 | `templates.cjs`、`teacher-brief.cjs`、`subject-scoring.cjs` | 学科提示词、教师要求与题型评分口径 |
@@ -59,12 +60,14 @@
 2. HTTP函数验证来源、教师会话、请求结构与应用额度，创建不可覆盖的任务元数据，返回任务ID。
 3. COS对象通知触发Worker。执行标记防止重复事件重复调用；较大练习按冻结的整卷安排分组处理。
 4. 命题模型直接输出约定结构。可修复的格式错误携带原稿和具体诊断进入独立修复任务，默认沿用出题模型和思考强度，次数由工作台配置。
-5. 学科复核检查条件、答案、题型、分值与评分依据，保留明确修订记录；不确定建议交给教师，确定且无法修正的问题不能伪装成合格成稿。
+5. 学科复核检查条件、答案、题型、分值与评分依据。公式试排会提供有问题的题号、字段和原式，复核只纠正能确认的问题，修订后再次试排。明确修订保留记录，未能确定的题意交给教师判断。
 6. 必要图示按照题文给定的已知条件、标签、要求和版位独立规划、绘制，再核对题图关系。
 7. 私有任务对象持续保存进度、部分成稿和最终结果；前端查询原任务并恢复显示。
 8. 教师审阅、修改和确认当前文档版本，在浏览器导出PDF/Word并记录练后反馈。
 
 请求字段仅允许学科、年级、教学范围、训练目标、题量、时长、难度、题型、图示策略、依据模式及最多24项匿名有效得分证据等约定内容。姓名、班级、学生标识、排名和完整成绩留在本机。真实0分有效；缺满分、缺分及异常分不能充当失分证据。
+
+WorkBuddy 账号 CLI 通过独立的 `jingxu-account-codebuddy` 函数接入。更新该函数时，使用 `tools/workbuddy-account-bridge.patch` 对应的 `workbench.cjs` 实现，并将 `tools/workbuddy-cli-events.cjs` 与它一同打包。该路由转发 CLI 提供的公开思考与正文草稿。正文草稿只用于进度展示，最终校验读取正式成稿事件。
 
 ### 幂等、保存与继续
 

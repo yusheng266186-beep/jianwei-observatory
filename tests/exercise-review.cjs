@@ -5,7 +5,15 @@ const {makeFixture}=require('./fixtures.cjs');
 
 const base=new URL(process.env.AUDIT_URL||'http://127.0.0.1:4173/');
 const engine=process.env.AUDIT_BROWSER==='webkit'?webkit:chromium;
-const limit='当 $x\\to+\\infty}$ 时观察函数变化。';
+const limit=String.raw`当 \(x\to+\infty}}\) 时观察函数变化。`;
+const calculation=String.raw`代入得到
+\[
+\begin{aligned}
+f(1)&=2\times1\\
+&=2
+\end{aligned}
+\]
+。这与代入法一致。`;
 function savedExercise(id,analysis){
  return {
   id,sid:'test-4-0',exam:'52',status:'ready',createdAt:Date.now(),
@@ -15,7 +23,7 @@ function savedExercise(id,analysis){
    title:'函数专项练习',objective:'核对函数性质',
    questions:[1,2,3].map(id=>({
     id,type:'填空',level:'基础',stem:'求函数 $f(x)='+id+'x$ 在 $x=1$ 时的值。',
-    choices:[],answer:String(id),analysis:id===1?analysis:'将指定的自变量代入函数。',
+    choices:[],answer:String(id),analysis:id===1?analysis:id===2?calculation:'将指定的自变量代入函数。',
     points:['写出函数值'],maxScore:5,minutes:4
    }))
   }
@@ -66,19 +74,29 @@ function savedExercise(id,analysis){
   assert.equal(await page.locator('[data-exercise-preview-invalid]').count(),0);
   const labels=await page.locator('[data-question-id="1"] .exercise-formula').evaluateAll(nodes=>nodes.map(node=>node.getAttribute('aria-label')));
   assert(labels.includes('公式：x\\to+\\infty'));
+  assert.equal(await page.locator('[data-question-id="2"] .exercise-formula').count(),3,'The multiline display is rendered as one formula');
   assert.equal(await analysis.inputValue(),limit,'The edit field retains the original formula');
   const download=page.waitForEvent('download');
   await page.locator('[data-ai-action=teacher-word]').click();
   const file=await (await download).path(),bytes=await fs.readFile(file);
   assert.equal(bytes.toString('ascii',0,2),'PK');
-  const formulas=await page.evaluate(async encoded=>{
+  const word=await page.evaluate(async encoded=>{
    const archive=await window.JSZip.loadAsync(encoded,{base64:true});
    const source=await archive.file('word/document.xml').async('string');
    const xml=new DOMParser().parseFromString(source,'application/xml');
    const math='http://schemas.openxmlformats.org/officeDocument/2006/math';
-   return [...xml.getElementsByTagNameNS(math,'oMath')].map(node=>node.textContent);
+   const drawing='http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing';
+   return {
+    formulas:[...xml.getElementsByTagNameNS(math,'oMath')].map(node=>node.textContent),
+    illustrations:[...xml.getElementsByTagNameNS(drawing,'docPr')].map(node=>node.getAttribute('descr'))
+   };
   },bytes.toString('base64'));
-  assert(formulas.includes('x→+∞'),'The Word answer keeps the corrected formula editable');
+  assert(word.formulas.includes('x→+∞'),'The Word answer keeps the corrected formula editable');
+  assert(word.illustrations.some(text=>text.includes('\\begin{aligned}')&&text.includes('2\\times1')),'The Word vector retains the multiline layout');
+  const pdf=page.waitForEvent('download');
+  await page.locator('[data-ai-action=teacher-pdf]').click();
+  const pdfBytes=await fs.readFile(await (await pdf).path());
+  assert.equal(pdfBytes.toString('ascii',0,4),'%PDF');
 
   await editor.locator('summary').click();
   await analysis.fill('当 $x}+1$ 时观察函数变化。');
@@ -95,6 +113,6 @@ function savedExercise(id,analysis){
   await review.check();
   await approved();
   assert.deepEqual(errors,[]);
-  console.log('PASS '+engine.name()+' legacy review, CLI formula recovery and Word download, precise review blocker and recovery');
+  console.log('PASS '+engine.name()+' legacy review, CLI formula recovery and Word/PDF downloads, precise review blocker and recovery');
  }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});
