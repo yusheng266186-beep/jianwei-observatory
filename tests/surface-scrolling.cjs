@@ -6,14 +6,24 @@ const engine=process.env.AUDIT_BROWSER==='webkit'?webkit:chromium;
 const url=process.env.AUDIT_URL||'http://127.0.0.1:4173/';
 const scrollTop=locator=>locator.evaluate(el=>el.scrollTop);
 const liveId='84111111-1111-4111-8111-111111111112';
+const service='https://1459223409-4t5ckc9dro.ap-chengdu.tencentscf.com';
 function liveExercise(){
  const now=Date.now(),thinkingText='核对条件并计算。'.repeat(900);
  return {id:liveId,sid:'test-4-0',exam:'52',status:'running',createdAt:now,startedAt:now,acceptedAt:now,deadlineAt:now+600000,
   request:{subject:'数学',grade:'高三',curriculum:'函数',focus:'求导',count:6,minutes:25,difficulty:'基础巩固',evidence:[]},
-  progress:{phase:'writing',heartbeatAt:now,receivedAt:now,thinkingChars:thinkingText.length,thinkingText,responseChars:2200,
+  progress:{phase:'writing',sequence:1,heartbeatAt:now,receivedAt:now,thinkingChars:thinkingText.length,thinkingText,responseChars:2200,
    draft:{title:'匿名进度',completed:5,questions:[1,2,3,4,5].map(id=>({id,type:'解答',complete:true,stem:'已输出的题干。'.repeat(85)}))}
   }
  };
+}
+async function importMaterials(page,record){
+ await page.goto(url);
+ const fixture=makeFixture();fixture.exercises=[record];
+ await page.locator('#files').setInputFiles({name:'anonymous-scroll.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(fixture))});
+ await page.locator('[data-inbox=commit]').click();
+ await page.locator('#inbox').waitFor({state:'hidden'});
+ const notice=page.locator('#toast [data-cmd=toast-close]');
+ if(await notice.isVisible())await notice.click();
 }
 async function wheel(page,locator,y,x=0){
  await locator.hover();
@@ -209,13 +219,18 @@ async function tableReading(page,session){
  assert(await opener.evaluate(el=>document.activeElement===el));
 }
 
-async function livePreview(page,session){
+async function openLiveExercise(page){
  await page.locator('#navigation [data-scene=library]').click();
  await page.waitForSelector('#stage[data-scene=library][aria-busy=false]');
  const tab=page.locator('#stage [data-key=tab][data-value=exercises]');
  if(!await tab.isVisible())await page.locator('.library-context-navigation>summary').click();
  await tab.click();
  await page.locator('[data-center-action=open][data-center-id="'+liveId+'"]').click();
+ await page.locator('#exercise-dialog .exercise-live-output').waitFor();
+}
+
+async function livePreview(page,session){
+ await openLiveExercise(page);
  const dialog=page.locator('#exercise-dialog'),output=dialog.locator('.exercise-live-output');
  await output.waitFor();
  assert.equal(await output.evaluate(el=>getComputedStyle(el).maxHeight),'none','live questions follow the dialog scroll');
@@ -242,8 +257,15 @@ async function livePreview(page,session){
   const crossed=await scrollTop(dialog);
   assert(end-await scrollTop(log)<2,'the wheel covers the last part of the log first');
   assert(Math.abs(crossed-before-148)<5,'only the unused wheel distance moves the dialog');
-  const beforeReverse=await log.boundingBox();
-  await page.mouse.move(beforeReverse.x+beforeReverse.width/2,beforeReverse.y+beforeReverse.height/2);
+  const point=await log.evaluate(node=>{
+   const rect=node.getBoundingClientRect(),x=(rect.left+rect.right)/2;
+   for(let y=Math.max(0,rect.top)+4;y<Math.min(innerHeight,rect.bottom);y+=8){
+    if(node.contains(document.elementFromPoint(x,y)))return {x,y};
+   }
+   return null;
+  });
+  assert(point,'the visible portion of the log can receive a reverse wheel');
+  await page.mouse.move(point.x,point.y);
   await page.mouse.wheel(0,-70);
   await page.waitForFunction(end=>document.querySelector('[data-stream-scroll=thinking]').scrollTop<end-40,end);
   assert(Math.abs(await scrollTop(dialog)-crossed)<4,'wheel reversal goes back through the log');
@@ -251,6 +273,45 @@ async function livePreview(page,session){
  await page.waitForFunction(top=>document.getElementById('exercise-dialog').scrollTop>top+25,before);
  await dialog.locator('.inbox-top [data-ai-action=close]').click();
  await dialog.waitFor({state:'hidden'});
+}
+
+async function delayedFormulaUpdate(browser){
+ const context=await browser.newContext({viewport:{width:1280,height:810},reducedMotion:'reduce'});
+ try{
+  const page=await context.newPage(),record={...liveExercise(),service},progress=structuredClone(record.progress);
+  let releaseProgress,releaseFormula;
+  const holdProgress=new Promise(resolve=>{releaseProgress=resolve;}),holdFormula=new Promise(resolve=>{releaseFormula=resolve;});
+  progress.sequence++;
+  progress.thinkingText+='新增思考内容。'.repeat(190);
+  progress.thinkingChars=progress.thinkingText.length;
+  progress.draft.questions[0].stem='后台新增的公式题干 $x^{31}$';
+  await page.addInitScript(service=>localStorage.setItem('hengji:exerciseConnection',JSON.stringify({url:service,token:'anonymous-scroll-fixture',expires:Date.now()+86400000})),service);
+  await page.route('https://**/*',route=>new URL(route.request().url()).origin===new URL(url).origin?route.continue():route.abort());
+  await page.route(service+'/**',async route=>{
+   const request=route.request(),headers={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'Authorization,Content-Type,X-Request-ID','Access-Control-Allow-Methods':'GET,OPTIONS'};
+   if(request.method()==='OPTIONS')return route.fulfill({status:204,headers});
+   assert.equal(request.method(),'GET');
+   if(new URL(request.url()).pathname.endsWith('/'+liveId)){
+    await holdProgress;
+    return route.fulfill({headers,json:{status:'running',progress}});
+   }
+   return route.fulfill({headers,json:{subjects:[]}});
+  });
+  await page.route('**/vendor/mathjax-3.2.2/tex-svg.js',async route=>{await holdFormula;await route.continue();});
+  const formulaRequested=page.waitForRequest(request=>request.url().endsWith('/vendor/mathjax-3.2.2/tex-svg.js'));
+  await importMaterials(page,record);
+  await openLiveExercise(page);
+  const log=page.locator('#exercise-dialog [data-stream-scroll=thinking]');
+  await log.hover();await log.evaluate(el=>{el.scrollTop=el.scrollHeight;});
+  releaseProgress();await formulaRequested;
+  await page.mouse.wheel(0,-230);
+  await page.waitForFunction(()=>{const el=document.querySelector('[data-stream-scroll=thinking]');return el.scrollHeight-el.clientHeight-el.scrollTop>150;});
+  const before=await scrollTop(log);
+  releaseFormula();
+  await page.waitForFunction(()=>document.querySelector('.exercise-live-output')?.textContent.includes('后台新增的公式题干'));
+  assert(Math.abs(await scrollTop(log)-before)<3,'a delayed preview keeps the point the teacher scrolled back to');
+  console.log('PASS '+engine.name()+' live updates preserve reading position while a formula loads');
+ }finally{await context.close();}
 }
 
 (async()=>{
@@ -263,13 +324,7 @@ async function livePreview(page,session){
     page.on('pageerror',error=>issues.push(error.message));
     page.setDefaultTimeout(14000);
     await page.route('https://**/*',route=>new URL(route.request().url()).origin===new URL(url).origin?route.continue():route.abort());
-    await page.goto(url);
-    const fixture=makeFixture();
-    fixture.exercises=[liveExercise()];
-    await page.locator('#files').setInputFiles({name:'anonymous-scroll.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(fixture))});
-    await page.locator('[data-inbox=commit]').click();
-    await page.locator('#inbox').waitFor({state:'hidden'});
-    if(await page.locator('#toast [data-cmd=toast-close]').isVisible())await page.locator('#toast [data-cmd=toast-close]').click();
+    await importMaterials(page,liveExercise());
     const session=width<600&&engine===chromium?await context.newCDPSession(page):null;
     await exercise(page,session);
     await observations(page,session);
@@ -279,5 +334,6 @@ async function livePreview(page,session){
     console.log('PASS '+engine.name()+' '+width+' '+(session?'touch':'wheel')+' exercise, live output, drawer, table and report scrolling and return');
    }finally{await context.close();}
   }
+  await delayedFormulaUpdate(browser);
  }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

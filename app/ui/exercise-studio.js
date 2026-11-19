@@ -215,7 +215,23 @@ async function submitImageJob(record,{job,key},endpoint,{generation,source}){
  const inputIssue=field=>fieldErrors[field]?' aria-invalid="true" aria-describedby="exercise-'+field+'-error"':'';
  const issueText=field=>fieldErrors[field]?'<small class="exercise-field-error" id="exercise-'+field+'-error">'+esc(fieldErrors[field])+'</small>':'';
  const liveFrames=new WeakMap();
- async function updateLiveProgress(){const host=root.querySelector('[data-ai-live-progress]'),record=current;if(!host||!record)return;const frame=progressFrame(record),last=liveFrames.get(host);if(last===frame)return;const seen=new Set([...host.querySelectorAll('[data-stream-scroll]')].map(n=>n.dataset.streamScroll)),pinned=new Set([...host.querySelectorAll('[data-stream-scroll]')].filter(n=>n.scrollHeight-n.clientHeight-n.scrollTop<36).map(n=>n.dataset.streamScroll)),sequence=visibleExerciseProgress(record).progress?.sequence||0,html=await exerciseProgressHTML(record);if(current!==record||(visibleExerciseProgress(record).progress?.sequence||0)!==sequence)return;renderInto(host,html);liveFrames.set(host,frame);for(const node of host.querySelectorAll('[data-stream-scroll]'))if(!seen.has(node.dataset.streamScroll)||pinned.has(node.dataset.streamScroll))node.scrollTop=node.scrollHeight;}
+ async function updateLiveProgress(){
+  const host=root.querySelector('[data-ai-live-progress]'),record=current;
+  if(!host||!record)return;
+  const frame=progressFrame(record);
+  if(liveFrames.get(host)===frame)return;
+  const sequence=visibleExerciseProgress(record).progress?.sequence||0,html=await exerciseProgressHTML(record);
+  if(!host.isConnected||!dialog.open||current!==record||(visibleExerciseProgress(record).progress?.sequence||0)!==sequence)return;
+  // Formula rendering can wait for assets. Read the teacher's position just
+  // before replacing content, after any scrolling done during that wait.
+  const positions=new Map([...host.querySelectorAll('[data-stream-scroll]')].map(node=>[node.dataset.streamScroll,{top:node.scrollTop,atEnd:node.scrollHeight-node.clientHeight-node.scrollTop<=4}]));
+  renderInto(host,html);liveFrames.set(host,frame);
+  for(const node of host.querySelectorAll('[data-stream-scroll]')){
+   const position=positions.get(node.dataset.streamScroll);
+   if(!position||position.atEnd)node.scrollTop=node.scrollHeight;
+   else if(Math.abs(node.scrollTop-position.top)>1)node.scrollTop=position.top;
+  }
+ }
  function updateWaiting(){if(!current)return;for(const phase of root.querySelectorAll('[data-ai-live-phase]'))phase.textContent=generationPhase(current);for(const activity of root.querySelectorAll('[data-ai-live-activity]'))activity.textContent=generationActivity(current);for(const label of root.querySelectorAll('[data-ai-elapsed]'))label.textContent=jobTiming(current,records).label;for(const connection of root.querySelectorAll('[data-ai-connection]'))connection.textContent=jobConnection(current,navigator.onLine!==false);}
 
  async function loadRecords(){if(loaded){if(saveTimer)await persist();else await saving;return;}if(!loading){const generation=epoch;loading=access(['exercises','exerciseSavedSetups','exerciseComposerDrafts']).then(value=>{if(generation===epoch){records=Array.isArray(value?.exercises)?value.exercises.filter(r=>!removedIds.has(r.id)):[];baseline=exerciseRecordSnapshot(records);setupShelf.load(value?.exerciseSavedSetups);drafts.restore(value?.exerciseComposerDrafts);for(const pair of (Array.isArray(value?.exerciseComposerDrafts?.bases)?value.exerciseComposerDrafts.bases:[]))if(Array.isArray(pair)&&typeof pair[0]==='string'&&pair[1]&&['latest','common','manual'].includes(pair[1].mode)&&Array.isArray(pair[1].exams))basisSelections.set(pair[0],pair[1]);loaded=true;remember('exercisePending',records.some(r=>pendingJob(r)||pendingImages(r)));}}).finally(()=>{loading=null;});}await loading;}
