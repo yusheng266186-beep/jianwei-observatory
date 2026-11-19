@@ -23,7 +23,7 @@ import {createExerciseSetupShelf} from './exercise-setup-shelf.js';
 import {createExerciseContentPicker,exerciseKnowledgeLabels,exerciseAllFocusLabels,exerciseSelectedGroups} from './exercise-content-picker.js';
 import {createExerciseDrafts,exerciseDraftKey,newExerciseDraft as legacyNewExerciseDraft,mergeExerciseComposer} from '../engine/exercise-drafts.js';
 import {exerciseIdentity} from '../engine/exercise-identity.js';
-import {exerciseProgressHTML,visibleExerciseProgress,generationActivity,generationPhase,generationLogHTML,progressFrame} from './exercise-progress.js';
+import {exerciseProgressHTML,visibleExerciseProgress,generationActivity,generationPhase,generationLogHTML,progressFrame,renderExerciseLiveFrame} from './exercise-progress.js';
 import {exerciseRoster} from '../engine/exercise-roster.js';
 import {createExerciseCenter} from './exercise-center.js';
 import {pendingJob,pendingImages,jobStateLabel,jobTiming,jobConnection,mergeJobSnapshot,mergeJobAcknowledgement,jobSnapshotCurrent} from '../engine/exercise-jobs.js';
@@ -220,17 +220,9 @@ async function submitImageJob(record,{job,key},endpoint,{generation,source}){
   if(!host||!record)return;
   const frame=progressFrame(record);
   if(liveFrames.get(host)===frame)return;
-  const sequence=visibleExerciseProgress(record).progress?.sequence||0,html=await exerciseProgressHTML(record);
-  if(!host.isConnected||!dialog.open||current!==record||(visibleExerciseProgress(record).progress?.sequence||0)!==sequence)return;
-  // Formula rendering can wait for assets. Read the teacher's position just
-  // before replacing content, after any scrolling done during that wait.
-  const positions=new Map([...host.querySelectorAll('[data-stream-scroll]')].map(node=>[node.dataset.streamScroll,{top:node.scrollTop,atEnd:node.scrollHeight-node.clientHeight-node.scrollTop<=4}]));
-  renderInto(host,html);liveFrames.set(host,frame);
-  for(const node of host.querySelectorAll('[data-stream-scroll]')){
-   const position=positions.get(node.dataset.streamScroll);
-   if(!position||position.atEnd)node.scrollTop=node.scrollHeight;
-   else if(Math.abs(node.scrollTop-position.top)>1)node.scrollTop=position.top;
-  }
+  const sequence=visibleExerciseProgress(record).progress?.sequence||0;
+  const isCurrent=()=>dialog.open&&!selecting&&current===record&&(visibleExerciseProgress(record).progress?.sequence||0)===sequence;
+  if(await renderExerciseLiveFrame(host,exerciseProgressHTML(record),isCurrent))liveFrames.set(host,frame);
  }
  function updateWaiting(){if(!current)return;for(const phase of root.querySelectorAll('[data-ai-live-phase]'))phase.textContent=generationPhase(current);for(const activity of root.querySelectorAll('[data-ai-live-activity]'))activity.textContent=generationActivity(current);for(const label of root.querySelectorAll('[data-ai-elapsed]'))label.textContent=jobTiming(current,records).label;for(const connection of root.querySelectorAll('[data-ai-connection]'))connection.textContent=jobConnection(current,navigator.onLine!==false);}
 
