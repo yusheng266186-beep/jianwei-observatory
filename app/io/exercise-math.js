@@ -16,11 +16,49 @@ export function warmExerciseMath(){
  if(!loading){const task=new Promise((resolve,reject)=>{window.MathJax={loader:{paths:{mathjax:new URL('../../vendor/mathjax-3.2.2/',import.meta.url).href.replace(/\/$/,'')},load:['[tex]/mhchem']},tex:{packages:{'[+]':['mhchem']}},startup:{typeset:false},svg:{fontCache:'none'},options:{enableMenu:false}};const script=document.createElement('script');script.src=new URL('../../vendor/mathjax-3.2.2/tex-svg.js',import.meta.url).href;let settled=false;const timer=setTimeout(()=>finish(new Error('公式组件加载超时，请重试')),20000);function finish(error){if(settled)return;settled=true;clearTimeout(timer);if(error){script.remove();reject(error);}else resolve();}script.onload=()=>{if(settled)return;const startup=window.MathJax?.startup?.promise;if(!startup||typeof startup.then!=='function'){finish(new Error('公式组件未能初始化，请重试'));return;}startup.then(()=>finish(),()=>finish(new Error('公式组件未能初始化，请重试')));};script.onerror=()=>finish(new Error('公式组件未能加载，请重试'));document.head.append(script);});loading=task;task.catch(()=>{if(loading===task)loading=null;});}return loading;
 }
 export function mathParts(value){const parts=[],regex=/\$\$([\s\S]*?)\$\$|\$([^$\n]+)\$/g;let at=0,match;while((match=regex.exec(String(value)))){if(match.index>at)parts.push({text:String(value).slice(at,match.index)});parts.push({latex:match[1]??match[2]});at=regex.lastIndex;}if(at<String(value).length)parts.push({text:String(value).slice(at)});return parts;}
+function recoverTrailingBrace(latex){
+ const last=latex.trimEnd().length-1;
+ if(latex[last]!=='}')return null;
+ let depth=0;
+ for(let i=0;i<=last;i++){
+  if(latex[i]==='\\'){i++;continue;}
+  if(latex[i]==='{')depth++;
+  else if(latex[i]==='}'){
+   depth--;
+   if(depth<0)return i===last?latex.slice(0,last)+latex.slice(last+1):null;
+  }
+ }
+ return null;
+}
 export function mathSVG(latex){
  if(latex.length>2500||/\\(?:href|html|includegraphics|url|require|def|newcommand)\b/.test(latex))return Promise.reject(new Error('公式中包含不支持的内容，请编辑后重试'));
- return cache.get(latex,async()=>{await warmExerciseMath();const node=await window.MathJax.tex2svgPromise(latex,{display:false});if(node.querySelector('[data-mjx-error]'))throw new Error('公式未能正确排版，请编辑后重试');const svg=node.querySelector('svg');if(!svg)throw new Error('公式未能正确排版');const box=svg.getAttribute('viewBox').split(/\s+/).map(Number),width=box[2]/1000*12,height=box[3]/1000*12;svg.setAttribute('xmlns','http://www.w3.org/2000/svg');svg.setAttribute('width',String(width));svg.setAttribute('height',String(height));svg.querySelectorAll('[fill="currentColor"]').forEach(e=>e.setAttribute('fill','#111111'));prepareExerciseMathSVG(svg);return {svg:svg.outerHTML,width,height,ascent:-box[1]/1000*12,descent:(box[1]+box[3])/1000*12};});
+ return cache.get(latex,async()=>{
+  await warmExerciseMath();
+  const render=source=>window.MathJax.tex2svgPromise(source,{display:false});
+  let source=latex,node=await render(source);
+  let failure=node.querySelector('[data-mjx-error]');
+  // A single unmatched group closer at the very end has no visible math.
+  // Try the source first so valid literal braces and delimiters stay intact.
+  if(failure?.getAttribute('data-mjx-error')==='Extra close brace or missing open brace'){
+   const candidate=recoverTrailingBrace(source);
+   if(candidate?.trim()){
+    source=candidate;
+    node=await render(source);
+    failure=node.querySelector('[data-mjx-error]');
+   }
+  }
+  if(failure)throw new Error('公式未能正确排版，请编辑后重试');
+  const svg=node.querySelector('svg');
+  if(!svg)throw new Error('公式未能正确排版');
+  const box=svg.getAttribute('viewBox').split(/\s+/).map(Number),width=box[2]/1000*12,height=box[3]/1000*12;
+  svg.setAttribute('xmlns','http://www.w3.org/2000/svg');
+  svg.setAttribute('width',String(width));svg.setAttribute('height',String(height));
+  svg.querySelectorAll('[fill="currentColor"]').forEach(e=>e.setAttribute('fill','#111111'));
+  prepareExerciseMathSVG(svg);
+  return {latex:source,svg:svg.outerHTML,width,height,ascent:-box[1]/1000*12,descent:(box[1]+box[3])/1000*12};
+ });
 }
-async function inlineExerciseHTML(value){const parts=[];for(const part of mathParts(value)){if(part.latex){const m=await mathSVG(part.latex);parts.push('<span class="exercise-formula" role="img" aria-label="'+esc('公式：'+part.latex)+'">'+m.svg+'</span>');}else parts.push(esc(part.text).replace(/\n/g,'<br>'));}return parts.join('');}
+async function inlineExerciseHTML(value){const parts=[];for(const part of mathParts(value)){if(part.latex){const m=await mathSVG(part.latex);parts.push('<span class="exercise-formula" role="img" aria-label="'+esc('公式：'+m.latex)+'">'+m.svg+'</span>');}else parts.push(esc(part.text).replace(/\n/g,'<br>'));}return parts.join('');}
 export function richExerciseHTML(value){return htmlCache.get(String(value),async()=>{const blocks=[];for(const block of exerciseRichBlocks(value)){if(block.kind==='text'){blocks.push(await inlineExerciseHTML(block.text));continue;}const header=await Promise.all(block.header.map(async text=>'<th scope="col">'+await inlineExerciseHTML(text)+'</th>')),rows=await Promise.all(block.rows.map(async row=>'<tr>'+(await Promise.all(row.map(async(text,i)=>'<td style="text-align:'+block.alignments[i]+'">'+await inlineExerciseHTML(text)+'</td>'))).join('')+'</tr>'));blocks.push('<div class="exercise-data-table'+(block.header.length>=5?' is-wide':'')+'" tabindex="0" role="region" aria-label="题目数据表，可横向滚动"><table><thead><tr>'+header.join('')+'</tr></thead><tbody>'+rows.join('')+'</tbody></table></div>');}return blocks.join('<br>');});}
 
 let measureTask,metricsTask;

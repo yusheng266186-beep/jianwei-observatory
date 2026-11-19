@@ -2,7 +2,7 @@ import {exerciseDocumentDesign as design,exerciseWordStyles,exerciseWordFontTabl
 import {requireExerciseQualityReview} from '../engine/exercise-quality.js';
 import {validateExerciseResult,difficultyProfile,exerciseTypeLabel} from '../engine/exercise-contract.js';
 import {exercisePrintSections,exerciseAnswerSpaceHeight,exerciseWritingRows,exercisePrintFigureParts,exerciseKeepPromptTogether,exerciseKeepWritingTogether,exerciseChoiceRowKeepNext,exerciseChoiceKeepNext,exercisePrintSubtitle,exerciseKeepWritingSampleTogether} from '../engine/exercise-print.js';
-import {mathParts,mathSVG,warmExerciseMath,exerciseLineWidth} from './exercise-math.js';
+import {mathParts,mathSVG,exerciseLineWidth} from './exercise-math.js';
 import {exerciseDiagramSVG} from './exercise-diagram.js';
 import {mathMLToOffice,mathMLTableToWord,wordMathNeedsVector} from './exercise-word-math.js';
 import {exerciseRichBlocks,exerciseTableWidths} from '../engine/exercise-rich-blocks.js';
@@ -48,8 +48,36 @@ async function buildExerciseWord(record,{teacher,name,classNo}){
   media.push(['word/media/'+png,await bytes.arrayBuffer()]);relations.push('<Relationship Id="'+rid+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/'+png+'"/>');const cx=Math.round(width*12700),cy=Math.round(height*12700);
   return '<w:r>'+(baselineOffset?'<w:rPr><w:position w:val="'+Math.round(baselineOffset*2)+'"/></w:rPr>':'')+'<w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="'+cx+'" cy="'+cy+'"/><wp:docPr id="'+id+'" name="图示'+id+'" descr="'+xml(alt)+'"/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="'+id+'" name="'+png+'"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="'+rid+'">'+(svg?'<a:extLst><a:ext uri="{96DAC541-7B7A-43D3-8B79-37D633B846F1}"><asvg:svgBlip xmlns:asvg="http://schemas.microsoft.com/office/drawing/2016/SVG/main" r:embed="rSvg'+id+'"/></a:ext></a:extLst>':'')+'</a:blip><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="'+cx+'" cy="'+cy+'"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>';
  };
- const inline=async(value,fontSize=design.body)=>{const out=[];for(const part of mathParts(String(value))){if(!part.latex){out.push(textRun(part.text));continue;}const rendered=await mathSVG(part.latex);try{if(wordMathNeedsVector(part.latex))throw new Error('OFFICE_MATH_BORDERED_TABLE');await warmExerciseMath();const mml=await window.MathJax.tex2mmlPromise(part.latex,{display:false}),doc=new DOMParser().parseFromString(mml,'application/xml');if(doc.querySelector('parsererror,merror'))throw new Error('INVALID_MATHML');out.push(mathMLToOffice(doc.documentElement));}catch{out.push(await image(rendered.svg,{width:Math.min(460,rendered.width*fontSize/design.mathEm),height:rendered.height*fontSize/design.mathEm,baselineOffset:-rendered.descent*fontSize/design.mathEm,svg:true,alt:'公式 '+part.latex}));}}return out.join('');};
- const p=async(value,style='Normal',extra='')=>{const parts=mathParts(String(value)).filter(p=>p.latex||p.text.trim());if(parts.length===1&&parts[0].latex&&/\\begin\{array\}/.test(parts[0].latex)&&/\\hline|\|/.test(parts[0].latex)){try{await mathSVG(parts[0].latex);const mml=await window.MathJax.tex2mmlPromise(parts[0].latex,{display:false}),doc=new DOMParser().parseFromString(mml,'application/xml'),table=doc.querySelector('mtable');if(table)return mathMLTableToWord(table);}catch{}}return '<w:p><w:pPr><w:pStyle w:val="'+style+'"/>'+extra+'</w:pPr>'+await inline(value,({Meta:design.meta,Caption:design.caption,TableHeader:design.tableHeader,TableCell:design.table}[style]||design.body))+'</w:p>';};
+ const inline=async(value,fontSize=design.body)=>{
+  const out=[];
+  for(const part of mathParts(value)){
+   if(!part.latex){out.push(textRun(part.text));continue;}
+   const {latex,svg,width,height,descent}=await mathSVG(part.latex);
+   try{
+    if(wordMathNeedsVector(latex))throw new Error('OFFICE_MATH_BORDERED_TABLE');
+    const mml=await window.MathJax.tex2mmlPromise(latex,{display:false}),doc=new DOMParser().parseFromString(mml,'application/xml');
+    if(doc.querySelector('parsererror,merror'))throw new Error('INVALID_MATHML');
+    out.push(mathMLToOffice(doc.documentElement));
+   }catch{
+    const scale=fontSize/design.mathEm;
+    out.push(await image(svg,{width:Math.min(460,width*scale),height:height*scale,baselineOffset:-descent*scale,svg:true,alt:'公式 '+latex}));
+   }
+  }
+  return out.join('');
+ };
+ const p=async(value,style='Normal',extra='')=>{
+  const parts=mathParts(value).filter(p=>p.latex||p.text.trim());
+  if(parts.length===1&&parts[0].latex&&/\\begin\{array\}/.test(parts[0].latex)&&/\\hline|\|/.test(parts[0].latex)){
+   try{
+    const {latex}=await mathSVG(parts[0].latex);
+    const mml=await window.MathJax.tex2mmlPromise(latex,{display:false}),doc=new DOMParser().parseFromString(mml,'application/xml');
+    const table=doc.querySelector('mtable');
+    if(table)return mathMLTableToWord(table);
+   }catch{}
+  }
+  const size={Meta:design.meta,Caption:design.caption,TableHeader:design.tableHeader,TableCell:design.table}[style]||design.body;
+  return '<w:p><w:pPr><w:pStyle w:val="'+style+'"/>'+extra+'</w:pPr>'+await inline(value,size)+'</w:p>';
+ };
  const table=async block=>{
   const widths=exerciseTableWidths(block.header.length,10146).map(Math.round),rows=[],keepRows=block.rows.length<=4&&[block.header,...block.rows].flat().join('').length<600;
   for(const [r,row] of [block.header,...block.rows].entries())rows.push('<w:tr><w:trPr><w:cantSplit/>'+(r===0?'<w:tblHeader/>':'')+'</w:trPr>'+(await Promise.all(row.map(async(text,i)=>'<w:tc><w:tcPr><w:tcW w:w="'+widths[i]+'" w:type="dxa"/><w:vAlign w:val="center"/>'+(r===0?'<w:shd w:fill="F1F3F4"/>':'')+'</w:tcPr>'+await p(text,r===0?'TableHeader':'TableCell','<w:jc w:val="'+block.alignments[i]+'"/>'+(keepRows&&r<block.rows.length?'<w:keepNext/>':''))+'</w:tc>'))).join('')+'</w:tr>');
