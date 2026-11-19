@@ -25,8 +25,8 @@ export function createScrollMotion({now=()=>performance.now(),requestFrame=fn=>r
   }
   schedule();
  }
- function to(host,values,{immediate=false,frequency=24}={}){
-  const pos=read(host),old=states.get(host),time=now(),from={x:pos.left,y:pos.top},target={x:clamp(values.left??old?.target.x??from.x,pos.maxLeft),y:clamp(values.top??old?.target.y??from.y,pos.maxTop)},velocity=old?springAt(old.from,old.target,old.velocity,(time-old.start)/1000,old.frequency).velocity:{};
+ function to(host,values,{immediate=false,frequency=24,initialVelocity}={}){
+  const pos=read(host),old=states.get(host),time=now(),from={x:pos.left,y:pos.top},target={x:clamp(values.left??old?.target.x??from.x,pos.maxLeft),y:clamp(values.top??old?.target.y??from.y,pos.maxTop)},velocity=initialVelocity||(old?springAt(old.from,old.target,old.velocity,(time-old.start)/1000,old.frequency).velocity:{});
   if(old&&!immediate&&!reducedMotion()&&old.target.x===target.x&&old.target.y===target.y&&Math.abs(pos.left-old.last.x)<=2&&Math.abs(pos.top-old.last.y)<=2)return old.promise;
   if(old)cleanup(old,false);
   if(immediate||reducedMotion()||['x','y'].every(k=>Math.abs(from[k]-target[k])<.5)){write(host,{left:target.x,top:target.y});return Promise.resolve(true);}
@@ -38,6 +38,7 @@ let shared;
 const controller=()=>shared||(shared=createScrollMotion());
 export const scrollToMotion=(host,values,options)=>controller().to(host,values,options);
 export const scrollByMotion=(host,values,options)=>controller().by(host,values,options);
+export const cancelScrollOn=host=>shared?.cancel(host);
 export const cancelScrollMotion=()=>shared?.cancelAll();
 const installations=new WeakSet();
 export function installScrollMotion(doc=document){

@@ -19,7 +19,7 @@ async function wheel(page,locator,y,x=0){
  await locator.hover();
  await page.mouse.wheel(x,y);
 }
-async function swipe(session,target,delta){
+async function swipe(session,target,delta,{whileHeld,reverse=0}={}){
  const {x,y,width,height}=await target.boundingBox();
  const point={x:x+width/2,y:y+height/2};
  const send=(type,touchPoints)=>session.send('Input.dispatchTouchEvent',{type,touchPoints});
@@ -27,12 +27,17 @@ async function swipe(session,target,delta){
  for(let step=1;step<=8;step++){
   await send('touchMove',[{...point,y:point.y+delta*step/8}]);
  }
+ await whileHeld?.(false);
+ if(reverse){
+  for(let step=1;step<=6;step++)await send('touchMove',[{...point,y:point.y+delta+reverse*step/6}]);
+  await whileHeld?.(true);
+ }
  await send('touchEnd',[]);
 }
 
 async function exercise(page,session){
  await page.locator('#navigation [data-scene=follow]').click();
- const opener=page.locator('.follow-ai-entry [data-cmd=exercise-hub]');
+ const opener=page.locator('#stage .follow-ai-entry [data-cmd=exercise-hub]');
  await opener.click();
  const dialog=page.locator('#exercise-dialog');
  const student=dialog.locator('[data-ai-action=pick-student][data-ai-sid="test-18-3"]');
@@ -79,6 +84,22 @@ async function exercise(page,session){
  await dialog.waitFor({state:'hidden'});
  await page.waitForFunction(()=>!document.body.classList.contains('modal-open'));
  assert(await opener.evaluate(el=>document.activeElement===el),'closing returns focus to the teaching entry');
+
+ await opener.click();
+ await student.click();
+ const focus=dialog.locator('[data-ai-field=focus]');
+ await focus.fill('返回后继续编辑这份匿名练习');
+ await page.goBack();
+ await page.waitForSelector('#stage[data-scene=board][aria-busy=false]');
+ await dialog.waitFor({state:'hidden'});
+ await page.goForward();
+ await page.waitForSelector('#stage[data-scene=follow][aria-busy=false]');
+ assert(await dialog.isHidden(),'browser history restores the scene without a stale overlay');
+ await opener.click();
+ await student.click();
+ assert.equal(await focus.inputValue(),'返回后继续编辑这份匿名练习','browser navigation saves the editor before closing');
+ await dialog.locator('.inbox-top [data-ai-action=close]').click();
+ await dialog.waitFor({state:'hidden'});
 }
 
 async function observations(page,session){
@@ -94,6 +115,20 @@ async function observations(page,session){
   assert(before>100);
   await swipe(session,toolbar,97);
   await page.waitForFunction(top=>document.querySelector('#research-drawer .drawer-body').scrollTop<top-35,before);
+  await page.emulateMedia({reducedMotion:'no-preference'});
+  await body.evaluate(el=>{el.scrollTop=240;});
+  const close=toolbar.locator('[data-cmd=drawer-close]');
+  let liftedAt;
+  await swipe(session,close,85,{whileHeld:async()=>{liftedAt=await scrollTop(body);}});
+  await page.waitForFunction(top=>document.querySelector('#research-drawer .drawer-body').scrollTop<top-6,liftedAt);
+  assert(await drawer.isVisible(),'a swipe starting over Close does not click it');
+  const {x,y,width,height}=await toolbar.boundingBox();
+  await session.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:x+width/2,y:y+height/2}]});
+  const interruptedAt=await scrollTop(body);
+  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+  assert(Math.abs(await scrollTop(body)-interruptedAt)<2,'touching the toolbar again immediately stops the prior flick');
+  await session.send('Input.dispatchTouchEvent',{type:'touchCancel',touchPoints:[]});
+  await page.emulateMedia({reducedMotion:'reduce'});
  }else{
   await wheel(page,toolbar,260);
   await page.waitForFunction(()=>document.querySelector('#research-drawer .drawer-body').scrollTop>120);
@@ -101,6 +136,23 @@ async function observations(page,session){
  await toolbar.locator('[data-cmd=drawer-close]').click();
  await drawer.waitFor({state:'hidden'});
  assert(await peek.evaluate(el=>document.activeElement===el));
+
+ await page.locator('#stage [data-cmd=class-subject][data-subject=数学]').first().click();
+ const row=body.locator('[data-cmd=peek][data-sid="test-4-17"]').first();
+ await row.scrollIntoViewIfNeeded();
+ await row.evaluate(node=>node.addEventListener('click',()=>{window.subjectTopAtClick=node.closest('.drawer-body').scrollTop;},{once:true}));
+ await row.click();
+ const subjectPosition=await page.evaluate(()=>window.subjectTopAtClick);
+ assert(subjectPosition>60);
+ await page.locator('#research-drawer[data-kind=person]').waitFor();
+ assert.equal(await scrollTop(body),0,'student observation opens from the top');
+ if(page.viewportSize().width<600)await toolbar.locator('[data-cmd=drawer-back]').tap();
+ else await page.keyboard.press('Escape');
+ await page.locator('#research-drawer[data-kind=subject]').waitFor();
+ assert(await row.evaluate(el=>document.activeElement===el),'undoing the drill-down returns to the opening student row');
+ assert(Math.abs(await scrollTop(body)-subjectPosition)<4,'the subject list keeps its vertical position');
+ await toolbar.locator('[data-cmd=drawer-close]').click();
+ await drawer.waitFor({state:'hidden'});
 
  await page.locator('#stage [data-cmd=export]').first().click();
  const report=page.locator('#report-dialog'),paper=report.locator('.report-paper-scroll');
@@ -170,10 +222,32 @@ async function livePreview(page,session){
  const log=dialog.locator('[data-stream-scroll=thinking]');
  await log.scrollIntoViewIfNeeded();
  await log.hover();
- await log.evaluate(el=>{el.scrollTop=el.scrollHeight;});
+ const end=await log.evaluate(el=>{const max=el.scrollHeight-el.clientHeight;el.scrollTop=max-42;return max;});
  const before=await scrollTop(dialog);
- if(session)await swipe(session,log,-120);
- else await page.mouse.wheel(0,220);
+ if(session){
+  let handedOffAt;
+  await swipe(session,log,-140,{reverse:75,whileHeld:async reversed=>{
+   if(!reversed){
+    assert(end-await scrollTop(log)<2,'touch reaches the last line in the log');
+    handedOffAt=await scrollTop(dialog);
+    assert(handedOffAt>before+35,'one drag continues through the log boundary before lift');
+   }else{
+    assert(end-await scrollTop(log)>40,'touch can reverse inside the original log immediately');
+    assert(Math.abs(await scrollTop(dialog)-handedOffAt)<4,'a reversal does not move the outer dialog');
+   }
+  }});
+ }else{
+  await page.mouse.wheel(0,190);
+  await page.waitForFunction(top=>document.getElementById('exercise-dialog').scrollTop>top+35,before,{timeout:3500});
+  const crossed=await scrollTop(dialog);
+  assert(end-await scrollTop(log)<2,'the wheel covers the last part of the log first');
+  assert(Math.abs(crossed-before-148)<5,'only the unused wheel distance moves the dialog');
+  const beforeReverse=await log.boundingBox();
+  await page.mouse.move(beforeReverse.x+beforeReverse.width/2,beforeReverse.y+beforeReverse.height/2);
+  await page.mouse.wheel(0,-70);
+  await page.waitForFunction(end=>document.querySelector('[data-stream-scroll=thinking]').scrollTop<end-40,end);
+  assert(Math.abs(await scrollTop(dialog)-crossed)<4,'wheel reversal goes back through the log');
+ }
  await page.waitForFunction(top=>document.getElementById('exercise-dialog').scrollTop>top+25,before);
  await dialog.locator('.inbox-top [data-ai-action=close]').click();
  await dialog.waitFor({state:'hidden'});

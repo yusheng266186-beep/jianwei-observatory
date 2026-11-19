@@ -1184,7 +1184,7 @@ input[type=search]{min-width:0}
   max-height:230px;
   margin-top:2px;
   overflow:auto;
-  overscroll-behavior:contain;
+  overscroll-behavior-x:contain;
   padding-right:2px;
 }
 .history-item{

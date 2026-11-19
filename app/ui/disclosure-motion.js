@@ -25,7 +25,15 @@ export function toggleDisclosure(details,{reducedMotion=motionReduced,onSettled=
   const {height,adjust}=measure();record.target=height;
   try{
    const animation=details.animate([{height:Math.max(0,start-adjust)+'px',overflow:'clip'},{height:Math.max(0,height-adjust)+'px',overflow:'clip'}],{...timing,fill:'both'});record.animation=animation;
-   finishAnimation(animation,timing.duration).then(()=>{if(record.animation===animation)complete();});
+   finishAnimation(animation,timing.duration).then(()=>{
+    if(states.get(details)!==record||record.animation!==animation)return;
+    // Native finish can precede the next resize frame. Measure again after
+    // the old height is released so late content can keep animating smoothly.
+    if(wanted&&!reducedMotion()&&Math.abs(measure().height-height)>1){
+     if(resizeFrame){cancelAnimationFrame(resizeFrame);resizeFrame=0;}
+     run(height,motion.control);
+    }else complete();
+   });
   }catch{complete();}
  }
  run(before,motion.disclose);
